@@ -1,0 +1,71 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('org_id')->nullable();
+            $table->string('role', 20)->nullable();
+            $table->string('full_name', 255);
+            $table->string('phone', 30)->nullable();
+            $table->string('email', 255)->nullable();
+            $table->text('password_hash')->nullable();
+            $table->timestamp('phone_verified_at')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->integer('failed_login_count')->default(0);
+            $table->timestamp('locked_until')->nullable();
+            $table->timestamp('last_login_at')->nullable();
+            $table->boolean('mfa_enabled')->default(false);
+            $table->string('mfa_method', 20)->nullable();
+            $table->text('mfa_secret_encrypted')->nullable();
+            $table->timestamp('mfa_enrolled_at')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->timestamp('deleted_at')->nullable();
+            $table->json('meta')->nullable();
+            $table->string('identity_number', 20)->nullable();
+            $table->date('identity_issued_date')->nullable();
+            $table->string('identity_issued_place', 255)->nullable();
+            $table->date('date_of_birth')->nullable();
+            $table->text('address')->nullable();
+            $table->timestamps();
+
+            $table->unique(['org_id', 'phone']);
+            $table->unique(['org_id', 'email']);
+            $table->index(['org_id', 'role']);
+        });
+
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+
+        Schema::create('sessions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->foreignId('user_id')->nullable()->index();
+            $table->string('ip_address', 45)->nullable();
+            $table->text('user_agent')->nullable();
+            $table->longText('payload');
+            $table->integer('last_activity')->index();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('users');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('sessions');
+    }
+};

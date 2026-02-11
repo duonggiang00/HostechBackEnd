@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\FloorStoreRequest;
+use App\Http\Requests\FloorUpdateRequest;
+use App\Http\Resources\FloorResource;
+use App\Models\Floor;
+use Spatie\QueryBuilder\QueryBuilder;
+
+class FloorController extends Controller
+{
+    public function index()
+    {
+        $query = QueryBuilder::for(Floor::class)
+            ->allowedFilters(['property_id', 'name', 'code'])
+            ->defaultSort('sort_order');
+
+        return FloorResource::collection($query->paginate(15))->response()->setStatusCode(200);
+    }
+
+    public function store(FloorStoreRequest $request)
+    {
+        $data = $request->validated();
+        $data['org_id'] = request()->header('X-Org-Id');
+
+        $floor = Floor::create($data);
+
+        return new FloorResource($floor);
+    }
+
+    public function show(string $id)
+    {
+        $floor = Floor::find($id);
+        if (!$floor) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        return new FloorResource($floor);
+    }
+
+    public function update(FloorUpdateRequest $request, string $id)
+    {
+        $floor = Floor::find($id);
+        if (!$floor) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $floor->update($request->validated());
+
+        return new FloorResource($floor);
+    }
+
+    public function destroy(string $id)
+    {
+        $floor = Floor::find($id);
+        if (!$floor) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $floor->delete();
+
+        return response()->json(['message' => 'Deleted successfully'], 200);
+    }
+}
