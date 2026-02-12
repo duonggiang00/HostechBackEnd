@@ -7,16 +7,17 @@ use App\Http\Requests\PropertyIndexRequest;
 use App\Http\Requests\PropertyStoreRequest;
 use App\Http\Requests\PropertyUpdateRequest;
 use App\Http\Resources\PropertyResource;
+use App\Models\Property;
 use App\Services\PropertyService;
 
 class PropertyController extends Controller
 {
-    public function __construct(protected PropertyService $service)
-    {
-    }
+    public function __construct(protected PropertyService $service) {}
 
     public function index(PropertyIndexRequest $request)
     {
+        $this->authorize('viewAny', Property::class);
+
         $perPage = (int) $request->query('per_page', 15);
         $allowed = ['name', 'code'];
 
@@ -27,6 +28,8 @@ class PropertyController extends Controller
 
     public function store(PropertyStoreRequest $request)
     {
+        $this->authorize('create', Property::class);
+
         $data = $request->validated();
         $data['org_id'] = request()->header('X-Org-Id');
 
@@ -38,9 +41,11 @@ class PropertyController extends Controller
     public function show(string $id)
     {
         $property = $this->service->find($id);
-        if (!$property) {
+        if (! $property) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('view', $property);
 
         return new PropertyResource($property);
     }
@@ -48,9 +53,11 @@ class PropertyController extends Controller
     public function update(PropertyUpdateRequest $request, string $id)
     {
         $property = $this->service->find($id);
-        if (!$property) {
+        if (! $property) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('update', $property);
 
         $updated = $this->service->update($id, $request->validated());
 
@@ -60,13 +67,14 @@ class PropertyController extends Controller
     public function destroy(string $id)
     {
         $property = $this->service->find($id);
-        if (!$property) {
+        if (! $property) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('delete', $property);
 
         $this->service->delete($id);
 
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
 }
-

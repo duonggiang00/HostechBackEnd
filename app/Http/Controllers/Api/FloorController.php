@@ -13,6 +13,8 @@ class FloorController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', Floor::class);
+
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters(['property_id', 'name', 'code'])
             ->defaultSort('sort_order');
@@ -22,6 +24,8 @@ class FloorController extends Controller
 
     public function store(FloorStoreRequest $request)
     {
+        $this->authorize('create', Floor::class);
+
         $data = $request->validated();
         $data['org_id'] = request()->header('X-Org-Id');
 
@@ -33,9 +37,11 @@ class FloorController extends Controller
     public function show(string $id)
     {
         $floor = Floor::find($id);
-        if (!$floor) {
+        if (! $floor) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('view', $floor);
 
         return new FloorResource($floor);
     }
@@ -43,9 +49,11 @@ class FloorController extends Controller
     public function update(FloorUpdateRequest $request, string $id)
     {
         $floor = Floor::find($id);
-        if (!$floor) {
+        if (! $floor) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('update', $floor);
 
         $floor->update($request->validated());
 
@@ -55,9 +63,11 @@ class FloorController extends Controller
     public function destroy(string $id)
     {
         $floor = Floor::find($id);
-        if (!$floor) {
+        if (! $floor) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('delete', $floor);
 
         $floor->delete();
 

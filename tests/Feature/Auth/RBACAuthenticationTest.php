@@ -167,15 +167,19 @@ class RBACAuthenticationTest extends TestCase
      */
     public function test_user_can_checkown_permissions(): void
     {
-        $user = User::factory()->create();
-        $user->assignRole('Tenant');
+        $user = User::factory()->create([
+            'org_id' => \Illuminate\Support\Str::uuid(),
+        ]);
+        // Use Owner role which has permission to view users in org
+        $user->assignRole('Owner');
 
         $token = $user->createToken('test-token')->plainTextToken;
 
         // User should be able to check their own permissions via API
-        $response = $this->getJson('/api/v1/users', [
+        $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
-        ]);
+            'X-Org-Id' => $user->org_id,
+        ])->getJson('/api/v1/users');
 
         // Should have access to protected route with valid token
         $response->assertStatus(200);

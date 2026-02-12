@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('timezone', 64)->default('Asia/Bangkok');
             $table->string('currency', 8)->default('VND');
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

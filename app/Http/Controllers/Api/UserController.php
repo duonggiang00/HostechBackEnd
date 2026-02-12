@@ -14,6 +14,8 @@ class UserController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', User::class);
+
         $query = QueryBuilder::for(User::class)
             ->allowedFilters(['role', 'email', 'is_active'])
             ->defaultSort('full_name');
@@ -23,8 +25,11 @@ class UserController extends Controller
 
     public function store(UserStoreRequest $request)
     {
+        $this->authorize('create', User::class);
+
         $data = $request->validated();
         $data['password_hash'] = Hash::make($data['password']);
+        $data['org_id'] = request()->header('X-Org-Id');
         unset($data['password'], $data['password_confirmation']);
 
         $user = User::create($data);
@@ -35,9 +40,11 @@ class UserController extends Controller
     public function show(string $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('view', $user);
 
         return new UserResource($user);
     }
@@ -45,9 +52,11 @@ class UserController extends Controller
     public function update(UserUpdateRequest $request, string $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('update', $user);
 
         $data = $request->validated();
         if (isset($data['password'])) {
@@ -63,9 +72,11 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         $user = User::find($id);
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('delete', $user);
 
         $user->delete();
 

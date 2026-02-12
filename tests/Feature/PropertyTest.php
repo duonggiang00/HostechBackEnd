@@ -3,26 +3,41 @@
 use App\Models\Org;
 use App\Models\Property;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\TestCase;
 
-it('returns paginated properties for tenant', function () {
-    $org = Org::create(['id' => (string) Str::uuid(), 'name' => 'Tenant A']);
+class PropertyTest extends TestCase
+{
+    use RefreshDatabase;
 
-    // Create a user with a Sanctum token
-    $user = User::factory()->create(['org_id' => $org->id]);
-    $token = $user->createToken('api-token')->plainTextToken;
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\RBACSeeder::class);
+    }
 
-    Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P1', 'name' => 'Prop 1']);
-    Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P2', 'name' => 'Prop 2']);
+    public function test_returns_paginated_properties_for_tenant(): void
+    {
+        $org = Org::create(['id' => (string) Str::uuid(), 'name' => 'Tenant A']);
 
-    $response = $this
-        ->withHeaders([
-            'X-Org-Id' => $org->id,
-            'Authorization' => "Bearer {$token}",
-        ])
-        ->getJson('/api/v1/properties');
+        // Create a user with Owner role (has property viewing permission)
+        $user = User::factory()->create(['org_id' => $org->id]);
+        $user->assignRole('Owner');
+        $token = $user->createToken('api-token')->plainTextToken;
 
-    $response->assertStatus(200);
-    $response->assertJsonStructure(['data', 'links', 'meta']);
-    expect($response->json('meta.per_page'))->toBe(15);
-});
+        Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P1', 'name' => 'Prop 1']);
+        Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P2', 'name' => 'Prop 2']);
+
+        $response = $this
+            ->withHeaders([
+                'X-Org-Id' => $org->id,
+                'Authorization' => "Bearer {$token}",
+            ])
+            ->getJson('/api/v1/properties');
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['data', 'links', 'meta']);
+        expect($response->json('meta.per_page'))->toBe(15);
+    }
+}

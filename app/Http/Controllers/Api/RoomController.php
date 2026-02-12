@@ -7,16 +7,17 @@ use App\Http\Requests\RoomIndexRequest;
 use App\Http\Requests\RoomStoreRequest;
 use App\Http\Requests\RoomUpdateRequest;
 use App\Http\Resources\RoomResource;
+use App\Models\Room;
 use App\Services\RoomService;
 
 class RoomController extends Controller
 {
-    public function __construct(protected RoomService $service)
-    {
-    }
+    public function __construct(protected RoomService $service) {}
 
     public function index(RoomIndexRequest $request)
     {
+        $this->authorize('viewAny', Room::class);
+
         $perPage = (int) $request->query('per_page', 15);
         $allowed = ['code', 'status', 'type', 'property_id'];
 
@@ -27,6 +28,8 @@ class RoomController extends Controller
 
     public function store(RoomStoreRequest $request)
     {
+        $this->authorize('create', Room::class);
+
         $data = $request->validated();
         $data['org_id'] = request()->header('X-Org-Id');
 
@@ -38,9 +41,11 @@ class RoomController extends Controller
     public function show(string $id)
     {
         $room = $this->service->find($id);
-        if (!$room) {
+        if (! $room) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('view', $room);
 
         return new RoomResource($room);
     }
@@ -48,9 +53,11 @@ class RoomController extends Controller
     public function update(RoomUpdateRequest $request, string $id)
     {
         $room = $this->service->find($id);
-        if (!$room) {
+        if (! $room) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('update', $room);
 
         $updated = $this->service->update($id, $request->validated());
 
@@ -60,13 +67,14 @@ class RoomController extends Controller
     public function destroy(string $id)
     {
         $room = $this->service->find($id);
-        if (!$room) {
+        if (! $room) {
             return response()->json(['message' => 'Not Found'], 404);
         }
+
+        $this->authorize('delete', $room);
 
         $this->service->delete($id);
 
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
 }
-
