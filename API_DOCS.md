@@ -10,10 +10,11 @@ This API uses **Policy-based Authorization** combined with **Role-Based Access C
 
 1. [Authentication](#authentication)
 2. [Authorization & Policies](#authorization--policies)
-3. [Authentication Endpoints](#authentication-endpoints)
-4. [Protected API Endpoints (v1)](#protected-api-endpoints-v1)
-5. [Error Handling](#error-handling)
-6. [Examples](#examples)
+3. [Soft Delete](#soft-delete)
+4. [Authentication Endpoints](#authentication-endpoints)
+5. [Protected API Endpoints (v1)](#protected-api-endpoints-v1)
+6. [Error Handling](#error-handling)
+7. [Examples](#examples)
 
 ---
 
@@ -81,7 +82,7 @@ viewAny   : SuperAdmin, Admin, Owner
 view      : SuperAdmin, Admin, Owner (own org)
 create    : SuperAdmin, Admin only
 update    : SuperAdmin, Admin, Owner (own org)
-delete    : SuperAdmin, Admin only
+delete    : SuperAdmin, Admin, Owner (own org)
 ```
 
 #### Properties Module
@@ -125,6 +126,110 @@ If a user lacks authorization:
     "message": "This action is unauthorized."
 }
 ```
+
+---
+
+## Soft Delete
+
+All resources support soft delete (data preservation) and permanent delete (hard delete). When a resource is soft deleted, it's hidden from normal queries but can be restored.
+
+### Soft Delete Behavior
+
+- **Soft Delete (DELETE)**: Records marked for deletion but kept in database with `deleted_at` timestamp
+- **Restore**: Recovers a previously soft-deleted record
+- **Force Delete (Permanent)**: Completely removes record from database
+
+### Query Soft-Deleted Records
+
+By default, all list endpoints exclude soft-deleted records. To include them:
+
+**Query Parameter**: `?with_trashed=true`
+
+```bash
+curl -X GET "http://localhost:8000/api/v1/users?with_trashed=true" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Org-Id: {org_id}"
+```
+
+**Response includes both active and soft-deleted records**:
+
+```json
+{
+    "data": [
+        {
+            "id": "550e8400-e29b-41d4-a716-446655440000",
+            "full_name": "John Doe",
+            "email": "john.doe@example.com",
+            "deleted_at": null
+        },
+        {
+            "id": "660e8400-e29b-41d4-a716-446655440001",
+            "full_name": "Deleted User",
+            "email": "deleted@example.com",
+            "deleted_at": "2026-02-12T10:30:00Z"
+        }
+    ]
+}
+```
+
+### Restore a Soft-Deleted Resource
+
+**POST** `/api/v1/{resource}/{id}/restore`
+
+Restore a previously soft-deleted resource. Requires delete authorization.
+
+**Parameters**:
+
+- `{resource}`: One of `users`, `orgs`, `properties`, `floors`, `rooms`
+- `{id}`: Resource ID
+
+**Response (200 OK)**:
+
+```json
+{
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "full_name": "Restored User",
+    "email": "restored@example.com",
+    "deleted_at": null
+}
+```
+
+**Example**:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/users/660e8400-e29b-41d4-a716-446655440001/restore" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Org-Id: {org_id}"
+```
+
+### Permanently Delete a Resource
+
+**DELETE** `/api/v1/{resource}/{id}/force`
+
+Permanently remove a resource from the database (hard delete). Cannot be undone. Requires delete authorization.
+
+**Parameters**:
+
+- `{resource}`: One of `users`, `orgs`, `properties`, `floors`, `rooms`
+- `{id}`: Resource ID
+
+**Response (200 OK)**:
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+```
+
+**Example**:
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/users/660e8400-e29b-41d4-a716-446655440001/force" \
+  -H "Authorization: Bearer {token}" \
+  -H "X-Org-Id: {org_id}"
+```
+
+---
 
 ---
 
@@ -330,8 +435,10 @@ All v1 endpoints require authentication and authorization via policies.
 **Query Parameters:**
 
 ```
-?page=1&per_page=15
+?page=1&per_page=15&with_trashed=true
 ```
+
+The `with_trashed` parameter includes soft-deleted organizations in the response (default: false).
 
 **Response (200 OK):**
 
@@ -467,6 +574,45 @@ curl -X GET "http://localhost:8000/api/v1/orgs?page=1&per_page=15" \
     "message": "Deleted successfully"
 }
 ```
+
+---
+
+### Restore Organization
+
+**POST** `/api/v1/orgs/{id}/restore`
+
+**Authorization**: SuperAdmin, Admin only
+
+**Response (200 OK):**
+
+```json
+{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "ABC Property Management",&with_trashed=true
+```
+
+The `with_trashed` parameter includes soft-deleted users in the response (default: false). "phone": "+84-123-456-789",
+"email": "contact@abc.com",
+"address": "123 Main St, City, Country"
+}
+
+````
+
+---
+
+### Permanently Delete Organization
+
+**DELETE** `/api/v1/orgs/{id}/force`
+
+**Authorization**: SuperAdmin, Admin only
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+````
 
 ---
 
@@ -614,11 +760,51 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **Response (200 OK):**
 
+````json
+{
+
+
+---
+
+### Restore User
+
+**POST** `/api/v1/users/{id}/restore`
+
+**Authorization**: SuperAdmin, Admin, Owner (same org)
+
+**Response (200 OK):**
+
 ```json
 {
-    "message": "Deleted successfully"
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "full_name": "John Doe",
+    "email": "john.doe@example.com",
+    "phone": "+84-912-345-678",&with_trashed=true
+````
+
+The `with_trashed` parameter includes soft-deleted properties in the response (default: false). "roles": ["Owner"],
+"is_active": true
 }
-```
+
+````
+
+---
+
+### Permanently Delete User
+
+**DELETE** `/api/v1/users/{id}/force`
+
+**Authorization**: SuperAdmin, Admin, Owner (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+``` "message": "Deleted successfully"
+}
+````
 
 ---
 
@@ -771,11 +957,53 @@ curl -X GET "http://localhost:8000/api/v1/properties?page=1" \
 
 **Response (200 OK):**
 
+````json
+{
+
+
+---
+
+### Restore Property
+
+**POST** `/api/v1/properties/{id}/restore`
+
+**Authorization**: SuperAdmin, Admin, Owner (same org)
+
+**Response (200 OK):**
+
 ```json
 {
-    "message": "Deleted successfully"
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "org_id": "750e8400-e29b-41d4-a716-446655440000",&with_trashed=true
+````
+
+The `with_trashed` parameter includes soft-deleted floors in the response (default: false). "code": "PROP-001",
+"name": "Downtown Residential Complex",
+"address": "123 Main St, Downtown",
+"phone": "+84-123-456-700",
+"email": "property@example.com",
+"description": "Modern residential building with 50 units"
 }
-```
+
+````
+
+---
+
+### Permanently Delete Property
+
+**DELETE** `/api/v1/properties/{id}/force`
+
+**Authorization**: SuperAdmin, Admin, Owner (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+``` "message": "Deleted successfully"
+}
+````
 
 ---
 
@@ -827,28 +1055,80 @@ curl -X GET "http://localhost:8000/api/v1/properties?page=1" \
 
 **Request Body:**
 
-```json
+````json
 {
     "property_id": "550e8400-e29b-41d4-a716-446655440001",
     "code": "F-02",
     "name": "First Floor",
     "description": "Residential apartments",
-    "sort_order": 2
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Deleted successfully"
+}
+````
+
+---
+
+### Restore Floor
+
+**POST** `/api/v1/floors/{id}/restore`
+
+**Authorization**: SuperAdmin, Admin, Owner, Manager (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "org_id": "750e8400-e29b-41d4-a716-446655440000",
+    "property_id": "550e8400-e29b-41d4-a716-446655440001",
+    "code": "F-01",
+    "name": "Ground Floor",
+    "description": "Retail and common areas",
+    "sort_order": 1
 }
 ```
+
+---
+
+### Permanently Delete Floor
+
+**DELETE** `/api/v1/floors/{id}/force`
+
+**Authorization**: SuperAdmin, Admin, Owner, Manager (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+```
+
+    "sort_order": 2
+
+}
+
+````
 
 **Response (201 Created):**
 
 ```json
-{
-    "id": "660e8400-e29b-41d4-a716-446655440002",
-    "org_id": "750e8400-e29b-41d4-a716-446655440000",
-    "property_id": "550e8400-e29b-41d4-a716-446655440001",
-    "code": "F-02",
-    "name": "First Floor",
-    "description": "Residential apartments",
-    "sort_order": 2
+{&with_trashed=true
+````
+
+The `with_trashed` parameter includes soft-deleted rooms in the response (default: false). "id": "660e8400-e29b-41d4-a716-446655440002",
+"org_id": "750e8400-e29b-41d4-a716-446655440000",
+"property_id": "550e8400-e29b-41d4-a716-446655440001",
+"code": "F-02",
+"name": "First Floor",
+"description": "Residential apartments",
+"sort_order": 2
 }
+
 ```
 
 ---
@@ -888,8 +1168,10 @@ curl -X GET "http://localhost:8000/api/v1/properties?page=1" \
 **Query Parameters:**
 
 ```
+
 ?page=1&per_page=15&filter[property_id]=550e8400-e29b-41d4-a716-446655440000&filter[status]=available
-```
+
+````
 
 **Response (200 OK):**
 
@@ -918,7 +1200,7 @@ curl -X GET "http://localhost:8000/api/v1/properties?page=1" \
         "total": 150
     }
 }
-```
+````
 
 ---
 
@@ -946,6 +1228,57 @@ curl -X GET "http://localhost:8000/api/v1/properties?page=1" \
 ```
 
 **Response (201 Created):**
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Deleted successfully"
+}
+```
+
+---
+
+### Restore Room
+
+**POST** `/api/v1/rooms/{id}/restore`
+
+**Authorization**: SuperAdmin, Admin, Owner, Manager (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "org_id": "750e8400-e29b-41d4-a716-446655440000",
+    "property_id": "550e8400-e29b-41d4-a716-446655440001",
+    "floor_id": "550e8400-e29b-41d4-a716-446655440002",
+    "code": "R-101",
+    "name": "Room 101",
+    "type": "studio",
+    "area": 35.5,
+    "capacity": 2,
+    "base_price": 1500000,
+    "status": "available",
+    "description": "Modern studio apartment"
+}
+```
+
+---
+
+### Permanently Delete Room
+
+**DELETE** `/api/v1/rooms/{id}/force`
+
+**Authorization**: SuperAdmin, Admin, Owner, Manager (same org)
+
+**Response (200 OK):**
+
+```json
+{
+    "message": "Permanently deleted successfully"
+}
+```
 
 ```json
 {

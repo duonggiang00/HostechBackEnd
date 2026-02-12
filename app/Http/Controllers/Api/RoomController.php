@@ -77,4 +77,32 @@ class RoomController extends Controller
 
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
+
+    public function restore(string $id)
+    {
+        $room = $this->service->findTrashed($id);
+        if (! $room) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $room);
+
+        $this->service->restore($id);
+
+        return new RoomResource($room);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $room = $this->service->findWithTrashed($id);
+        if (! $room) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $room);
+
+        $this->service->forceDelete($id);
+
+        return response()->json(['message' => 'Permanently deleted successfully'], 200);
+    }
 }

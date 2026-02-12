@@ -13,12 +13,26 @@ class RoomService
             ->allowedFilters($allowedFilters)
             ->defaultSort('code');
 
+        if (request()->boolean('with_trashed')) {
+            $query->withTrashed();
+        }
+
         return $query->paginate($perPage)->withQueryString();
     }
 
     public function find(string $id): ?Room
     {
         return Room::find($id);
+    }
+
+    public function findTrashed(string $id): ?Room
+    {
+        return Room::onlyTrashed()->find($id);
+    }
+
+    public function findWithTrashed(string $id): ?Room
+    {
+        return Room::withTrashed()->find($id);
     }
 
     public function create(array $data): Room
@@ -45,5 +59,24 @@ class RoomService
 
         return false;
     }
-}
 
+    public function restore(string $id): bool
+    {
+        $room = $this->findTrashed($id);
+        if ($room) {
+            return $room->restore();
+        }
+
+        return false;
+    }
+
+    public function forceDelete(string $id): bool
+    {
+        $room = $this->findWithTrashed($id);
+        if ($room) {
+            return $room->forceDelete();
+        }
+
+        return false;
+    }
+}

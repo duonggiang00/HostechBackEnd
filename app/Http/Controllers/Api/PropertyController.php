@@ -77,4 +77,32 @@ class PropertyController extends Controller
 
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
+
+    public function restore(string $id)
+    {
+        $property = $this->service->findTrashed($id);
+        if (! $property) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $property);
+
+        $this->service->restore($id);
+
+        return new PropertyResource($property);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $property = $this->service->findWithTrashed($id);
+        if (! $property) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $property);
+
+        $this->service->forceDelete($id);
+
+        return response()->json(['message' => 'Permanently deleted successfully'], 200);
+    }
 }

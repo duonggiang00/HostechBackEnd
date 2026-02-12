@@ -20,6 +20,10 @@ class UserController extends Controller
             ->allowedFilters(['role', 'email', 'is_active'])
             ->defaultSort('full_name');
 
+        if (request()->boolean('with_trashed')) {
+            $query->withTrashed();
+        }
+
         return UserResource::collection($query->paginate(15))->response()->setStatusCode(200);
     }
 
@@ -81,5 +85,33 @@ class UserController extends Controller
         $user->delete();
 
         return response()->json(['message' => 'Deleted successfully'], 200);
+    }
+
+    public function restore(string $id)
+    {
+        $user = User::onlyTrashed()->find($id);
+        if (! $user) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $user);
+
+        $user->restore();
+
+        return new UserResource($user);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $user = User::withTrashed()->find($id);
+        if (! $user) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $user);
+
+        $user->forceDelete();
+
+        return response()->json(['message' => 'Permanently deleted successfully'], 200);
     }
 }

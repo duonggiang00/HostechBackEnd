@@ -14,7 +14,13 @@ class OrgController extends Controller
     {
         $this->authorize('viewAny', Org::class);
 
-        $orgs = Org::paginate(15);
+        $query = Org::query();
+
+        if (request()->boolean('with_trashed')) {
+            $query->withTrashed();
+        }
+
+        $orgs = $query->paginate(15);
 
         return OrgResource::collection($orgs)->response()->setStatusCode(200);
     }
@@ -66,5 +72,33 @@ class OrgController extends Controller
         $org->delete();
 
         return response()->json(['message' => 'Deleted successfully'], 200);
+    }
+
+    public function restore(string $id)
+    {
+        $org = Org::onlyTrashed()->find($id);
+        if (! $org) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $org);
+
+        $org->restore();
+
+        return new OrgResource($org);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $org = Org::withTrashed()->find($id);
+        if (! $org) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $org);
+
+        $org->forceDelete();
+
+        return response()->json(['message' => 'Permanently deleted successfully'], 200);
     }
 }

@@ -19,6 +19,10 @@ class FloorController extends Controller
             ->allowedFilters(['property_id', 'name', 'code'])
             ->defaultSort('sort_order');
 
+        if (request()->boolean('with_trashed')) {
+            $query->withTrashed();
+        }
+
         return FloorResource::collection($query->paginate(15))->response()->setStatusCode(200);
     }
 
@@ -72,5 +76,33 @@ class FloorController extends Controller
         $floor->delete();
 
         return response()->json(['message' => 'Deleted successfully'], 200);
+    }
+
+    public function restore(string $id)
+    {
+        $floor = Floor::onlyTrashed()->find($id);
+        if (! $floor) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $floor);
+
+        $floor->restore();
+
+        return new FloorResource($floor);
+    }
+
+    public function forceDelete(string $id)
+    {
+        $floor = Floor::withTrashed()->find($id);
+        if (! $floor) {
+            return response()->json(['message' => 'Not Found'], 404);
+        }
+
+        $this->authorize('delete', $floor);
+
+        $floor->forceDelete();
+
+        return response()->json(['message' => 'Permanently deleted successfully'], 200);
     }
 }
