@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, HasUuids, MultiTenant, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, HasUuids, MultiTenant, Notifiable;
 
     public $incrementing = false;
 
@@ -19,7 +21,6 @@ class User extends Authenticatable
     protected $fillable = [
         'id',
         'org_id',
-        'role',
         'full_name',
         'phone',
         'email',
@@ -44,5 +45,31 @@ class User extends Authenticatable
     public function org()
     {
         return $this->belongsTo(Org::class, 'org_id');
+    }
+
+    /**
+     * Get the password for the user.
+     *
+     * @return string
+     */
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
+
+    /**
+     * Accessor to make $user->password work, while reading from password_hash column.
+     */
+    public function getPasswordAttribute(): ?string
+    {
+        return $this->password_hash;
+    }
+
+    /**
+     * Mutator to hash password and set it on the password_hash attribute.
+     */
+    public function setPasswordAttribute(string $value): void
+    {
+        $this->attributes['password_hash'] = \Illuminate\Support\Facades\Hash::make($value);
     }
 }

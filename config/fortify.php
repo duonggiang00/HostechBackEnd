@@ -71,9 +71,11 @@ return [
     | authentication or password reset when the operations are successful
     | and the user is authenticated. You are free to change this value.
     |
+    | NOTE: For API-only applications, this is not used.
+    |
     */
 
-    'home' => '/home',
+    'home' => '/api/v1/dashboard',
 
     /*
     |--------------------------------------------------------------------------
@@ -84,9 +86,11 @@ return [
     | that it registers with the application. If necessary, you may change
     | subdomain under which all of the Fortify routes will be available.
     |
+    | API Routes: /api/auth/login, /api/auth/register, etc.
+    |
     */
 
-    'prefix' => '',
+    'prefix' => '/api/auth',
 
     'domain' => null,
 
@@ -96,12 +100,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify which middleware Fortify will assign to the routes
-    | that it registers with the application. If necessary, you may change
-    | these middleware but typically this provided default is preferred.
+    | that it registers with the application. For API-only, we use 'api'
+    | instead of 'web'.
     |
     */
 
-    'middleware' => ['web'],
+    'middleware' => ['api'],
 
     /*
     |--------------------------------------------------------------------------
@@ -124,13 +128,13 @@ return [
     | Register View Routes
     |--------------------------------------------------------------------------
     |
-    | Here you may specify if the routes returning views should be disabled as
-    | you may not need them when building your own application. This may be
-    | especially true if you're writing a custom single-page application.
+    | Since this is an API-only application, set to FALSE to disable
+    | view routes (login, register, password reset views).
+    | Fortify will only register JSON endpoints.
     |
     */
 
-    'views' => true,
+    'views' => false,
 
     /*
     |--------------------------------------------------------------------------

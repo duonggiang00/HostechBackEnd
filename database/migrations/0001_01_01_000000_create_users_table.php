@@ -13,11 +13,10 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('org_id')->nullable();
-            $table->string('role', 20)->nullable();
+            $table->uuid('org_id')->nullable()->index();
             $table->string('full_name', 255);
             $table->string('phone', 30)->nullable();
-            $table->string('email', 255)->nullable();
+            $table->string('email', 255)->unique();
             $table->text('password_hash')->nullable();
             $table->timestamp('phone_verified_at')->nullable();
             $table->timestamp('email_verified_at')->nullable();
@@ -39,8 +38,6 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['org_id', 'phone']);
-            $table->unique(['org_id', 'email']);
-            $table->index(['org_id', 'role']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory(5)->create();
+        // Users are now created by OrgSeeder with proper role assignments
+        // This seeder is kept for potential future extensions
     }
 }

@@ -15,26 +15,35 @@ class CreateNewUser implements CreatesNewUsers
     /**
      * Validate and create a newly registered user.
      *
-     * @param  array<string, string>  $input
+     * @param  array<string, mixed>  $input
      */
     public function create(array $input): User
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
+            'full_name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
                 'string',
                 'email',
                 'max:255',
-                Rule::unique(User::class),
+                Rule::unique(User::class, 'email'),
             ],
+            'phone' => ['nullable', 'string', 'max:30'],
             'password' => $this->passwordRules(),
         ])->validate();
 
-        return User::create([
-            'name' => $input['name'],
+        $user = User::create([
+            'full_name' => $input['full_name'],
             'email' => $input['email'],
-            'password' => Hash::make($input['password']),
+            'phone' => $input['phone'] ?? null,
+            'password_hash' => Hash::make($input['password']),
+            'email_verified_at' => now(),
+            'is_active' => true,
         ]);
+
+        // Securely assign the default role for public registration
+        $user->assignRole('Tenant');
+
+        return $user;
     }
 }

@@ -11,7 +11,6 @@ class UserResource extends JsonResource
         return [
             'id' => $this->id,
             'org_id' => $this->org_id,
-            'role' => $this->role,
             'full_name' => $this->full_name,
             'phone' => $this->phone,
             'email' => $this->email,
@@ -20,6 +19,8 @@ class UserResource extends JsonResource
             'is_active' => $this->is_active,
             'mfa_enabled' => $this->mfa_enabled,
             'last_login_at' => $this->last_login_at,
+            'roles' => $this->roles->pluck('name'),
+            'permissions' => $this->getAllPermissions()->pluck('name'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
