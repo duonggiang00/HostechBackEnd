@@ -21,7 +21,8 @@ trait HandlesOrgScope
         }
 
         // Must be in same org
-        return $user->org_id === $model->org_id;
+        // Use loose comparison or string casting to avoid issues with UUID objects vs strings
+        return (string) $user->org_id === (string) $model->org_id;
     }
 
     /**
