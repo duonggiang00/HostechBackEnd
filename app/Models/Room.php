@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Models\Concerns\MultiTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Room extends Model
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
 

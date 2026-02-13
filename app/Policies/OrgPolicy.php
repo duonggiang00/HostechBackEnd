@@ -2,80 +2,77 @@
 
 namespace App\Policies;
 
+use App\Contracts\RbacModuleProvider;
 use App\Models\Org;
 use App\Models\User;
+use App\Traits\HandlesOrgScope;
+use Illuminate\Auth\Access\Response;
 
-class OrgPolicy
+class OrgPolicy implements RbacModuleProvider
 {
-    /**
-     * Determine if the user can view organizations list
-     */
+    use HandlesOrgScope;
+
+    public static function getModuleName(): string
+    {
+        return 'Orgs';
+    }
+
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'RU',
+            'Manager' => '-',
+            'Staff' => '-',
+            'Tenant' => '-',
+        ];
+    }
+
     public function viewAny(User $user): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
+        if ($user->hasPermissionTo('viewAny Orgs')) {
             return true;
         }
-
-        // Owner: can view their own org
-        if ($user->hasRole('Owner') && $user->org_id) {
-            return true;
-        }
-
         return false;
     }
 
-    /**
-     * Determine if the user can view a specific organization
-     */
     public function view(User $user, Org $org): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
-            return true;
+        if (! $user->hasPermissionTo('view Orgs')) {
+            return false;
         }
 
-        // Owner: only their own org
-        if ($user->hasRole('Owner') && $user->org_id === $org->id) {
-            return true;
+        // Owner can only view their own org
+        if ($user->hasRole('Owner')) {
+            return $user->org_id === $org->id;
         }
 
-        return false;
+        return $this->checkOrgScope($user, $org);
     }
 
-    /**
-     * Determine if the user can create organizations
-     */
     public function create(User $user): bool
     {
-        // Only Admin can create orgs
-        return $user->hasRole('SuperAdmin') || $user->hasRole('Admin');
+        return $user->hasPermissionTo('create Orgs');
     }
 
-    /**
-     * Determine if the user can update an organization
-     */
     public function update(User $user, Org $org): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
-            return true;
+        if (! $user->hasPermissionTo('update Orgs')) {
+            return false;
         }
 
-        // Owner: only their own org
-        if ($user->hasRole('Owner') && $user->org_id === $org->id) {
-            return true;
+        if ($user->hasRole('Owner')) {
+            return $user->org_id === $org->id;
         }
 
-        return false;
+        return $this->checkOrgScope($user, $org);
     }
 
-    /**
-     * Determine if the user can delete an organization
-     */
     public function delete(User $user, Org $org): bool
     {
-        // Only Admin can delete orgs
-        return $user->hasRole('SuperAdmin') || $user->hasRole('Admin');
+        if (! $user->hasPermissionTo('delete Orgs')) {
+            return false;
+        }
+
+        return $this->checkOrgScope($user, $org);
     }
 }

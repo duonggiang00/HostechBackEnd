@@ -10,10 +10,23 @@ use App\Http\Resources\RoomResource;
 use App\Models\Room;
 use App\Services\RoomService;
 
+use Dedoc\Scramble\Attributes\Group; // Added
+
+/**
+ * Quản lý Phòng (Rooms)
+ * 
+ * API quản lý các phòng trong một tầng (Floor) của tòa nhà.
+ */
+#[Group('Quản lý Bất động sản')]
 class RoomController extends Controller
 {
     public function __construct(protected RoomService $service) {}
 
+    /**
+     * Danh sách phòng
+     * 
+     * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
+     */
     public function index(RoomIndexRequest $request)
     {
         $this->authorize('viewAny', Room::class);
@@ -26,6 +39,9 @@ class RoomController extends Controller
         return RoomResource::collection($paginator)->response()->setStatusCode(200);
     }
 
+    /**
+     * Tạo phòng mới
+     */
     public function store(RoomStoreRequest $request)
     {
         $this->authorize('create', Room::class);
@@ -38,6 +54,9 @@ class RoomController extends Controller
         return new RoomResource($room);
     }
 
+    /**
+     * Chi tiết phòng
+     */
     public function show(string $id)
     {
         $room = $this->service->find($id);
@@ -50,6 +69,9 @@ class RoomController extends Controller
         return new RoomResource($room);
     }
 
+    /**
+     * Cập nhật phòng
+     */
     public function update(RoomUpdateRequest $request, string $id)
     {
         $room = $this->service->find($id);
@@ -64,6 +86,9 @@ class RoomController extends Controller
         return new RoomResource($updated);
     }
 
+    /**
+     * Xóa phòng (Soft Delete)
+     */
     public function destroy(string $id)
     {
         $room = $this->service->find($id);
@@ -78,6 +103,9 @@ class RoomController extends Controller
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
 
+    /**
+     * Khôi phục phòng
+     */
     public function restore(string $id)
     {
         $room = $this->service->findTrashed($id);
@@ -92,6 +120,9 @@ class RoomController extends Controller
         return new RoomResource($room);
     }
 
+    /**
+     * Xóa vĩnh viễn phòng
+     */
     public function forceDelete(string $id)
     {
         $room = $this->service->findWithTrashed($id);

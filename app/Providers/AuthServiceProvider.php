@@ -35,5 +35,9 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Policies are registered via the $policies property
+
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return $user->hasRole('SuperAdmin') || $user->hasRole('Admin') ? true : null;
+        });
     }
 }

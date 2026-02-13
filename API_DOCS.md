@@ -4,6 +4,8 @@
 
 This API uses **Policy-based Authorization** combined with **Role-Based Access Control (RBAC)** using Spatie Laravel Permission.
 
+> **Note for Developers**: This project uses a **Dynamic RBAC System**. Permissions are defined directly in Policy files and synced to the database using `php artisan rbac:sync`. See `MODULE_GUIDE.md` for details.
+
 ---
 
 ## Table of Contents
@@ -23,6 +25,9 @@ This API uses **Policy-based Authorization** combined with **Role-Based Access C
 ```
 http://localhost:8000
 ```
+
+> **Interactive Documentation**: Access the auto-generated Swagger UI at:
+> [http://localhost:8000/docs/api](http://localhost:8000/docs/api)
 
 ---
 
@@ -1330,6 +1335,72 @@ The `with_trashed` parameter includes soft-deleted rooms in the response (defaul
 **DELETE** `/api/v1/rooms/{id}`
 
 **Authorization**: SuperAdmin, Admin, Owner, Manager (same org)
+
+---
+
+---
+
+## Audit Logs
+
+System-wide audit logging for tracking changes.
+
+### Get Audit Logs
+
+**GET** `/api/v1/audit-logs`
+
+**Authorization**: 
+- **SuperAdmin/Admin**: View all logs.
+- **Owner**: View logs belonging to their Organization.
+- **Manager/Staff/Tenant**: No access.
+
+**Query Parameters:**
+
+```
+?page=1&per_page=20
+&filter[subject_type]=App\Models\Room
+&filter[event]=created
+&filter[causer_id]={user_id}
+&sort=-created_at
+```
+
+**Response (200 OK):**
+
+```json
+{
+    "data": [
+        {
+            "id": "9b84ff3a-18b6...",
+            "log_name": "default",
+            "description": "updated",
+            "subject_type": "App\\Models\\Room",
+            "subject_id": "...",
+            "causer_type": "App\\Models\\User",
+            "causer_id": "...",
+            "properties": {
+                "old": {"name": "Old Room"},
+                "attributes": {"name": "New Room"}
+            },
+            "created_at": "2026-02-13T08:30:00.000000Z"
+        }
+    ]
+}
+```
+
+### Get Generic Log Details
+
+**GET** `/api/v1/audit-logs/{id}`
+
+**Authorization**: Same as list.
+
+**Response (200 OK):**
+
+```json
+{
+    "id": "9b84ff3a-18b6...",
+    "description": "created",
+    ...
+}
+```
 
 ---
 

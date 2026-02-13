@@ -2,128 +2,79 @@
 
 namespace App\Policies;
 
+use App\Contracts\RbacModuleProvider;
 use App\Models\Room;
 use App\Models\User;
+use App\Traits\HandlesOrgScope;
+use Illuminate\Auth\Access\Response;
 
-class RoomPolicy
+class RoomPolicy implements RbacModuleProvider
 {
-    /**
-     * Determine if the user can view rooms list
-     */
+    use HandlesOrgScope;
+
+    public static function getModuleName(): string
+    {
+        return 'Room';
+    }
+
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'CRUD',
+            'Manager' => 'CRUD',
+            'Staff' => 'RU',
+            'Tenant' => 'R',
+        ];
+    }
+
     public function viewAny(User $user): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
+        if ($user->hasPermissionTo('viewAny Room')) {
             return true;
         }
-
-        // Owner, Manager, Staff, Tenant can view in their org
-        if ($user->org_id) {
-            return true;
-        }
-
         return false;
     }
 
-    /**
-     * Determine if the user can view a specific room
-     */
     public function view(User $user, Room $room): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
-            return true;
-        }
-
-        // Must be in same org
-        if ($user->org_id !== $room->org_id) {
+        if (! $user->hasPermissionTo('view Room')) {
             return false;
         }
 
-        // Owner: all rooms in org
-        if ($user->hasRole('Owner')) {
-            return true;
+        if ($user->hasRole('Owner') || $user->hasRole('Manager') || $user->hasRole('Staff')) {
+            return $this->checkOrgScope($user, $room);
         }
 
-        // Manager & Staff: rooms in their org
-        if ($user->hasRole('Manager') || $user->hasRole('Staff')) {
-            return true;
-        }
-
-        // Tenant: can view rooms in their org (read-only)
         if ($user->hasRole('Tenant')) {
-            return true;
+            // Tenant can only view rooms they are assigned to (or just in their org for now, 
+            // relying on existing logic which was "view rooms in their org")
+            // The previous logic was: if ($user->hasRole('Tenant')) { return true; } 
+            return $this->checkOrgScope($user, $room);
         }
 
         return false;
     }
 
-    /**
-     * Determine if the user can create rooms
-     */
     public function create(User $user): bool
     {
-        // Admin, Owner, Manager can create
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin') || $user->hasRole('Owner') || $user->hasRole('Manager')) {
-            return true;
-        }
-
-        return false;
+        return $user->hasPermissionTo('create Room');
     }
 
-    /**
-     * Determine if the user can update a room
-     */
     public function update(User $user, Room $room): bool
     {
-        // Admin: all
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
-            return true;
-        }
-
-        // Must be in same org
-        if ($user->org_id !== $room->org_id) {
+        if (! $user->hasPermissionTo('update Room')) {
             return false;
         }
 
-        // Owner: all rooms in org
-        if ($user->hasRole('Owner')) {
-            return true;
-        }
-
-        // Manager: rooms in org
-        if ($user->hasRole('Manager')) {
-            return true;
-        }
-
-        // Staff: can update rooms in org
-        if ($user->hasRole('Staff')) {
-            return true;
-        }
-
-        return false;
+        return $this->checkOrgScope($user, $room);
     }
 
-    /**
-     * Determine if the user can delete a room
-     */
     public function delete(User $user, Room $room): bool
     {
-        // Admin and Owner can delete
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
-            return true;
+        if (! $user->hasPermissionTo('delete Room')) {
+            return false;
         }
 
-        // Owner in same org
-        if ($user->hasRole('Owner') && $user->org_id === $room->org_id) {
-            return true;
-        }
-
-        // Manager in same org
-        if ($user->hasRole('Manager') && $user->org_id === $room->org_id) {
-            return true;
-        }
-
-        return false;
+        return $this->checkOrgScope($user, $room);
     }
 }

@@ -10,8 +10,22 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\QueryBuilder\QueryBuilder;
 
+use Dedoc\Scramble\Attributes\Group; // Added
+
+/**
+ * Quản lý Người dùng
+ * 
+ * API cho phép quản lý tài khoản người dùng trong hệ thống.
+ * Bao gồm các chức năng tạo, xem, sửa, xóa và khôi phục tài khoản.
+ */
+#[Group('Tổ chức & Người dùng')]
 class UserController extends Controller
 {
+    /**
+     * Danh sách người dùng
+     * 
+     * Lấy danh sách người dùng có hỗ trợ phân trang và tìm kiếm.
+     */
     public function index()
     {
         $this->authorize('viewAny', User::class);
@@ -27,7 +41,12 @@ class UserController extends Controller
         return UserResource::collection($query->paginate(15))->response()->setStatusCode(200);
     }
 
-    public function store(UserStoreRequest $request)
+    /**
+     * Tạo người dùng mới
+     * 
+     * Tạo một tài khoản người dùng mới. Yêu cầu quyền Admin hoặc Owner.
+     */
+    public function store(StoreUserRequest $request)
     {
         $this->authorize('create', User::class);
 
@@ -41,6 +60,11 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    /**
+     * Chi tiết người dùng
+     * 
+     * Xem thông tin chi tiết của một người dùng cụ thể.
+     */
     public function show(string $id)
     {
         $user = User::find($id);
@@ -53,6 +77,11 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    /**
+     * Cập nhật người dùng
+     * 
+     * Cập nhật thông tin tài khoản người dùng.
+     */
     public function update(UserUpdateRequest $request, string $id)
     {
         $user = User::find($id);
@@ -73,6 +102,11 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    /**
+     * Xóa người dùng (Soft Delete)
+     * 
+     * Đưa tài khoản vào thùng rác tạm thời. Có thể khôi phục sau này.
+     */
     public function destroy(string $id)
     {
         $user = User::find($id);
@@ -87,6 +121,11 @@ class UserController extends Controller
         return response()->json(['message' => 'Deleted successfully'], 200);
     }
 
+    /**
+     * Khôi phục người dùng
+     * 
+     * Khôi phục tài khoản đã bị xóa tạm thời.
+     */
     public function restore(string $id)
     {
         $user = User::onlyTrashed()->find($id);
@@ -101,6 +140,11 @@ class UserController extends Controller
         return new UserResource($user);
     }
 
+    /**
+     * Xóa vĩnh viễn người dùng
+     * 
+     * Xóa hoàn toàn tài khoản khỏi hệ thống. Không thể khôi phục.
+     */
     public function forceDelete(string $id)
     {
         $user = User::withTrashed()->find($id);

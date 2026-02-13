@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Route;
 // - POST /api/auth/logout (uses auth:web for sessions)
 
 // For API clients using Sanctum tokens, provide a logout endpoint
+/**
+ * Đăng xuất
+ *
+ * Hủy bỏ token hiện tại, đăng xuất khỏi hệ thống.
+ * 
+ * @tags Xác thực (Auth)
+ */
 Route::middleware(['auth:sanctum'])->post('/auth/logout', function (Illuminate\Http\Request $request) {
     // Revoke current Sanctum token
     $request->user()?->currentAccessToken()?->delete();
@@ -46,4 +53,7 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::apiResource('rooms', RoomController::class);
     Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
     Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);
+
+    // Audit Logs
+    Route::apiResource('audit-logs', \App\Http\Controllers\Api\V1\AuditLogController::class)->only(['index', 'show']);
 });

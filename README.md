@@ -1,59 +1,116 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Hướng dẫn Cài đặt & Triển khai Dự án
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Tài liệu này hướng dẫn chi tiết các bước để cài đặt dự án từ source code trên GitHub về môi trường local.
 
-## About Laravel
+## 1. Yêu cầu hệ thống (Prerequisites)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Đảm bảo máy của bạn đã cài đặt các công cụ sau:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **PHP**: >= 8.2
+- **Composer**: Công cụ quản lý thư viện PHP.
+- **MySQL** hoặc **MariaDB**: Cơ sở dữ liệu.
+- **Node.js & NPM**: (Tùy chọn) Nếu cần build frontend assets.
+- **Git**: Để clone source code.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 2. Các bước cài đặt
 
-## Learning Laravel
+### Bước 1: Clone Source Code
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Mở terminal/command prompt và chạy lệnh sau để tải mã nguồn về:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+git clone <URL_CUA_REPO_GITHUB>
+cd <TEN_THU_MUC_DU_AN>
+```
 
-## Laravel Sponsors
+### Bước 2: Cài đặt Dependencies
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Cài đặt các thư viện PHP cần thiết thông qua Composer:
 
-### Premium Partners
+```bash
+composer install
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Bước 3: Cấu hình Môi trường
 
-## Contributing
+Copy file cấu hình mẫu `.env.example` thành `.env`:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+cp .env.example .env
+```
 
-## Code of Conduct
+Mở file `.env` và cập nhật thông tin kết nối cơ sở dữ liệu:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```ini
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=datn          # Tên database của bạn
+DB_USERNAME=root          # Username DB
+DB_PASSWORD=              # Password DB
+```
 
-## Security Vulnerabilities
+### Bước 4: Tạo Base Application Key
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+php artisan key:generate
+```
 
-## License
+### Bước 5: Migration & Seeding (Quan trọng)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Chạy migration để tạo bảng và seed dữ liệu mẫu (bao gồm Roles, Permissions, Admin User):
+
+```bash
+php artisan migrate --seed
+```
+
+> **Lưu ý:** Lệnh này sẽ chạy `DatabaseSeeder`, trong đó sẽ gọi `RbacSeeder` để thiết lập quyền hạn ban đầu.
+
+### Bước 6: Cấu hình RBAC (Phân quyền)
+
+Dự án sử dụng cơ chế **Dynamic RBAC**. Để đảm bảo tất cả các quyền (permissions) từ Policy được đồng bộ vào Database, hãy chạy lệnh sau:
+
+```bash
+php artisan rbac:sync
+```
+
+Lệnh này sẽ quét toàn bộ các file Policy trong `app/Policies` và tạo các quyền tương ứng (ví dụ: `viewAny Properties`, `create Users`...) nếu chưa tồn tại.
+
+### Bước 7: Khởi chạy Server
+
+```bash
+php artisan serve
+```
+
+Server sẽ chạy tại `http://127.0.0.1:8000`.
+
+## 3. Tài liệu API
+
+Dự án tích hợp sẵn **Scramble** để tự động tạo tài liệu API.
+
+- Truy cập: `http://127.0.0.1:8000/docs/api`
+- Tại đây bạn có thể xem danh sách API, tham số và test thử request.
+
+## 4. Các tài khoản mẫu (nếu có từ Seeder)
+
+Nếu bạn đã chạy `--seed`, hệ thống thường sẽ tạo sẵn một tài khoản Admin/SuperAdmin. Kiểm tra file `database/seeders/DatabaseSeeder.php` hoặc `UserSeeder.php` để biết thông tin đăng nhập mặc định (thường là `admin@example.com` / `password`).
+
+## 5. Xử lý sự cố thường gặp
+
+### Lỗi "Permission denied" (Linux/Mac)
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+
+### Lỗi thiếu bảng hoặc cột
+Hãy thử chạy lại migration:
+```bash
+php artisan migrate:refresh --seed
+```
+
+### Lỗi 403 Forbidden khi gọi API
+Đảm bảo User đã được gán Role hoặc Permission phù hợp. Kiểm tra lại bằng lệnh:
+```bash
+php artisan rbac:sync
+```
+Và kiểm tra bảng `model_has_roles` hoặc `model_has_permissions` trong DB.

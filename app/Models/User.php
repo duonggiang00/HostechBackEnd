@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\MultiTenant;
+use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -13,9 +14,12 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, HasRoles, HasUuids, MultiTenant, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasRoles, HasUuids, MultiTenant, Notifiable, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
+    
+    // Force Spatie Permission to use 'web' guard even for Sanctum auth
+    public $guard_name = 'web';
 
     protected $keyType = 'string';
 

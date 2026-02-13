@@ -9,8 +9,21 @@ use App\Http\Resources\FloorResource;
 use App\Models\Floor;
 use Spatie\QueryBuilder\QueryBuilder;
 
+use Dedoc\Scramble\Attributes\Group; // Added
+
+/**
+ * Quản lý Tầng (Floors)
+ * 
+ * API quản lý các tầng trong một tòa nhà (Property).
+ */
+#[Group('Quản lý Bất động sản')]
 class FloorController extends Controller
 {
+    /**
+     * Danh sách tầng
+     * 
+     * Lấy danh sách các tầng. Hỗ trợ lọc theo Property.
+     */
     public function index()
     {
         $this->authorize('viewAny', Floor::class);
@@ -26,6 +39,9 @@ class FloorController extends Controller
         return FloorResource::collection($query->paginate(15))->response()->setStatusCode(200);
     }
 
+    /**
+     * Tạo tầng mới
+     */
     public function store(FloorStoreRequest $request)
     {
         $this->authorize('create', Floor::class);
