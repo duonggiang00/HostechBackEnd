@@ -16,7 +16,7 @@ class RBACSeeder extends Seeder
         $this->command->info("\n📋 Bắt đầu khởi tạo RBAC...");
 
         // 1. Create System Roles (Not managed by specific module policies)
-        $systemRoles = ['SuperAdmin', 'Admin'];
+        $systemRoles = ['Admin'];
         foreach ($systemRoles as $roleName) {
             Role::firstOrCreate(['name' => $roleName]);
         }

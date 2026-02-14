@@ -20,7 +20,7 @@ class OrgPolicy implements RbacModuleProvider
     public static function getRolePermissions(): array
     {
         return [
-            'Owner' => 'RU',
+            'Owner' => 'CRUD',
             'Manager' => '-',
             'Staff' => '-',
             'Tenant' => '-',
@@ -43,7 +43,7 @@ class OrgPolicy implements RbacModuleProvider
 
         // Owner can only view their own org
         if ($user->hasRole('Owner')) {
-            return $user->org_id === $org->id;
+            return (string) $user->org_id === (string) $org->id;
         }
 
         return $this->checkOrgScope($user, $org);
@@ -61,7 +61,7 @@ class OrgPolicy implements RbacModuleProvider
         }
 
         if ($user->hasRole('Owner')) {
-            return $user->org_id === $org->id;
+            return (string) $user->org_id === (string) $org->id;
         }
 
         return $this->checkOrgScope($user, $org);
@@ -71,6 +71,11 @@ class OrgPolicy implements RbacModuleProvider
     {
         if (! $user->hasPermissionTo('delete Orgs')) {
             return false;
+        }
+
+        // Owner can only delete their own org (if they have permission)
+        if ($user->hasRole('Owner')) {
+            return (string) $user->org_id === (string) $org->id;
         }
 
         return $this->checkOrgScope($user, $org);

@@ -49,7 +49,7 @@ class RoleAccessTest extends TestCase
      */
     public function test_owner_can_create_property()
     {
-        $response = $this->actingAs($this->owner)->postJson('/api/v1/properties', [
+        $response = $this->actingAs($this->owner)->postJson('/api/properties', [
             'name' => 'Test Property',
             'code' => 'TEST-001',
             'org_id' => $this->org->id
@@ -61,7 +61,7 @@ class RoleAccessTest extends TestCase
     public function test_manager_cannot_create_property()
     {
         // Manager has 'RU' (Read, Update), not Create
-        $response = $this->actingAs($this->manager)->postJson('/api/v1/properties', [
+        $response = $this->actingAs($this->manager)->postJson('/api/properties', [
             'name' => 'Manager Property',
             'code' => 'MGR-001',
             'org_id' => $this->org->id
@@ -74,7 +74,7 @@ class RoleAccessTest extends TestCase
     {
         $property = Property::factory()->create(['org_id' => $this->org->id]);
 
-        $response = $this->actingAs($this->staff)->getJson("/api/v1/properties/{$property->id}");
+        $response = $this->actingAs($this->staff)->getJson("/api/properties/{$property->id}");
 
         $response->assertOk();
     }
@@ -82,8 +82,11 @@ class RoleAccessTest extends TestCase
     public function test_staff_cannot_update_property()
     {
         $property = Property::factory()->create(['org_id' => $this->org->id]);
+        
+        // Debug
+        // dump($this->staff->getAllPermissions()->pluck('name')->toArray());
 
-        $response = $this->actingAs($this->staff)->putJson("/api/v1/properties/{$property->id}", [
+        $response = $this->actingAs($this->staff)->putJson("/api/properties/{$property->id}", [
             'name' => 'Updated Name'
         ]);
 
@@ -95,7 +98,7 @@ class RoleAccessTest extends TestCase
      */
     public function test_owner_can_view_audit_logs()
     {
-        $response = $this->actingAs($this->owner)->getJson('/api/v1/audit-logs');
+        $response = $this->actingAs($this->owner)->getJson('/api/audit-logs');
         
         $response->assertOk();
     }
@@ -103,7 +106,7 @@ class RoleAccessTest extends TestCase
     public function test_manager_cannot_view_audit_logs()
     {
         // AuditLog Policy: only Owner/Admin can view
-        $response = $this->actingAs($this->manager)->getJson('/api/v1/audit-logs');
+        $response = $this->actingAs($this->manager)->getJson('/api/audit-logs');
 
         $response->assertForbidden();
     }
@@ -116,7 +119,7 @@ class RoleAccessTest extends TestCase
         $otherOrg = Org::factory()->create();
         $otherProperty = Property::factory()->create(['org_id' => $otherOrg->id]);
 
-        $response = $this->actingAs($this->owner)->getJson("/api/v1/properties/{$otherProperty->id}");
+        $response = $this->actingAs($this->owner)->getJson("/api/properties/{$otherProperty->id}");
 
         // Subject to Policy implementation checkOrgScope
         $response->assertForbidden(); // Or NotFound depending on logic

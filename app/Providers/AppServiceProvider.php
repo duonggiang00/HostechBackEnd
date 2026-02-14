@@ -20,7 +20,7 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Gate::define('viewApiDocs', function ($user = null) {
             // Allow access in local environment or if user is Admin/SuperAdmin
-            return app()->environment('local') || ($user && ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')));
+            return app()->environment('local') || ($user && $user->hasRole('Admin'));
         });
 
         \Dedoc\Scramble\Scramble::afterOpenApiGenerated(function (\Dedoc\Scramble\Support\Generator\OpenApi $openApi) {

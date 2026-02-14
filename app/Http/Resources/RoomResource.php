@@ -4,6 +4,21 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property string $id ID phòng
+ * @property string $code Mã phòng
+ * @property string $name Tên phòng
+ * @property string $type Loại phòng
+ * @property float $area Diện tích
+ * @property int $capacity Sức chứa
+ * @property float $base_price Giá cơ bản
+ * @property string $status Trạng thái
+ * @property string $description Mô tả
+ * @property array $amenities Tiện nghi
+ * @property array $utilities Dịch vụ
+ * @property string $created_at Thời gian tạo
+ * @property string $updated_at Thời gian cập nhật
+ */
 class RoomResource extends JsonResource
 {
     public function toArray($request): array

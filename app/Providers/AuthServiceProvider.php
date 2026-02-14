@@ -37,7 +37,7 @@ class AuthServiceProvider extends ServiceProvider
         // Policies are registered via the $policies property
 
         \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
-            return $user->hasRole('SuperAdmin') || $user->hasRole('Admin') ? true : null;
+            return $user->hasRole('Admin') ? true : null;
         });
     }
 }

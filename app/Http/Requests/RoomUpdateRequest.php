@@ -4,6 +4,18 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * @bodyParam code string Mã phòng. Example: P.101
+ * @bodyParam name string Tên phòng. Example: Phòng 101
+ * @bodyParam type string Loại phòng (studio, apartment, house, dormitory, other).
+ * @bodyParam area number Diện tích.
+ * @bodyParam capacity integer Sức chứa.
+ * @bodyParam base_price number Giá cơ bản.
+ * @bodyParam status string Trạng thái.
+ * @bodyParam description string Mô tả.
+ * @bodyParam amenities json Tiện nghi.
+ * @bodyParam utilities json Dịch vụ.
+ */
 class RoomUpdateRequest extends FormRequest
 {
     public function authorize(): bool

@@ -7,14 +7,43 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class PropertyService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
     {
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
-            ->defaultSort('name');
+            ->defaultSort('name')
+            ->withCount(['floors', 'rooms']);
+
+        if ($orgId) {
+            $query->where('org_id', $orgId);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
 
         if (request()->boolean('with_trashed')) {
             $query->withTrashed();
+        }
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    {
+        $query = QueryBuilder::for(Property::onlyTrashed())
+            ->allowedFilters($allowedFilters)
+            ->defaultSort('name')
+            ->withCount(['floors', 'rooms']);
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
         }
 
         return $query->paginate($perPage)->withQueryString();

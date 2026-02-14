@@ -27,29 +27,40 @@ Route::middleware(['auth:sanctum'])->post('/auth/logout', function (Illuminate\H
     return response()->json(['message' => 'Logged out successfully'], 200);
 });
 
+Route::middleware(['auth:sanctum'])->get('/auth/me', function (Illuminate\Http\Request $request) {
+    return $request->user();
+});
+
 // Protected API Routes
-Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
     // Organizations
+    Route::get('orgs/trash', [OrgController::class, 'trash']);
     Route::apiResource('orgs', OrgController::class);
     Route::post('orgs/{id}/restore', [OrgController::class, 'restore']);
     Route::delete('orgs/{id}/force', [OrgController::class, 'forceDelete']);
+    Route::get('orgs/{id}/properties', [OrgController::class, 'properties']);
+    Route::get('orgs/{id}/users', [OrgController::class, 'users']);
 
     // Users
+    Route::get('users/trash', [UserController::class, 'trash']);
     Route::apiResource('users', UserController::class);
     Route::post('users/{id}/restore', [UserController::class, 'restore']);
     Route::delete('users/{id}/force', [UserController::class, 'forceDelete']);
 
     // Properties
+    Route::get('properties/trash', [PropertyController::class, 'trash']);
     Route::apiResource('properties', PropertyController::class);
     Route::post('properties/{id}/restore', [PropertyController::class, 'restore']);
     Route::delete('properties/{id}/force', [PropertyController::class, 'forceDelete']);
 
     // Floors
+    Route::get('floors/trash', [FloorController::class, 'trash']);
     Route::apiResource('floors', FloorController::class);
     Route::post('floors/{id}/restore', [FloorController::class, 'restore']);
     Route::delete('floors/{id}/force', [FloorController::class, 'forceDelete']);
 
     // Rooms
+    Route::get('rooms/trash', [RoomController::class, 'trash']);
     Route::apiResource('rooms', RoomController::class);
     Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
     Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);

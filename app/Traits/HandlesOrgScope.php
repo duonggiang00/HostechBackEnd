@@ -16,7 +16,7 @@ trait HandlesOrgScope
      */
     protected function checkOrgScope(User $user, Model $model): bool
     {
-        if ($user->hasRole('SuperAdmin') || $user->hasRole('Admin')) {
+        if ($user->hasRole('Admin')) {
             return true;
         }
 

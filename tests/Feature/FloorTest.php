@@ -2,7 +2,6 @@
 
 use App\Models\Org;
 use App\Models\Property;
-use App\Models\Room;
 use App\Models\Floor;
 use App\Models\User;
 use Spatie\Permission\Models\Role;
@@ -16,75 +15,68 @@ beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
 });
 
-test('admin can crud room', function () {
+test('admin can crud floor', function () {
     $admin = User::factory()->admin()->create();
     $org = Org::factory()->create();
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
     actingAs($admin);
 
     // Create
-    $response = postJson('/api/rooms', [
+    $response = postJson('/api/floors', [
         'property_id' => $property->id,
-        'floor_id' => $floor->id,
-        'code' => 'RM-TEST-01',
-        'name' => 'Test Room',
-        'base_price' => 500000,
-        'status' => 'available'
+        'code' => 'FL-TEST-01',
+        'name' => 'Test Floor',
+        'sort_order' => 1
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
 
     // Read
-    getJson("/api/rooms/{$id}")
+    getJson("/api/floors/{$id}")
         ->assertStatus(200)
-        ->assertJsonFragment(['name' => 'Test Room']);
+        ->assertJsonFragment(['name' => 'Test Floor']);
 
     // Update
-    putJson("/api/rooms/{$id}", ['name' => 'Updated Name'])
+    putJson("/api/floors/{$id}", ['name' => 'Updated Floor'])
         ->assertStatus(200)
-        ->assertJsonFragment(['name' => 'Updated Name']);
+        ->assertJsonFragment(['name' => 'Updated Floor']);
 
     // Delete
-    deleteJson("/api/rooms/{$id}")->assertStatus(200);
+    deleteJson("/api/floors/{$id}")->assertStatus(200);
 
     // Trash
-    getJson('/api/rooms/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
+    getJson('/api/floors/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
 });
 
-test('owner can crud room within org', function () {
+test('owner can crud floor within org', function () {
     $org = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-
 
     actingAs($owner);
 
     // Create
-    $response = postJson('/api/rooms', [
+    $response = postJson('/api/floors', [
         'property_id' => $property->id,
-        'floor_id' => $floor->id,
-        'code' => 'RM-OWNER-01',
-        'name' => 'Owner Room',
-        'base_price' => 100,
-        'status' => 'available'
+        'code' => 'FL-OWNER-01',
+        'name' => 'Owner Floor',
+        'sort_order' => 1
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
 
     // Update
-    putJson("/api/rooms/{$id}", ['name' => 'Owner Updated'])
+    putJson("/api/floors/{$id}", ['name' => 'Owner Updated'])
         ->assertStatus(200);
 
     // Delete
-    deleteJson("/api/rooms/{$id}")->assertStatus(200);
+    deleteJson("/api/floors/{$id}")->assertStatus(200);
 });
 
-test('owner cannot access other org room', function () {
+test('owner cannot access other org floor', function () {
     $org1 = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org1->id]);
     $role = Role::firstOrCreate(['name' => 'Owner']);
@@ -93,10 +85,8 @@ test('owner cannot access other org room', function () {
     $org2 = Org::factory()->create();
     $prop2 = Property::factory()->create(['org_id' => $org2->id]);
     $floor2 = Floor::factory()->create(['property_id' => $prop2->id, 'org_id' => $org2->id]);
-    $room2 = Room::factory()->create(['floor_id' => $floor2->id, 'property_id' => $prop2->id, 'org_id' => $org2->id]);
 
     actingAs($owner)
-        ->getJson("/api/rooms/{$room2->id}")
+        ->getJson("/api/floors/{$floor2->id}")
         ->assertStatus(403);
 });
-

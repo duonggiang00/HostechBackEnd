@@ -32,11 +32,49 @@ class PropertyController extends Controller
         $this->authorize('viewAny', Property::class);
 
         $perPage = (int) $request->query('per_page', 15);
-        $allowed = ['name', 'code'];
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 15;
+        }
 
-        $paginator = $this->service->paginate($allowed, $perPage);
+        $allowed = ['name', 'code'];
+        $search = $request->input('search');
+
+        // Security: Filter by Org for non-Admin
+        $user = $request->user();
+        if (! $user->hasRole('Admin') && $user->org_id) {
+            $request->merge(['org_id' => $user->org_id]); // Force filter in request? 
+            // Better to pass to service explicitly or modify service to accept orgId
+            $paginator = $this->service->paginate($allowed, $perPage, $search, $user->org_id);
+        } else {
+            // Admin or no org (Admin)
+            // If Admin wants to filter by org_id, they can pass it
+            $orgId = $request->input('org_id');
+            $paginator = $this->service->paginate($allowed, $perPage, $search, $orgId);
+        }
 
         return PropertyResource::collection($paginator)->response()->setStatusCode(200);
+    }
+
+    /**
+     * Danh sách bất động sản đã xóa (Thùng rác)
+     * 
+     * Lấy danh sách bất động sản đã bị xóa tạm thời.
+     */
+    public function trash(PropertyIndexRequest $request) 
+    {
+        $this->authorize('viewAny', Property::class);
+
+        $perPage = (int) $request->query('per_page', 15);
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 15;
+        }
+
+        $allowed = ['name', 'code'];
+        $search = $request->input('search');
+
+        $properties = $this->service->paginateTrash($allowed, $perPage, $search);
+
+        return PropertyResource::collection($properties)->response()->setStatusCode(200);
     }
 
     /**
@@ -55,7 +93,7 @@ class PropertyController extends Controller
         if ($user->org_id) {
             $data['org_id'] = $user->org_id;
         } 
-        // If SuperAdmin/Admin (no org_id), try getting from request or header
+        // If Admin (no org_id), try getting from request or header
         else {
             $data['org_id'] = $request->input('org_id') ?? $request->header('X-Org-Id');
         }
@@ -80,6 +118,13 @@ class PropertyController extends Controller
         }
 
         $this->authorize('view', $property);
+
+        // Check if property has floors
+        if ($property->floors()->exists()) {
+            $property->load(['floors.rooms']); // Optional: load rooms within floors if desired, or just 'floors'
+        } else {
+            $property->load('rooms');
+        }
 
         return new PropertyResource($property);
     }

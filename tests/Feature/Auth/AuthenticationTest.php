@@ -48,7 +48,7 @@ class AuthenticationTest extends TestCase
         // Verify user has Tenant role
         $user = User::where('email', 'john@example.com')->first();
         $this->assertTrue($user->hasRole('Tenant'));
-        $this->assertTrue($user->hasPermissionTo('read Room'));
+        $this->assertTrue($user->hasPermissionTo('view Room'));
     }
 
     /**
@@ -133,7 +133,7 @@ class AuthenticationTest extends TestCase
         $user = User::where('email', 'john@example.com')->first();
 
         // Should have only read room permission
-        $this->assertTrue($user->hasPermissionTo('read Room'));
+        $this->assertTrue($user->hasPermissionTo('view Room'));
         $this->assertFalse($user->hasPermissionTo('create Room'));
     }
 
@@ -241,7 +241,7 @@ class AuthenticationTest extends TestCase
         $this->assertNotEmpty($token);
 
         // Verify token works for authenticated requests
-        $authResponse = $this->getJson('/api/v1/users', [
+        $authResponse = $this->getJson('/api/users', [
             'Authorization' => "Bearer {$token}",
         ]);
 
@@ -341,5 +341,23 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertStatus(401);
+    }
+    /**
+     * Test authenticated user can get profile via /api/auth/me
+     */
+    public function test_authenticated_user_can_get_profile(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->getJson('/api/auth/me', [
+            'Authorization' => "Bearer {$token}",
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'id' => $user->id,
+            'email' => $user->email,
+        ]);
     }
 }

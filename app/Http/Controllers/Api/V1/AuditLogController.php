@@ -35,7 +35,7 @@ class AuditLogController extends Controller
         // (SuperAdmin/Admin bypass is handled in AuthServiceProvider Gate::before or Policy, 
         // but for filtering list we need explicit check here to filter results)
         $user = $request->user();
-        if (! $user->hasRole('SuperAdmin') && ! $user->hasRole('Admin')) {
+        if (! $user->hasRole('Admin')) {
              if ($user->org_id) {
                  $query->where('org_id', $user->org_id);
              } else {

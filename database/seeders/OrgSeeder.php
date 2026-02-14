@@ -17,12 +17,13 @@ class OrgSeeder extends Seeder
         $this->command->info('📊 BẮT ĐẦU SEED DỮ LIỆU');
         $this->command->info("================================\n");
 
-        // Create system-wide SuperAdmin
+        // Create system-wide Admin (Single System Administrator)
         $this->command->info('👤 Tạo tài khoản Administrator toàn quyền hệ thống...');
-        User::factory()->superAdmin()->create([
+        User::factory()->admin()->create([
+            'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
             'org_id' => null,
         ]);
-        $this->command->line("✅ SuperAdmin: admin@example.com (Mật khẩu: 12345678)\n");
+        $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgCount = 3;
         $usersPerOrg = 5;
@@ -39,24 +40,23 @@ class OrgSeeder extends Seeder
             $this->command->info("\n👥 Tạo người dùng cho tổ chức: <fg=yellow>{$org->name}</>");
             $this->command->line("└─ Số lượng người dùng: <fg=cyan>$usersPerOrg</>");
 
+            // Note: We no longer create "Admin" per org. Roles start from Owner.
+            // Adjust usersPerOrg logic if exact number needed, but usually factory count is just total.
+            
             User::factory($usersPerOrg)
                 ->state(['org_id' => $org->id])
                 ->create()
                 ->each(function (User $user, $index) {
                     // Assign roles based on user index
                     if ($index === 0) {
-                        $user->assignRole('Admin');
-                        $user->update(['email' => 'admin.'.fake()->unique()->slug().'@org.example.com']);
-                        $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=red>Admin</>");
-                    } elseif ($index === 1) {
                         $user->assignRole('Owner');
                         $user->update(['email' => 'owner.'.fake()->unique()->slug().'@org.example.com']);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=magenta>Owner</>");
-                    } elseif ($index === 2) {
+                    } elseif ($index === 1) {
                         $user->assignRole('Manager');
                         $user->update(['email' => 'manager.'.fake()->unique()->slug().'@org.example.com']);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=blue>Manager</>");
-                    } elseif ($index === 3) {
+                    } elseif ($index === 2) {
                         $user->assignRole('Staff');
                         $user->update(['email' => 'staff.'.fake()->unique()->slug().'@org.example.com']);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=green>Staff</>");
@@ -106,7 +106,7 @@ class OrgSeeder extends Seeder
         $this->command->info("\n================================");
         $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
         $this->command->info('================================');
-        $this->command->line('✅ SuperAdmin: <fg=cyan>1</> (admin@example.com 🔓)');
+        $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
         $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
         $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
         $this->command->line('✅ Bất động sản: <fg=cyan>'.($orgCount * $propertiesPerOrg).'</>');

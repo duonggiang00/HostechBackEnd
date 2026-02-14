@@ -2,16 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\Room;
+use App\Models\Floor;
 use Spatie\QueryBuilder\QueryBuilder;
 
-class RoomService
+class FloorService
 {
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
     {
-        $query = QueryBuilder::for(Room::class)
+        $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
-            ->defaultSort('code');
+            ->defaultSort('sort_order')
+            ->withCount('rooms');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -24,10 +25,6 @@ class RoomService
             $query->where('property_id', $propertyId);
         }
 
-        if ($floorId = request()->input('floor_id')) {
-            $query->where('floor_id', $floorId);
-        }
-
         if (request()->boolean('with_trashed')) {
             $query->withTrashed();
         }
@@ -37,9 +34,10 @@ class RoomService
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
     {
-        $query = QueryBuilder::for(Room::onlyTrashed())
+        $query = QueryBuilder::for(Floor::onlyTrashed())
             ->allowedFilters($allowedFilters)
-            ->defaultSort('code');
+            ->defaultSort('sort_order')
+            ->withCount('rooms');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -51,41 +49,41 @@ class RoomService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function find(string $id): ?Room
+    public function find(string $id): ?Floor
     {
-        return Room::find($id);
+        return Floor::find($id);
     }
 
-    public function findTrashed(string $id): ?Room
+    public function findTrashed(string $id): ?Floor
     {
-        return Room::onlyTrashed()->find($id);
+        return Floor::onlyTrashed()->find($id);
     }
 
-    public function findWithTrashed(string $id): ?Room
+    public function findWithTrashed(string $id): ?Floor
     {
-        return Room::withTrashed()->find($id);
+        return Floor::withTrashed()->find($id);
     }
 
-    public function create(array $data): Room
+    public function create(array $data): Floor
     {
-        return Room::create($data);
+        return Floor::create($data);
     }
 
-    public function update(string $id, array $data): ?Room
+    public function update(string $id, array $data): ?Floor
     {
-        $room = $this->find($id);
-        if ($room) {
-            $room->update($data);
+        $floor = $this->find($id);
+        if ($floor) {
+            $floor->update($data);
         }
 
-        return $room;
+        return $floor;
     }
 
     public function delete(string $id): bool
     {
-        $room = $this->find($id);
-        if ($room) {
-            return $room->delete();
+        $floor = $this->find($id);
+        if ($floor) {
+            return $floor->delete();
         }
 
         return false;
@@ -93,9 +91,9 @@ class RoomService
 
     public function restore(string $id): bool
     {
-        $room = $this->findTrashed($id);
-        if ($room) {
-            return $room->restore();
+        $floor = $this->findTrashed($id);
+        if ($floor) {
+            return $floor->restore();
         }
 
         return false;
@@ -103,9 +101,9 @@ class RoomService
 
     public function forceDelete(string $id): bool
     {
-        $room = $this->findWithTrashed($id);
-        if ($room) {
-            return $room->forceDelete();
+        $floor = $this->findWithTrashed($id);
+        if ($floor) {
+            return $floor->forceDelete();
         }
 
         return false;

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('properties', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('org_id');
+            $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete();
             $table->string('code', 50)->nullable();
             $table->string('name', 255);
             $table->text('address')->nullable();
@@ -21,10 +21,9 @@ return new class extends Migration
             $table->integer('default_cutoff_day')->default(30);
             $table->json('bank_accounts')->nullable();
             $table->timestamps();
-            $table->timestamp('deleted_at')->nullable();
+            $table->softDeletes();
 
             $table->unique(['org_id', 'code']);
-            $table->index(['org_id']);
         });
     }
 

@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('rooms', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('org_id');
-            $table->uuid('property_id');
-            $table->uuid('floor_id')->nullable();
+            $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete();
+            $table->foreignUuid('property_id')->constrained('properties')->cascadeOnDelete();
+            $table->foreignUuid('floor_id')->nullable()->constrained('floors')->nullOnDelete();
             $table->string('code', 50);
             $table->string('name', 255);
             $table->string('type', 20)->default('apartment');
@@ -25,13 +25,10 @@ return new class extends Migration
             $table->json('amenities')->nullable();
             $table->json('utilities')->nullable();
             $table->timestamps();
-            $table->timestamp('deleted_at')->nullable();
+            $table->softDeletes();
 
             $table->unique(['property_id', 'code']);
-            $table->index(['org_id']);
-            $table->index(['property_id']);
             $table->index(['property_id', 'status']);
-            $table->index(['floor_id']);
             $table->index(['status']);
         });
     }

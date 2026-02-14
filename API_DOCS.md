@@ -59,8 +59,7 @@ The system implements 6 roles with different permission scopes:
 
 | Role           | Scope             | Access Level                                     |
 | -------------- | ----------------- | ------------------------------------------------ |
-| **SuperAdmin** | System-wide       | All resources, all actions, bypass org isolation |
-| **Admin**      | Organization-wide | All resources within organization, all actions   |
+| **Admin**      | System-wide       | All resources, all actions, bypass org isolation |
 | **Owner**      | Organization-wide | Full CRUD for Users, Properties, Floors, Rooms   |
 | **Manager**    | Property-level    | CRUD for Floors & Rooms, Update Properties       |
 | **Staff**      | Property-level    | Read Properties/Floors/Rooms, Update Rooms       |
@@ -73,51 +72,51 @@ Each endpoint checks authorization through Laravel Policies:
 #### Users Module
 
 ```
-viewAny   : SuperAdmin, Admin, Owner, Manager
-view      : SuperAdmin, Admin, Owner (same org), Manager (same org)
-create    : SuperAdmin, Admin, Owner
-update    : SuperAdmin, Admin, Owner (same org)
-delete    : SuperAdmin, Admin, Owner (same org)
+viewAny   : Admin, Owner, Manager
+view      : Admin, Owner (same org), Manager (same org)
+create    : Admin, Owner
+update    : Admin, Owner (same org)
+delete    : Admin, Owner (same org)
 ```
 
 #### Organizations Module
 
 ```
-viewAny   : SuperAdmin, Admin, Owner
-view      : SuperAdmin, Admin, Owner (own org)
-create    : SuperAdmin, Admin only
-update    : SuperAdmin, Admin, Owner (own org)
-delete    : SuperAdmin, Admin, Owner (own org)
+viewAny   : Admin, Owner
+view      : Admin, Owner (own org)
+create    : Admin only
+update    : Admin, Owner (own org)
+delete    : Admin, Owner (own org)
 ```
 
 #### Properties Module
 
 ```
-viewAny   : SuperAdmin, Admin, Owner, Manager, Staff
-view      : SuperAdmin, Admin, Owner, Manager, Staff (same org)
-create    : SuperAdmin, Admin, Owner
-update    : SuperAdmin, Admin, Owner, Manager (same org)
-delete    : SuperAdmin, Admin, Owner (same org)
+viewAny   : Admin, Owner, Manager, Staff
+view      : Admin, Owner, Manager, Staff (same org)
+create    : Admin, Owner
+update    : Admin, Owner, Manager (same org)
+delete    : Admin, Owner (same org)
 ```
 
 #### Floors Module
 
 ```
-viewAny   : SuperAdmin, Admin, Owner, Manager, Staff
-view      : SuperAdmin, Admin, Owner, Manager, Staff (same org)
-create    : SuperAdmin, Admin, Owner, Manager
-update    : SuperAdmin, Admin, Owner, Manager
-delete    : SuperAdmin, Admin, Owner, Manager (same org)
+viewAny   : Admin, Owner, Manager, Staff
+view      : Admin, Owner, Manager, Staff (same org)
+create    : Admin, Owner, Manager
+update    : Admin, Owner, Manager
+delete    : Admin, Owner, Manager (same org)
 ```
 
 #### Rooms Module
 
 ```
-viewAny   : SuperAdmin, Admin, Owner, Manager, Staff, Tenant (same org)
-view      : SuperAdmin, Admin, Owner, Manager, Staff, Tenant (same org)
-create    : SuperAdmin, Admin, Owner, Manager
-update    : SuperAdmin, Admin, Owner, Manager, Staff (same org)
-delete    : SuperAdmin, Admin, Owner, Manager (same org)
+viewAny   : Admin, Owner, Manager, Staff, Tenant (same org)
+view      : Admin, Owner, Manager, Staff, Tenant (same org)
+create    : Admin, Owner, Manager
+update    : Admin, Owner, Manager, Staff (same org)
+delete    : Admin, Owner, Manager (same org)
 ```
 
 ### Authorization Errors
@@ -519,7 +518,7 @@ curl -X GET "http://localhost:8000/api/v1/orgs?page=1&per_page=15" \
 
 **GET** `/api/v1/orgs/{id}`
 
-**Authorization**: SuperAdmin, Admin, Owner (own org)
+ (own org)
 
 **Response (200 OK):**
 
@@ -539,7 +538,7 @@ curl -X GET "http://localhost:8000/api/v1/orgs?page=1&per_page=15" \
 
 **PUT** `/api/v1/orgs/{id}`
 
-**Authorization**: SuperAdmin, Admin, Owner (own org)
+ (own org)
 
 **Request Body:**
 
@@ -627,7 +626,7 @@ The `with_trashed` parameter includes soft-deleted users in the response (defaul
 
 **GET** `/api/v1/users`
 
-**Authorization**: SuperAdmin, Admin, Owner, Manager
+, Manager
 
 **Query Parameters:**
 
@@ -672,7 +671,7 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **POST** `/api/v1/users`
 
-**Authorization**: SuperAdmin, Admin, Owner only
+ only
 
 **Request Body:**
 
@@ -707,7 +706,7 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **GET** `/api/v1/users/{id}`
 
-**Authorization**: SuperAdmin, Admin, Owner (same org), Manager (same org)
+ (same org), Manager (same org)
 
 **Response (200 OK):**
 
@@ -730,7 +729,7 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **PUT** `/api/v1/users/{id}`
 
-**Authorization**: SuperAdmin, Admin, Owner (same org)
+ (same org)
 
 **Request Body:**
 
@@ -761,7 +760,7 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **DELETE** `/api/v1/users/{id}`
 
-**Authorization**: SuperAdmin, Admin, Owner (same org)
+ (same org)
 
 **Response (200 OK):**
 
@@ -775,7 +774,7 @@ curl -X GET "http://localhost:8000/api/v1/users?page=1&per_page=15" \
 
 **POST** `/api/v1/users/{id}/restore`
 
-**Authorization**: SuperAdmin, Admin, Owner (same org)
+ (same org)
 
 **Response (200 OK):**
 

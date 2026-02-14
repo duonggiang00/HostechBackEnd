@@ -36,6 +36,33 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 
+## Project Architecture (Strict Enforcement)
+
+### 1. Service Layer Pattern
+- **Logic**: All business logic MUST be in `App\Services`. Controllers should only handle request parsing and response formatting.
+- **Naming**: `ModelNameService` (e.g., `OrgService`, `UserService`).
+- **Dependency Injection**: Inject services into controllers.
+
+### 2. Role-Based Access Control (RBAC)
+- **Engine**: Spatie Laravel Permission.
+- **Dynamic Permissions**: All Policies MUST implement `App\Contracts\RbacModuleProvider`.
+- **Sync**: Run `php artisan rbac:sync` to register permissions defined in Policies.
+- **Scopes**:
+    - `Admin`: System-wide access (Super User replacement).
+    - `Owner`: Organization-wide access.
+    - `Manager/Staff`: Property-level access.
+- **Traits**: Use `HandlesOrgScope` in Policies to enforce ownership checks.
+
+### 3. Multi-tenancy
+- **Models**: Tenant-scoped models MUST use `App\Models\Concerns\MultiTenant`.
+- **Foreign Keys**: `org_id` is the tenant key.
+
+### 4. API Standardization
+- **Documentation**: Use `Dedoc\Scramble\Attributes\Group` in Controllers.
+- **Validation**: MANDATORY use of FormRequests (`App\Http\Requests`).
+- **Responses**: MANDATORY use of Eloquent Resources (`App\Http\Resources`).
+- **Filtering**: Services should support standardized filtering (e.g., `allowedFilters` via Spatie QueryBuilder or manual request checks).
+
 ## Frontend Bundling
 
 - If the user doesn't see a frontend change reflected in the UI, it could mean they need to run `npm run build`, `npm run dev`, or `composer run dev`. Ask them.

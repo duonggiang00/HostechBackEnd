@@ -6,7 +6,7 @@ Tài liệu này hướng dẫn chi tiết các bước để cài đặt dự �
 
 Đảm bảo máy của bạn đã cài đặt các công cụ sau:
 
-- **PHP**: >= 8.2
+- **PHP**: >= 8.3
 - **Composer**: Công cụ quản lý thư viện PHP.
 - **MySQL** hoặc **MariaDB**: Cơ sở dữ liệu.
 - **Node.js & NPM**: (Tùy chọn) Nếu cần build frontend assets.
@@ -93,7 +93,9 @@ Dự án tích hợp sẵn **Scramble** để tự động tạo tài liệu API
 
 ## 4. Các tài khoản mẫu (nếu có từ Seeder)
 
-Nếu bạn đã chạy `--seed`, hệ thống thường sẽ tạo sẵn một tài khoản Admin/SuperAdmin. Kiểm tra file `database/seeders/DatabaseSeeder.php` hoặc `UserSeeder.php` để biết thông tin đăng nhập mặc định (thường là `admin@example.com` / `password`).
+Nếu bạn đã chạy `--seed`, hệ thống sẽ tạo sẵn tài khoản `Admin` hệ thống (thay thế cho SuperAdmin cũ).
+- **Admin System**: `admin@example.com` / `password` (Quyền cao nhất, quản lý toàn hệ thống).
+- **Owner Sample**: `owner@example.com` / `password` (Chủ sở hữu, quản lý 1 Organization).
 
 ## 5. Xử lý sự cố thường gặp
 

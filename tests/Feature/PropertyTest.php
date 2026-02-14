@@ -1,43 +1,88 @@
 <?php
 
+use App\Models\User;
 use App\Models\Org;
 use App\Models\Property;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
-use Tests\TestCase;
+use function Pest\Laravel\actingAs;
+use function Pest\Laravel\getJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
+use function Pest\Laravel\deleteJson;
 
-class PropertyTest extends TestCase
-{
-    use RefreshDatabase;
+beforeEach(function () {
+    $this->seed(\Database\Seeders\RBACSeeder::class);
+});
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
-    }
+test('admin can crud property', function () {
+    $admin = User::factory()->admin()->create();
+    $org = Org::factory()->create();
 
-    public function test_returns_paginated_properties_for_tenant(): void
-    {
-        $org = Org::create(['id' => (string) Str::uuid(), 'name' => 'Tenant A']);
+    actingAs($admin);
 
-        // Create a user with Owner role (has property viewing permission)
-        $user = User::factory()->create(['org_id' => $org->id]);
-        $user->assignRole('Owner');
-        $token = $user->createToken('api-token')->plainTextToken;
+    // Create
+    $response = postJson('/api/properties', [
+        'org_id' => $org->id,
+        'code' => 'PROP-TEST-01',
+        'name' => 'Test Property',
+        'status' => 'active',
+        'type' => 'apartment'
+    ]);
+    $response->assertStatus(201);
+    $id = $response->json('data.id');
 
-        Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P1', 'name' => 'Prop 1']);
-        Property::create(['id' => (string) Str::uuid(), 'org_id' => $org->id, 'code' => 'P2', 'name' => 'Prop 2']);
+    // Read
+    getJson("/api/properties/{$id}")
+        ->assertStatus(200)
+        ->assertJsonFragment(['name' => 'Test Property']);
 
-        $response = $this
-            ->withHeaders([
-                'X-Org-Id' => $org->id,
-                'Authorization' => "Bearer {$token}",
-            ])
-            ->getJson('/api/v1/properties');
+    // Update
+    putJson("/api/properties/{$id}", ['name' => 'Updated Name'])
+        ->assertStatus(200)
+        ->assertJsonFragment(['name' => 'Updated Name']);
 
-        $response->assertStatus(200);
-        $response->assertJsonStructure(['data', 'links', 'meta']);
-        expect($response->json('meta.per_page'))->toBe(15);
-    }
-}
+    // Delete
+    deleteJson("/api/properties/{$id}")->assertStatus(200);
+
+    // Trash
+    getJson('/api/properties/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
+});
+
+test('owner can crud property within org', function () {
+    $org = Org::factory()->create();
+    $owner = User::factory()->create(['org_id' => $org->id]);
+    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $owner->assignRole($role);
+
+    actingAs($owner);
+
+    // Create
+    $response = postJson('/api/properties', [
+        'code' => 'PROP-OWNER-01',
+        'name' => 'Owner Property',
+        'status' => 'active',
+        'type' => 'office'
+    ]);
+    $response->assertStatus(201);
+    $id = $response->json('data.id');
+
+    // Update
+    putJson("/api/properties/{$id}", ['name' => 'Owner Updated'])
+        ->assertStatus(200);
+
+    // Delete
+    deleteJson("/api/properties/{$id}")->assertStatus(200);
+});
+
+test('owner cannot access other org property', function () {
+    $org1 = Org::factory()->create();
+    $owner = User::factory()->create(['org_id' => $org1->id]);
+    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $owner->assignRole($role);
+
+    $org2 = Org::factory()->create();
+    $prop2 = Property::factory()->create(['org_id' => $org2->id]);
+
+    actingAs($owner)
+        ->getJson("/api/properties/{$prop2->id}")
+        ->assertStatus(403);
+});

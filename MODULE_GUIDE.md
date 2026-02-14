@@ -77,34 +77,61 @@ namespace App\Services;
 
 use App\Models\Contract;
 use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
 
 class ContractService
 {
-    // Hỗ trợ Filter & Sort & Pagination
-    public function paginate(array $allowedFilters = [], int $perPage = 15)
+    /**
+     * Paginate with Search & Filter
+     * 
+     * @param array $allowedFilters param cho Spatie QueryBuilder
+     * @param int $perPage
+     * @param string|null $search Search term
+     */
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
     {
         $query = QueryBuilder::for(Contract::class)
             ->allowedFilters($allowedFilters)
             ->defaultSort('-created_at');
+
+        // 1. Manual Search Logic
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Manual Top-level Filters (Important!)
+        // Handle explicit params like ?org_id=... if needed directly
+        if ($orgId = request()->input('org_id')) {
+            $query->where('org_id', $orgId);
+        }
+
+        // 3. Global Scopes (MultiTenant) are applied automatically by Model Trait
 
         return $query->paginate($perPage)->withQueryString();
     }
 
     public function create(array $data): Contract
     {
-        // Có thể thêm logic validate business rule tại đây
         return Contract::create($data);
     }
 
     public function update(string $id, array $data): ?Contract
     {
-        $contract = Contract::find($id);
+        $contract = $this->find($id);
         if ($contract) {
             $contract->update($data);
         }
         return $contract;
     }
     
+    public function find(string $id): ?Contract
+    {
+        return Contract::find($id);
+    }
+
     // ... delete, restore impl
 }
 ```

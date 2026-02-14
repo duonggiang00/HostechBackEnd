@@ -1,110 +1,44 @@
-Admin → Toàn hệ thống (bypass mọi kiểm soát)
+# Role-Based Access Control (RBAC) System
 
-Owner → Toàn quyền trong phạm vi Org
+This system uses a **Dynamic Permission** model powered by Spatie Laravel Permission.
 
-Manager → Toàn quyền trong phạm vi Property
+## 1. Role Hierarchy & Scope
 
-Staff → Một số quyền hạn chế trong Property
+| Role | Scope | Description |
+| :--- | :--- | :--- |
+| **Admin** | **System-wide** | Super User. Bypasses all scope checks. Can manage everything. |
+| **Owner** | **Organization** | Full control over a single Organization and its resources. |
+| **Manager** | **Property** | Can manage specific Properties (Floors, Rooms) assigned to them. |
+| **Staff** | **Property** | Limited operational access (View, Update status) within a Property. |
+| **Tenant** | **Room** | Customer level. Can only view their assigned Room/Contract. |
 
-Tenant → Chỉ xem Room
+## 2. Permission Matrix (CRUD)
 
-1️⃣ Phân cấp Scope
-System
- └── Organization (Org)
-      └── Property
-           └── Floor
-                └── Room
+| Module \ Role | Admin | Owner (Org) | Manager (Prop) | Staff (Prop) | Tenant (Room) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Users** | * | CRUD | R | - | - |
+| **Organizations** | * | R, U | - | - | - |
+| **Properties** | * | CRUD | R, U | R | - |
+| **Floors** | * | CRUD | CRUD | R | - |
+| **Rooms** | * | CRUD | CRUD | R, U | R |
 
-2️⃣ Định nghĩa quyền (Action)
-Ký hiệu	Ý nghĩa
-C	Create
-R	Read
-U	Update
-D	Delete
-*	Full quyền (CRUD + phân quyền nếu có)
--	Không có quyền
-3️⃣ Ma trận RBAC
-🔹 Module: Quản lý Người dùng (Users)
-Role	Quyền
-Admin	* (toàn hệ thống)
-Owner	C,R,U,D trong Org
-Manager	R trong Property
-Staff	-
-Tenant	-
-🔹 Module: Quản lý Orgs
-Role	Quyền
-Admin	*
-Owner	R,U (Org của mình)
-Manager	-
-Staff	-
-Tenant	-
-🔹 Module: Quản lý Properties
-Role	Quyền
-Admin	*
-Owner	C,R,U,D (trong Org)
-Manager	R,U (Property được gán)
-Staff	R (Property được gán)
-Tenant	-
-🔹 Module: Quản lý Floor
-Role	Quyền
-Admin	*
-Owner	* (trong Org)
-Manager	C,R,U,D (Property được gán)
-Staff	R
-Tenant	-
-🔹 Module: Quản lý Room
-Role	Quyền
-Admin	*
-Owner	* (trong Org)
-Manager	* (Property được gán)
-Staff	R,U (ví dụ cập nhật trạng thái phòng)
-Tenant	R (Room của mình)
-4️⃣ Tóm tắt theo Role
-🔵 Admin
+> **Note:**
+> - `*`: Full Access (Bypass)
+> - `CRUD`: Create, Read, Update, Delete
+> - `R, U`: Read, Update
+> - `-`: No Access
 
-Bypass mọi kiểm tra scope
+## 3. Scope Logic
 
-Toàn quyền mọi module
+The system automatically scopes queries based on the user's role:
 
-🟢 Owner (Org-level)
+- **Admin**: `TenantManager::getOrgId()` returns `null` => No scope applied (View All).
+- **Owner**: `TenantManager::getOrgId()` returns `user->org_id` => Scoped to Org.
+- **Manager/Staff**: Scoped to Org AND specific assigned Properties (via logic in Services/Policies).
 
-Toàn quyền trong phạm vi Org
+## 4. Default Accounts (Seeder)
 
-Quản lý Users, Properties, Floor, Room trong Org đó
+- **System Admin**: `admin@example.com` / `password`
+- **Sample Owner**: `owner@example.com` / `password`
 
-🟡 Manager (Property-level)
 
-Toàn quyền Floor & Room
-
-Chỉnh sửa Property
-
-Không được tạo Property mới
-
-Không quản lý Users (chỉ xem)
-
-🟠 Staff (Property-level)
-
-Xem Property
-
-Xem Floor
-
-Xem Room
-
-Cập nhật Room (giới hạn)
-
-Không được tạo/xóa
-
-🔴 Tenant
-
-Chỉ xem Room của mình
-
-Không thấy module khác
-
-5️⃣ Biểu diễn dạng bảng tổng hợp (CRUD Matrix)
-| Module ↓ / Role → | Admin | Owner      | Manager | Staff | Tenant  |
-| ----------------- | ----- | ---------- | ------- | ----- | ------- |
-| Users             | *     | CRUD (Org) | R       | -     | -       |
-| Orgs              | *     | RU         | -       | -     | -       |
-| Properties        | *     | CRUD       | RU      | R     | -       |
-| Floor             | *     | CRUD       | CRUD    | R     | -       |
-| Room              | *     | CRUD       | CRUD    | RU    | R (own) |

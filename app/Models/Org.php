@@ -17,4 +17,14 @@ class Org extends Model
     protected $keyType = 'string';
 
     protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'timezone', 'currency'];
+
+    public function properties()
+    {
+        return $this->hasMany(Property::class);
+    }
+
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
 }

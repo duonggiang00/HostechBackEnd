@@ -26,22 +26,12 @@ class UserFactory extends Factory
         ];
     }
 
-    public function superAdmin(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email' => 'admin@example.com',
-            'full_name' => 'System Administrator',
-            'org_id' => null,
-        ])->afterCreating(function ($user) {
-            $user->assignRole('SuperAdmin');
-        });
-    }
-
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'full_name' => fake()->name(),
-            'email' => 'admin.'.fake()->unique()->slug().'@org.example.com',
+            'full_name' => 'System Administrator',
+            'email' => 'admin@example.com',
+            'org_id' => null,
         ])->afterCreating(function ($user) {
             $user->assignRole('Admin');
         });
