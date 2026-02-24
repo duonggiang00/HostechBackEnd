@@ -8,6 +8,8 @@ use App\Models\Property\Room;
 use App\Models\Property\RoomPhoto;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
+use App\Models\Meter\Meter;
+use App\Models\Meter\MeterReading;
 use Carbon\Carbon;
 
 class RoomFactory extends Factory
@@ -78,6 +80,45 @@ class RoomFactory extends Factory
                 'effective_from' => Carbon::now()->startOfMonth()->format('Y-m-d'),
                 'price' => $room->base_price,
             ]);
+
+            // Sinh Đồng hồ Điện và Nước (Meters)
+            $meterTypes = ['ELECTRIC', 'WATER'];
+            foreach ($meterTypes as $type) {
+                $meter = Meter::create([
+                    'id' => Str::uuid(),
+                    'org_id' => $room->org_id,
+                    'room_id' => $room->id,
+                    'code' => $type === 'ELECTRIC' ? 'E-' . strtoupper(Str::random(6)) : 'W-' . strtoupper(Str::random(6)),
+                    'type' => $type,
+                    'installed_at' => Carbon::now()->subMonths(6)->format('Y-m-d'),
+                    'is_active' => true,
+                ]);
+
+                // Sinh Bản ghi chốt số (MeterReadings) - Tháng trước (Đã APPROVED)
+                $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
+                MeterReading::create([
+                    'id' => Str::uuid(),
+                    'org_id' => $room->org_id,
+                    'meter_id' => $meter->id,
+                    'period_start' => $lastMonthStart->format('Y-m-d'),
+                    'period_end' => $lastMonthStart->copy()->endOfMonth()->format('Y-m-d'),
+                    'reading_value' => $type === 'ELECTRIC' ? fake()->numberBetween(100, 500) : fake()->numberBetween(10, 50),
+                    'status' => 'APPROVED',
+                    'approved_at' => $lastMonthStart->copy()->endOfMonth(),
+                ]);
+
+                // Sinh Bản ghi chốt số (MeterReadings) - Tháng này (Đang DRAFT)
+                $thisMonthStart = Carbon::now()->startOfMonth();
+                MeterReading::create([
+                    'id' => Str::uuid(),
+                    'org_id' => $room->org_id,
+                    'meter_id' => $meter->id,
+                    'period_start' => $thisMonthStart->format('Y-m-d'),
+                    'period_end' => $thisMonthStart->copy()->endOfMonth()->format('Y-m-d'),
+                    'reading_value' => fake()->numberBetween(500, 1000), // Số tiếp theo
+                    'status' => 'DRAFT',
+                ]);
+            }
         });
     }
 }

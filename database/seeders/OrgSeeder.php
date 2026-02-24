@@ -10,7 +10,18 @@ use App\Models\Property\RoomPhoto;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Org\User;
+use App\Models\Service\Service;
+use App\Models\Service\ServiceRate;
+use App\Models\Service\TieredRate;
+use App\Models\Service\RoomService;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
+use App\Models\Invoice\Invoice;
+use App\Models\Invoice\InvoiceItem;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class OrgSeeder extends Seeder
 {
@@ -70,6 +81,65 @@ class OrgSeeder extends Seeder
                     }
                 });
 
+            // ---------------------------------------------------------
+            // 2. CREATE SERVICES FOR THIS ORG
+            // ---------------------------------------------------------
+            $this->command->info("\n🔧 Tạo Dịch vụ cơ bản cho tổ chức...");
+            $serviceDataList = [
+                ['code' => 'DIEN','name' => 'Tiền điện', 'calc_mode' => 'PER_METER','unit' => 'kwh','price' => 3500],
+                ['code' => 'NUOC','name' => 'Tiền nước', 'calc_mode' => 'PER_METER','unit' => 'm3','price' => 15000],
+                ['code' => 'INTERNET','name' => 'Internet', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 100000],
+                ['code' => 'QL','name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 50000],
+                ['code' => 'GUIXE','name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY','unit' => 'bike','price' => 100000],
+                ['code' => 'VS','name' => 'Vệ sinh', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 30000]
+            ];
+
+            $serviceIds = [];
+            foreach ($serviceDataList as $data) {
+                $price = $data['price'];
+                unset($data['price']);
+
+                $data['id'] = Str::uuid()->toString();
+                $data['org_id'] = $org->id;
+                $data['is_active'] = true;
+                $data['is_recurring'] = true;
+                $data['created_at'] = now();
+                $data['updated_at'] = now();
+
+                DB::table('services')->insert($data);
+                $serviceId = $data['id'];
+                $serviceIds[$data['code']] = $serviceId;
+
+                $rateId = Str::uuid()->toString();
+                DB::table('service_rates')->insert([
+                    'id' => $rateId,
+                    'org_id' => $org->id,
+                    'service_id' => $serviceId,
+                    'effective_from' => now()->startOfMonth()->toDateString(),
+                    'price' => $price,
+                    'created_at' => now(),
+                ]);
+
+                if ($data['code'] === 'DIEN') {
+                    $tiers = [
+                        ['tier_from' => 0, 'tier_to' => 50, 'price' => 2000],
+                        ['tier_from' => 51, 'tier_to' => 100, 'price' => 2500],
+                        ['tier_from' => 101, 'tier_to' => 200, 'price' => 3000],
+                        ['tier_from' => 201, 'tier_to' => null, 'price' => 3500],
+                    ];
+                    foreach ($tiers as $tier) {
+                        DB::table('tiered_rates')->insert([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $org->id,
+                            'service_rate_id' => $rateId,
+                            'tier_from' => $tier['tier_from'],
+                            'tier_to' => $tier['tier_to'],
+                            'price' => $tier['price'],
+                        ]);
+                    }
+                }
+            }
+
             // Create properties
             $this->command->info("\n🏢 Tạo bất động sản (Properties)...");
             $this->command->line("└─ Số lượng bất động sản: <fg=cyan>$propertiesPerOrg</>");
@@ -104,6 +174,131 @@ class OrgSeeder extends Seeder
 
                     $this->command->line("     ✅ Tổng cộng <fg=green>$totalRoomsInProperty</> phòng");
                 });
+
+            // ---------------------------------------------------------
+            // 3. ASSIGN ROOM SERVICES, CONTRACTS, INVOICES
+            // ---------------------------------------------------------
+            $rooms = Room::where('org_id', $org->id)->get();
+            $baseCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
+
+            foreach ($rooms as $room) {
+                // A. Assign Room Services
+                $selectedCodes = fake()->randomElements($baseCodes, fake()->numberBetween(3, 5));
+                foreach ($selectedCodes as $code) {
+                    DB::table('room_services')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'room_id' => $room->id,
+                        'service_id' => $serviceIds[$code],
+                        'quantity' => 1,
+                        'included_units' => ($code === 'INTERNET') ? 1 : 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                if (fake()->boolean(60) && isset($serviceIds['GUIXE'])) {
+                    DB::table('room_services')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'room_id' => $room->id,
+                        'service_id' => $serviceIds['GUIXE'],
+                        'quantity' => fake()->numberBetween(1, 3),
+                        'included_units' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // B. Manage Contracts & Invoices
+                if (rand(0, 100) > 30) {
+                    // Active Contract
+                    $contract = Contract::factory()->create([
+                        'org_id' => $room->org_id,
+                        'property_id' => $room->property_id,
+                        'room_id' => $room->id,
+                        'status' => 'ACTIVE',
+                        'start_date' => now()->subMonths(rand(1, 11)),
+                        'end_date' => now()->addMonths(rand(1, 12)),
+                    ]);
+
+                    ContractMember::factory()->create([
+                        'org_id' => $contract->org_id,
+                        'contract_id' => $contract->id,
+                        'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
+                        'role' => 'TENANT',
+                        'is_primary' => true,
+                    ]);
+
+                    if (rand(0, 1) === 1) {
+                        ContractMember::factory()->create([
+                            'org_id' => $contract->org_id,
+                            'contract_id' => $contract->id,
+                            'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
+                            'role' => 'ROOMMATE',
+                            'is_primary' => false,
+                        ]);
+                    }
+
+                    // Generate Invoices for this Active Contract
+                    $servicesToInvoice = Service::where('org_id', $org->id)->inRandomOrder()->limit(3)->get();
+                    
+                    // Paid Invoice (Last month)
+                    $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
+                    $paidInvoice = Invoice::factory()->paid()->create([
+                        'org_id' => $org->id,
+                        'property_id' => $room->property_id,
+                        'contract_id' => $contract->id,
+                        'room_id' => $room->id,
+                        'period_start' => $lastMonthStart->toDateString(),
+                        'period_end' => $lastMonthStart->copy()->endOfMonth()->toDateString(),
+                        'due_date' => $lastMonthStart->copy()->addDays(5)->toDateString(),
+                        'total_amount' => 5500000,
+                    ]);
+                    InvoiceItem::factory()->rent()->create(['org_id' => $org->id, 'invoice_id' => $paidInvoice->id, 'unit_price' => 5000000, 'amount' => 5000000]);
+                    foreach ($servicesToInvoice as $svc) {
+                        InvoiceItem::factory()->create(['org_id' => $org->id, 'invoice_id' => $paidInvoice->id, 'service_id' => $svc->id, 'description' => 'Tiền '.$svc->name, 'unit_price' => $svc->unit_price ?? 50000, 'quantity' => rand(1, 10)]);
+                    }
+                    $paidInvoice->update(['total_amount' => $paidInvoice->items()->sum('amount'), 'paid_amount' => $paidInvoice->items()->sum('amount')]);
+
+                    // Pending Invoice (This month)
+                    $thisMonthStart = Carbon::now()->startOfMonth();
+                    $pendingInvoice = Invoice::factory()->issued()->create([
+                        'org_id' => $org->id,
+                        'property_id' => $room->property_id,
+                        'contract_id' => $contract->id,
+                        'room_id' => $room->id,
+                        'period_start' => $thisMonthStart->toDateString(),
+                        'period_end' => $thisMonthStart->copy()->endOfMonth()->toDateString(),
+                        'due_date' => $thisMonthStart->copy()->addDays(5)->toDateString(),
+                        'status' => 'PENDING',
+                        'total_amount' => 5500000,
+                        'paid_amount' => 0,
+                    ]);
+                    InvoiceItem::factory()->rent()->create(['org_id' => $org->id, 'invoice_id' => $pendingInvoice->id, 'unit_price' => 5000000, 'amount' => 5000000]);
+                    $pendingInvoice->update(['total_amount' => $pendingInvoice->items()->sum('amount')]);
+                }
+
+                if (rand(0, 100) > 70) {
+                    // Ended Contract
+                    $contract = Contract::factory()->create([
+                        'org_id' => $room->org_id,
+                        'property_id' => $room->property_id,
+                        'room_id' => $room->id,
+                        'status' => 'ENDED',
+                        'start_date' => now()->subYears(2),
+                        'end_date' => now()->subYears(1),
+                        'terminated_at' => now()->subYears(1),
+                    ]);
+                    ContractMember::factory()->create([
+                        'org_id' => $contract->org_id,
+                        'contract_id' => $contract->id,
+                        'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
+                        'role' => 'TENANT',
+                        'is_primary' => true,
+                        'left_at' => $contract->end_date,
+                    ]);
+                }
+            }
         });
 
         $this->command->info("\n================================");
@@ -117,12 +312,11 @@ class OrgSeeder extends Seeder
         $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor))."</>");
         
         // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
-        $photoCount = RoomPhoto::count();
-        $assetCount = RoomAsset::count();
-        $priceCount = RoomPrice::count();
-
-        $this->command->line("✅ Ảnh phòng (Photos): <fg=cyan>{$photoCount}</>");
-        $this->command->line("✅ Tài sản phòng (Assets): <fg=cyan>{$assetCount}</>");
-        $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>{$priceCount}</>\n");
+        $this->command->line("✅ Ảnh phòng (Photos): <fg=cyan>".RoomPhoto::count()."</>");
+        $this->command->line("✅ Tài sản phòng (Assets): <fg=cyan>".RoomAsset::count()."</>");
+        $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>".RoomPrice::count()."</>");
+        $this->command->line("✅ Dịch vụ (Services): <fg=cyan>".Service::count()."</>");
+        $this->command->line("✅ Hợp đồng (Contracts): <fg=cyan>".Contract::count()."</>");
+        $this->command->line("✅ Hóa đơn (Invoices): <fg=cyan>".Invoice::count()."</>\n");
     }
 }

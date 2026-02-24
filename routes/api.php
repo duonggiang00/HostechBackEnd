@@ -32,7 +32,11 @@ Route::middleware(['auth:sanctum'])->get('/auth/me', function (Illuminate\Http\R
 });
 
 // Protected API Routes
+use App\Http\Controllers\Api\UploadController;
+
 Route::middleware('auth:sanctum')->group(function () {
+    // API Quản lý File chung
+    Route::post('upload', [UploadController::class, 'store']);
     // Organizations
     Route::get('orgs/trash', [OrgController::class, 'trash']);
     Route::apiResource('orgs', OrgController::class);

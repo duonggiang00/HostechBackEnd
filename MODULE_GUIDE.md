@@ -1,308 +1,285 @@
 # Hướng dẫn Phát triển Module mới (Full Stack)
 
-Tài liệu này hướng dẫn chi tiết quy trình xây dựng một module chức năng mới (ví dụ: `Contract`, `Booking`, `ServiceOrder`...) từ con số 0, tuân thủ kiến trúc chuẩn của dự án.
+Tài liệu này hướng dẫn chi tiết quy trình xây dựng một module chức năng mới từ con số 0, tuân thủ kiến trúc **Domain-Driven Directory Structuring** (Gom nhóm theo nghiệp vụ) của dự án. 
 
-## Kiến trúc Chuẩn
-
-Dự án tuân theo mô hình phân lớp kết hợp **Domain-Driven Directory Structuring**:
-1.  **Model**: Entity dữ liệu, đặt trong `app/Models/TênDomain/`. Tích hợp các Trait hệ thống (UUID, Multi-tenant, Audit Log).
-2.  **Service**: Chứa Business Logic, đặt trong `app/Services/TênDomain/`. Controller **không** nên gọi trực tiếp Eloquent.
-3.  **Policy (RBAC)**: Quản lý quyền truy cập Dynamic, đặt trong `app/Policies/TênDomain/`.
-4.  **Controller**: Tiếp nhận Request, gọi Service, trả về Resource. Đặt trong `app/Http/Controllers/Api/TênDomain/`. Tích hợp tài liệu API (Scramble).
-5.  **API Resource & Request**: Định dạng dữ liệu trả về và Validate đầu vào. Đặt trong `app/Http/Resources/TênDomain/` và `app/Http/Requests/TênDomain/`.
+Ví dụ mẫu xuyên suốt bài hướng dẫn này là Module **`Test`** (Chứa tính năng tên là `TestFeature`).
 
 ---
 
-## Quy trình Chi tiết (7 Bước)
+## I. Giải thích các Hàm/Trait Tiện ích Cốt lõi (Utility Functions)
+Hệ thống Laravel này đã được custom lại chặt chẽ với các Trait & Interface dùng chung. **BẮT BUỘC** phải nắm rõ khi tạo Module mới:
 
-Tạo Model kèm theo Migration (Ghi rõ thư mục Domain, vd: `Contract`):
+1. **`MultiTenant`** (Trait cho Model): 
+   - **Tác dụng:** Tự động áp dụng Global Scope để chỉ lấy các record có `org_id` khớp với `org_id` của user đang thao tác. Ngăn chặn tuyệt đối việc tổ chức A nhìn thấy dữ liệu của tổ chức B. Bạn không cần tự viết `->where('org_id', ...)` nữa.
+2. **`SystemLoggable`** (Trait cho Model):
+   - **Tác dụng:** Tự động "bắt" các sự kiện `created`, `updated`, `deleted`, `restored` của Model và lưu lại lịch sử thay đổi vào bảng `audit_logs`. Nó cung cấp "dấu vết" cho toàn bộ hệ thống.
+3. **`HasUuids`** (Trait cho Model của Laravel):
+   - **Tác dụng:** Tự động sinh chuỗi UUID (VD: `550e8400-e29b-...`) để gán làm khóa chính `id` khi khởi tạo record.
+4. **`RbacModuleProvider`** (Interface cho Policy):
+   - **Tác dụng:** Đánh dấu một `Policy` là nguồn cung cấp Quyền (Permissions). Hệ thống sẽ chạy lệnh quét để tự động đọc `getModuleName` và `getRolePermissions` nhằm nhét các quyền CRUD vào Database.
+5. **`HandlesOrgScope`** (Trait cho Policy):
+   - **Tác dụng:** Cung cấp hàm `$this->checkOrgScope($user, $model)`. Hàm này kiểm tra "Vật lý" xem `org_id` của Record đang truy vấn có khớp với User không (Đề phòng rò rỉ qua các lỗ hổng URL).
+6. **`Spatie/QueryBuilder`** (Package cho Service/Controller):
+   - **Tác dụng:** Tự động "dịch" các Query Params từ URL thành Eloquent Query. Vd: `?filter[status]=ACTIVE&sort=-created_at`. Giúp tiết kiệm hàng chục dòng code `if/else`.
+
+---
+
+## II. Quy trình Chi tiết (7 Bước Tạo Module Mới)
+
+### Bước 1: Khởi tạo Cấu trúc File (Domain-driven)
+Chúng ta gom tệp vể đúng thư mục tính năng của nó. Ví dụ tính năng "TestFeature" thuộc domain "Test":
 
 ```bash
-php artisan make:model Contract/Contract -m
+# Tao Database Migration
+php artisan make:migration create_test_features_table
+
+# Tạo Model
+php artisan make:model Test/TestFeature
+
+# Tạo Service Layer (Nơi chứa Business Logic)
+php artisan make:class Services/Test/TestFeatureService
+
+# Tạo Controllers & API (Giao tiếp HTTP)
+php artisan make:controller Api/Test/TestFeatureController
+php artisan make:resource Test/TestFeatureResource
+php artisan make:request Test/TestFeatureStoreRequest
+
+# Tạo Policy (Bơm vào hệ thống cấm/cho phép)
+php artisan make:policy Test/TestFeaturePolicy --model=Test/TestFeature
 ```
 
-**1.1. Migration:**
-Lưu ý sử dụng `uuid` làm khóa chính và thêm cột `org_id` để hỗ trợ Multi-tenancy.
+### Bước 2: Thiết lập Database Migration & Model
 
+**2.1. Migration:** Luôn nhớ UUID và `org_id`.
 ```php
-// database/migrations/xxxx_create_contracts_table.php
-Schema::create('contracts', function (Blueprint $table) {
-    $table->uuid('id')->primary();
-    $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete(); // Bat buoc
-    $table->string('code')->unique();
+Schema::create('test_features', function (Blueprint $table) {
+    $table->uuid('id')->primary(); // Bắt buộc
+    // Bắt buộc liên kết Org để MultiTenant hoạt động
+    $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete(); 
+    
+    // Các fields của module
     $table->string('name');
-    // ... custom columns
+    $table->boolean('is_active')->default(true);
+    
     $table->timestamps();
-    $table->softDeletes(); // Khuyen khich
+    $table->softDeletes(); // Nếu module yêu cầu thùng rác
 });
 ```
 
-**1.2. Model:**
-Tích hợp các Trait quan trọng. Lưu ý đúng Namespace:
-
+**2.2. Model (`app/Models/Test/TestFeature.php`):** Tích hợp Trait cốt lõi.
 ```php
-// app/Models/Contract/Contract.php
-namespace App\Models\Contract;
+namespace App\Models\Test;
 
-use App\Models\Concerns\MultiTenant;       // <--- Scope theo Admin/User Org
-use App\Traits\SystemLoggable;             // <--- Tu dong ghi Audit Log
+use App\Models\Concerns\MultiTenant;
+use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Contract extends Model
+class TestFeature extends Model
 {
     use HasUuids, MultiTenant, SystemLoggable, SoftDeletes;
 
-    protected $fillable = [
-        'org_id', 'code', 'name', // ...
-    ];
-
-    // Định nghĩa relationship nếu có
-    public function org() {
-        return $this->belongsTo(Org::class);
-    }
+    public $incrementing = false;     // Bắt buộc với UUID
+    protected $keyType = 'string';    // Bắt buộc với UUID
+    
+    protected $fillable = ['org_id', 'name', 'is_active'];
 }
 ```
 
-### Bước 2: Service Layer
+### Bước 3: Build Service Layer (Xử lý Data chuẩn nhất)
 
-Tạo Service class để xử lý logic. Nếu logic đơn giản, có thể dùng Base Service hoặc viết trực tiếp các hàm CRUD.
+Service làm nhiệm vụ giao tiếp CSDL, Controller chỉ việc gọi. Chú ý sử dụng QueryBuilder tại đây.
 
+`app/Services/Test/TestFeatureService.php`:
 ```php
-// app/Services/Contract/ContractService.php
-namespace App\Services\Contract;
+namespace App\Services\Test;
 
-use App\Models\Contract\Contract;
+use App\Models\Test\TestFeature;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
-class ContractService
+class TestFeatureService
 {
-    /**
-     * Paginate with Search & Filter
-     * 
-     * @param array $allowedFilters param cho Spatie QueryBuilder
-     * @param int $perPage
-     * @param string|null $search Search term
-     */
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
     {
-        $query = QueryBuilder::for(Contract::class)
-            ->allowedFilters($allowedFilters)
-            ->defaultSort('-created_at');
+        $query = QueryBuilder::for(TestFeature::class)
+            ->allowedFilters($filters)
+            ->defaultSort('-created_at'); // Sort mặc định
 
-        // 1. Manual Search Logic
+        // Tìm kiếm Full text cục bộ chữ (Spatie ko hỗ trợ like default)
         if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
-            });
+            $query->where('name', 'like', "%{$search}%");
         }
-
-        // 2. Manual Top-level Filters (Important!)
-        // Handle explicit params like ?org_id=... if needed directly
-        if ($orgId = request()->input('org_id')) {
-            $query->where('org_id', $orgId);
-        }
-
-        // 3. Global Scopes (MultiTenant) are applied automatically by Model Trait
 
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function create(array $data): Contract
+    public function create(array $data): TestFeature
     {
-        return Contract::create($data);
+        return TestFeature::create($data); // Org_id sẽ do Controller truyền xuống Data
     }
-
-    public function update(string $id, array $data): ?Contract
-    {
-        $contract = $this->find($id);
-        if ($contract) {
-            $contract->update($data);
-        }
-        return $contract;
-    }
-    
-    public function find(string $id): ?Contract
-    {
-        return Contract::find($id);
-    }
-
-    // ... delete, restore impl
 }
 ```
 
-Tạo FormRequest để validate dữ liệu đầu vào. Nhớ đặt trong Domain:
+### Bước 4: Thiết lập Form Requests (Kiểm tra Dữ liệu User Test)
+Đầu vào dơ = Database dơ. Validate là rào chắn đầu.
 
-```bash
-php artisan make:request Contract/ContractStoreRequest
-```
-
+`app/Http/Requests/Test/TestFeatureStoreRequest.php`:
 ```php
-// app/Http/Requests/Contract/ContractStoreRequest.php
-namespace App\Http\Requests\Contract;
-
+namespace App\Http\Requests\Test;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ContractStoreRequest extends FormRequest
+class TestFeatureStoreRequest extends FormRequest
 {
-public function rules(): array
-{
-    return [
-        'name' => ['required', 'string', 'max:255'],
-        'code' => ['required', 'string', 'unique:contracts,code'],
-        // khong can validate org_id neu lay tu Auth user
-    ];
+    public function authorize(): bool { return true; } // Policy sẽ quản lý auth thực tế
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'is_active' => ['boolean'] // Mặc định validate kiểu dữ liệu
+        ];
+    }
 }
 ```
 
-### Bước 4: Policy & Dynamic RBAC (Quan trọng)
+### Bước 5: Phân Quyền Xuyên Suốt (RBAC + Policy)
 
-Đây là bước để hệ thống tự động nhận diện quyền.
-
-```bash
-php artisan make:policy Contract/ContractPolicy --model=Contract/Contract
-```
-
-Sửa file `app/Policies/Contract/ContractPolicy.php`:
+Đây là bước để hệ thống tự biết tới Module mới của bạn.
+`app/Policies/Test/TestFeaturePolicy.php`:
 
 ```php
-namespace App\Policies\Contract;
+namespace App\Policies\Test;
 
-use App\Contracts\RbacModuleProvider; // [!] Interface bat buoc
-use App\Models\Contract\Contract;
+use App\Contracts\RbacModuleProvider; // INTERFACE KHỞI NGUỒN PHÂN QUYỀN
+use App\Models\Test\TestFeature;
 use App\Models\Org\User;
-use App\Traits\HandlesOrgScope;       // [!] Trait bat buoc
-use Illuminate\Auth\Access\Response;
+use App\Traits\HandlesOrgScope;
 
-class ContractPolicy implements RbacModuleProvider
+class TestFeaturePolicy implements RbacModuleProvider
 {
-    use HandlesOrgScope;
+    use HandlesOrgScope; 
 
-    // 1. Tên Module hiển thị trong Permission (vd: 'viewAny Contract')
-    public static function getModuleName(): string
-    {
-        return 'Contract';
-    }
+    // 1. Khai báo Tên Nhóm Quyền (Permission Prefix)
+    public static function getModuleName(): string { return 'TestFeature'; }
 
-    // 2. Ma trận phân quyền
+    // 2. Định nghĩa Base/Default Permissions khi Sync Role
     public static function getRolePermissions(): array
     {
         return [
-            'Owner'   => 'CRUD', // Full quyền
-            'Manager' => 'RU',   // Xem & Sửa
-            'Staff'   => 'R',    // Chỉ xem
-            'Tenant'  => '-',    // Không truy cập
+            'Owner'   => 'CRUD', // Cầm trịch toàn bộ
+            'Manager' => 'CRUD', 
+            'Staff'   => 'RU',   // Chỉ xem và update, không được xóa
+            'Tenant'  => 'R',    // Chỉ Xem
         ];
     }
 
-    // 3. Implement methods
-    public function viewAny(User $user): bool
-    {
-        return $user->hasPermissionTo('viewAny Contract');
+    // 3. Logic xác nhận quyền view list
+    public function viewAny(User $user): bool {
+        return $user->hasPermissionTo('viewAny TestFeature');
     }
 
-    public function view(User $user, Contract $contract): bool
-    {
-        if (! $user->hasPermissionTo('view Contract')) return false;
-        return $this->checkOrgScope($user, $contract); // User chỉ xem được Contract của Org mình
+    // 4. Logic xác nhận View chi tiết
+    public function view(User $user, TestFeature $item): bool {
+        if (! $user->hasPermissionTo('view TestFeature')) return false;
+        
+        // HÀM TIỆN ÍCH chặn Data chéo (Bảo mật tầng vật lý cuối)
+        return $this->checkOrgScope($user, $item); 
     }
-
-    public function create(User $user): bool
-    {
-        return $user->hasPermissionTo('create Contract');
-    }
-
-    // ... update, delete tương tự
+    
+    // Tạo, Sửa, Xóa tương tự theo pattern này...
 }
 ```
 
-Tạo Controller và thêm document cho Scramble. Nhớ đặt trong Domain:
-
+🚨 **LƯU Ý:** Bạn VỪA TẠO policy cung cấp quyền mới. Gõ ngay Terminal:
 ```bash
-php artisan make:controller Api/Contract/ContractController
+php artisan pb:sync
+# Hoặc lệnh quét của hệ thống: php artisan rbac:sync
 ```
 
+### Bước 6: API Resource & Controller (Điểm Cuối)
+
+**Định hình Output (Resource):**
 ```php
-// app/Http/Controllers/Api/Contract/ContractController.php
-namespace App\Http\Controllers\Api\Contract;
+namespace App\Http\Resources\Test;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class TestFeatureResource extends JsonResource
+{
+    public function toArray($request): array
+    {
+        return [
+            'id' => $this->id, // Trả UUID sạch
+            'name' => $this->name,
+            'is_active' => (bool) $this->is_active,
+            'created_at' => $this->created_at?->toIso8601String(),
+        ];
+    }
+}
+```
+
+**Controller Lắp Ráp:**
+```php
+namespace App\Http\Controllers\Api\Test;
 
 use App\Http\Controllers\Controller;
-use App\Services\Contract\ContractService;
-use App\Models\Contract\Contract;
-use App\Http\Requests\Contract\ContractStoreRequest;
-use Dedoc\Scramble\Attributes\Group; // [!] Group API Docs
+use App\Services\Test\TestFeatureService;
+use App\Models\Test\TestFeature;
+use App\Http\Requests\Test\TestFeatureStoreRequest;
+use App\Http\Resources\Test\TestFeatureResource;
+use Illuminate\Http\Request;
+use Spatie\QueryBuilder\AllowedFilter;
 
-/**
- * Quản lý Hợp đồng (Contracts)
- * 
- * API quản lý hợp đồng thuê nhà...
- */
-#[Group('Quản lý Hợp đồng')]
-class ContractController extends Controller
+class TestFeatureController extends Controller
 {
-    public function __construct(protected ContractService $service) {}
+    public function __construct(protected TestFeatureService $service) {}
 
-    /**
-     * Danh sách hợp đồng
-     * 
-     * Lấy danh sách có phân trang và lọc.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $this->authorize('viewAny', Contract::class);
-        return $this->service->paginate(['code', 'name']);
+        // 1. Phân quyền tổng
+        $this->authorize('viewAny', TestFeature::class);
+
+        // 2. Chấp nhận filter URL từ Client (Vd: ?filter[is_active]=1)
+        $filters = ['is_active']; 
+
+        // 3. Chạy qua Service
+        $paginator = $this->service->paginate(
+            $filters, 
+            $request->query('per_page', 15), 
+            $request->input('search')
+        );
+
+        // 4. Output List
+        return TestFeatureResource::collection($paginator);
     }
 
-    /**
-     * Tạo hợp đồng mới
-     */
-    public function store(ContractStoreRequest $request)
+    public function store(TestFeatureStoreRequest $request)
     {
-        $this->authorize('create', Contract::class);
+        // 1. Phân quyền tạo
+        $this->authorize('create', TestFeature::class);
         
+        // 2. Lấy dữ liệu an toàn & Gán dữ liệu bắt buộc (org_id)
         $data = $request->validated();
-        
-        // Tự động gán Org ID từ User
-        /** @var \App\Models\User $user */
-        $user = auth()->user();
-        if ($user->org_id) {
-            $data['org_id'] = $user->org_id;
-        }
+        $data['org_id'] = auth()->user()->org_id; 
 
-        return $this->service->create($data);
+        // 3. Ghi CSDL
+        $item = $this->service->create($data);
+        
+        return new TestFeatureResource($item);
     }
 }
 ```
 
-**6.1. Routes:**
-Thêm vào `routes/api.php`:
-
+### Bước 7: Đăng ký Router
+Viết code hoàn chỉnh nhưng không nhét route cũng vứt. Mở `routes/api.php` ở nhóm Middleware `auth:sanctum`:
 ```php
+use App\Http\Controllers\Api\Test\TestFeatureController;
+
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
+    // Tự sinh toàn bộ (index, store, show, update, destroy)
+    Route::apiResource('test-features', TestFeatureController::class);
 });
 ```
 
-**6.2. Đồng bộ RBAC:**
-Chạy lệnh sau để tạo Permission trong DB:
-
-```bash
-php artisan rbac:sync
-```
-
-### Bước 7: Kiểm thử
-
-1.  Truy cập `http://localhost:8000/docs/api` để xem API mới đã hiện lên chưa.
-2.  Dùng Postman hoặc Scramble "Try it out" để gọi API.
-3.  Kiểm tra bảng `activity_log` xem log có được ghi lại khi Create/Update không.
-
----
-
-## Mẹo (Tips)
-
-- **Filter**: Để filter theo field mới, chỉ cần thêm tên field vào mảng `$allowedFilters` trong Controller/Service.
-- **Scope**: Trait `MultiTenant` trong Model sẽ tự động filter query theo `org_id` của User đăng nhập, bạn không cần `where('org_id', ...)` thủ công trong Service (trừ trường hợp đặc biệt).
-- **Format Date**: Nếu API cần trả về định dạng ngày tháng cụ thể, hãy dùng API Resource (`php artisan make:resource ContractResource`).
+Chạy `php artisan optimize:clear` là API của bạn đã sẵn sàng và an toàn tuyệt đối ở mọi tầng kiến trúc!

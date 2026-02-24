@@ -10,9 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Service\RoomService;
 
-class Room extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+
+class Room extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
 
     public $incrementing = false;
 
@@ -37,9 +41,10 @@ class Room extends Model
         return $this->belongsTo(Floor::class);
     }
 
-    public function photos()
+    public function registerMediaConversions(Media $media = null): void
     {
-        return $this->hasMany(RoomPhoto::class);
+        $this->addMediaConversion('thumb')->width(368)->height(232)->nonQueued();
+        $this->addMediaConversion('detail')->width(800)->height(500)->nonQueued();
     }
 
     public function assets()
