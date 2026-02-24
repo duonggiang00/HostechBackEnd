@@ -1,8 +1,8 @@
 <?php
 
-use App\Models\User;
-use App\Models\Org;
-use App\Models\Property;
+use App\Models\Org\User;
+use App\Models\Org\Org;
+use App\Models\Property\Property;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;

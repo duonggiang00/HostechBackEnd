@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Rbac;
 
-use App\Models\Org;
-use App\Models\Property;
-use App\Models\User;
+use App\Models\Org\Org;
+use App\Models\Property\Property;
+use App\Models\Org\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Spatie\Permission\Models\Role;

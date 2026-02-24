@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\FloorController;
-use App\Http\Controllers\Api\OrgController;
-use App\Http\Controllers\Api\PropertyController;
-use App\Http\Controllers\Api\RoomController;
-use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\Property\FloorController;
+use App\Http\Controllers\Api\Org\OrgController;
+use App\Http\Controllers\Api\Property\PropertyController;
+use App\Http\Controllers\Api\Property\RoomController;
+use App\Http\Controllers\Api\Org\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Fortify automatically registers these routes:
@@ -40,6 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('orgs/{id}/force', [OrgController::class, 'forceDelete']);
     Route::get('orgs/{id}/properties', [OrgController::class, 'properties']);
     Route::get('orgs/{id}/users', [OrgController::class, 'users']);
+    Route::get('orgs/{id}/services', [OrgController::class, 'services']);
 
     // Users
     Route::get('users/trash', [UserController::class, 'trash']);
@@ -65,6 +66,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
     Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);
 
+    // Services
+    Route::get('services/trash', [\App\Http\Controllers\Api\Service\ServiceController::class, 'trash']);
+    Route::apiResource('services', \App\Http\Controllers\Api\Service\ServiceController::class);
+    Route::post('services/{id}/restore', [\App\Http\Controllers\Api\Service\ServiceController::class, 'restore']);
+    Route::delete('services/{id}/force', [\App\Http\Controllers\Api\Service\ServiceController::class, 'forceDelete']);
+
     // Audit Logs
-    Route::apiResource('audit-logs', \App\Http\Controllers\Api\V1\AuditLogController::class)->only(['index', 'show']);
+    Route::apiResource('audit-logs', \App\Http\Controllers\Api\System\AuditLogController::class)->only(['index', 'show']);
+
+    // Contracts
+    Route::get('contracts/trash', [\App\Http\Controllers\Api\Contract\ContractController::class, 'trash']);
+    Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
+    Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
+    Route::delete('contracts/{id}/force', [\App\Http\Controllers\Api\Contract\ContractController::class, 'forceDelete']);
 });

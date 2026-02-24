@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Org;
-use App\Models\Property;
-use App\Models\Room;
-use App\Models\Floor;
-use App\Models\User;
+use App\Models\Org\Org;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\Property\Floor;
+use App\Models\Org\User;
 use Spatie\Permission\Models\Role;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;

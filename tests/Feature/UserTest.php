@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Org;
-use App\Models\User;
+use App\Models\Org\Org;
+use App\Models\Org\User;
 use Spatie\Permission\Models\Role;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;

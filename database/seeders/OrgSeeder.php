@@ -2,11 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\Floor;
-use App\Models\Org;
-use App\Models\Property;
-use App\Models\Room;
-use App\Models\User;
+use App\Models\Property\Floor;
+use App\Models\Org\Org;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\Property\RoomPhoto;
+use App\Models\Property\RoomAsset;
+use App\Models\Property\RoomPrice;
+use App\Models\Org\User;
 use Illuminate\Database\Seeder;
 
 class OrgSeeder extends Seeder
@@ -111,6 +114,15 @@ class OrgSeeder extends Seeder
         $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
         $this->command->line('✅ Bất động sản: <fg=cyan>'.($orgCount * $propertiesPerOrg).'</>');
         $this->command->line('✅ Tầng: <fg=cyan>'.($orgCount * $propertiesPerOrg * $floorsPerProperty).'</>');
-        $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor))."</>\n");
+        $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor))."</>");
+        
+        // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
+        $photoCount = RoomPhoto::count();
+        $assetCount = RoomAsset::count();
+        $priceCount = RoomPrice::count();
+
+        $this->command->line("✅ Ảnh phòng (Photos): <fg=cyan>{$photoCount}</>");
+        $this->command->line("✅ Tài sản phòng (Assets): <fg=cyan>{$assetCount}</>");
+        $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>{$priceCount}</>\n");
     }
 }

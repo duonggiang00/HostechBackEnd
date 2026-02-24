@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\User;
-use App\Models\Org;
+use App\Models\Org\User;
+use App\Models\Org\Org;
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;

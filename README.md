@@ -94,7 +94,7 @@ Dự án tích hợp sẵn **Scramble** để tự động tạo tài liệu API
 ## 4. Các tài khoản mẫu (nếu có từ Seeder)
 
 Nếu bạn đã chạy `--seed`, hệ thống sẽ tạo sẵn tài khoản `Admin` hệ thống (thay thế cho SuperAdmin cũ).
-- **Admin System**: `admin@example.com` / `password` (Quyền cao nhất, quản lý toàn hệ thống).
+- **Admin System**: `admin@example.com` / `12345678` (Quyền cao nhất, quản lý toàn hệ thống).
 - **Owner Sample**: `owner@example.com` / `password` (Chủ sở hữu, quản lý 1 Organization).
 
 ## 5. Xử lý sự cố thường gặp

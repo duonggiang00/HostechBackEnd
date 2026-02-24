@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Floor;
-use App\Models\Org;
-use App\Models\Property;
-use App\Models\Room;
-use App\Models\User;
+use App\Models\Property\Floor;
+use App\Models\Org\Org;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\Org\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\User;
+use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Model;
 
 trait HandlesPropertyScope

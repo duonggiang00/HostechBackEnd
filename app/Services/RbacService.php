@@ -34,7 +34,9 @@ class RbacService
         $files = File::allFiles($policyPath);
 
         foreach ($files as $file) {
-            $className = 'App\\Policies\\'.pathinfo($file->getFilename(), PATHINFO_FILENAME);
+            $relativePath = $file->getRelativePathname();
+            $classPath = str_replace(['/', '.php'], ['\\', ''], $relativePath);
+            $className = 'App\\Policies\\' . $classPath;
 
             if (! class_exists($className)) {
                 continue;

@@ -13,18 +13,19 @@ return new class extends Migration
     {
         Schema::create('services', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('org_id');
-            $table->string('code',20)->nullable(false);
-            $table->string('name',255)->nullable(false);
-            $table->string('calc_mode',20)->nullable(false);
-            $table->string('unit',20)->nullable(false);
-            $table->boolean('is_recurring')->default(true)->nullable(false);
-            $table->boolean('is_active')->default(true)->nullable(false);
-            $table->json('meta')->nullable(true);
+            $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete();
+            $table->string('code', 50);
+            $table->string('name', 255);
+            $table->string('calc_mode', 20)->comment('ENUM: PER_ROOM, PER_PERSON, PER_QUANTITY, PER_METER');
+            $table->string('unit', 20);
+            $table->boolean('is_recurring')->default(true);
+            $table->boolean('is_active')->default(true);
+            $table->json('meta')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
-            
+
+            $table->unique(['org_id', 'code']);
+            $table->index(['org_id']);
         });
     }
 
