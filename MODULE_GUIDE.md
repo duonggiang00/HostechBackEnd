@@ -4,23 +4,21 @@ Tài liệu này hướng dẫn chi tiết quy trình xây dựng một module c
 
 ## Kiến trúc Chuẩn
 
-Dự án tuân theo mô hình phân lớp:
-1.  **Model**: Entity dữ liệu, tích hợp các Trait hệ thống (UUID, Multi-tenant, Audit Log).
-2.  **Service**: Chứa Business Logic (CRUD, tính toán, xử lý dữ liệu). Controller **không** nên gọi trực tiếp Eloquent.
-3.  **Policy (RBAC)**: Quản lý quyền truy cập Dynamic.
-4.  **Controller**: Tiếp nhận Request, gọi Service, trả về Resource. Tích hợp tài liệu API (Scramble).
-5.  **API Resource**: Định dạng dữ liệu trả về JSON.
+Dự án tuân theo mô hình phân lớp kết hợp **Domain-Driven Directory Structuring**:
+1.  **Model**: Entity dữ liệu, đặt trong `app/Models/TênDomain/`. Tích hợp các Trait hệ thống (UUID, Multi-tenant, Audit Log).
+2.  **Service**: Chứa Business Logic, đặt trong `app/Services/TênDomain/`. Controller **không** nên gọi trực tiếp Eloquent.
+3.  **Policy (RBAC)**: Quản lý quyền truy cập Dynamic, đặt trong `app/Policies/TênDomain/`.
+4.  **Controller**: Tiếp nhận Request, gọi Service, trả về Resource. Đặt trong `app/Http/Controllers/Api/TênDomain/`. Tích hợp tài liệu API (Scramble).
+5.  **API Resource & Request**: Định dạng dữ liệu trả về và Validate đầu vào. Đặt trong `app/Http/Resources/TênDomain/` và `app/Http/Requests/TênDomain/`.
 
 ---
 
 ## Quy trình Chi tiết (7 Bước)
 
-### Bước 1: Database & Model
-
-Tạo Model kèm theo Migration:
+Tạo Model kèm theo Migration (Ghi rõ thư mục Domain, vd: `Contract`):
 
 ```bash
-php artisan make:model Contract -m
+php artisan make:model Contract/Contract -m
 ```
 
 **1.1. Migration:**
@@ -40,11 +38,11 @@ Schema::create('contracts', function (Blueprint $table) {
 ```
 
 **1.2. Model:**
-Tích hợp các Trait quan trọng:
+Tích hợp các Trait quan trọng. Lưu ý đúng Namespace:
 
 ```php
-// app/Models/Contract.php
-namespace App\Models;
+// app/Models/Contract/Contract.php
+namespace App\Models\Contract;
 
 use App\Models\Concerns\MultiTenant;       // <--- Scope theo Admin/User Org
 use App\Traits\SystemLoggable;             // <--- Tu dong ghi Audit Log
@@ -72,10 +70,10 @@ class Contract extends Model
 Tạo Service class để xử lý logic. Nếu logic đơn giản, có thể dùng Base Service hoặc viết trực tiếp các hàm CRUD.
 
 ```php
-// app/Services/ContractService.php
-namespace App\Services;
+// app/Services/Contract/ContractService.php
+namespace App\Services\Contract;
 
-use App\Models\Contract;
+use App\Models\Contract\Contract;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
 
@@ -136,16 +134,20 @@ class ContractService
 }
 ```
 
-### Bước 3: Request Validation
-
-Tạo FormRequest để validate dữ liệu đầu vào.
+Tạo FormRequest để validate dữ liệu đầu vào. Nhớ đặt trong Domain:
 
 ```bash
-php artisan make:request ContractStoreRequest
+php artisan make:request Contract/ContractStoreRequest
 ```
 
 ```php
-// app/Http/Requests/ContractStoreRequest.php
+// app/Http/Requests/Contract/ContractStoreRequest.php
+namespace App\Http\Requests\Contract;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class ContractStoreRequest extends FormRequest
+{
 public function rules(): array
 {
     return [
@@ -161,17 +163,17 @@ public function rules(): array
 Đây là bước để hệ thống tự động nhận diện quyền.
 
 ```bash
-php artisan make:policy ContractPolicy --model=Contract
+php artisan make:policy Contract/ContractPolicy --model=Contract/Contract
 ```
 
-Sửa file `app/Policies/ContractPolicy.php`:
+Sửa file `app/Policies/Contract/ContractPolicy.php`:
 
 ```php
-namespace App\Policies;
+namespace App\Policies\Contract;
 
 use App\Contracts\RbacModuleProvider; // [!] Interface bat buoc
-use App\Models\Contract;
-use App\Models\User;
+use App\Models\Contract\Contract;
+use App\Models\Org\User;
 use App\Traits\HandlesOrgScope;       // [!] Trait bat buoc
 use Illuminate\Auth\Access\Response;
 
@@ -217,20 +219,20 @@ class ContractPolicy implements RbacModuleProvider
 }
 ```
 
-### Bước 5: Controller & API Documentation
-
-Tạo Controller và thêm document cho Scramble.
+Tạo Controller và thêm document cho Scramble. Nhớ đặt trong Domain:
 
 ```bash
-php artisan make:controller Api/ContractController
+php artisan make:controller Api/Contract/ContractController
 ```
 
 ```php
-namespace App\Http\Controllers\Api;
+// app/Http/Controllers/Api/Contract/ContractController.php
+namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Controller;
-use App\Services\ContractService;
-use App\Models\Contract;
+use App\Services\Contract\ContractService;
+use App\Models\Contract\Contract;
+use App\Http\Requests\Contract\ContractStoreRequest;
 use Dedoc\Scramble\Attributes\Group; // [!] Group API Docs
 
 /**
@@ -275,14 +277,12 @@ class ContractController extends Controller
 }
 ```
 
-### Bước 6: Đăng ký & Đồng bộ
-
 **6.1. Routes:**
 Thêm vào `routes/api.php`:
 
 ```php
 Route::middleware(['auth:sanctum'])->group(function () {
-    Route::apiResource('contracts', \App\Http\Controllers\Api\ContractController::class);
+    Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
 });
 ```
 

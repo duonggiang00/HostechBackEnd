@@ -38,8 +38,11 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ## Project Architecture (Strict Enforcement)
 
-### 1. Service Layer Pattern
-- **Logic**: All business logic MUST be in `App\Services`. Controllers should only handle request parsing and response formatting.
+### 1. Domain-Driven Directory Structuring & Service Layer Pattern
+- **Structure**: The project strictly follows a Domain-Driven architecture within standard Laravel folders. Files must be organized into their respective Domain folders (e.g., `Auth`, `Org`, `Property`, `Service`, `Contract`, `System`) across all components (`Models`, `Controllers/Api`, `Services`, `Requests`, `Resources`, `Policies`, `factories`).
+    - *Example:* `app/Models/Property/Room.php` (namespace `App\Models\Property`).
+    - *Example:* `app/Http/Controllers/Api/Property/RoomController.php` (namespace `App\Http\Controllers\Api\Property`).
+- **Logic**: All business logic MUST go in Service classes (`App\Services\{Domain}`). Controllers should only handle request parsing and response formatting.
 - **Naming**: `ModelNameService` (e.g., `OrgService`, `UserService`).
 - **Dependency Injection**: Inject services into controllers.
 
