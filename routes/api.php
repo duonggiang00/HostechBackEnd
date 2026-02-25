@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Org\OrgController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomController;
 use App\Http\Controllers\Api\Org\UserController;
+use App\Http\Controllers\Api\Invoice\InvoiceController;
 use Illuminate\Support\Facades\Route;
 
 // Fortify automatically registers these routes:
@@ -84,4 +85,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
     Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
     Route::delete('contracts/{id}/force', [\App\Http\Controllers\Api\Contract\ContractController::class, 'forceDelete']);
+
+    //invoices
+    Route::get('invoices/trash', [InvoiceController::class, 'trash']);
+    Route::apiResource('invoices', InvoiceController::class);
+    Route::post('invoices/{id}/restore', [InvoiceController::class, 'restore']);
+    Route::delete('invoices/{id}/force', [InvoiceController::class, 'forceDelete']);
 });
