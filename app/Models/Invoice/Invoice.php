@@ -22,22 +22,10 @@ class Invoice extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id',
-        'property_id',
-        'contract_id',
-        'room_id',
-        'period_start',
-        'period_end',
-        'status',
-        'issue_date',
-        'due_date',
-        'total_amount',
-        'paid_amount',
-        'snapshot',
-        'created_by_user_id',
-        'issued_by_user_id',
-        'issued_at',
-        'cancelled_at',
+        'org_id', 'property_id', 'contract_id', 'room_id',
+        'period_start', 'period_end', 'status', 'issue_date', 'due_date',
+        'total_amount', 'paid_amount', 'snapshot',
+        'created_by_user_id', 'issued_by_user_id', 'issued_at', 'cancelled_at',
     ];
 
     protected $casts = [
