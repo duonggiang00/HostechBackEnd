@@ -102,10 +102,32 @@ class InvoicePolicy implements RbacModuleProvider
     }
 
     /**
-     * XÓA hóa đơn?
+     * XÓA MỀM hóa đơn?
      * Lưu ý nghiệp vụ: chỉ xóa được khi status = DRAFT
      */
     public function delete(User $user, Invoice $invoice): bool
+    {
+        if (!$user->hasPermissionTo('delete Invoice')) {
+            return false;
+        }
+        return $this->checkOrgScope($user, $invoice);
+    }
+
+    /**
+     * KHÔI PHỤC hóa đơn đã xóa mềm?
+     */
+    public function restore(User $user, Invoice $invoice): bool
+    {
+        if (!$user->hasPermissionTo('delete Invoice')) {
+            return false;
+        }
+        return $this->checkOrgScope($user, $invoice);
+    }
+
+    /**
+     * XÓA VĨNH VIỄN?
+     */
+    public function forceDelete(User $user, Invoice $invoice): bool
     {
         if (!$user->hasPermissionTo('delete Invoice')) {
             return false;

@@ -12,10 +12,11 @@ use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable;
+    use HasFactory, HasUuids, MultiTenant, SystemLoggable, SoftDeletes;
 
     public $incrementing = false;
 
