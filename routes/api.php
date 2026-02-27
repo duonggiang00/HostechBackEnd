@@ -84,4 +84,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
     Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
     Route::delete('contracts/{id}/force', [\App\Http\Controllers\Api\Contract\ContractController::class, 'forceDelete']);
+    //invoices
+    // Danh sách theo cây phân cấp Tòa nhà → Tầng
+    Route::get('properties/{property_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByProperty']);
+    Route::get('properties/{property_id}/floors/{floor_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByFloor']);
+
+    // SoftDeletes: Thùng rác, Khôi phục, Xóa vĩnh viễn
+    Route::get('invoices/trash', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'trash']);
+    Route::apiResource('invoices', \App\Http\Controllers\Api\Invoice\InvoiceController::class);
+    Route::post('invoices/{id}/restore', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'restore']);
+    Route::delete('invoices/{id}/force', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'forceDelete']);
+
+    // CRUD cho Items trong Hóa đơn
+    Route::post('invoices/{invoice}/items', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'storeItem']);
+    Route::delete('invoices/items/{item}', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'destroyItem']);
 });

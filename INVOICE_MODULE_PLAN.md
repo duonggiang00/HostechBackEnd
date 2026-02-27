@@ -20,17 +20,7 @@ Module **Invoice** là trung tâm tài chính của hệ thống, xử lý việ
 ## 2. Thiết kế API Endpoints (RESTful chuẩn hóa)
 
 ### Danh sách APIs
-| HTTP Method | Endpoint | Quyền (Role) | Chức năng |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/invoices` | Owner, Manager, Staff, Tenant | Danh sách toàn bộ hóa đơn (Tenant chỉ thấy của mình). |
-| `GET` | `/api/properties/{property_id}/invoices` | Owner, Manager, Staff | Danh sách hóa đơn thuộc 1 Tòa nhà. |
-| `GET` | `/api/properties/{property_id}/floors/{floor_id}/invoices` | Owner, Manager, Staff | Danh sách hóa đơn thuộc 1 Tầng. |
-| `POST` | `/api/invoices` | Owner, Manager | Tạo mới hóa đơn (Kèm các Items chi tiết). |
-| `GET` | `/api/invoices/{id}` | Owner, Manager, Staff, Tenant | Xem chi tiết 1 hóa đơn (Bao gồm danh sách Items). |
-| `PUT/PATCH` | `/api/invoices/{id}` | Owner, Manager | Cập nhật hóa đơn (Thay đổi trạng thái, tổng tiền...). |
-| `DELETE` | `/api/invoices/{id}` | Owner, Manager | Xóa hóa đơn (Chỉ xóa được khi DRAFT hoặc CANCELLED). |
-| `POST` | `/api/invoices/{id}/items` | Owner, Manager | Thêm chi tiết phí vào hóa đơn. |
-| `DELETE` | `/api/invoices/items/{item_id}`| Owner, Manager | Xóa 1 dòng chi phí khỏi hóa đơn. |
+cccccccc
 
 ---
 
