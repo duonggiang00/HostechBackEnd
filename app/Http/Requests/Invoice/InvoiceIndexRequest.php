@@ -42,4 +42,5 @@ class InvoiceIndexRequest extends FormRequest
             'sort' => 'Sắp xếp',
         ];
     }
+    //test
 }
