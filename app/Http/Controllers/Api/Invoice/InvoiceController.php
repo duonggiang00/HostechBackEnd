@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Invoice;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Invoice\InvoiceIndexRequest;
 use App\Http\Requests\Invoice\InvoiceStoreRequest;
 use App\Http\Requests\Invoice\InvoiceUpdateRequest;
 use App\Http\Resources\Invoice\InvoiceResource;
@@ -33,15 +34,8 @@ class InvoiceController extends Controller
      * Danh sách hóa đơn
      *
      * Lấy danh sách hóa đơn. Hỗ trợ lọc theo Property, Room, Contract, Status.
-     *
-     * @queryParam per_page int Số bản ghi mỗi trang. Example: 15
-     * @queryParam search string Tìm kiếm theo mã phòng.
-     * @queryParam filter[status] string Lọc trạng thái: DRAFT, ISSUED, PENDING, PAID, OVERDUE, CANCELLED.
-     * @queryParam filter[property_id] string Lọc theo tòa nhà.
-     * @queryParam filter[room_id] string Lọc theo phòng.
-     * @queryParam sort string Sắp xếp: due_date, total_amount, created_at. Thêm "-" để DESC.
      */
-    public function index(Request $request)
+    public function index(InvoiceIndexRequest $request)
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -64,9 +58,9 @@ class InvoiceController extends Controller
     /**
      * Danh sách hóa đơn theo Tòa nhà (Property)
      *
-     * Lấy danh sách hóa đơn thuộc 1 Tòa nhà cụ thể.
+     * Lấy danh sách hóa đơn thuộc 1 Tòa nhà cụ thể. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function indexByProperty(Request $request, string $property_id)
+    public function indexByProperty(InvoiceIndexRequest $request, string $property_id)
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -86,9 +80,9 @@ class InvoiceController extends Controller
     /**
      * Danh sách hóa đơn theo Tầng (Floor) trong Tòa nhà
      *
-     * Lấy danh sách hóa đơn thuộc 1 Tầng cụ thể trong Tòa nhà.
+     * Lấy danh sách hóa đơn thuộc 1 Tầng cụ thể trong Tòa nhà. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function indexByFloor(Request $request, string $property_id, string $floor_id)
+    public function indexByFloor(InvoiceIndexRequest $request, string $property_id, string $floor_id)
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -107,8 +101,10 @@ class InvoiceController extends Controller
 
     /**
      * Danh sách hóa đơn đã xóa (Thùng rác)
+     *
+     * Lấy danh sách hóa đơn đã xóa mềm. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function trash(Request $request)
+    public function trash(InvoiceIndexRequest $request)
     {
         $this->authorize('viewAny', Invoice::class);
 

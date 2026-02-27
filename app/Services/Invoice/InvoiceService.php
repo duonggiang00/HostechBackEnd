@@ -73,8 +73,20 @@ class InvoiceService
         ?string $orgId = null
     ) {
         $query = QueryBuilder::for(Invoice::onlyTrashed())
-            ->allowedFilters($allowedFilters)
-            ->allowedSorts(['due_date', 'created_at'])
+            ->allowedFilters(array_merge($allowedFilters, [
+                AllowedFilter::exact('org_id'),
+                AllowedFilter::exact('property_id'),
+                AllowedFilter::exact('room_id'),
+                AllowedFilter::exact('status'),
+            ]))
+            ->allowedSorts([
+                'due_date',
+                'period_start',
+                'period_end',
+                'total_amount',
+                'status',
+                'created_at',
+            ])
             ->defaultSort('-created_at')
             ->with(['property', 'room']);
 
@@ -88,7 +100,11 @@ class InvoiceService
                     'room',
                     fn($rq) =>
                     $rq->where('code', 'like', "%{$search}%")
-                );
+                        ->orWhere('name', 'like', "%{$search}%")
+                )
+                    ->orWhereHas('property', function ($pq) use ($search) {
+                        $pq->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -104,9 +120,24 @@ class InvoiceService
         ?string $search = null,
         ?string $orgId = null
     ) {
-        $query = Invoice::where('property_id', $propertyId)
-            ->with(['property', 'room', 'contract', 'items'])
-            ->orderBy('created_at', 'desc');
+        $query = QueryBuilder::for(
+            Invoice::where('property_id', $propertyId)
+        )
+            ->allowedFilters([
+                AllowedFilter::exact('status'),
+                AllowedFilter::exact('room_id'),
+                AllowedFilter::exact('contract_id'),
+            ])
+            ->allowedSorts([
+                'due_date',
+                'period_start',
+                'period_end',
+                'total_amount',
+                'status',
+                'created_at',
+            ])
+            ->defaultSort('-created_at')
+            ->with(['property', 'room', 'contract', 'items']);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -134,12 +165,27 @@ class InvoiceService
         ?string $search = null,
         ?string $orgId = null
     ) {
-        $query = Invoice::where('property_id', $propertyId)
-            ->whereHas('room', function ($q) use ($floorId) {
-                $q->where('floor_id', $floorId);
-            })
-            ->with(['property', 'room', 'contract', 'items'])
-            ->orderBy('created_at', 'desc');
+        $query = QueryBuilder::for(
+            Invoice::where('property_id', $propertyId)
+                ->whereHas('room', function ($q) use ($floorId) {
+                    $q->where('floor_id', $floorId);
+                })
+        )
+            ->allowedFilters([
+                AllowedFilter::exact('status'),
+                AllowedFilter::exact('room_id'),
+                AllowedFilter::exact('contract_id'),
+            ])
+            ->allowedSorts([
+                'due_date',
+                'period_start',
+                'period_end',
+                'total_amount',
+                'status',
+                'created_at',
+            ])
+            ->defaultSort('-created_at')
+            ->with(['property', 'room', 'contract', 'items']);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -148,7 +194,8 @@ class InvoiceService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('room', function ($rq) use ($search) {
-                    $rq->where('code', 'like', "%{$search}%");
+                    $rq->where('code', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%");
                 });
             });
         }
