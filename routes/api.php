@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\Property\FloorController;
 use App\Http\Controllers\Api\Org\OrgController;
+use App\Http\Controllers\Api\Org\UserController;
+use App\Http\Controllers\Api\Property\FloorController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomController;
-use App\Http\Controllers\Api\Org\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Fortify automatically registers these routes:
@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
  * Đăng xuất
  *
  * Hủy bỏ token hiện tại, đăng xuất khỏi hệ thống.
- * 
+ *
  * @tags Xác thực (Auth)
  */
 Route::middleware(['auth:sanctum'])->post('/auth/logout', function (Illuminate\Http\Request $request) {
@@ -84,7 +84,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
     Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
     Route::delete('contracts/{id}/force', [\App\Http\Controllers\Api\Contract\ContractController::class, 'forceDelete']);
-    //invoices
+
+    // Meters
+    Route::get('properties/{property_id}/meters', [\App\Http\Controllers\Api\Meter\MeterController::class, 'indexByProperty']);
+    Route::get('properties/{property_id}/floors/{floor_id}/meters', [\App\Http\Controllers\Api\Meter\MeterController::class, 'indexByFloor']);
+    Route::apiResource('meters', \App\Http\Controllers\Api\Meter\MeterController::class);
+
+    // invoices
     // Danh sách theo cây phân cấp Tòa nhà → Tầng
     Route::get('properties/{property_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByProperty']);
     Route::get('properties/{property_id}/floors/{floor_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByFloor']);
