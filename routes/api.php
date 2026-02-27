@@ -90,6 +90,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('properties/{property_id}/floors/{floor_id}/meters', [\App\Http\Controllers\Api\Meter\MeterController::class, 'indexByFloor']);
     Route::apiResource('meters', \App\Http\Controllers\Api\Meter\MeterController::class);
 
+    // Meter Readings
+    Route::apiResource('meters.readings', \App\Http\Controllers\Api\Meter\MeterReadingController::class)->scoped();
+
     // invoices
     // Danh sách theo cây phân cấp Tòa nhà → Tầng
     Route::get('properties/{property_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByProperty']);
