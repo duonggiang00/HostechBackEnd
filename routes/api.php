@@ -137,4 +137,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // CRUD cho Items trong Hóa đơn
     Route::post('invoices/{invoice}/items', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'storeItem']);
     Route::delete('invoices/items/{item}', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'destroyItem']);
+    
+    // Handovers
+    Route::apiResource('handovers', \App\Http\Controllers\Api\Handover\HandoverController::class);
+    Route::post('handovers/{handover}/confirm', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'confirm']);
+    
+    // Handover Items
+    Route::get('handovers/{handover}/items', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsIndex']);
+    Route::post('handovers/{handover}/items', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsStore']);
+    Route::put('handovers/{handover}/items/{item}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsUpdate']);
+    Route::delete('handovers/{handover}/items/{item}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsDestroy']);
+    
+    // Handover Meter Snapshots
+    Route::get('handovers/{handover}/snapshots', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsIndex']);
+    Route::post('handovers/{handover}/snapshots', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsStore']);
+    Route::delete('handovers/{handover}/snapshots/{snapshot}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsDestroy']);
 });
