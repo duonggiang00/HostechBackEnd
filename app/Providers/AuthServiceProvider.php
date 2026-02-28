@@ -27,6 +27,7 @@ class AuthServiceProvider extends ServiceProvider
         Property::class => PropertyPolicy::class,
         Floor::class => FloorPolicy::class,
         Room::class => RoomPolicy::class,
+        \App\Models\Handover\Handover::class => \App\Policies\HandoverPolicy::class,
     ];
 
     /**
