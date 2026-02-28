@@ -3,13 +3,14 @@
 namespace App\Models\System;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use App\Models\Org\User;
 
-class TemporaryUpload extends Model implements HasMedia
+class TemporaryUpload extends \Illuminate\Database\Eloquent\Model implements HasMedia
 {
-    use HasUuids, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia;
 
     public $incrementing = false;
     protected $keyType = 'string';
