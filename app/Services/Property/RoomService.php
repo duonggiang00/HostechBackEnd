@@ -19,6 +19,17 @@ class RoomService
             ->allowedIncludes(['assets', 'prices', 'statusHistories', 'media'])
             ->defaultSort('code');
 
+        $user = request()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('contracts', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                  ->whereHas('members', function ($sq) use ($user) {
+                      $sq->where('user_id', $user->id)
+                         ->where('status', 'APPROVED');
+                  });
+            });
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")

@@ -49,27 +49,37 @@ Table users [Note: 'Người dùng hệ thống (Admin, Owner, Staff, Tenant)'] 
   }
 }
 
-Table invites [Note: 'Lời mời tham gia tổ chức, dùng cho nhân viên hoặc người thuê'] {
+Table user_invitations [Note: 'Lời mời tạo tài khoản và phân quyền cho người nhận'] {
   id uuid [pk]
-  org_id uuid [not null, ref: > orgs.id]
-  property_id uuid [ref: > properties.id, note: 'Tùy chọn: Gán cứng vào 1 Property cụ thể']
-  type varchar(10) [not null, note: "ENUM: STAFF, TENANT"]
-  channel varchar(10) [not null, default: 'LINK', note: "ENUM: EMAIL, PHONE, LINK, QR"]
-  target_email varchar(255)
-  target_phone varchar(30)
-  token varchar(64) [not null]
-  expires_at timestamp
-  revoked_at timestamp
-  usage_count int [not null, default: 0]
-  max_usage int [not null, default: 1]
-  created_by_user_id uuid [ref: > users.id]
+  email varchar(255) [unique, not null]
+  token varchar(64) [unique, not null, note: 'Hash bảo mật dùng cho link đăng ký']
+  role_name varchar(50) [not null, note: 'Owner, Manager, Staff, Tenant']
+  org_id uuid [null, note: 'Null nếu mời Owner tự tạo tổ chức']
+  properties_scope json [null, note: 'Danh sách tòa nhà được gán nếu là Manager/Staff']
+  invited_by uuid [ref: > users.id]
+  expires_at timestamp [not null]
+  registered_at timestamp [null]
   created_at timestamp
+  updated_at timestamp
 
   Indexes {
-    (org_id, token) [unique]
+    (email) [unique]
+    (token) [unique]
     (org_id)
-    (property_id)
-    (expires_at)
+  }
+}
+
+Ref: user_invitations.org_id > orgs.id
+
+Table property_user [Note: 'Pivot gắn Manager/Staff vào các Property nhất định'] {
+  id bigint [pk]
+  property_id uuid [ref: > properties.id]
+  user_id uuid [ref: > users.id]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (property_id, user_id) [unique]
   }
 }
 
@@ -954,7 +964,8 @@ Table generated_documents [Note: 'File văn bản đã được xuất PDF/Word 
 TableGroup Core_System {
   orgs
   users
-  invites
+  user_invitations
+  property_user
 }
 
 TableGroup Property_Management {

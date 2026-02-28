@@ -42,6 +42,13 @@ class OrgController extends Controller
      * Danh sách tổ chức
      * 
      * Lấy danh sách các tổ chức.
+     *
+     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
+     * @queryParam page int Số trang. Example: 1
+     * @queryParam search string Tìm kiếm theo tên tổ chức, email hoặc SĐT. Example: Org A
+     * @queryParam filter[name] string Lọc theo tên tổ chức.
+     * @queryParam filter[email] string Lọc theo email.
+     * @queryParam filter[phone] string Lọc theo số điện thoại.
      */
     public function index(OrgIndexRequest $request)
     {
@@ -59,8 +66,20 @@ class OrgController extends Controller
 
         return OrgResource::collection($paginator)->response()->setStatusCode(200);
     }
-    
-    // ...
+
+    /**
+     * Tạo mới tổ chức
+     * 
+     * Thêm một tổ chức mới vào hệ thống.
+     */
+    public function store(OrgStoreRequest $request)
+    {
+        $this->authorize('create', Org::class);
+
+        $org = $this->service->create($request->validated());
+
+        return new OrgResource($org);
+    }
 
     /**
      * Chi tiết tổ chức
@@ -108,7 +127,13 @@ class OrgController extends Controller
      * Danh sách tổ chức đã xóa (Thùng rác)
      * 
      * Lấy danh sách các tổ chức đã bị xóa tạm thời (Soft Delete).
-     * 
+     *
+     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
+     * @queryParam page int Số trang. Example: 1
+     * @queryParam search string Tìm kiếm theo tên tổ chức, email hoặc SĐT.
+     * @queryParam filter[name] string Lọc theo tên tổ chức.
+     * @queryParam filter[email] string Lọc theo email.
+     * @queryParam filter[phone] string Lọc theo số điện thoại.
      */
     public function trash(OrgIndexRequest $request)
     {
@@ -180,6 +205,12 @@ class OrgController extends Controller
      * Danh sách Property của tổ chức
      * 
      * Lấy danh sách Property thuộc về tổ chức này.
+     *
+     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
+     * @queryParam page int Số trang. Example: 1
+     * @queryParam search string Tìm kiếm theo tên hoặc mã property. Example: Building A
+     * @queryParam filter[name] string Lọc theo tên property.
+     * @queryParam filter[code] string Lọc theo mã property.
      */
     public function properties(PropertyIndexRequest $request, string $id)
     {
@@ -203,6 +234,12 @@ class OrgController extends Controller
      * Danh sách người dùng của tổ chức
      * 
      * Lấy danh sách người dùng thuộc về tổ chức này.
+     *
+     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
+     * @queryParam page int Số trang. Example: 1
+     * @queryParam search string Tìm kiếm theo tên hoặc email. Example: Nguyen Van A
+     * @queryParam filter[full_name] string Lọc theo họ tên người dùng.
+     * @queryParam filter[email] string Lọc theo email người dùng.
      */
     public function users(UserIndexRequest $request, string $id)
     {

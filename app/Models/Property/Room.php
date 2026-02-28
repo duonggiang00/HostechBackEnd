@@ -68,4 +68,9 @@ class Room extends Model implements HasMedia
     {
         return $this->hasMany(RoomStatusHistory::class);
     }
+
+    public function contracts()
+    {
+        return $this->hasMany(\App\Models\Contract\Contract::class);
+    }
 }

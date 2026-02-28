@@ -36,6 +36,12 @@ class User extends Authenticatable implements HasMedia
         'password_hash',
         'is_active',
         'meta',
+        // Personal / identity
+        'identity_number',
+        'identity_issued_date',
+        'identity_issued_place',
+        'date_of_birth',
+        'address',
     ];
 
     protected $hidden = [
@@ -80,5 +86,14 @@ class User extends Authenticatable implements HasMedia
     public function setPasswordAttribute(string $value): void
     {
         $this->attributes['password_hash'] = \Illuminate\Support\Facades\Hash::make($value);
+    }
+
+    /**
+     * Managed properties for Manager/Staff roles
+     */
+    public function properties()
+    {
+        return $this->belongsToMany(\App\Models\Property\Property::class, 'property_user')
+                    ->withTimestamps();
     }
 }

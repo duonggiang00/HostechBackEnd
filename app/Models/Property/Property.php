@@ -33,4 +33,18 @@ class Property extends Model
     {
         return $this->hasMany(Room::class);
     }
+
+    /**
+     * Users (Manager/Staff) assigned to this property
+     */
+    public function managers()
+    {
+        return $this->belongsToMany(\App\Models\Org\User::class, 'property_user')
+                    ->withTimestamps();
+    }
+
+    public function contracts()
+    {
+        return $this->hasMany(\App\Models\Contract\Contract::class);
+    }
 }

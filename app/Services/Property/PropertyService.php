@@ -14,6 +14,17 @@ class PropertyService
             ->defaultSort('name')
             ->withCount(['floors', 'rooms']);
 
+        $user = request()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('contracts', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                  ->whereHas('members', function ($sq) use ($user) {
+                      $sq->where('user_id', $user->id)
+                         ->where('status', 'APPROVED');
+                  });
+            });
+        }
+
         if ($orgId) {
             $query->where('org_id', $orgId);
         }

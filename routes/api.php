@@ -28,15 +28,30 @@ Route::middleware(['auth:sanctum'])->post('/auth/logout', function (Illuminate\H
 });
 
 Route::middleware(['auth:sanctum'])->get('/auth/me', function (Illuminate\Http\Request $request) {
-    return $request->user();
+    $user = $request->user()->loadMissing('roles', 'permissions', 'media');
+    return new \App\Http\Resources\Org\UserResource($user);
 });
 
 // Protected API Routes
 use App\Http\Controllers\Api\System\MediaController;
 
+// Public API Routes
+Route::get('invitations/validate/{token}', [\App\Http\Controllers\Api\System\UserInvitationController::class, 'validateToken']);
+
 Route::middleware('auth:sanctum')->group(function () {
     // API Quản lý File chung
     Route::post('media/upload', [MediaController::class, 'store']);
+
+    // Profile — Hồ sơ cá nhân
+    Route::get('profile', [\App\Http\Controllers\Api\Org\ProfileController::class, 'show']);
+    Route::put('profile', [\App\Http\Controllers\Api\Org\ProfileController::class, 'update']);
+    Route::post('profile/change-password', [\App\Http\Controllers\Api\Org\ProfileController::class, 'changePassword']);
+    Route::post('profile/avatar', [\App\Http\Controllers\Api\Org\ProfileController::class, 'uploadAvatar']);
+    Route::get('profile/mfa-status', [\App\Http\Controllers\Api\Org\ProfileController::class, 'mfaStatus']);
+    
+    // User Invitations
+    Route::post('invitations', [\App\Http\Controllers\Api\System\UserInvitationController::class, 'store']);
+    
     // Organizations
     Route::get('orgs/trash', [OrgController::class, 'trash']);
     Route::apiResource('orgs', OrgController::class);
@@ -82,7 +97,15 @@ Route::middleware('auth:sanctum')->group(function () {
     // Audit Logs
     Route::apiResource('audit-logs', \App\Http\Controllers\Api\System\AuditLogController::class)->only(['index', 'show']);
 
-    // Contracts
+    // Contracts — Tenant Signature Flow
+    Route::get('contracts/my-pending', [\App\Http\Controllers\Api\Contract\ContractController::class, 'myPendingContracts']);
+    Route::post('contracts/{contract}/accept-signature', [\App\Http\Controllers\Api\Contract\ContractController::class, 'acceptSignature']);
+    Route::post('contracts/{contract}/reject-signature', [\App\Http\Controllers\Api\Contract\ContractController::class, 'rejectSignature']);
+    // Contracts — Tenant Self-Service
+    Route::post('contracts/{contract}/members', [\App\Http\Controllers\Api\Contract\ContractController::class, 'addMember']);
+    Route::get('contracts/{contract}/available-rooms', [\App\Http\Controllers\Api\Contract\ContractController::class, 'availableRooms']);
+    Route::post('contracts/{contract}/room-transfer-request', [\App\Http\Controllers\Api\Contract\ContractController::class, 'roomTransferRequest']);
+    // Contracts — CRUD
     Route::get('contracts/trash', [\App\Http\Controllers\Api\Contract\ContractController::class, 'trash']);
     Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
     Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
