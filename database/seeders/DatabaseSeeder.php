@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             RBACSeeder::class,
             OrgSeeder::class,
             UserSeeder::class,
+            TicketSeeder::class,
         ]);
     }
 }

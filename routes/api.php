@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 // - POST /api/auth/logout (uses auth:web for sessions)
 
 // For API clients using Sanctum tokens, provide a logout endpoint
+
 /**
  * Đăng xuất
  *
@@ -106,7 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Nested Room Assets API (under Room)
     Route::apiResource('properties.rooms.assets', \App\Http\Controllers\Api\Property\RoomAssetController::class)
         ->parameters([
-            'assets' => 'asset' // parameter name becomes {asset} instead of {room_asset}
+            'assets' => 'asset', // parameter name becomes {asset} instead of {room_asset}
         ]);
 
     // Meters
@@ -131,4 +132,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // CRUD cho Items trong Hóa đơn
     Route::post('invoices/{invoice}/items', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'storeItem']);
     Route::delete('invoices/items/{item}', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'destroyItem']);
+
+    // Tickets
+    Route::apiResource('tickets', \App\Http\Controllers\Api\Ticket\TicketController::class);
+    Route::put('tickets/{id}/status', [\App\Http\Controllers\Api\Ticket\TicketController::class, 'updateStatus']);
+    Route::post('tickets/{id}/events', [\App\Http\Controllers\Api\Ticket\TicketController::class, 'storeEvent']);
+    Route::post('tickets/{id}/costs', [\App\Http\Controllers\Api\Ticket\TicketController::class, 'storeCost']);
 });

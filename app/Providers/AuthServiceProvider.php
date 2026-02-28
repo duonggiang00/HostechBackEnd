@@ -2,16 +2,18 @@
 
 namespace App\Providers;
 
-use App\Models\Property\Floor;
 use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Org\User;
-use App\Policies\Property\FloorPolicy;
+use App\Models\Ticket\Ticket;
 use App\Policies\Org\OrgPolicy;
+use App\Policies\Org\UserPolicy;
+use App\Policies\Property\FloorPolicy;
 use App\Policies\Property\PropertyPolicy;
 use App\Policies\Property\RoomPolicy;
-use App\Policies\Org\UserPolicy;
+use App\Policies\Ticket\TicketPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -27,6 +29,7 @@ class AuthServiceProvider extends ServiceProvider
         Property::class => PropertyPolicy::class,
         Floor::class => FloorPolicy::class,
         Room::class => RoomPolicy::class,
+        Ticket::class => TicketPolicy::class,
     ];
 
     /**

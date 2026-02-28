@@ -3,18 +3,19 @@
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
+use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Org\User;
 use Spatie\Permission\Models\Role;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertNotSoftDeleted;
+use function Pest\Laravel\assertSoftDeleted;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
-use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertSoftDeleted;
-use function Pest\Laravel\assertNotSoftDeleted;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -25,7 +26,7 @@ test('admin can create contract', function () {
     $admin = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Admin User']);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $tenant = User::factory()->create(['org_id' => $org->id]);
@@ -49,8 +50,8 @@ test('admin can create contract', function () {
                 'role' => 'TENANT',
                 'is_primary' => true,
                 'joined_at' => now()->toDateString(),
-            ]
-        ]
+            ],
+        ],
     ]);
 
     $response->assertStatus(201)
@@ -99,28 +100,28 @@ test('user cannot create contract for another org', function () {
     // If strict Org Scope is applied in Service/Controller, it might auto-assign Org 1, creating mismatch.
     // Current Controller logic assigns org_id = user->org_id.
     // If DB has FK constraints, referencing property_id (Org 2) with org_id (Org 1) might fail or be allowed depending on schema.
-    // Schema: 
+    // Schema:
     // contracts.org_id -> orgs
     // contracts.property_id -> properties
     // properties.org_id -> orgs
     // There isn't an explicit DB constraint that contracts.org_id == contracts.property.org_id usually, but logically it must hold.
     // If allowed, it creates inconsistent state. Request validation usually handles this 'exists:properties,id,org_id,...'
-    
+
     // For now, let's assume it might fail validation or return 403 or 422.
     // Since we didn't add strict org validation rule, it might actually succeed with inconsistent data OR fail on FK if constraints exist.
     // Safe bet: The validation 'exists' doesn't check org ownership by default.
     // So `store` might succeed creating a contract in Org 1 linked to Property in Org 2.
     // This is a logic gap we might discover. Let's see.
     // If Controller overrides org_id, it effectively "steals" the property context or creates invalid link.
-    
-    // BUT we are creating a test to VERIFY behavior. 
+
+    // BUT we are creating a test to VERIFY behavior.
     // Let's assert 422 if we had validation, or check DB if we expect success (which would be a bug to fix).
-    // Let's stick to "Owner creates in proper org" first. 
+    // Let's stick to "Owner creates in proper org" first.
     // And "Owner cannot access other org data".
-    
+
     // Let's simplify: access control on viewing.
     $contract2 = Contract::factory()->create(['org_id' => $org2->id, 'property_id' => $property2->id, 'room_id' => $room2->id]);
-    
+
     getJson("/api/contracts/{$contract2->id}")
         ->assertStatus(403);
 });
@@ -130,26 +131,26 @@ test('can list contracts with filters', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     Contract::factory()->create([
-        'org_id' => $org->id, 
+        'org_id' => $org->id,
         'property_id' => $property->id,
         'room_id' => $room->id,
         'status' => 'ACTIVE',
-        'rent_price' => 1000
+        'rent_price' => 1000,
     ]);
-    
+
     $property2 = Property::factory()->create(['org_id' => $org->id]);
     $room2 = Room::factory()->create(['property_id' => $property2->id, 'org_id' => $org->id]);
     Contract::factory()->create([
-        'org_id' => $org->id, 
+        'org_id' => $org->id,
         'property_id' => $property2->id,
         'room_id' => $room2->id,
         'status' => 'ENDED',
-        'rent_price' => 2000
+        'rent_price' => 2000,
     ]);
 
     actingAs($admin);
@@ -165,7 +166,7 @@ test('can list contracts with filters', function () {
         ->assertJsonCount(1, 'data')
         ->assertJsonFragment(['rent_price' => 1000]);
 
-    // Filter by Property 
+    // Filter by Property
     getJson("/api/contracts?filter[property_id]={$property->id}")
         ->assertStatus(200)
         ->assertJsonCount(1, 'data')
@@ -177,25 +178,25 @@ test('can update contract', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     $contract = Contract::factory()->create(['org_id' => $org->id, 'status' => 'DRAFT', 'property_id' => $property->id, 'room_id' => $room->id]);
 
     actingAs($admin);
 
     putJson("/api/contracts/{$contract->id}", [
         'status' => 'ACTIVE',
-        'rent_price' => 6000000
+        'rent_price' => 6000000,
     ])->assertStatus(200)
-      ->assertJsonPath('data.status', 'ACTIVE')
-      ->assertJsonPath('data.rent_price', 6000000);
-      
+        ->assertJsonPath('data.status', 'ACTIVE')
+        ->assertJsonPath('data.rent_price', 6000000);
+
     assertDatabaseHas('contracts', [
         'id' => $contract->id,
         'status' => 'ACTIVE',
-        'rent_price' => 6000000
+        'rent_price' => 6000000,
     ]);
 });
 
@@ -204,10 +205,10 @@ test('can soft delete and restore contract', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
 
     actingAs($admin);
@@ -231,17 +232,17 @@ test('can force delete contract', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
     $contract->delete(); // Soft deleted first
 
     actingAs($admin);
 
     deleteJson("/api/contracts/{$contract->id}/force")->assertStatus(200);
-    
+
     $this->assertDatabaseMissing('contracts', ['id' => $contract->id]);
 });
 
@@ -250,7 +251,7 @@ test('manager can create contract', function () {
     $manager = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Manager']);
     $manager->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
@@ -270,7 +271,7 @@ test('staff cannot create contract', function () {
     $staff = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Staff']);
     $staff->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
@@ -290,10 +291,10 @@ test('staff can view any contract in org', function () {
     $staff = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Staff']);
     $staff->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
 
     actingAs($staff);
@@ -305,12 +306,12 @@ test('tenant can view own contract', function () {
     $tenant = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     // Add tenant as member
     ContractMember::create([
         'id' => \Illuminate\Support\Str::uuid(),
@@ -320,7 +321,7 @@ test('tenant can view own contract', function () {
         'full_name' => $tenant->full_name,
         'phone' => $tenant->phone,
         'role' => 'TENANT',
-        'is_primary' => true
+        'is_primary' => true,
     ]);
 
     actingAs($tenant);
@@ -332,10 +333,10 @@ test('tenant cannot view other contract', function () {
     $tenant = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
-    
+
     // Contract user belongs to
     $ownContract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
     ContractMember::create([
@@ -346,25 +347,25 @@ test('tenant cannot view other contract', function () {
         'full_name' => $tenant->full_name,
         'phone' => $tenant->phone,
         'role' => 'TENANT',
-        'is_primary' => true
+        'is_primary' => true,
     ]);
-    
+
     // Other contract
     $room2 = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $otherContract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room2->id]);
 
     actingAs($tenant);
-    
+
     // Can view own
     getJson("/api/contracts/{$ownContract->id}")->assertStatus(200);
-    
+
     // Cannot view other
     getJson("/api/contracts/{$otherContract->id}")->assertStatus(403);
 });
 
 test('unauthorized user cannot list contracts', function () {
     $org = Org::factory()->create();
-    $user = User::factory()->create(['org_id' => $org->id]); 
+    $user = User::factory()->create(['org_id' => $org->id]);
     // User has no role/permissions yet
 
     actingAs($user);
@@ -377,7 +378,7 @@ test('admin can add member to contract without user account (decoupled)', functi
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
@@ -409,11 +410,11 @@ test('admin can update contract member', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,
@@ -446,11 +447,11 @@ test('admin can mark contract member as left', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,
@@ -472,11 +473,11 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
     $tenant = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     ContractMember::create([
         'id' => \Illuminate\Support\Str::uuid(),
         'org_id' => $org->id,
@@ -484,7 +485,7 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
         'user_id' => $tenant->id,
         'full_name' => $tenant->full_name,
         'role' => 'TENANT',
-        'is_primary' => true
+        'is_primary' => true,
     ]);
 
     actingAs($tenant);
@@ -512,11 +513,11 @@ test('admin can approve pending roommate request', function () {
     $admin = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,
@@ -542,11 +543,11 @@ test('tenant cannot approve their own or other roommate requests', function () {
     $tenant = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
-    
+
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
-    
+
     ContractMember::create([
         'id' => \Illuminate\Support\Str::uuid(),
         'org_id' => $org->id,
@@ -554,9 +555,9 @@ test('tenant cannot approve their own or other roommate requests', function () {
         'user_id' => $tenant->id,
         'full_name' => $tenant->full_name,
         'role' => 'TENANT',
-        'is_primary' => true
+        'is_primary' => true,
     ]);
-    
+
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,

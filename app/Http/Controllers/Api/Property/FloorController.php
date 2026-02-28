@@ -3,21 +3,20 @@
 namespace App\Http\Controllers\Api\Property;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Property\FloorIndexRequest;
 use App\Http\Requests\Property\FloorStoreRequest;
 use App\Http\Requests\Property\FloorUpdateRequest;
-use App\Http\Requests\Property\FloorIndexRequest;
 use App\Http\Resources\Property\FloorResource;
 use App\Models\Property\Floor;
-use Spatie\QueryBuilder\QueryBuilder;
-
 use App\Services\Property\FloorService;
+use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 
 /**
  * Quản lý Tầng (Floors)
- * 
+ *
  * API quản lý các tầng trong một tòa nhà (Property).
+ *
  * @tags Quản lý Tầng
  */
 #[Group('Quản lý Tầng')]
@@ -27,14 +26,13 @@ class FloorController extends Controller
 
     /**
      * Danh sách tầng
-     * 
+     *
      * Lấy danh sách các tầng. Hỗ trợ lọc theo Property.
      */
 
-
     /**
      * Danh sách tầng
-     * 
+     *
      * Lấy danh sách các tầng. Hỗ trợ lọc theo Property.
      */
     public function index(FloorIndexRequest $request)
@@ -48,8 +46,8 @@ class FloorController extends Controller
 
         $allowed = [
             AllowedFilter::exact('property_id'),
-            'name', 
-            'code'
+            'name',
+            'code',
         ];
         $search = $request->input('search');
 
@@ -60,9 +58,9 @@ class FloorController extends Controller
 
     /**
      * Danh sách tầng đã xóa (Thùng rác)
-     * 
+     *
      * Lấy danh sách các tầng đã bị xóa tạm thời (Soft Delete).
-     * 
+     *
      * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 10
      * @queryParam page int Trang hiện tại. Example: 1
      * @queryParam search string Từ khóa tìm kiếm. Example: Tầng 1
@@ -90,7 +88,7 @@ class FloorController extends Controller
 
     /**
      * Tạo tầng mới
-     * 
+     *
      * Thêm một tầng mới vào hệ thống.
      */
     public function store(FloorStoreRequest $request)
@@ -102,14 +100,14 @@ class FloorController extends Controller
 
         $property = \App\Models\Property\Property::find($data['property_id']);
         if (! $property) {
-             return response()->json(['message' => 'Property not found'], 404);
+            return response()->json(['message' => 'Property not found'], 404);
         }
 
         // Security: Check if Property belongs to User's Org (if not Admin)
-        if (! $user->hasRole('Admin') && $user->org_id && (string)$property->org_id !== (string)$user->org_id) {
-             return response()->json(['message' => 'Unauthorized: You cannot add floors to a property in another organization.'], 403);
+        if (! $user->hasRole('Admin') && $user->org_id && (string) $property->org_id !== (string) $user->org_id) {
+            return response()->json(['message' => 'Unauthorized: You cannot add floors to a property in another organization.'], 403);
         }
-        
+
         // Auto-assign org_id from Property (secure now)
         $data['org_id'] = $property->org_id;
 
@@ -120,7 +118,7 @@ class FloorController extends Controller
 
     /**
      * Chi tiết tầng
-     * 
+     *
      * Xem thông tin chi tiết của một tầng, bao gồm danh sách phòng.
      */
     public function show(string $id)
@@ -139,7 +137,7 @@ class FloorController extends Controller
 
     /**
      * Cập nhật tầng
-     * 
+     *
      * Cập nhật thông tin của một tầng.
      */
     public function update(FloorUpdateRequest $request, string $id)
@@ -158,7 +156,7 @@ class FloorController extends Controller
 
     /**
      * Xóa tầng (Soft Delete)
-     * 
+     *
      * Đưa tầng vào thùng rác tạm thời.
      */
     public function destroy(string $id)
@@ -177,7 +175,7 @@ class FloorController extends Controller
 
     /**
      * Khôi phục tầng
-     * 
+     *
      * Khôi phục tầng đã bị xóa tạm thời.
      */
     public function restore(string $id)
@@ -196,7 +194,7 @@ class FloorController extends Controller
 
     /**
      * Xóa vĩnh viễn tầng
-     * 
+     *
      * Xóa hoàn toàn tầng khỏi hệ thống. Không thể khôi phục.
      */
     public function forceDelete(string $id)
