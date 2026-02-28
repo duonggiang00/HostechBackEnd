@@ -389,6 +389,73 @@ class OrgSeeder extends Seeder
                         'left_at' => $contract->end_date,
                     ]);
                 }
+
+                // C. Seed Tickets (40% chance per room to have a ticket)
+                if (rand(0, 100) > 60) {
+                    $ticketId = Str::uuid()->toString();
+                    $tenantId = User::where('org_id', $org->id)->whereHas('roles', function($q) {
+                        $q->where('name', 'Tenant');
+                    })->inRandomOrder()->first()?->id ?? $ownerId;
+
+                    $isClosed = rand(0, 1) === 1;
+                    $status = $isClosed ? 'DONE' : fake()->randomElement(['OPEN', 'RECEIVED', 'IN_PROGRESS', 'WAITING_PARTS']);
+                    $createdAt = now()->subDays(rand(1, 15));
+
+                    DB::table('tickets')->insert([
+                        'id' => $ticketId,
+                        'org_id' => $org->id,
+                        'property_id' => $room->property_id,
+                        'room_id' => $room->id,
+                        'contract_id' => isset($contract) ? $contract->id : null,
+                        'created_by_user_id' => $tenantId,
+                        'assigned_to_user_id' => $ownerId,
+                        'category' => fake()->randomElement(['Điện', 'Nước', 'Vệ sinh', 'Khác']),
+                        'priority' => fake()->randomElement(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
+                        'status' => $status,
+                        'description' => fake()->sentence(8),
+                        'due_at' => $createdAt->copy()->addDays(3),
+                        'closed_at' => $isClosed ? $createdAt->copy()->addDays(rand(1, 2)) : null,
+                        'created_at' => $createdAt,
+                        'updated_at' => $isClosed ? $createdAt->copy()->addDays(rand(1, 2)) : $createdAt,
+                    ]);
+
+                    // Seed Ticket Events
+                    DB::table('ticket_events')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'ticket_id' => $ticketId,
+                        'actor_user_id' => $tenantId,
+                        'type' => 'CREATED',
+                        'message' => 'Tạo phiếu yêu cầu mới',
+                        'created_at' => $createdAt,
+                    ]);
+
+                    if ($status !== 'OPEN') {
+                        DB::table('ticket_events')->insert([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $org->id,
+                            'ticket_id' => $ticketId,
+                            'actor_user_id' => $ownerId,
+                            'type' => 'STATUS_CHANGED',
+                            'message' => 'Chuyển trạng thái sang ' . $status,
+                            'created_at' => $createdAt->copy()->addHours(2),
+                        ]);
+                    }
+
+                    // 50% chance for ticket costs if it's DONE
+                    if ($isClosed && rand(0, 1) === 1) {
+                        DB::table('ticket_costs')->insert([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $org->id,
+                            'ticket_id' => $ticketId,
+                            'amount' => fake()->randomElement([50000, 100000, 150000, 200000]),
+                            'payer' => fake()->randomElement(['OWNER', 'TENANT']),
+                            'note' => 'Chi phí sửa chữa/thay thế vật tư',
+                            'created_by_user_id' => $ownerId,
+                            'created_at' => $createdAt->copy()->addDays(1),
+                        ]);
+                    }
+                }
             }
         });
 
@@ -407,6 +474,7 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>".RoomPrice::count()."</>");
         $this->command->line("✅ Dịch vụ (Services): <fg=cyan>".Service::count()."</>");
         $this->command->line("✅ Hợp đồng (Contracts): <fg=cyan>".Contract::count()."</>");
-        $this->command->line("✅ Hóa đơn (Invoices): <fg=cyan>".Invoice::count()."</>\n");
+        $this->command->line("✅ Hóa đơn (Invoices): <fg=cyan>".Invoice::count()."</>");
+        $this->command->line("✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>".DB::table('tickets')->count()."</>\n");
     }
 }
