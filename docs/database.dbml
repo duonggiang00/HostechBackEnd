@@ -1,0 +1,1024 @@
+// ==============================================
+// 1. CORE & IDENTITY MODULE
+// ==============================================
+
+Table orgs [Note: 'Tổ chức/Doanh nghiệp quản lý bất động sản'] {
+  id uuid [pk]
+  name varchar(255)
+  phone varchar(30)
+  email varchar(255)
+  address text
+  timezone varchar(64) [default: 'Asia/Bangkok']
+  currency varchar(8) [default: 'VND']
+  created_at timestamp
+  updated_at timestamp
+} 
+
+Table users [Note: 'Người dùng hệ thống (Admin, Owner, Staff, Tenant)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  role varchar(20) [not null, note: "ENUM: ADMIN, OWNER, MANAGER, STAFF, TENANT"]
+  full_name varchar(255) [not null]
+  phone varchar(30)
+  email varchar(255)
+  password_hash text
+  phone_verified_at timestamp
+  email_verified_at timestamp
+  failed_login_count int [not null, default: 0]
+  locked_until timestamp
+  last_login_at timestamp
+  mfa_enabled boolean [not null, default: false]
+  mfa_method varchar(20)
+  mfa_secret_encrypted text
+  mfa_enrolled_at timestamp
+  is_active boolean [not null, default: true]
+  deleted_at timestamp
+  meta json
+  identity_number varchar(20) [note: 'Số CCCD/CMND']
+  identity_issued_date date
+  identity_issued_place varchar(255)
+  date_of_birth date
+  address text
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id, phone) [unique]
+    (org_id, email) [unique]
+    (org_id, role)
+  }
+}
+
+Table invites [Note: 'Lời mời tham gia tổ chức, dùng cho nhân viên hoặc người thuê'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id, note: 'Tùy chọn: Gán cứng vào 1 Property cụ thể']
+  type varchar(10) [not null, note: "ENUM: STAFF, TENANT"]
+  channel varchar(10) [not null, default: 'LINK', note: "ENUM: EMAIL, PHONE, LINK, QR"]
+  target_email varchar(255)
+  target_phone varchar(30)
+  token varchar(64) [not null]
+  expires_at timestamp
+  revoked_at timestamp
+  usage_count int [not null, default: 0]
+  max_usage int [not null, default: 1]
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (org_id, token) [unique]
+    (org_id)
+    (property_id)
+    (expires_at)
+  }
+}
+
+// ==============================================
+// 2. PROPERTY & ROOM MODULE
+// ==============================================
+
+Table properties [Note: 'Bất động sản (Tòa nhà, khu trọ, chung cư)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  code varchar(50)
+  name varchar(255) [not null]
+  address text
+  note text
+  use_floors boolean [not null, default: true, note: 'Có sử dụng tầng hay không']
+  default_billing_cycle varchar(20) [not null, default: 'MONTHLY']
+  default_due_day int [not null, default: 5]
+  default_cutoff_day int [not null, default: 30]
+  bank_accounts json
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (org_id, code) [unique]
+    (org_id)
+  }
+}
+
+Table floors [Note: 'Tầng của tòa nhà'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  code varchar(50)
+  name varchar(255) [not null]
+  sort_order int [not null, default: 0]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (property_id, code) [unique]
+    (org_id)
+    (property_id)
+  }
+}
+
+Table rooms [Note: 'Phòng (trọ, căn hộ) để cho thuê'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  floor_id uuid [ref: > floors.id, note: 'Nullable nếu không dùng tầng']
+  code varchar(50) [not null, note: 'VD: A101']
+  name varchar(255) [not null]
+  type varchar(20) [not null, default: 'apartment', note: "ENUM: studio, apartment, house, dormitory, other"]
+  area decimal(8,2)
+  floor int [note: 'Số tầng (nếu không dùng floor_id)']
+  capacity int [not null, default: 1]
+  base_price decimal(15,2) [not null]
+  status varchar(20) [not null, default: 'available', note: "ENUM: available, occupied, maintenance, reserved"]
+  description text
+  amenities json
+  utilities json
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (property_id, code) [unique]
+    (org_id)
+    (property_id)
+    (property_id, status)
+    (floor_id)
+    (status)
+  }
+}
+
+Table room_status_histories [Note: 'Lịch sử thay đổi trạng thái thẻ phòng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  room_id uuid [not null, ref: > rooms.id]
+  from_status varchar(20)
+  to_status varchar(20) [not null]
+  reason text
+  changed_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (room_id)
+    (created_at)
+  }
+}
+
+Table room_assets [Note: 'Tài sản gắn liền với phòng (Điều hòa, nóng lạnh...)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  room_id uuid [not null, ref: > rooms.id]
+  name varchar(255) [not null]
+  serial varchar(100)
+  condition varchar(50)
+  purchased_at date
+  warranty_end date
+  note text
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (org_id)
+    (room_id)
+  }
+}
+
+Table room_prices [Note: 'Lịch sử biến động giá khởi điểm của phòng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  room_id uuid [not null, ref: > rooms.id]
+  effective_from date [not null]
+  price decimal(15,2) [not null]
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (room_id, effective_from) [unique]
+    (org_id)
+    (room_id)
+    (effective_from)
+  }
+}
+
+Table floor_plans [Note: 'Bản đồ / Mặt bằng tầng (ảnh) dùng để gắn Room Mapping'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  floor_id uuid [ref: > floors.id]
+  image_path text [not null]
+  room_mappings json [note: 'room_id -> {x,y,w,h}']
+  version int [not null, default: 1]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (floor_id)
+  }
+}
+
+// ==============================================
+// 3. UTILITY & SERVICES MODULE
+// ==============================================
+
+Table services [Note: 'Danh mục dịch vụ (Điện, Nước, Rác, Wifi)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  code varchar(50) [not null]
+  name varchar(255) [not null]
+  calc_mode varchar(20) [not null, note: "ENUM: PER_ROOM, PER_PERSON, PER_QUANTITY, PER_METER"]
+  unit varchar(20) [not null]
+  is_recurring boolean [not null, default: true]
+  is_active boolean [not null, default: true]
+  meta json
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (org_id, code) [unique]
+    (org_id)
+  }
+}
+
+Table service_rates [Note: 'Giá của dịch vụ, có theo dõi lịch sử thay đổi mức giá theo thời gian'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  service_id uuid [not null, ref: > services.id]
+  effective_from date [not null]
+  price decimal(15,2) [not null]
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (service_id, effective_from) [unique]
+    (org_id)
+    (service_id)
+    (effective_from)
+  }
+}
+
+Table tiered_rates [Note: 'Biểu giá điện/nước lũy tiến (ví dụ: Chữ 1-50 giá A, 51-100 giá B)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  service_rate_id uuid [not null, ref: > service_rates.id]
+  tier_from int [not null]
+  tier_to int
+  price decimal(15,2) [not null]
+
+  Indexes {
+    (org_id)
+    (service_rate_id)
+  }
+}
+
+Table room_services [Note: 'Gán dịch vụ kèm thiết lập riêng biệt (vd: khoán điện) cho từng phòng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  room_id uuid [not null, ref: > rooms.id]
+  service_id uuid [not null, ref: > services.id]
+  quantity int [not null, default: 1]
+  included_units int [not null, default: 0, note: 'Số đơn vị miễn phí']
+  meta json
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (room_id, service_id) [unique]
+    (org_id)
+  }
+}
+
+// ==============================================
+// 4. METERS MODULE 
+// ==============================================
+
+Table meters [Note: 'Đồng hồ (Điện, Nước) gắn trong phòng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  room_id uuid [not null, ref: > rooms.id]
+  code varchar(100) [not null]
+  type varchar(10) [not null, note: "ENUM: ELECTRIC, WATER"]
+  installed_at date
+  is_active boolean [not null, default: true]
+  meta json
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (org_id, code) [unique]
+    (org_id)
+    (room_id)
+    (type)
+  }
+}
+
+Table meter_readings [Note: 'Phiếu ghi chỉ số đồng hồ (Điện/Nước tủ chốt mỗi tháng)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  meter_id uuid [not null, ref: > meters.id]
+  period_start date [not null]
+  period_end date [not null]
+  reading_value bigint [not null]
+  status varchar(10) [not null, default: 'DRAFT', note: "ENUM: DRAFT, SUBMITTED, APPROVED, LOCKED"]
+  submitted_by_user_id uuid [ref: > users.id]
+  submitted_at timestamp
+  approved_by_user_id uuid [ref: > users.id]
+  approved_at timestamp
+  locked_at timestamp
+  meta json
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (meter_id, period_start, period_end) [unique]
+    (org_id)
+    (meter_id)
+    (status)
+    (period_end, status)
+  }
+}
+
+Table adjustment_notes [Note: 'Ghi chú điều chỉnh chỉ số bị sai lệch sau khi đã chốt'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  meter_reading_id uuid [not null, ref: > meter_readings.id]
+  reason text [not null]
+  before_value bigint [not null]
+  after_value bigint [not null]
+  requested_by_user_id uuid [not null, ref: > users.id]
+  approved_by_user_id uuid [ref: > users.id]
+  approved_at timestamp
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (meter_reading_id)
+  }
+}
+
+// ==============================================
+// 5. CONTRACT & RENTAL CYCLE MODULE
+// ==============================================
+
+Table contracts [Note: 'Hợp đồng thuê phòng chính thức'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  room_id uuid [not null, ref: > rooms.id]
+  status varchar(10) [not null, default: 'DRAFT', note: "ENUM: DRAFT, ACTIVE, ENDED, CANCELLED"]
+  start_date date [not null]
+  end_date date
+  billing_cycle varchar(10) [not null, default: 'MONTHLY', note: "ENUM: MONTHLY, QUARTERLY"]
+  due_day int [not null, default: 5]
+  cutoff_day int [not null, default: 30]
+  rent_price decimal(15,2) [not null]
+  deposit_amount decimal(15,2) [not null, default: 0.00]
+  join_code varchar(64)
+  join_code_expires_at timestamp
+  join_code_revoked_at timestamp
+  signed_at timestamp
+  terminated_at timestamp
+  created_by_user_id uuid [ref: > users.id]
+  meta json
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp
+
+  Indexes {
+    (org_id, join_code) [unique]
+    (org_id)
+    (property_id)
+    (property_id, status)
+    (room_id)
+    (status)
+    (end_date)
+  }
+}
+
+Table contract_members [Note: 'Danh sách và vai trò khách thuê gắn trên hợp đồng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  contract_id uuid [not null, ref: > contracts.id]
+  user_id uuid [ref: > users.id, note: 'Tùy chọn: Null nếu khách chưa có tài khoản']
+  full_name varchar(255) [not null]
+  phone varchar(30)
+  identity_number varchar(50) [note: 'Số CCCD/CMND']
+  role varchar(10) [not null, default: 'TENANT', note: "ENUM: TENANT, ROOMMATE, GUARANTOR"]
+  status varchar(20) [not null, default: 'APPROVED', note: "ENUM: PENDING, APPROVED, REJECTED"]
+  is_primary boolean [not null, default: false]
+  joined_at timestamp
+  left_at timestamp
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (contract_id)
+    (user_id)
+  }
+}
+
+Table penalty_rules [Note: 'Quy định phạt (trễ hạn mạn, hủy hđ sớm...)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  type varchar(30) [not null, note: "ENUM: LATE_PAYMENT, EARLY_TERMINATION, DEPOSIT_DEDUCTION, OTHER"]
+  calc_mode varchar(10) [not null, note: "ENUM: FIXED, PERCENT, PER_DAY"]
+  value decimal(15,2) [not null]
+  grace_days int [not null, default: 0]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (type)
+  }
+}
+
+Table contract_renewals [Note: 'Phụ lục, Gia hạn hợp đồng cũ tạo thành bản hợp đồng mới'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  original_contract_id uuid [not null, ref: > contracts.id]
+  new_contract_id uuid [not null, ref: > contracts.id]
+  type varchar(10) [not null, note: "ENUM: RENEWAL, ANNEX"]
+  created_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (original_contract_id)
+    (new_contract_id)
+  }
+}
+
+Table handovers [Note: 'Biên bản nhận/trả phòng (Bàn giao)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  contract_id uuid [not null, ref: > contracts.id]
+  room_id uuid [not null, ref: > rooms.id]
+  type varchar(10) [not null, note: "ENUM: CHECKIN, CHECKOUT"]
+  status varchar(10) [not null, default: 'DRAFT', note: "ENUM: DRAFT, CONFIRMED"]
+  note text
+  confirmed_by_user_id uuid [ref: > users.id]
+  confirmed_at timestamp
+  locked_at timestamp [note: 'Khóa không cho sửa sau confirm']
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (contract_id, type) [unique]
+    (org_id)
+    (contract_id)
+    (room_id)
+  }
+}
+
+Table handover_items [Note: 'Danh sách món đồ bàn giao trong biên bản'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  handover_id uuid [not null, ref: > handovers.id]
+  name varchar(255) [not null]
+  status varchar(10) [not null, default: 'OK', note: "ENUM: OK, MISSING, DAMAGED"]
+  note text
+  sort_order int [not null, default: 0]
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (handover_id)
+  }
+}
+
+Table handover_meter_snapshots [Note: 'Chốt số đồng hồ chớp nhoáng lúc bàn giao'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  handover_id uuid [not null, ref: > handovers.id]
+  meter_id uuid [not null, ref: > meters.id]
+  reading_value bigint [not null]
+
+  Indexes {
+    (org_id)
+    (handover_id)
+    (meter_id)
+  }
+}
+
+// ==============================================
+// 6. BILLING & FINANCE MODULE
+// ==============================================
+
+Table invoices [Note: 'Hóa đơn tổng hợp hàng tháng của phòng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  contract_id uuid [not null, ref: > contracts.id]
+  room_id uuid [not null, ref: > rooms.id]
+  period_start date [not null]
+  period_end date [not null]
+  status varchar(10) [not null, default: 'DRAFT', note: "ENUM: DRAFT, ISSUED, PENDING, PAID, OVERDUE, CANCELLED"]
+  issue_date date
+  due_date date [not null]
+  total_amount decimal(15,2) [not null, default: 0.00]
+  paid_amount decimal(15,2) [not null, default: 0.00]
+  snapshot json [note: 'Bản chụp thông tin khách, giá lúc xuất HĐ để bảo toàn lịch sử']
+  created_by_user_id uuid [ref: > users.id]
+  issued_by_user_id uuid [ref: > users.id]
+  issued_at timestamp
+  cancelled_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (contract_id, period_start, period_end) [unique]
+    (org_id)
+    (property_id)
+    (room_id)
+    (status)
+    (due_date)
+    (contract_id, period_start)
+  }
+}
+
+Table invoice_items [Note: 'Các khoản mục tính tiền trong hóa đơn (Tiền phòng, điện, nước, phạt)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  type varchar(15) [not null, note: "ENUM: RENT, SERVICE, PENALTY, DISCOUNT, ADJUSTMENT"]
+  service_id uuid [ref: > services.id]
+  description varchar(255) [not null]
+  quantity decimal(12,2) [not null, default: 1.00]
+  unit_price decimal(15,2) [not null]
+  amount decimal(15,2) [not null]
+  meta json
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (invoice_id)
+    (service_id)
+    (type)
+  }
+}
+
+Table invoice_status_histories [Note: 'Lịch sử trạng thái thanh toán của hóa đơn'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  from_status varchar(20)
+  to_status varchar(20) [not null]
+  note text
+  changed_by_user_id uuid [ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (invoice_id)
+    (created_at)
+  }
+}
+
+Table invoice_adjustments [Note: 'Khoản điều chỉnh bù trừ hóa đơn (Tức trừ tiền nợ, cộng tiền dư)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  type varchar(10) [not null, note: "ENUM: CREDIT, DEBIT"]
+  amount decimal(15,2) [not null]
+  reason text [not null]
+  created_by_user_id uuid [not null, ref: > users.id]
+  approved_by_user_id uuid [ref: > users.id]
+  approved_at timestamp
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (invoice_id)
+    (type)
+  }
+}
+
+Table payments [Note: 'Phiếu thu, chứng từ nhận tiền trả cho HĐ'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  payer_user_id uuid [ref: > users.id]
+  received_by_user_id uuid [ref: > users.id]
+  method varchar(10) [not null, note: "ENUM: CASH, TRANSFER, WALLET, QR"]
+  amount decimal(15,2) [not null]
+  reference varchar(255)
+  received_at timestamp
+  status varchar(10) [not null, default: 'APPROVED', note: "ENUM: PENDING, APPROVED, REJECTED"]
+  approved_by_user_id uuid [ref: > users.id]
+  approved_at timestamp
+  note text
+  provider_ref varchar(255)
+  provider_status varchar(50)
+  webhook_payload json
+  meta json
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (received_at)
+    (received_at, status)
+    (status)
+    (method)
+  }
+}
+
+Table payment_allocations [Note: 'Phân bổ 1 lần Payment cho nhiều Invoice (nếu nhận gộp)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  payment_id uuid [not null, ref: > payments.id]
+  invoice_id uuid [not null, ref: > invoices.id]
+  amount decimal(15,2) [not null]
+  created_at timestamp
+
+  Indexes {
+    (payment_id, invoice_id) [unique]
+    (org_id)
+    (payment_id)
+    (invoice_id)
+  }
+}
+
+Table ledger_entries [Note: 'Sổ cái tổng hợp mọi luồng thu/chi tự động cập nhật'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  ref_type varchar(50) [not null]
+  ref_id uuid [not null]
+  debit decimal(15,2) [not null, default: 0.00]
+  credit decimal(15,2) [not null, default: 0.00]
+  occurred_at timestamp
+  meta json
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (ref_type, ref_id)
+    (occurred_at)
+  }
+}
+
+// ==============================================
+// 7. MAINTENANCE & TICKETS MODULE
+// ==============================================
+
+Table tickets [Note: 'Phiếu yêu cầu/Sự cố (Báo hỏng điện nước, phàn nàn)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [not null, ref: > properties.id]
+  room_id uuid [not null, ref: > rooms.id]
+  contract_id uuid [ref: > contracts.id]
+  created_by_user_id uuid [not null, ref: > users.id]
+  assigned_to_user_id uuid [ref: > users.id]
+  category varchar(100)
+  priority varchar(10) [not null, default: 'MEDIUM', note: "ENUM: LOW, MEDIUM, HIGH, URGENT"]
+  status varchar(20) [not null, default: 'OPEN', note: "ENUM: OPEN, RECEIVED, IN_PROGRESS, WAITING_PARTS, DONE, CANCELLED"]
+  description text [not null]
+  due_at timestamp
+  closed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (room_id)
+    (contract_id)
+    (status)
+    (priority)
+    (created_by_user_id)
+    (assigned_to_user_id)
+  }
+}
+
+Table ticket_events [Note: 'Lịch sử dòng thời gian thảo luận / đổi trạng thái Ticket'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  ticket_id uuid [not null, ref: > tickets.id]
+  actor_user_id uuid [ref: > users.id]
+  type varchar(50) [not null]
+  message text
+  meta json
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (ticket_id)
+    (created_at)
+  }
+}
+
+Table ticket_costs [Note: 'Chi phí sửa chữa phát sinh từ sự cố được chốt lại'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  ticket_id uuid [not null, ref: > tickets.id]
+  amount decimal(15,2) [not null]
+  payer varchar(10) [not null, default: 'OWNER', note: "ENUM: OWNER, TENANT"]
+  note text
+  created_by_user_id uuid [not null, ref: > users.id]
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (ticket_id)
+  }
+}
+
+Table ticket_invoice_links [Note: 'Liên kết chi phí Ticket vào Hóa Đơn cuối tháng'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  ticket_id uuid [not null, ref: > tickets.id]
+  invoice_item_id uuid [not null, ref: > invoice_items.id]
+  created_at timestamp
+
+  Indexes {
+    (ticket_id, invoice_item_id) [unique]
+    (org_id)
+  }
+}
+
+Table ticket_ratings [Note: 'Đánh giá độ hài lòng của khách sau khi chốt sự cố'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  ticket_id uuid [not null, ref: > tickets.id]
+  user_id uuid [not null, ref: > users.id]
+  rating int [not null, note: '1..5']
+  comment text
+  created_at timestamp
+
+  Indexes {
+    (ticket_id, user_id) [unique]
+    (org_id)
+  }
+}
+
+// ==============================================
+// 8. CASHFLOW MODULE
+// ==============================================
+
+Table cashflow_categories [Note: 'Danh mục dòng tiền Thu / Chi'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  type varchar(10) [not null, note: "ENUM: INCOME, EXPENSE"]
+  code varchar(50)
+  name varchar(255) [not null]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id, code) [unique]
+    (org_id)
+    (type)
+  }
+}
+
+Table cashflow_entries [Note: 'Giao dịch thu chi (Sổ quỹ)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  category_id uuid [not null, ref: > cashflow_categories.id]
+  type varchar(10) [not null, note: "ENUM: INCOME, EXPENSE"]
+  amount decimal(15,2) [not null]
+  occurred_at date [not null]
+  note text
+  created_by_user_id uuid [not null, ref: > users.id]
+  related_type varchar(50)
+  related_id uuid
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (category_id)
+    (occurred_at)
+    (type)
+  }
+}
+
+// ==============================================
+// 9. MEDIA & COMMUNICATION MODULE
+// ==============================================
+
+Table media [Note: 'Bảng dùng chung lưu trữ toàn bộ file, ảnh. Hỗ trợ hệ thống Spatie MediaLibrary đa hình'] {
+  id uuid [pk]
+  model_type varchar(255) [not null, note: 'Polymorphic Model Class. Ex: App\\Models\\Property\\Room']
+  model_id uuid [not null, note: 'Polymorphic Model ID']
+  uuid uuid [unique]
+  collection_name varchar(255) [not null]
+  name varchar(255) [not null]
+  file_name varchar(255) [not null]
+  mime_type varchar(255)
+  disk varchar(255) [not null]
+  conversions_disk varchar(255)
+  size bigint [not null]
+  manipulations json [not null]
+  custom_properties json [not null]
+  generated_conversions json [not null]
+  responsive_images json [not null]
+  order_column int
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (model_type, model_id)
+  }
+}
+
+Table notification_preferences [Note: 'Cài đặt muốn nhận thông báo qua kênh nào của từng user'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  user_id uuid [not null, ref: > users.id]
+  channels json [note: '["IN_APP","EMAIL","SMS","ZALO","PUSH"]']
+  opted_out boolean [not null, default: false]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (user_id) [unique]
+    (org_id)
+  }
+}
+
+Table notification_templates [Note: 'Bản mẫu gửi Email / SMS hàng loạt'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  code varchar(100) [not null]
+  channel varchar(10) [not null, default: 'IN_APP', note: "ENUM: IN_APP, EMAIL, SMS, ZALO, PUSH"]
+  title varchar(255)
+  body text [not null]
+  variables json
+  version int [not null, default: 1]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id, code, channel) [unique]
+    (org_id)
+    (property_id)
+    (code)
+  }
+}
+
+Table notification_rules [Note: 'Thiết lập tự động hóa thông báo (vd: Tự gửi lúc HĐ còn 5 ngày het hạn)'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  trigger varchar(100) [not null]
+  schedule json
+  template_id uuid [not null, ref: > notification_templates.id]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (trigger)
+    (is_active)
+  }
+}
+
+Table notification_logs [Note: 'Lịch sử log gửi thông báo'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  rule_id uuid [ref: > notification_rules.id]
+  user_id uuid [ref: > users.id]
+  channel varchar(20) [not null]
+  status varchar(20) [not null, note: 'SENT/FAILED/PENDING']
+  provider_id varchar(255)
+  payload json
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (created_at)
+    (user_id)
+    (status)
+  }
+}
+
+Table document_templates [Note: 'Bản mẫu xuất File Hợp Đồng PDF / Word'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  property_id uuid [ref: > properties.id]
+  type varchar(10) [not null, note: "ENUM: CONTRACT, ANNEX, HANDOVER, RECEIPT, INVOICE"]
+  name varchar(255) [not null]
+  content text [not null, note: 'HTML template (longtext)']
+  variables json
+  version int [not null, default: 1]
+  is_active boolean [not null, default: true]
+  created_at timestamp
+  updated_at timestamp
+
+  Indexes {
+    (org_id)
+    (property_id)
+    (type)
+  }
+}
+
+Table generated_documents [Note: 'File văn bản đã được xuất PDF/Word và lưu lại'] {
+  id uuid [pk]
+  org_id uuid [not null, ref: > orgs.id]
+  template_id uuid [not null, ref: > document_templates.id]
+  owner_type varchar(50) [not null]
+  owner_id uuid [not null]
+  path text [not null]
+  sha256 varchar(64)
+  created_at timestamp
+
+  Indexes {
+    (org_id)
+    (owner_type, owner_id)
+    (template_id)
+  }
+}
+
+// ==============================================
+// TABLE GROUP DEFINITIONS
+// ==============================================
+
+TableGroup Core_System {
+  orgs
+  users
+  invites
+}
+
+TableGroup Property_Management {
+  properties
+  floors
+  rooms
+  room_status_histories
+  room_assets
+  room_prices
+  floor_plans
+}
+
+TableGroup Utility_Services {
+  services
+  service_rates
+  tiered_rates
+  room_services
+}
+
+TableGroup Meters_Management {
+  meters
+  meter_readings
+  adjustment_notes
+}
+
+TableGroup Rental_Operations {
+  contracts
+  contract_members
+  penalty_rules
+  contract_renewals
+  handovers
+  handover_items
+  handover_meter_snapshots
+}
+
+TableGroup Finance_Billing {
+  invoices
+  invoice_items
+  invoice_status_histories
+  invoice_adjustments
+  payments
+  payment_allocations
+  ledger_entries
+}
+
+TableGroup Maintenance_Tickets {
+  tickets
+  ticket_events
+  ticket_costs
+  ticket_invoice_links
+  ticket_ratings
+}
+
+TableGroup Cashflow_Management {
+  cashflow_categories
+  cashflow_entries
+}
+
+TableGroup Media_Communication_Docs {
+  media
+  notification_preferences
+  notification_templates
+  notification_rules
+  notification_logs
+  document_templates
+  generated_documents
+}

@@ -3,6 +3,11 @@
 namespace App\Services\Property;
 
 use App\Models\Property\Room;
+use App\Models\Property\RoomAsset;
+use App\Models\Property\RoomPrice;
+use App\Models\Property\RoomStatusHistory;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class RoomService
@@ -11,6 +16,7 @@ class RoomService
     {
         $query = QueryBuilder::for(Room::class)
             ->allowedFilters($allowedFilters)
+            ->allowedIncludes(['assets', 'prices', 'statusHistories', 'media'])
             ->defaultSort('code');
 
         if ($search) {
@@ -68,17 +74,141 @@ class RoomService
 
     public function create(array $data): Room
     {
-        return Room::create($data);
+        return DB::transaction(function () use ($data) {
+            $assetsData = $data['assets'] ?? [];
+            $mediaIds = $data['media_ids'] ?? [];
+            unset($data['assets'], $data['media_ids']);
+
+            $room = Room::create($data);
+
+            // Sync Media
+            if (!empty($mediaIds)) {
+                $room->syncMediaAttachments($mediaIds, 'gallery');
+            }
+
+            // Sync Assets
+            if (!empty($assetsData)) {
+                $assetsToInsert = array_map(function ($asset) use ($room) {
+                    return array_merge($asset, [
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $room->org_id,
+                        'room_id' => $room->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }, $assetsData);
+                RoomAsset::insert($assetsToInsert);
+            }
+
+            // Sync Price History
+            if (isset($data['base_price'])) {
+                RoomPrice::create([
+                    'org_id' => $room->org_id,
+                    'room_id' => $room->id,
+                    'effective_from' => now()->toDateString(),
+                    'price' => $data['base_price'],
+                    'created_by_user_id' => request()->user()?->id,
+                ]);
+            }
+
+            // Sync Status History
+            if (isset($data['status'])) {
+                RoomStatusHistory::create([
+                    'org_id' => $room->org_id,
+                    'room_id' => $room->id,
+                    'from_status' => null,
+                    'to_status' => $data['status'],
+                    'reason' => 'Initial creation',
+                    'changed_by_user_id' => request()->user()?->id,
+                ]);
+            }
+
+            return $room;
+        });
     }
 
     public function update(string $id, array $data): ?Room
     {
-        $room = $this->find($id);
-        if ($room) {
-            $room->update($data);
-        }
+        return DB::transaction(function () use ($id, $data) {
+            $room = $this->find($id);
+            if (!$room) return null;
 
-        return $room;
+            $assetsData = $data['assets'] ?? null;
+            $mediaIds = $data['media_ids'] ?? [];
+            
+            // Track old status & price for history
+            $oldStatus = $room->status;
+            $oldPrice = $room->base_price;
+            
+            unset($data['assets'], $data['media_ids']);
+
+            $room->update($data);
+
+            // Sync Media (append new)
+            if (!empty($mediaIds)) {
+                $room->syncMediaAttachments($mediaIds, 'gallery');
+            }
+
+            // Sync Assets
+            if (is_array($assetsData)) {
+                $existingAssetIds = $room->assets()->pluck('id')->toArray();
+                $updatedAssetIds = [];
+
+                foreach ($assetsData as $assetData) {
+                    if (isset($assetData['id']) && in_array($assetData['id'], $existingAssetIds)) {
+                        // Update existing
+                        $asset = RoomAsset::find($assetData['id']);
+                        if ($asset) {
+                            $asset->update($assetData);
+                            $updatedAssetIds[] = $asset->id;
+                        }
+                    } else {
+                        // Create new
+                        $newAsset = RoomAsset::create(array_merge($assetData, [
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $room->org_id,
+                            'room_id' => $room->id,
+                        ]));
+                        $updatedAssetIds[] = $newAsset->id;
+                    }
+                }
+
+                // Delete missing
+                $assetsToDelete = array_diff($existingAssetIds, $updatedAssetIds);
+                if (!empty($assetsToDelete)) {
+                    RoomAsset::whereIn('id', $assetsToDelete)->delete();
+                }
+            }
+
+            // Sync Price History
+            if (isset($data['base_price']) && (float)$data['base_price'] !== (float)$oldPrice) {
+                RoomPrice::updateOrCreate(
+                    [
+                        'room_id' => $room->id,
+                        'effective_from' => now()->toDateString(),
+                    ],
+                    [
+                        'org_id' => $room->org_id,
+                        'price' => $data['base_price'],
+                        'created_by_user_id' => request()->user()?->id,
+                    ]
+                );
+            }
+
+            // Sync Status History
+            if (isset($data['status']) && $data['status'] !== $oldStatus) {
+                RoomStatusHistory::create([
+                    'org_id' => $room->org_id,
+                    'room_id' => $room->id,
+                    'from_status' => $oldStatus,
+                    'to_status' => $data['status'],
+                    'reason' => 'Status updated',
+                    'changed_by_user_id' => request()->user()?->id,
+                ]);
+            }
+
+            return $room;
+        });
     }
 
     public function delete(string $id): bool

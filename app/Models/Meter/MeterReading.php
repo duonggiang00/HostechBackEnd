@@ -51,4 +51,9 @@ class MeterReading extends Model
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');
     }
+
+    public function adjustmentNotes()
+    {
+        return $this->hasMany(AdjustmentNote::class);
+    }
 }

@@ -10,6 +10,7 @@ class UserService
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
     {
         $query = QueryBuilder::for(User::class)
+            ->with(['roles', 'permissions'])
             ->allowedFilters($allowedFilters)
             ->defaultSort('full_name');
 
@@ -34,6 +35,7 @@ class UserService
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
     {
         $query = QueryBuilder::for(User::onlyTrashed())
+            ->with(['roles', 'permissions'])
             ->allowedFilters($allowedFilters)
             ->defaultSort('full_name');
 

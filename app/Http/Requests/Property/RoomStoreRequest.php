@@ -17,6 +17,14 @@ use Illuminate\Foundation\Http\FormRequest;
  * @bodyParam description string Mô tả thêm.
  * @bodyParam amenities json Tiện nghi.
  * @bodyParam utilities json Dịch vụ/Tiện ích.
+ * @bodyParam media_ids string[] Mảng chứa danh sách ID của media (upload files). Example: ["uuid-1234"]
+ * @bodyParam assets object[] Mảng cấu hình các thiết bị, tài sản trong phòng.
+ * @bodyParam assets[].name string required Tên tài sản. Example: Tivi Samsung
+ * @bodyParam assets[].serial string Số series của tài sản. Example: 12345XYZ
+ * @bodyParam assets[].condition string Tình trạng của tài sản (Mới, Cũ, ...). Example: Mới 100%
+ * @bodyParam assets[].purchased_at date Ngày mua. Example: 2024-01-01
+ * @bodyParam assets[].warranty_end date Hạn bảo hành. Example: 2026-01-01
+ * @bodyParam assets[].note string Ghi chú thêm về tài sản.
  */
 class RoomStoreRequest extends FormRequest
 {
@@ -40,6 +48,18 @@ class RoomStoreRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'amenities' => ['nullable', 'json'],
             'utilities' => ['nullable', 'json'],
+
+            // Thêm các trường upload/relation
+            'media_ids' => ['nullable', 'array'],
+            'media_ids.*' => ['uuid'],
+            
+            'assets' => ['nullable', 'array'],
+            'assets.*.name' => ['required', 'string', 'max:255'],
+            'assets.*.serial' => ['nullable', 'string', 'max:100'],
+            'assets.*.condition' => ['nullable', 'string', 'max:50'],
+            'assets.*.purchased_at' => ['nullable', 'date'],
+            'assets.*.warranty_end' => ['nullable', 'date'],
+            'assets.*.note' => ['nullable', 'string'],
         ];
     }
 }

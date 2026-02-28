@@ -34,6 +34,7 @@ class ServiceController extends Controller
      * @queryParam filter[is_active] boolean Lọc theo trạng thái hoạt động (1: Active, 0: Inactive). Example: 1
      * @queryParam filter[unit] string Lọc theo đơn vị tính. Example: kwh
      * @queryParam sort string Sắp xếp theo trường (prefix '-' để giảm dần). Các trường hỗ trợ: code, name, created_at. Default: code. Example: -created_at
+     * @queryParam with_trashed boolean Bao gồm cả các mục đã xóa tạm (Soft Deleted). Example: 1
      */
     public function index(ServiceIndexRequest $request)
     {

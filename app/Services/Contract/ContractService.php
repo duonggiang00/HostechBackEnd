@@ -4,6 +4,7 @@ namespace App\Services\Contract;
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Org\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -157,12 +158,39 @@ class ContractService
 
     public function addMember(Contract $contract, array $memberData): ContractMember
     {
-        // $memberData should contain user_id, role, is_primary etc.
+        if (!empty($memberData['user_id']) && empty($memberData['full_name'])) {
+            $user = User::find($memberData['user_id']);
+            if ($user) {
+                $memberData['full_name'] = $user->full_name;
+                $memberData['phone'] = $memberData['phone'] ?? $user->phone;
+            }
+        }
+
+        $joinedAt = array_key_exists('joined_at', $memberData) ? $memberData['joined_at'] : now();
+
         return ContractMember::create(array_merge($memberData, [
             'contract_id' => $contract->id,
             'org_id' => $contract->org_id,
-            'joined_at' => $memberData['joined_at'] ?? now(),
+            'joined_at' => $joinedAt,
         ]));
+    }
+
+    public function updateMember(string $contractId, string $memberId, array $data): ?ContractMember
+    {
+        $member = ContractMember::where('contract_id', $contractId)->find($memberId);
+        if (! $member) return null;
+
+        $member->update($data);
+        return $member->refresh();
+    }
+
+    public function removeMember(string $contractId, string $memberId): bool
+    {
+        // We do a soft-remove by setting left_at, marking the termination of residency
+        $member = ContractMember::where('contract_id', $contractId)->find($memberId);
+        if (! $member) return false;
+
+        return $member->update(['left_at' => now()]);
     }
 
     private function generateJoinCode(): string

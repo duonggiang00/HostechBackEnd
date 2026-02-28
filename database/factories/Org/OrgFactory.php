@@ -11,10 +11,10 @@ class OrgFactory extends Factory
     {
         return [
             'id' => Str::uuid(),
-            'name' => fake()->company(),
-            'phone' => fake()->phoneNumber(),
-            'email' => fake()->companyEmail(),
-            'address' => fake()->address(),
+            'name' => fake('vi_VN')->company(),
+            'phone' => fake('vi_VN')->phoneNumber(),
+            'email' => fake('vi_VN')->companyEmail(),
+            'address' => fake('vi_VN')->address(),
             'timezone' => 'Asia/Bangkok',
             'currency' => 'VND',
         ];

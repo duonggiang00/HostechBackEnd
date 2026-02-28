@@ -317,6 +317,8 @@ test('tenant can view own contract', function () {
         'org_id' => $org->id,
         'contract_id' => $contract->id,
         'user_id' => $tenant->id,
+        'full_name' => $tenant->full_name,
+        'phone' => $tenant->phone,
         'role' => 'TENANT',
         'is_primary' => true
     ]);
@@ -341,6 +343,8 @@ test('tenant cannot view other contract', function () {
         'org_id' => $org->id,
         'contract_id' => $ownContract->id,
         'user_id' => $tenant->id,
+        'full_name' => $tenant->full_name,
+        'phone' => $tenant->phone,
         'role' => 'TENANT',
         'is_primary' => true
     ]);
@@ -366,4 +370,203 @@ test('unauthorized user cannot list contracts', function () {
     actingAs($user);
 
     getJson('/api/contracts')->assertStatus(403);
+});
+
+test('admin can add member to contract without user account (decoupled)', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+
+    actingAs($admin);
+
+    $response = postJson("/api/contracts/{$contract->id}/members", [
+        'full_name' => 'Test Roommate',
+        'phone' => '0987654321',
+        'identity_number' => '123456789012',
+        'role' => 'ROOMMATE',
+        'is_primary' => false,
+    ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.full_name', 'Test Roommate')
+        ->assertJsonPath('data.role', 'ROOMMATE');
+
+    assertDatabaseHas('contract_members', [
+        'contract_id' => $contract->id,
+        'full_name' => 'Test Roommate',
+        'phone' => '0987654321',
+        'user_id' => null,
+    ]);
+});
+
+test('admin can update contract member', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    
+    $member = ContractMember::factory()->create([
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'full_name' => 'Old Name',
+        'role' => 'ROOMMATE',
+    ]);
+
+    actingAs($admin);
+
+    $response = putJson("/api/contracts/{$contract->id}/members/{$member->id}", [
+        'full_name' => 'New Name',
+        'role' => 'TENANT',
+        'phone' => '111222333',
+    ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.full_name', 'New Name')
+        ->assertJsonPath('data.role', 'TENANT');
+
+    assertDatabaseHas('contract_members', [
+        'id' => $member->id,
+        'full_name' => 'New Name',
+        'role' => 'TENANT',
+        'phone' => '111222333',
+    ]);
+});
+
+test('admin can mark contract member as left', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    
+    $member = ContractMember::factory()->create([
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'left_at' => null,
+    ]);
+
+    actingAs($admin);
+
+    $response = deleteJson("/api/contracts/{$contract->id}/members/{$member->id}");
+
+    $response->assertStatus(200);
+
+    $member->refresh();
+    expect($member->left_at)->not->toBeNull();
+});
+
+test('tenant can request to add roommate and it becomes PENDING', function () {
+    $org = Org::factory()->create();
+    $tenant = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Tenant']);
+    $tenant->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    
+    ContractMember::create([
+        'id' => \Illuminate\Support\Str::uuid(),
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'user_id' => $tenant->id,
+        'full_name' => $tenant->full_name,
+        'role' => 'TENANT',
+        'is_primary' => true
+    ]);
+
+    actingAs($tenant);
+
+    $response = postJson("/api/contracts/{$contract->id}/members", [
+        'full_name' => 'Pending Roommate',
+        'phone' => '0987654321',
+        'role' => 'ROOMMATE',
+        'is_primary' => false,
+    ]);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.status', 'PENDING');
+
+    assertDatabaseHas('contract_members', [
+        'contract_id' => $contract->id,
+        'full_name' => 'Pending Roommate',
+        'status' => 'PENDING',
+        'joined_at' => null,
+    ]);
+});
+
+test('admin can approve pending roommate request', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    
+    $member = ContractMember::factory()->create([
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'full_name' => 'Pending Roommate',
+        'status' => 'PENDING',
+        'joined_at' => null,
+    ]);
+
+    actingAs($admin);
+
+    $response = putJson("/api/contracts/{$contract->id}/members/{$member->id}/approve");
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.status', 'APPROVED');
+
+    $member->refresh();
+    expect($member->status)->toBe('APPROVED');
+    expect($member->joined_at)->not->toBeNull();
+});
+
+test('tenant cannot approve their own or other roommate requests', function () {
+    $org = Org::factory()->create();
+    $tenant = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Tenant']);
+    $tenant->assignRole($role);
+    
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    
+    ContractMember::create([
+        'id' => \Illuminate\Support\Str::uuid(),
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'user_id' => $tenant->id,
+        'full_name' => $tenant->full_name,
+        'role' => 'TENANT',
+        'is_primary' => true
+    ]);
+    
+    $member = ContractMember::factory()->create([
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'full_name' => 'Pending Roommate',
+        'status' => 'PENDING',
+        'joined_at' => null,
+    ]);
+
+    actingAs($tenant);
+
+    putJson("/api/contracts/{$contract->id}/members/{$member->id}/approve")
+        ->assertStatus(403);
 });

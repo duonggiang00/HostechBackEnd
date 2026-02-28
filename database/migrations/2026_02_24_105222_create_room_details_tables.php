@@ -8,21 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Bảng room_photos
-        Schema::create('room_photos', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete();
-            $table->foreignUuid('room_id')->constrained('rooms')->cascadeOnDelete();
-            $table->text('path');
-            $table->string('mime', 100)->nullable();
-            $table->bigInteger('size_bytes')->nullable();
-            $table->integer('sort_order')->default(0);
-            $table->timestamps();
-
-            $table->index('org_id');
-            $table->index('room_id');
-        });
-
         // Bảng room_assets
         Schema::create('room_assets', function (Blueprint $table) {
             $table->uuid('id')->primary();
@@ -62,6 +47,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('room_prices');
         Schema::dropIfExists('room_assets');
-        Schema::dropIfExists('room_photos');
     }
 };

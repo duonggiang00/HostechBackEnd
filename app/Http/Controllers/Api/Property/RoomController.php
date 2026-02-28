@@ -136,6 +136,8 @@ class RoomController extends Controller
 
         $this->authorize('view', $room);
 
+        $room->loadMissing(['assets', 'prices', 'statusHistories', 'media']);
+
         return new RoomResource($room);
     }
 

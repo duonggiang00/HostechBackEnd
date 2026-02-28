@@ -4,6 +4,7 @@ namespace App\Services\Service;
 
 use App\Models\Service\Service;
 use App\Models\Service\ServiceRate;
+use App\Models\Service\TieredRate;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
 use Illuminate\Support\Str;
@@ -16,8 +17,8 @@ class ServiceService
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['code', 'name', 'created_at'])
             ->defaultSort('code')
-            // Eager load current rate to display price in list
-            ->with(['currentRate']); 
+            // Eager load current rate and its tiered rates to display price and tiers in list
+            ->with(['currentRate.tieredRates']);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -43,7 +44,7 @@ class ServiceService
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['code', 'name', 'created_at'])
             ->defaultSort('code')
-            ->with(['currentRate']);
+            ->with(['currentRate.tieredRates']);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -61,17 +62,17 @@ class ServiceService
 
     public function find(string $id): ?Service
     {
-        return Service::with(['currentRate'])->find($id);
+        return Service::with(['currentRate.tieredRates'])->find($id);
     }
 
     public function findTrashed(string $id): ?Service
     {
-        return Service::onlyTrashed()->with(['currentRate'])->find($id);
+        return Service::onlyTrashed()->with(['currentRate.tieredRates'])->find($id);
     }
 
     public function findWithTrashed(string $id): ?Service
     {
-        return Service::withTrashed()->with(['currentRate'])->find($id);
+        return Service::withTrashed()->with(['currentRate.tieredRates'])->find($id);
     }
 
     /**
@@ -83,21 +84,38 @@ class ServiceService
             // 1. Extract Rate Data
             $price = $data['price'];
             $effectiveFrom = $data['effective_from'] ?? now()->toDateString();
+            $tieredRates = $data['tiered_rates'] ?? [];
             
             // Remove rate data from service data
-            $serviceData = collect($data)->except(['price', 'effective_from'])->toArray();
+            $serviceData = collect($data)->except(['price', 'effective_from', 'tiered_rates'])->toArray();
 
             // 2. Create Service
             $service = Service::create($serviceData);
 
             // 3. Create Initial Rate
-            ServiceRate::create([
+            $serviceRate = ServiceRate::create([
                 'org_id' => $service->org_id,
                 'service_id' => $service->id,
                 'price' => $price,
                 'effective_from' => $effectiveFrom,
-                'created_by_user_id' => auth()->id(),
+                'created_by_user_id' => request()->user()?->id,
             ]);
+
+            // 4. Create Tiered Rates
+            if ($service->calc_mode === 'PER_METER' && !empty($tieredRates)) {
+                $tiersToInsert = collect($tieredRates)->map(function ($tier) use ($serviceRate) {
+                    return [
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $serviceRate->org_id,
+                        'service_rate_id' => $serviceRate->id,
+                        'tier_from' => $tier['tier_from'],
+                        'tier_to' => $tier['tier_to'] ?? null,
+                        'price' => $tier['price'],
+                    ];
+                })->toArray();
+                
+                TieredRate::insert($tiersToInsert);
+            }
 
             return $service;
         });
@@ -113,24 +131,67 @@ class ServiceService
 
         return DB::transaction(function () use ($service, $data) {
             // 1. Handle Price Update
-            if (isset($data['price'])) {
-                $newPrice = (float) $data['price'];
-                $currentPrice = (float) $service->current_price;
+            $newPrice = isset($data['price']) ? (float) $data['price'] : (float) $service->current_price;
+            $currentPrice = (float) $service->current_price;
+            $hasPriceChanged = $newPrice !== $currentPrice;
 
-                // Create new rate record ONLY if price changed
-                if ($newPrice !== $currentPrice) {
-                    ServiceRate::create([
-                        'org_id' => $service->org_id,
+            // 2. Handle Tiered Rates Changes
+            $hasTiersChanged = false;
+            $newTiers = [];
+            if ($service->calc_mode === 'PER_METER' && isset($data['tiered_rates'])) {
+                $currentTiers = $service->currentRate?->tieredRates->map(function($t) {
+                    return [
+                        'tier_from' => (int)$t->tier_from,
+                        'tier_to' => $t->tier_to !== null ? (int)$t->tier_to : null,
+                        'price' => (float)$t->price,
+                    ];
+                })->toArray() ?? [];
+                
+                $newTiers = collect($data['tiered_rates'])->map(function($t) {
+                    return [
+                        'tier_from' => (int)$t['tier_from'],
+                        'tier_to' => $t['tier_to'] !== null ? (int)$t['tier_to'] : null,
+                        'price' => (float)$t['price'],
+                    ];
+                })->toArray();
+                
+                $hasTiersChanged = json_encode($currentTiers) !== json_encode($newTiers);
+            }
+
+            // Create new rate record ONLY if price or tiers changed
+            if ($hasPriceChanged || $hasTiersChanged) {
+                $effectiveFrom = $data['effective_from'] ?? now()->toDateString();
+
+                $serviceRate = ServiceRate::updateOrCreate(
+                    [
                         'service_id' => $service->id,
+                        'effective_from' => $effectiveFrom,
+                    ],
+                    [
+                        'org_id' => $service->org_id,
                         'price' => $newPrice,
-                        'effective_from' => $data['effective_from'] ?? now()->toDateString(),
-                        'created_by_user_id' => auth()->id(),
-                    ]);
+                        'created_by_user_id' => request()->user()?->id,
+                    ]
+                );
+
+                // If updated an existing rate today, replace its tiers
+                TieredRate::where('service_rate_id', $serviceRate->id)->delete();
+
+                if ($service->calc_mode === 'PER_METER' && !empty($newTiers)) {
+                    $tiersToInsert = collect($newTiers)->map(function ($tier) use ($serviceRate) {
+                        return array_merge($tier, [
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $serviceRate->org_id,
+                            'service_rate_id' => $serviceRate->id,
+                        ]);
+                    })->toArray();
+                    
+                    TieredRate::insert($tiersToInsert);
                 }
             }
 
-            // 2. Update Service Details
-            $serviceData = collect($data)->except(['price', 'effective_from'])->toArray();
+            // 3. Update Service Details
+            $serviceData = collect($data)->except(['price', 'effective_from', 'tiered_rates'])->toArray();
             if (! empty($serviceData)) {
                 $service->update($serviceData);
             }

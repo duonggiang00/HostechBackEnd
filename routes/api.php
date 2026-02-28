@@ -32,11 +32,11 @@ Route::middleware(['auth:sanctum'])->get('/auth/me', function (Illuminate\Http\R
 });
 
 // Protected API Routes
-use App\Http\Controllers\Api\UploadController;
+use App\Http\Controllers\Api\System\MediaController;
 
 Route::middleware('auth:sanctum')->group(function () {
     // API Quản lý File chung
-    Route::post('upload', [UploadController::class, 'store']);
+    Route::post('media/upload', [MediaController::class, 'store']);
     // Organizations
     Route::get('orgs/trash', [OrgController::class, 'trash']);
     Route::apiResource('orgs', OrgController::class);
@@ -70,6 +70,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
     Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);
 
+    // Room Services
+    Route::apiResource('rooms.services', \App\Http\Controllers\Api\Service\RoomServiceController::class);
+
     // Services
     Route::get('services/trash', [\App\Http\Controllers\Api\Service\ServiceController::class, 'trash']);
     Route::apiResource('services', \App\Http\Controllers\Api\Service\ServiceController::class);
@@ -84,6 +87,27 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('contracts', \App\Http\Controllers\Api\Contract\ContractController::class);
     Route::post('contracts/{id}/restore', [\App\Http\Controllers\Api\Contract\ContractController::class, 'restore']);
     Route::delete('contracts/{id}/force', [\App\Http\Controllers\Api\Contract\ContractController::class, 'forceDelete']);
+
+    // Contract Members
+    Route::put('contracts/{contract}/members/{member}/approve', [\App\Http\Controllers\Api\Contract\ContractMemberController::class, 'approve']);
+    Route::apiResource('contracts.members', \App\Http\Controllers\Api\Contract\ContractMemberController::class)->only(['index', 'store', 'show', 'update', 'destroy']);
+
+    // Property Module API
+    Route::apiResource('properties', \App\Http\Controllers\Api\Property\PropertyController::class);
+
+    // Nested Floors API
+    Route::apiResource('properties.floors', \App\Http\Controllers\Api\Property\FloorController::class)
+        ->shallow();
+
+    // Nested Rooms API
+    Route::apiResource('properties.rooms', \App\Http\Controllers\Api\Property\RoomController::class)
+        ->shallow();
+
+    // Nested Room Assets API (under Room)
+    Route::apiResource('properties.rooms.assets', \App\Http\Controllers\Api\Property\RoomAssetController::class)
+        ->parameters([
+            'assets' => 'asset' // parameter name becomes {asset} instead of {room_asset}
+        ]);
 
     // Meters
     Route::get('properties/{property_id}/meters', [\App\Http\Controllers\Api\Meter\MeterController::class, 'indexByProperty']);

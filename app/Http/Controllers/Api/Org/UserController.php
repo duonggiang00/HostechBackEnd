@@ -11,7 +11,8 @@ use App\Http\Resources\Org\UserResource;
 use App\Models\Org\User;
 use Illuminate\Support\Facades\Hash;
 use Spatie\QueryBuilder\QueryBuilder;
-
+use Spatie\QueryBuilder\AllowedFilter;
+use Illuminate\Database\Eloquent\Builder;
 use App\Services\Org\UserService;
 
 /**
@@ -37,7 +38,15 @@ class UserController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         if ($perPage < 1 || $perPage > 100) $perPage = 15;
 
-        $allowed = ['role', 'email', 'is_active'];
+        $allowed = [
+            AllowedFilter::callback('role', function (Builder $query, $value) {
+                $query->whereHas('roles', function (Builder $q) use ($value) {
+                    $q->where('name', 'like', "%{$value}%");
+                });
+            }),
+            'email',
+            'is_active'
+        ];
         $search = $request->input('search');
 
         $paginator = $this->service->paginate($allowed, $perPage, $search);
@@ -66,7 +75,15 @@ class UserController extends Controller
         if ($perPage < 1 || $perPage > 100) $perPage = 15;
 
         // Use Service for consistent logic
-        $allowed = ['role', 'email', 'is_active'];
+        $allowed = [
+            AllowedFilter::callback('role', function (Builder $query, $value) {
+                $query->whereHas('roles', function (Builder $q) use ($value) {
+                    $q->where('name', 'like', "%{$value}%");
+                });
+            }),
+            'email',
+            'is_active'
+        ];
         $search = $request->input('search');
 
         $paginator = $this->service->paginateTrash($allowed, $perPage, $search);

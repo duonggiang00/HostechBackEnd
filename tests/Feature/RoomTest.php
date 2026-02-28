@@ -31,10 +31,23 @@ test('admin can crud room', function () {
         'code' => 'RM-TEST-01',
         'name' => 'Test Room',
         'base_price' => 500000,
-        'status' => 'available'
+        'status' => 'available',
+        'assets' => [
+            [
+                'name' => 'Tivi Samsung',
+                'serial' => 'SN-123456',
+                'condition' => 'Mới 100%'
+            ]
+        ]
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
+
+    // Assert asset created
+    \App\Models\Property\RoomAsset::where('room_id', $id)->where('name', 'Tivi Samsung')->exists();
+    
+    // Assert price history created
+    \App\Models\Property\RoomPrice::where('room_id', $id)->where('price', 500000)->exists();
 
     // Read
     getJson("/api/rooms/{$id}")
@@ -42,9 +55,15 @@ test('admin can crud room', function () {
         ->assertJsonFragment(['name' => 'Test Room']);
 
     // Update
-    putJson("/api/rooms/{$id}", ['name' => 'Updated Name'])
+    putJson("/api/rooms/{$id}", [
+        'name' => 'Updated Name',
+        'base_price' => 600000, // Thay đổi giá
+    ])
         ->assertStatus(200)
         ->assertJsonFragment(['name' => 'Updated Name']);
+
+    // Assert new price history
+    \App\Models\Property\RoomPrice::where('room_id', $id)->where('price', 600000)->exists();
 
     // Delete
     deleteJson("/api/rooms/{$id}")->assertStatus(200);

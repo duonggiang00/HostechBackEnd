@@ -87,4 +87,14 @@ class Invoice extends Model
     {
         return $this->belongsTo(User::class, 'issued_by_user_id');
     }
+
+    public function statusHistories()
+    {
+        return $this->hasMany(InvoiceStatusHistory::class);
+    }
+
+    public function adjustments()
+    {
+        return $this->hasMany(InvoiceAdjustment::class);
+    }
 }

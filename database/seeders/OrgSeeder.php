@@ -6,7 +6,6 @@ use App\Models\Property\Floor;
 use App\Models\Org\Org;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Property\RoomPhoto;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Org\User;
@@ -60,23 +59,26 @@ class OrgSeeder extends Seeder
             User::factory($usersPerOrg)
                 ->state(['org_id' => $org->id])
                 ->create()
-                ->each(function (User $user, $index) {
+                ->each(function (User $user, $index) use ($org) {
+                    $orgSlug = Str::slug($org->name);
                     // Assign roles based on user index
                     if ($index === 0) {
                         $user->assignRole('Owner');
-                        $user->update(['email' => 'owner.'.fake()->unique()->slug().'@org.example.com']);
+                        $user->update(['email' => "{$orgSlug}_owner@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=magenta>Owner</>");
                     } elseif ($index === 1) {
                         $user->assignRole('Manager');
-                        $user->update(['email' => 'manager.'.fake()->unique()->slug().'@org.example.com']);
+                        $user->update(['email' => "{$orgSlug}_manager@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=blue>Manager</>");
                     } elseif ($index === 2) {
                         $user->assignRole('Staff');
-                        $user->update(['email' => 'staff.'.fake()->unique()->slug().'@org.example.com']);
+                        $user->update(['email' => "{$orgSlug}_staff@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=green>Staff</>");
                     } else {
                         $user->assignRole('Tenant');
-                        $user->update(['email' => 'tenant.'.fake()->unique()->slug().'@org.example.com']);
+                        // Use unique string for tenants since there are multiple
+                        $uniqueStr = Str::random(4);
+                        $user->update(['email' => "{$orgSlug}_tenant_{$uniqueStr}@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=cyan>Tenant</>");
                     }
                 });
@@ -155,16 +157,21 @@ class OrgSeeder extends Seeder
 
                     $totalRoomsInProperty = ($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor;
 
-                    Floor::factory($floorsPerProperty)
-                        ->state(['org_id' => $org->id, 'property_id' => $property->id])
-                        ->create()
-                        ->each(function (Floor $floor) use ($org, $property, $roomsPerFloor) {
-                            $this->command->line("     • Tầng {$floor->name} - Tạo <fg=cyan>$roomsPerFloor</> phòng");
+                    for ($i = 1; $i <= $floorsPerProperty; $i++) {
+                        $floor = Floor::factory()->create([
+                            'org_id' => $org->id, 
+                            'property_id' => $property->id,
+                            'name' => "Tầng $i",
+                            'code' => "F" . str_pad($i, 2, '0', STR_PAD_LEFT),
+                            'sort_order' => $i,
+                        ]);
 
-                            Room::factory($roomsPerFloor)
-                                ->state(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id])
-                                ->create();
-                        });
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsPerFloor</> phòng");
+
+                        Room::factory($roomsPerFloor)
+                            ->state(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id])
+                            ->create();
+                    }
 
                     // Create rooms without floor
                     $this->command->line("     • Không có tầng - Tạo <fg=cyan>$roomsWithoutFloor</> phòng");
@@ -180,6 +187,7 @@ class OrgSeeder extends Seeder
             // ---------------------------------------------------------
             $rooms = Room::where('org_id', $org->id)->get();
             $baseCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
+            $ownerId = User::where('org_id', $org->id)->first()->id;
 
             foreach ($rooms as $room) {
                 // A. Assign Room Services
@@ -219,12 +227,12 @@ class OrgSeeder extends Seeder
                         'status' => 'ACTIVE',
                         'start_date' => now()->subMonths(rand(1, 11)),
                         'end_date' => now()->addMonths(rand(1, 12)),
+                        'created_by_user_id' => $ownerId,
                     ]);
 
                     ContractMember::factory()->create([
                         'org_id' => $contract->org_id,
                         'contract_id' => $contract->id,
-                        'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
                         'role' => 'TENANT',
                         'is_primary' => true,
                     ]);
@@ -233,7 +241,6 @@ class OrgSeeder extends Seeder
                         ContractMember::factory()->create([
                             'org_id' => $contract->org_id,
                             'contract_id' => $contract->id,
-                            'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
                             'role' => 'ROOMMATE',
                             'is_primary' => false,
                         ]);
@@ -260,6 +267,32 @@ class OrgSeeder extends Seeder
                     }
                     $paidInvoice->update(['total_amount' => $paidInvoice->items()->sum('amount'), 'paid_amount' => $paidInvoice->items()->sum('amount')]);
 
+                    // Seed Invoice History for Paid Invoice
+                    DB::table('invoice_status_histories')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'invoice_id' => $paidInvoice->id,
+                        'from_status' => 'PENDING',
+                        'to_status' => 'PAID',
+                        'note' => 'Thanh toán đủ bằng tiền mặt',
+                        'changed_by_user_id' => $ownerId,
+                        'created_at' => now(),
+                    ]);
+
+                    // Seed an Invoice Adjustment (Ví dụ giảm một khoản nhỏ)
+                    DB::table('invoice_adjustments')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'invoice_id' => $paidInvoice->id,
+                        'type' => 'CREDIT',
+                        'amount' => 50000,
+                        'reason' => 'Giảm trừ 50k do khách phản ánh nước yếu',
+                        'created_by_user_id' => $ownerId,
+                        'approved_by_user_id' => $ownerId,
+                        'approved_at' => now(),
+                        'created_at' => now(),
+                    ]);
+
                     // Pending Invoice (This month)
                     $thisMonthStart = Carbon::now()->startOfMonth();
                     $pendingInvoice = Invoice::factory()->issued()->create([
@@ -276,6 +309,64 @@ class OrgSeeder extends Seeder
                     ]);
                     InvoiceItem::factory()->rent()->create(['org_id' => $org->id, 'invoice_id' => $pendingInvoice->id, 'unit_price' => 5000000, 'amount' => 5000000]);
                     $pendingInvoice->update(['total_amount' => $pendingInvoice->items()->sum('amount')]);
+
+                    // Seed Invoice History for Pending Invoice
+                    DB::table('invoice_status_histories')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'invoice_id' => $pendingInvoice->id,
+                        'from_status' => 'DRAFT',
+                        'to_status' => 'PENDING',
+                        'note' => 'Xuất hóa đơn tháng này',
+                        'changed_by_user_id' => $ownerId,
+                        'created_at' => now(),
+                    ]);
+
+                    // Mock a Meter, Meter Reading and Adjustment Note for this room
+                    $meterId = Str::uuid()->toString();
+                    DB::table('meters')->insert([
+                        'id' => $meterId,
+                        'org_id' => $org->id,
+                        'room_id' => $room->id,
+                        'code' => 'METER_E_' . rand(1000,9999),
+                        'type' => 'ELECTRIC',
+                        'installed_at' => now()->subYear()->toDateString(),
+                        'is_active' => true,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    $readingId = Str::uuid()->toString();
+                    DB::table('meter_readings')->insert([
+                        'id' => $readingId,
+                        'org_id' => $org->id,
+                        'meter_id' => $meterId,
+                        'period_start' => $thisMonthStart->toDateString(),
+                        'period_end' => $thisMonthStart->copy()->endOfMonth()->toDateString(),
+                        'reading_value' => rand(150, 200),
+                        'status' => 'LOCKED',
+                        'submitted_by_user_id' => $ownerId,
+                        'submitted_at' => now()->subDays(2),
+                        'approved_by_user_id' => $ownerId,
+                        'approved_at' => now()->subDays(1),
+                        'locked_at' => now()->subDays(1),
+                        'created_at' => now()->subDays(2),
+                        'updated_at' => now()->subDays(1),
+                    ]);
+
+                    // Seed an Adjustment Note
+                    DB::table('adjustment_notes')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'meter_reading_id' => $readingId,
+                        'reason' => 'Chủ nhà ghi nhầm công tơ điện tháng này',
+                        'before_value' => 250,
+                        'after_value' => 200, // Reduced to actual
+                        'requested_by_user_id' => $ownerId,
+                        'approved_by_user_id' => $ownerId,
+                        'approved_at' => now(),
+                        'created_at' => now(),
+                    ]);
                 }
 
                 if (rand(0, 100) > 70) {
@@ -288,11 +379,11 @@ class OrgSeeder extends Seeder
                         'start_date' => now()->subYears(2),
                         'end_date' => now()->subYears(1),
                         'terminated_at' => now()->subYears(1),
+                        'created_by_user_id' => $ownerId,
                     ]);
                     ContractMember::factory()->create([
                         'org_id' => $contract->org_id,
                         'contract_id' => $contract->id,
-                        'user_id' => User::factory()->create(['org_id' => $contract->org_id])->id,
                         'role' => 'TENANT',
                         'is_primary' => true,
                         'left_at' => $contract->end_date,
@@ -312,7 +403,6 @@ class OrgSeeder extends Seeder
         $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor))."</>");
         
         // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
-        $this->command->line("✅ Ảnh phòng (Photos): <fg=cyan>".RoomPhoto::count()."</>");
         $this->command->line("✅ Tài sản phòng (Assets): <fg=cyan>".RoomAsset::count()."</>");
         $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>".RoomPrice::count()."</>");
         $this->command->line("✅ Dịch vụ (Services): <fg=cyan>".Service::count()."</>");

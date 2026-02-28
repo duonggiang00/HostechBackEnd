@@ -113,6 +113,20 @@ class ContractPolicy implements RbacModuleProvider
     }
 
     /**
+     * Determine whether the user can add members to the contract.
+     */
+    public function addMember(User $user, Contract $contract): bool
+    {
+        // Manager/Owner/Staff
+        if ($user->hasPermissionTo('update Contracts')) {
+            return $this->checkOrgScope($user, $contract);
+        }
+        
+        // Tenant (if they are a member of the contract)
+        return $contract->members()->where('user_id', $user->id)->exists();
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Contract $contract): bool

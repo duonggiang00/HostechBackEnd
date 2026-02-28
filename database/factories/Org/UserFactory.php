@@ -16,8 +16,8 @@ class UserFactory extends Factory
         return [
             'id' => Str::uuid(),
             'org_id' => null,
-            'full_name' => fake()->name(),
-            'phone' => fake()->phoneNumber(),
+            'full_name' => fake('vi_VN')->name(),
+            'phone' => fake('vi_VN')->phoneNumber(),
             'email' => fake()->unique()->safeEmail(),
             'password_hash' => Hash::make('12345678'),
             'email_verified_at' => now(),

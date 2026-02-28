@@ -13,10 +13,12 @@ use App\Models\Service\RoomService;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use App\Traits\HasMediaAttachments; // Added
 
 class Room extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia, HasMediaAttachments; // Added
+
 
     public $incrementing = false;
 
@@ -60,5 +62,10 @@ class Room extends Model implements HasMedia
     public function roomServices()
     {
         return $this->hasMany(RoomService::class);
+    }
+
+    public function statusHistories()
+    {
+        return $this->hasMany(RoomStatusHistory::class);
     }
 }

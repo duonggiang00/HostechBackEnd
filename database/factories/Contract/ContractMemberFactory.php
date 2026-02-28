@@ -19,8 +19,12 @@ class ContractMemberFactory extends Factory
         return [
             'org_id' => \App\Models\Org\Org::factory(),
             'contract_id' => \App\Models\Contract\Contract::factory(),
-            'user_id' => \App\Models\Org\User::factory(),
+            'user_id' => null, // Default to no user created
+            'full_name' => fake('vi_VN')->name(),
+            'phone' => fake('vi_VN')->phoneNumber(),
+            'identity_number' => fake()->numerify('0010#########'), // Fake Vietnamese CCCD
             'role' => $this->faker->randomElement(['TENANT', 'ROOMMATE', 'GUARANTOR']),
+            'status' => 'APPROVED',
             'is_primary' => false,
             'joined_at' => now(),
             'left_at' => null,

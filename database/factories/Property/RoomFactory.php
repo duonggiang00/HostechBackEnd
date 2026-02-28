@@ -5,9 +5,9 @@ namespace Database\Factories\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 use App\Models\Property\Room;
-use App\Models\Property\RoomPhoto;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
+use App\Models\Property\RoomStatusHistory;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use Carbon\Carbon;
@@ -27,11 +27,11 @@ class RoomFactory extends Factory
             'area' => fake()->numberBetween(20, 150),
             'floor' => fake()->numberBetween(1, 20),
             'capacity' => fake()->numberBetween(1, 6),
-            'base_price' => fake()->numberBetween(5000000, 50000000),
+            'base_price' => fake()->numberBetween(30, 150) * 100000,
             'status' => fake()->randomElement(['available', 'occupied', 'maintenance']),
-            'description' => fake()->sentence(),
-            'amenities' => json_encode(fake()->randomElements(['WiFi', 'AC', 'TV', 'Bed', 'Kitchen'], 3)),
-            'utilities' => json_encode(fake()->randomElements(['Electricity', 'Water', 'Gas'], 2)),
+            'description' => fake('vi_VN')->realText(50),
+            'amenities' => json_encode(fake()->randomElements(['WiFi', 'Điều hòa', 'Tivi', 'Giường nệm', 'Tủ bếp'], 3)),
+            'utilities' => json_encode(fake()->randomElements(['Điện', 'Nước', 'Rác', 'Internet'], 2)),
         ];
     }
 
@@ -40,20 +40,6 @@ class RoomFactory extends Factory
         return $this->afterCreating(function (Room $room) {
             // Cần đảm bảo room có org_id trước khi tạo relations
             if (! $room->org_id) return;
-
-            // Sinh Photos (1-3 ảnh)
-            $photoCount = fake()->numberBetween(1, 3);
-            for ($i = 0; $i < $photoCount; $i++) {
-                RoomPhoto::create([
-                    'id' => Str::uuid(),
-                    'org_id' => $room->org_id,
-                    'room_id' => $room->id,
-                    'path' => 'rooms/' . $room->id . '/' . fake()->lexify('?????') . '.jpg',
-                    'mime' => 'image/jpeg',
-                    'size_bytes' => fake()->numberBetween(100000, 5000000),
-                    'sort_order' => $i,
-                ]);
-            }
 
             // Sinh Assets (1-4 tài sản)
             $assetNames = ['Điều hòa', 'Tivi', 'Tủ lạnh', 'Máy giặt', 'Bình nóng lạnh', 'Giường', 'Tủ quần áo'];
@@ -79,6 +65,17 @@ class RoomFactory extends Factory
                 'room_id' => $room->id,
                 'effective_from' => Carbon::now()->startOfMonth()->format('Y-m-d'),
                 'price' => $room->base_price,
+            ]);
+
+            // Sinh Room Status History (Trạng thái khởi tạo)
+            RoomStatusHistory::create([
+                'id' => Str::uuid(),
+                'org_id' => $room->org_id,
+                'room_id' => $room->id,
+                'from_status' => null,
+                'to_status' => $room->status,
+                'reason' => 'Initial status setup',
+                'changed_by_user_id' => null,
             ]);
 
             // Sinh Đồng hồ Điện và Nước (Meters)

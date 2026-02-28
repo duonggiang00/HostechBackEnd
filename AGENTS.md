@@ -36,6 +36,19 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 
+## ⚠️ CRITICAL AGENTIC WORKFLOW (READ FIRST & OBEY)
+To prevent hallucination and strictly follow the user's intended architecture, you MUST follow this workflow before executing ANY task:
+
+**PHASE 1: RESEARCH & PLANNING (MANDATORY)**
+1. **Never assume project structure.** If you are asked to code a feature, your VERY FIRST action must be to read related files in the `docs/` or `docs/project_specs/` directories.
+2. ALWAYS read `docs/database.dbml` when you need to understand tables, relationships, or before creating migrations.
+3. ALWAYS read `docs/MODULE_GUIDE.md` when asked to create or scaffold a new module.
+4. ALWAYS read `docs/API_DOCS.md` when tasked with writing API Controllers, FormRequests, or API Resources.
+5. Search the `docs/project_specs/` directory for any pre-existing plan (e.g., `INVOICE_MODULE_PLAN.md`) related to your task. If one exists, YOU MUST READ IT.
+
+**PHASE 2: EXECUTION**
+- Only after reading the relevant docs can you begin scaffolding or writing code.
+- If the user explicitly asks to run a workflow (e.g., `/scaffold_module`), use the `view_file` tool to read `.agents/workflows/scaffold_module.md` and execute its steps VERBATIM.
 ## Project Architecture (Strict Enforcement)
 
 ### 1. Domain-Driven Directory Structuring & Service Layer Pattern
@@ -58,13 +71,27 @@ This application is a Laravel application and its main Laravel ecosystems packag
 
 ### 3. Multi-tenancy
 - **Models**: Tenant-scoped models MUST use `App\Models\Concerns\MultiTenant`.
-- **Foreign Keys**: `org_id` is the tenant key.
+- **Foreign Keys**: `org_id` is the tenant key (UUID based).
+
+### 4. Database Schema Structure
+- See `docs/database.dbml` for the complete, up-to-date Database Markup Language formulation.
+- **Key Concepts**: 
+  - All primary keys are `uuid`. 
+  - Standard polymorphic Spatie MediaLibrary `media` handles photos, PDFs, receipts, and avatars—there are no separate hardcoded photo tables.
+  - History Tables (e.g. `room_status_histories`, `room_prices`) are used extensively for snapshotting past data over time without mutating history.
 
 ### 4. API Standardization
 - **Documentation**: Use `Dedoc\Scramble\Attributes\Group` in Controllers.
 - **Validation**: MANDATORY use of FormRequests (`App\Http\Requests`).
 - **Responses**: MANDATORY use of Eloquent Resources (`App\Http\Resources`).
 - **Filtering**: Services should support standardized filtering (e.g., `allowedFilters` via Spatie QueryBuilder or manual request checks).
+- **API Documentation Annotations (Scramble)**: When documenting `index` endpoints that use pagination and QueryBuilder, you MUST include the following standard `@queryParam` annotations in the PHPDoc block:
+  - `@queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10`
+  - `@queryParam page int Số trang. Example: 1`
+  - `@queryParam search string Tìm kiếm chung. Example: keyword`
+  - `@queryParam sort string Sắp xếp theo trường (prefix '-' để giảm dần). Các trường hỗ trợ: [liệt kê]. Default: created_at. Example: -created_at`
+  - `@queryParam filter[field_name] type Lọc theo trường cụ thể (nếu có allowedFilters). Example: value`
+  - `@queryParam with_trashed boolean Bao gồm cả các mục đã xóa tạm (Soft Deleted). Example: 1` (Only for endpoints that support `withTrashed()`)
 
 ## Frontend Bundling
 

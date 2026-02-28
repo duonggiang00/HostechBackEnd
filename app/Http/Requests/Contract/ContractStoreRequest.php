@@ -28,7 +28,10 @@ class ContractStoreRequest extends FormRequest
             
             // Member validation
             'members' => ['nullable', 'array'],
-            'members.*.user_id' => ['required', 'uuid', 'exists:users,id'],
+            'members.*.user_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'members.*.full_name' => ['required_without:members.*.user_id', 'string', 'max:255'],
+            'members.*.phone' => ['nullable', 'string', 'max:20'],
+            'members.*.identity_number' => ['nullable', 'string', 'max:50'],
             'members.*.role' => ['nullable', 'string', 'in:TENANT,ROOMMATE,GUARANTOR'],
             'members.*.is_primary' => ['nullable', 'boolean'],
             'members.*.joined_at' => ['nullable', 'date'],
