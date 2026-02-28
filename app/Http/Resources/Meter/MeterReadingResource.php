@@ -33,6 +33,20 @@ class MeterReadingResource extends JsonResource
             'meter' => new MeterResource($this->whenLoaded('meter')),
             'submitted_by' => $this->whenLoaded('submittedBy'),
             'approved_by' => $this->whenLoaded('approvedBy'),
+            'adjustments' => AdjustmentNoteResource::collection($this->whenLoaded('adjustmentNotes')),
+            'proofs' => $this->whenLoaded('media', function () {
+                return $this->getMedia('reading_proofs')->map(function ($media) {
+                    return [
+                        'id' => $this->id,
+                        'url' => $media->getUrl(),
+                        'thumb_url' => $media->getUrl('thumb'),
+                        'name' => $media->name,
+                        'file_name' => $media->file_name,
+                        'mime_type' => $media->mime_type,
+                        'size' => $media->size,
+                    ];
+                });
+            }),
         ];
     }
 }

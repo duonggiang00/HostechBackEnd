@@ -117,6 +117,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Meter Readings
     Route::apiResource('meters.readings', \App\Http\Controllers\Api\Meter\MeterReadingController::class)->scoped();
 
+    // Meter Reading Adjustments
+    Route::post('meter-readings/{reading}/adjustments', [\App\Http\Controllers\Api\Meter\AdjustmentNoteController::class, 'store']);
+    Route::get('meter-readings/{reading}/adjustments', [\App\Http\Controllers\Api\Meter\AdjustmentNoteController::class, 'index']);
+    Route::put('meter-readings/{reading}/adjustments/{adjustment}/approve', [\App\Http\Controllers\Api\Meter\AdjustmentNoteController::class, 'approve']);
+    Route::put('meter-readings/{reading}/adjustments/{adjustment}/reject', [\App\Http\Controllers\Api\Meter\AdjustmentNoteController::class, 'reject']);
+
     // invoices
     // Danh sách theo cây phân cấp Tòa nhà → Tầng
     Route::get('properties/{property_id}/invoices', [\App\Http\Controllers\Api\Invoice\InvoiceController::class, 'indexByProperty']);
