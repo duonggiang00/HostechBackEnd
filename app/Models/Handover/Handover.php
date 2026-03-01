@@ -11,12 +11,13 @@ use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Handover extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable, InteractsWithMedia;
+    use HasFactory, HasUuids, MultiTenant, SystemLoggable, InteractsWithMedia, SoftDeletes;
 
     public $incrementing = false;
     protected $keyType = 'string';

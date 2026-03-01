@@ -17,19 +17,42 @@ class HandoverService
     /**
      * Lấy danh sách Handover có phân trang & lọc
      */
-    public function paginate(Org $org, int $perPage = 15)
+    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
     {
-        return QueryBuilder::for(Handover::class)
-            ->where('org_id', $org->id)
-            ->allowedFilters([
+        $query = QueryBuilder::for(Handover::class)
+            ->allowedFilters(array_merge($filters, [
                 AllowedFilter::exact('type'),
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
-            ])
+            ]))
             ->allowedIncludes(['room', 'contract', 'confirmedBy'])
-            ->defaultSort('-created_at')
-            ->paginate($perPage);
+            ->defaultSort('-created_at');
+
+        $user = request()->user();
+        if ($user) {
+            $query->where('org_id', $user->org_id);
+            if ($user->hasRole('Tenant') || $user->hasRole('tenant')) {
+                $query->where('status', 'CONFIRMED')
+                      ->whereHas('contract', function ($q) use ($user) {
+                          $q->whereHas('members', function ($sq) use ($user) {
+                              $sq->where('user_id', $user->id)
+                                 ->where('status', 'APPROVED');
+                          });
+                      });
+            }
+        }
+
+        if ($search) {
+             $query->where(function (Builder $q) use ($search) {
+                 $q->where('note', 'LIKE', "%{$search}%")
+                   ->orWhereHas('room', function (Builder $qRoom) use ($search) {
+                       $qRoom->where('name', 'LIKE', "%{$search}%");
+                   });
+             });
+        }
+
+        return $query->paginate($perPage)->withQueryString();
     }
 
     /**
