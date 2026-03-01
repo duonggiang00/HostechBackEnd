@@ -272,15 +272,18 @@ class TestFeatureController extends Controller
 }
 ```
 
-### Bước 7: Đăng ký Router
-Viết code hoàn chỉnh nhưng không nhét route cũng vứt. Mở `routes/api.php` ở nhóm Middleware `auth:sanctum`:
+### Bước 7: Đăng ký Router (Modularized)
+Không viết trực tiếp vào `api.php`. Hãy tạo file mới: `routes/api/{domain}.php`.
+
+Hệ thống sẽ quét thư mục `routes/api/` và tự động nạp các routes này vào middleware `auth:sanctum`.
+
+Ví dụ: `routes/api/test.php`
 ```php
 use App\Http\Controllers\Api\Test\TestFeatureController;
+use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    // Tự sinh toàn bộ (index, store, show, update, destroy)
-    Route::apiResource('test-features', TestFeatureController::class);
-});
+// Tự sinh toàn bộ (index, store, show, update, destroy)
+Route::apiResource('test-features', TestFeatureController::class);
 ```
 
 Chạy `php artisan optimize:clear` là API của bạn đã sẵn sàng và an toàn tuyệt đối ở mọi tầng kiến trúc!
