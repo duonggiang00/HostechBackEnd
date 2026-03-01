@@ -168,11 +168,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Handover Items
     Route::get('handovers/{handover}/items', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsIndex']);
     Route::post('handovers/{handover}/items', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsStore']);
-    Route::put('handovers/{handover}/items/{item}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsUpdate']);
-    Route::delete('handovers/{handover}/items/{item}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsDestroy']);
+    Route::put('handovers/{handover}/items/{handoverItem}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsUpdate']);
+    Route::delete('handovers/{handover}/items/{handoverItem}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'itemsDestroy']);
     
     // Handover Meter Snapshots
     Route::get('handovers/{handover}/snapshots', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsIndex']);
     Route::post('handovers/{handover}/snapshots', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsStore']);
-    Route::delete('handovers/{handover}/snapshots/{snapshot}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsDestroy']);
+    Route::delete('handovers/{handover}/snapshots/{handoverMeterSnapshot}', [\App\Http\Controllers\Api\Handover\HandoverController::class, 'snapshotsDestroy']);
 });

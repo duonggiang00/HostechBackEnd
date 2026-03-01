@@ -17,7 +17,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Handover extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable, InteractsWithMedia, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
 
     public $incrementing = false;
     protected $keyType = 'string';

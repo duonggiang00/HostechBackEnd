@@ -27,6 +27,7 @@ return new class extends Migration
             $table->timestamp('locked_at')->nullable(); // Khóa không cho sửa sau confirm
             
             $table->timestamps();
+            $table->softDeletes();
 
             // Khóa ngoại
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');
