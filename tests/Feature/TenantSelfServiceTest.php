@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -23,15 +23,21 @@ class TenantSelfServiceTest extends TestCase
         Role::firstOrCreate(['name' => 'Manager', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'Tenant', 'guard_name' => 'web']);
 
-        // Grant Contracts permission for addMember policy check
+        // Register standard contract permissions that Policy checks
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Contracts', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view Contracts', 'guard_name' => 'web']);
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update Contracts', 'guard_name' => 'web']);
+
+        // Ensure roles have basic module access as per RbacModuleProvider expectations
+        Role::findByName('Tenant', 'web')->givePermissionTo(['viewAny Contracts', 'view Contracts']);
+        Role::findByName('Manager', 'web')->givePermissionTo(['viewAny Contracts', 'view Contracts', 'update Contracts']);
     }
 
     /** Setup a full active contract scenario */
     private function setupActiveContract(): array
     {
         $org = Org::create(['name' => 'Test Org']);
-        
+
         $tenant = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Primary Tenant']);
         $tenant->assignRole('Tenant');
 
@@ -72,16 +78,16 @@ class TenantSelfServiceTest extends TestCase
     {
         [, $tenant, , , $contract] = $this->setupActiveContract();
 
-        $response = $this->actingAs($tenant)->postJson('/api/contracts/' . $contract->id . '/members', [
+        $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/members', [
             'full_name' => 'Bạn Cùng Phòng',
             'phone' => '0901111222',
             'role' => 'ROOMMATE',
         ]);
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.full_name', 'Bạn Cùng Phòng')
-                 ->assertJsonPath('data.status', 'PENDING')
-                 ->assertJsonPath('data.role', 'ROOMMATE');
+            ->assertJsonPath('data.full_name', 'Bạn Cùng Phòng')
+            ->assertJsonPath('data.status', 'PENDING')
+            ->assertJsonPath('data.role', 'ROOMMATE');
 
         $this->assertDatabaseHas('contract_members', [
             'contract_id' => $contract->id,
@@ -100,7 +106,7 @@ class TenantSelfServiceTest extends TestCase
         $stranger = User::factory()->create(['org_id' => $otherOrg->id, 'full_name' => 'Stranger']);
         $stranger->assignRole('Tenant');
 
-        $response = $this->actingAs($stranger)->postJson('/api/contracts/' . $contract->id . '/members', [
+        $response = $this->actingAs($stranger)->postJson('/api/contracts/'.$contract->id.'/members', [
             'full_name' => 'Hack Attempt',
             'role' => 'ROOMMATE',
         ]);
@@ -120,11 +126,11 @@ class TenantSelfServiceTest extends TestCase
         // Phòng đang có hợp đồng (không được liệt kê)
         Room::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => 'Phòng 203', 'code' => 'P203', 'status' => 'OCCUPIED']);
 
-        $response = $this->actingAs($tenant)->getJson('/api/contracts/' . $contract->id . '/available-rooms');
+        $response = $this->actingAs($tenant)->getJson('/api/contracts/'.$contract->id.'/available-rooms');
 
         $response->assertStatus(200)
-                 ->assertJsonCount(2, 'data') // Chỉ 2 phòng AVAILABLE
-                 ->assertJsonPath('property_name', 'Tòa nhà A');
+            ->assertJsonCount(2, 'data') // Chỉ 2 phòng AVAILABLE
+            ->assertJsonPath('property_name', 'Tòa nhà A');
     }
 
     public function test_tenant_cannot_see_rooms_from_other_property()
@@ -135,9 +141,9 @@ class TenantSelfServiceTest extends TestCase
         $otherProperty = Property::create(['org_id' => $org->id, 'name' => 'Tòa nhà B', 'code' => 'TNB']);
         Room::create(['org_id' => $org->id, 'property_id' => $otherProperty->id, 'name' => 'Phòng B101', 'code' => 'B101', 'status' => 'AVAILABLE']);
 
-        $response = $this->actingAs($tenant)->getJson('/api/contracts/' . $contract->id . '/available-rooms');
+        $response = $this->actingAs($tenant)->getJson('/api/contracts/'.$contract->id.'/available-rooms');
         $response->assertStatus(200)
-                 ->assertJsonCount(0, 'data'); // Không thấy phòng ở tòa nhà khác
+            ->assertJsonCount(0, 'data'); // Không thấy phòng ở tòa nhà khác
     }
 
     // ─── FEATURE 3: Room Transfer Request ───────────────────────────────────
@@ -154,13 +160,13 @@ class TenantSelfServiceTest extends TestCase
             'status' => 'AVAILABLE',
         ]);
 
-        $response = $this->actingAs($tenant)->postJson('/api/contracts/' . $contract->id . '/room-transfer-request', [
+        $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/room-transfer-request', [
             'target_room_id' => $targetRoom->id,
             'reason' => 'Cần phòng rộng hơn',
         ]);
 
         $response->assertStatus(200)
-                 ->assertJsonPath('target_room.id', $targetRoom->id);
+            ->assertJsonPath('target_room.id', $targetRoom->id);
 
         // Verify meta được ghi vào contract
         $this->assertDatabaseHas('contracts', [
@@ -183,7 +189,7 @@ class TenantSelfServiceTest extends TestCase
             'status' => 'OCCUPIED', // Không phải AVAILABLE
         ]);
 
-        $response = $this->actingAs($tenant)->postJson('/api/contracts/' . $contract->id . '/room-transfer-request', [
+        $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/room-transfer-request', [
             'target_room_id' => $occupiedRoom->id,
         ]);
 

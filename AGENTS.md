@@ -47,27 +47,32 @@ To prevent hallucination and strictly follow the user's intended architecture, y
 5. Search the `docs/project_specs/` directory for any pre-existing plan (e.g., `INVOICE_MODULE_PLAN.md`) related to your task. If one exists, YOU MUST READ IT.
 
 **PHASE 2: EXECUTION**
-- Only after reading the relevant docs can you begin scaffolding or writing code.
-- If the user explicitly asks to run a workflow (e.g., `/scaffold_module`), use the `view_file` tool to read `.agents/workflows/scaffold_module.md` and execute its steps VERBATIM.
+- Chỉ sau khi đọc các tài liệu liên quan mới được bắt đầu viết code hoặc scaffold.
+- Nếu người dùng yêu cầu chạy workflow:
+    - `/scaffold_module`: Khởi tạo nhanh module mới chuẩn DDD.
+    - `/audit_module`: Rà soát kiến trúc và compliance của một Domain (Models, Services, Policies, Resources).
+    - `/add_status_history`: Tự động tạo bảng history và logic logging cho Model.
+    - `/finalize_module`: Kiểm tra cuối cùng (Pint, Tests, RBAC Sync) trước khi báo cáo hoàn tất.
+- Luôn sử dụng `view_file` để đọc nội dung workflow tương ứng trong `.agents/workflows/` và thực hiện CHÍNH XÁC từng bước.
 ## Project Architecture (Strict Enforcement)
 
 ### 1. Domain-Driven Directory Structuring & Service Layer Pattern
-- **Structure**: The project strictly follows a Domain-Driven architecture within standard Laravel folders. Files must be organized into their respective Domain folders (e.g., `Auth`, `Org`, `Property`, `Service`, `Contract`, `System`) across all components (`Models`, `Controllers/Api`, `Services`, `Requests`, `Resources`, `Policies`, `factories`).
-    - *Example:* `app/Models/Property/Room.php` (namespace `App\Models\Property`).
-    - *Example:* `app/Http/Controllers/Api/Property/RoomController.php` (namespace `App\Http\Controllers\Api\Property`).
-- **Logic**: All business logic MUST go in Service classes (`App\Services\{Domain}`). Controllers should only handle request parsing and response formatting.
-- **Naming**: `ModelNameService` (e.g., `OrgService`, `UserService`).
+- **Structure**: The project strictly follows a Domain-Driven architecture within standard Laravel folders. Files must be organized into Domain folders (e.g., `Auth`, `Org`, `Property`, `Contract`, `System`) across `Models`, `Controllers/Api`, `Services`, `Requests`, `Resources`, `Policies`.
+- **Logic**: All business logic MUST go in Service classes (`App\Services\{Domain}`).
+    - **Thin Controllers**: Controllers only handle request parsing, authorization (`$this->authorize`), and response formatting.
+    - **Logic Consolidation**: Service methods should handle varied logic (e.g., Admin vs Tenant) internally using performer context, ensuring controllers remain clean.
+    - **Intelligent Status Mapping**: Services should handle state transitions (e.g., `PENDING` vs `APPROVED`) based on the performer's roles/permissions.
+- **Naming**: `ModelNameService` (e.g., `ContractService`).
 - **Dependency Injection**: Inject services into controllers.
 
-### 2. Role-Based Access Control (RBAC)
+### 2. Role-Based Access Control (RBAC) & Scoping
 - **Engine**: Spatie Laravel Permission.
 - **Dynamic Permissions**: All Policies MUST implement `App\Contracts\RbacModuleProvider`.
 - **Sync**: Run `php artisan rbac:sync` to register permissions defined in Policies.
-- **Scopes**:
-    - `Admin`: System-wide access (Super User replacement).
-    - `Owner`: Organization-wide access.
-    - `Manager/Staff`: Property-level access.
-- **Traits**: Use `HandlesOrgScope` in Policies to enforce ownership checks.
+- **Scoping Pattern**:
+    - `Staff/Manager/Owner`: Access via standard Permission (`view Contracts`) + `HandlesOrgScope`.
+    - `Tenant`: Access via **Membership** (e.g., check if `user_id` exists in `members` table).
+- **Traits**: Use `HandlesOrgScope` for ownership checks.
 
 ### 3. Multi-tenancy
 - **Models**: Tenant-scoped models MUST use `App\Models\Concerns\MultiTenant`.
@@ -84,14 +89,15 @@ To prevent hallucination and strictly follow the user's intended architecture, y
 - **Documentation**: Use `Dedoc\Scramble\Attributes\Group` in Controllers.
 - **Validation**: MANDATORY use of FormRequests (`App\Http\Requests`).
 - **Responses**: MANDATORY use of Eloquent Resources (`App\Http\Resources`).
-- **Filtering**: Services should support standardized filtering (e.g., `allowedFilters` via Spatie QueryBuilder or manual request checks).
-- **API Documentation Annotations (Scramble)**: When documenting `index` endpoints that use pagination and QueryBuilder, you MUST include the following standard `@queryParam` annotations in the PHPDoc block:
-  - `@queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10`
-  - `@queryParam page int Số trang. Example: 1`
-  - `@queryParam search string Tìm kiếm chung. Example: keyword`
-  - `@queryParam sort string Sắp xếp theo trường (prefix '-' để giảm dần). Các trường hỗ trợ: [liệt kê]. Default: created_at. Example: -created_at`
-  - `@queryParam filter[field_name] type Lọc theo trường cụ thể (nếu có allowedFilters). Example: value`
-  - `@queryParam with_trashed boolean Bao gồm cả các mục đã xóa tạm (Soft Deleted). Example: 1` (Only for endpoints that support `withTrashed()`)
+    - **Completeness**: Resources must expose all fields necessary for UI verification (e.g., `status`, `full_name`, `phone`, `identity_number`).
+    - **Null-Safety**: Ensure optional fields return consistent types (or `null`) and handle relationships gracefully.
+- **Error Handling**: Standardize on `abort(code, message)` for consistent JSON Exception responses instead of manual `response()->json()`.
+- **Filtering**: Services should support standardized filtering (e.g., `allowedFilters` via Spatie QueryBuilder).
+- **Scramble Annotations**: Include standard `@queryParam` annotations (per_page, page, search, sort, filter, with_trashed).
+
+### 5. Audit Logging & State Tracking
+- **Models**: High-value models tracking state changes MUST use `App\Traits\SystemLoggable`.
+- **History Tables**: Use specialized history tables (e.g., `room_status_histories`) for snapshotting temporal data.
 
 ## Frontend Bundling
 

@@ -12,47 +12,38 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class RoomService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    /**
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?\App\Models\Org\User $performer = null)
     {
         $query = QueryBuilder::for(Room::class)
             ->allowedFilters($allowedFilters)
             ->allowedIncludes(['assets', 'prices', 'statusHistories', 'media'])
             ->defaultSort('code');
 
-        $user = request()->user();
-        if ($user && $user->hasRole('Tenant')) {
-            $query->whereHas('contracts', function ($q) use ($user) {
+        // Scoping Pattern: Membership-based for Tenant
+        if ($performer && $performer->hasRole('Tenant')) {
+            $query->whereHas('contracts', function ($q) use ($performer) {
                 $q->where('status', 'ACTIVE')
-                  ->whereHas('members', function ($sq) use ($user) {
-                      $sq->where('user_id', $user->id)
-                         ->where('status', 'APPROVED');
-                  });
+                    ->whereHas('members', function ($sq) use ($performer) {
+                        $sq->where('user_id', $performer->id)
+                            ->where('status', 'APPROVED');
+                    });
             });
         }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
-        }
-
-        if ($propertyId = request()->input('property_id')) {
-            $query->where('property_id', $propertyId);
-        }
-
-        if ($floorId = request()->input('floor_id')) {
-            $query->where('floor_id', $floorId);
-        }
-
-        if (request()->boolean('with_trashed')) {
-            $query->withTrashed();
         }
 
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Room::onlyTrashed())
             ->allowedFilters($allowedFilters)
@@ -61,7 +52,7 @@ class RoomService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -83,22 +74,33 @@ class RoomService
         return Room::withTrashed()->find($id);
     }
 
-    public function create(array $data): Room
+    public function create(array $data, \App\Models\Org\User $performer): Room
     {
-        return DB::transaction(function () use ($data) {
+        return DB::transaction(function () use ($data, $performer) {
+            // Consolidated Property Check & Org Auto-assignment
+            $property = \App\Models\Property\Property::findOrFail($data['property_id']);
+
+            // Security: Check if Property belongs to User's Org (if not Admin)
+            if (! $performer->hasRole('Admin') && $performer->org_id && (string) $property->org_id !== (string) $performer->org_id) {
+                abort(403, 'Unauthorized: You cannot add rooms to a property in another organization.');
+            }
+
             $assetsData = $data['assets'] ?? [];
             $mediaIds = $data['media_ids'] ?? [];
             unset($data['assets'], $data['media_ids']);
 
+            // Auto-assign org_id from property
+            $data['org_id'] = $property->org_id;
+
             $room = Room::create($data);
 
             // Sync Media
-            if (!empty($mediaIds)) {
+            if (! empty($mediaIds)) {
                 $room->syncMediaAttachments($mediaIds, 'gallery');
             }
 
             // Sync Assets
-            if (!empty($assetsData)) {
+            if (! empty($assetsData)) {
                 $assetsToInsert = array_map(function ($asset) use ($room) {
                     return array_merge($asset, [
                         'id' => Str::uuid()->toString(),
@@ -118,7 +120,7 @@ class RoomService
                     'room_id' => $room->id,
                     'effective_from' => now()->toDateString(),
                     'price' => $data['base_price'],
-                    'created_by_user_id' => request()->user()?->id,
+                    'created_by_user_id' => $performer->id,
                 ]);
             }
 
@@ -130,7 +132,7 @@ class RoomService
                     'from_status' => null,
                     'to_status' => $data['status'],
                     'reason' => 'Initial creation',
-                    'changed_by_user_id' => request()->user()?->id,
+                    'changed_by_user_id' => $performer->id,
                 ]);
             }
 
@@ -138,25 +140,27 @@ class RoomService
         });
     }
 
-    public function update(string $id, array $data): ?Room
+    public function update(string $id, array $data, \App\Models\Org\User $performer): ?Room
     {
-        return DB::transaction(function () use ($id, $data) {
+        return DB::transaction(function () use ($id, $data, $performer) {
             $room = $this->find($id);
-            if (!$room) return null;
+            if (! $room) {
+                return null;
+            }
 
             $assetsData = $data['assets'] ?? null;
             $mediaIds = $data['media_ids'] ?? [];
-            
+
             // Track old status & price for history
             $oldStatus = $room->status;
             $oldPrice = $room->base_price;
-            
+
             unset($data['assets'], $data['media_ids']);
 
             $room->update($data);
 
-            // Sync Media (append new)
-            if (!empty($mediaIds)) {
+            // Sync Media
+            if (! empty($mediaIds)) {
                 $room->syncMediaAttachments($mediaIds, 'gallery');
             }
 
@@ -167,14 +171,12 @@ class RoomService
 
                 foreach ($assetsData as $assetData) {
                     if (isset($assetData['id']) && in_array($assetData['id'], $existingAssetIds)) {
-                        // Update existing
                         $asset = RoomAsset::find($assetData['id']);
                         if ($asset) {
                             $asset->update($assetData);
                             $updatedAssetIds[] = $asset->id;
                         }
                     } else {
-                        // Create new
                         $newAsset = RoomAsset::create(array_merge($assetData, [
                             'id' => Str::uuid()->toString(),
                             'org_id' => $room->org_id,
@@ -184,15 +186,14 @@ class RoomService
                     }
                 }
 
-                // Delete missing
                 $assetsToDelete = array_diff($existingAssetIds, $updatedAssetIds);
-                if (!empty($assetsToDelete)) {
+                if (! empty($assetsToDelete)) {
                     RoomAsset::whereIn('id', $assetsToDelete)->delete();
                 }
             }
 
             // Sync Price History
-            if (isset($data['base_price']) && (float)$data['base_price'] !== (float)$oldPrice) {
+            if (isset($data['base_price']) && (float) $data['base_price'] !== (float) $oldPrice) {
                 RoomPrice::updateOrCreate(
                     [
                         'room_id' => $room->id,
@@ -201,7 +202,7 @@ class RoomService
                     [
                         'org_id' => $room->org_id,
                         'price' => $data['base_price'],
-                        'created_by_user_id' => request()->user()?->id,
+                        'created_by_user_id' => $performer->id,
                     ]
                 );
             }
@@ -214,7 +215,7 @@ class RoomService
                     'from_status' => $oldStatus,
                     'to_status' => $data['status'],
                     'reason' => 'Status updated',
-                    'changed_by_user_id' => request()->user()?->id,
+                    'changed_by_user_id' => $performer->id,
                 ]);
             }
 
@@ -225,30 +226,21 @@ class RoomService
     public function delete(string $id): bool
     {
         $room = $this->find($id);
-        if ($room) {
-            return $room->delete();
-        }
 
-        return false;
+        return $room ? $room->delete() : false;
     }
 
     public function restore(string $id): bool
     {
         $room = $this->findTrashed($id);
-        if ($room) {
-            return $room->restore();
-        }
 
-        return false;
+        return $room ? $room->restore() : false;
     }
 
     public function forceDelete(string $id): bool
     {
         $room = $this->findWithTrashed($id);
-        if ($room) {
-            return $room->forceDelete();
-        }
 
-        return false;
+        return $room ? $room->forceDelete() : false;
     }
 }

@@ -3,10 +3,9 @@
 namespace App\Policies\Property;
 
 use App\Contracts\RbacModuleProvider;
-use App\Models\Property\Room;
 use App\Models\Org\User;
+use App\Models\Property\Room;
 use App\Traits\HandlesOrgScope;
-use Illuminate\Auth\Access\Response;
 
 class RoomPolicy implements RbacModuleProvider
 {
@@ -32,26 +31,24 @@ class RoomPolicy implements RbacModuleProvider
         if ($user->hasPermissionTo('viewAny Room')) {
             return true;
         }
+
         return false;
     }
 
     public function view(User $user, Room $room): bool
     {
-        if (! $user->hasPermissionTo('view Room')) {
-            return false;
+        // Scoping Pattern: Staff/Manager gets standard permission check + Org Scope
+        if ($user->hasPermissionTo('view Room') && ! $user->hasRole('Tenant')) {
+            return $this->checkOrgScope($user, $room);
         }
 
-        if ($user->hasRole('Tenant')) {
-            // Tenant chỉ được xem chi tiết phòng nếu có Contract ACTIVE với APPROVED membership
-            return \App\Models\Contract\Contract::where('room_id', $room->id)
-                ->where('status', 'ACTIVE')
-                ->whereHas('members', function ($q) use ($user) {
-                    $q->where('user_id', $user->id)->where('status', 'APPROVED');
-                })
-                ->exists();
-        }
-
-        return $this->checkOrgScope($user, $room);
+        // Scoping Pattern: Tenant gets Membership check
+        return \App\Models\Contract\Contract::where('room_id', $room->id)
+            ->where('status', 'ACTIVE')
+            ->whereHas('members', function ($q) use ($user) {
+                $q->where('user_id', $user->id)->where('status', 'APPROVED');
+            })
+            ->exists();
     }
 
     public function create(User $user): bool

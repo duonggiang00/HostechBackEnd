@@ -39,6 +39,8 @@ class Invoice extends Model {
 
 ```php
 class InvoicePolicy implements RbacModuleProvider {
+    use HandlesOrgScope;
+
     public static function getModuleName(): string { return 'Invoices'; }
     
     public static function getRolePermissions(): array {
@@ -46,8 +48,16 @@ class InvoicePolicy implements RbacModuleProvider {
             'Owner'   => 'CRUD',
             'Manager' => 'CRU',
             'Staff'   => 'R',
-            // Không đặt 'Tenant' nếu muốn xử lý riêng trong method
+            'Tenant'  => 'R',
         ];
+    }
+
+    public function view(User $user, Invoice $invoice): bool {
+        // Scoping Pattern
+        if ($user->hasPermissionTo('view Invoices') && ! $user->hasRole('Tenant')) {
+             return $this->checkOrgScope($user, $invoice);
+        }
+        return $invoice->contract?->members()->where('user_id', $user->id)->exists();
     }
 }
 ```
@@ -58,27 +68,32 @@ class InvoicePolicy implements RbacModuleProvider {
 - `U` → `update {Module}`
 - `D` → `delete {Module}`
 
-### 3. Service — cấu trúc chuẩn
+### 3. Service — cấu trúc chuẩn (Consolidated Logic)
 
 ```php
 class InvoiceService {
     public function paginate(Request $request): LengthAwarePaginator {
         $query = QueryBuilder::for(Invoice::class)
-            ->allowedFilters([...])
-            ->allowedSorts([...])
-            ->allowedIncludes([...]);
+            ->allowedFilters([...]);
         
-        // Tenant scoping
+        // Membership-based scoping for Tenant
         if (auth()->user()->hasRole('Tenant')) {
-            $query->whereHas('contract.members', ...);
+            $query->whereHas('contract.members', function($q) {
+                $q->where('user_id', auth()->id())->where('status', 'APPROVED');
+            });
         }
         
         return $query->paginate($request->per_page ?? 15);
     }
+
+    public function processStatus(Invoice $invoice, string $newStatus, User $performer): void {
+        // Business logic consolidated in Service
+        $invoice->update(['status' => $newStatus]);
+    }
 }
 ```
 
-### 4. Controller — cấu trúc chuẩn
+### 4. Controller — Nguyên tắc Thin Controller
 
 ```php
 #[Group('Module Name')]
@@ -93,7 +108,15 @@ class InvoiceController extends Controller {
         $invoice = $this->service->store($request->validated());
         return new InvoiceResource($invoice);
     }
-    // ...
+
+    public function update(UpdateRequest $request, Invoice $invoice) {
+        $this->authorize('update', $invoice);
+        // Dùng abort() cho lỗi nghiệp vụ
+        if ($invoice->isPaid()) abort(422, 'Cannot update paid invoice');
+        
+        $this->service->update($invoice, $request->validated());
+        return new InvoiceResource($invoice);
+    }
 }
 ```
 
@@ -126,20 +149,19 @@ Route::delete('{resource}/{id}/force', [Controller::class, 'forceDelete']);
 
 ---
 
-## Tenant Scoping Pattern
+## Scoping Pattern (Bắt buộc)
 
-Khi module cần Tenant access nhưng phải giới hạn theo hợp đồng:
+Dự án áp dụng mô hình cô lập dữ liệu (Multi-tenant isolation) như sau:
 
+1. **Manager/Staff**: Truy cập toàn bộ Org dựa trên Permission (`view module`) + Trait `HandlesOrgScope`.
+2. **Tenant**: Truy cập dựa trên **Membership** (ví dụ: là thành viên trong Hợp đồng của phòng đó).
+
+**Trong Service:**
 ```php
-// Trong Service.paginate()
 if ($user->hasRole('Tenant')) {
-    $query->whereHas('contracts', function ($q) use ($user) {
-        $q->where('status', 'ACTIVE')
-          ->whereHas('members', function ($sq) use ($user) {
-              $sq->where('user_id', $user->id)->where('status', 'APPROVED');
-          });
+    $query->whereHas('contract.members', function ($sq) use ($user) {
+        $sq->where('user_id', $user->id)->where('status', 'APPROVED');
     });
-    return $query->paginate(15);
 }
 ```
 

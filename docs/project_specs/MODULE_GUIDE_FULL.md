@@ -87,37 +87,35 @@ class TestFeature extends Model
 }
 ```
 
-### Bước 3: Build Service Layer (Xử lý Data chuẩn nhất)
+### Bước 3: Build Service Layer (Nơi chứa logic duy nhất)
 
-Service làm nhiệm vụ giao tiếp CSDL, Controller chỉ việc gọi. Chú ý sử dụng QueryBuilder tại đây.
+Service làm nhiệm vụ xử lý nghiệp vụ cho tất cả các vai trò. Controller **KHÔNG** được chứa logic rẽ nhánh theo Role.
 
 `app/Services/Test/TestFeatureService.php`:
 ```php
-namespace App\Services\Test;
-
-use App\Models\Test\TestFeature;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
-
 class TestFeatureService
 {
-    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(User $user, array $filters = [])
     {
-        $query = QueryBuilder::for(TestFeature::class)
-            ->allowedFilters($filters)
-            ->defaultSort('-created_at'); // Sort mặc định
+        $query = QueryBuilder::for(TestFeature::class)->allowedFilters($filters);
 
-        // Tìm kiếm Full text cục bộ chữ (Spatie ko hỗ trợ like default)
-        if ($search) {
-            $query->where('name', 'like', "%{$search}%");
+        // Pattern: Membership-based scoping cho Tenant
+        if ($user->hasRole('Tenant')) {
+            $query->whereHas('contract.members', function($q) use ($user) {
+                $q->where('user_id', $user->id)->where('status', 'APPROVED');
+            });
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query->paginate()->withQueryString();
     }
 
-    public function create(array $data): TestFeature
+    public function create(array $data, User $performer): TestFeature
     {
-        return TestFeature::create($data); // Org_id sẽ do Controller truyền xuống Data
+        // Consolidated Logic: Tự động gán status dựa trên performer
+        $data['status'] = $performer->hasRole('Tenant') ? 'PENDING' : 'APPROVED';
+        $data['org_id'] = $performer->org_id;
+
+        return TestFeature::create($data);
     }
 }
 ```
@@ -180,12 +178,15 @@ class TestFeaturePolicy implements RbacModuleProvider
         return $user->hasPermissionTo('viewAny TestFeature');
     }
 
-    // 4. Logic xác nhận View chi tiết
+    // 3. Logic xác nhận View chi tiết
     public function view(User $user, TestFeature $item): bool {
-        if (! $user->hasPermissionTo('view TestFeature')) return false;
-        
-        // HÀM TIỆN ÍCH chặn Data chéo (Bảo mật tầng vật lý cuối)
-        return $this->checkOrgScope($user, $item); 
+        // Tầm vực Manager/Staff: Permission + Org check
+        if ($user->hasPermissionTo('view TestFeature') && ! $user->hasRole('Tenant')) {
+             return $this->checkOrgScope($user, $item); 
+        }
+
+        // Tầm vực Tenant: Dựa trên Membership (Phải thuộc về bản ghi đó)
+        return $item->contract?->members()->where('user_id', $user->id)->exists();
     }
     
     // Tạo, Sửa, Xóa tương tự theo pattern này...

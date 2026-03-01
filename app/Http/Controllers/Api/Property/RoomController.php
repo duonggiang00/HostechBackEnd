@@ -9,15 +9,15 @@ use App\Http\Requests\Property\RoomUpdateRequest;
 use App\Http\Resources\Property\RoomResource;
 use App\Models\Property\Room;
 use App\Services\Property\RoomService;
-use Illuminate\Http\Request;
-
-use Dedoc\Scramble\Attributes\Group; // Added
+use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\Request; // Added
 use Spatie\QueryBuilder\AllowedFilter;
 
 /**
  * Quản lý Phòng (Rooms)
- * 
+ *
  * API quản lý các phòng trong một tầng (Floor) của tòa nhà.
+ *
  * @tags Quản lý Phòng
  */
 #[Group('Quản lý Phòng')]
@@ -27,45 +27,16 @@ class RoomController extends Controller
 
     /**
      * Danh sách phòng
-     * 
+     *
      * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
      */
-
 
     /**
      * Danh sách phòng
-     * 
+     *
      * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
-     */
-    public function index(RoomIndexRequest $request)
-    {
-        $this->authorize('viewAny', Room::class);
-
-        $perPage = (int) $request->query('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) {
-            $perPage = 15;
-        }
-
-        $allowed = [
-            'code', 
-            'status', 
-            'type', 
-            AllowedFilter::exact('property_id'),
-            AllowedFilter::exact('floor_id')
-        ];
-        $search = $request->input('search');
-
-        $paginator = $this->service->paginate($allowed, $perPage, $search);
-
-        return RoomResource::collection($paginator)->response()->setStatusCode(200);
-    }
-
-    /**
-     * Danh sách phòng đã xóa (Thùng rác)
-     * 
-     * Lấy danh sách các phòng đã bị xóa tạm thời (Soft Delete).
-     * 
-     * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 10
+     *
+     * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 15
      * @queryParam page int Trang hiện tại. Example: 1
      * @queryParam search string Từ khóa tìm kiếm. Example: P.101
      * @queryParam filter[code] string Mã phòng. Example: R101
@@ -73,66 +44,55 @@ class RoomController extends Controller
      * @queryParam filter[type] string Loại phòng. Example: STANDARD
      * @queryParam filter[property_id] string ID Bất động sản. Example: uuid
      * @queryParam filter[floor_id] string ID Tầng. Example: uuid
-     * @queryParam sort string Sắp xếp. Example: -created_at
+     * @queryParam sort string Sắp xếp. Example: -code
+     */
+    public function index(RoomIndexRequest $request)
+    {
+        $this->authorize('viewAny', Room::class);
+
+        $perPage = (int) $request->query('per_page', 15);
+        $search = $request->input('search');
+        $allowed = ['code', 'status', 'type', AllowedFilter::exact('property_id'), AllowedFilter::exact('floor_id')];
+
+        $paginator = $this->service->paginate($allowed, $perPage, $search, $request->user());
+
+        return RoomResource::collection($paginator);
+    }
+
+    /**
+     * Danh sách phòng đã xóa (Thùng rác)
      */
     public function trash(Request $request)
     {
         $this->authorize('viewAny', Room::class);
 
         $perPage = (int) $request->query('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) {
-            $perPage = 15;
-        }
-
-        $allowed = ['code', 'status', 'type', 'property_id'];
         $search = $request->input('search');
+        $allowed = ['code', 'status', 'type', 'property_id'];
 
         $paginator = $this->service->paginateTrash($allowed, $perPage, $search);
 
-        return RoomResource::collection($paginator)->response()->setStatusCode(200);
+        return RoomResource::collection($paginator);
     }
 
     /**
      * Tạo phòng mới
-     * 
-     * Thêm một phòng mới vào hệ thống.
      */
     public function store(RoomStoreRequest $request)
     {
         $this->authorize('create', Room::class);
 
-        $data = $request->validated();
-        $user = $request->user();
-
-        $property = \App\Models\Property\Property::find($data['property_id']);
-        if (! $property) {
-             return response()->json(['message' => 'Property not found'], 404);
-        }
-
-        // Security: Check if Property belongs to User's Org (if not Admin)
-        if (! $user->hasRole('Admin') && $user->org_id && (string)$property->org_id !== (string)$user->org_id) {
-             return response()->json(['message' => 'Unauthorized: You cannot add rooms to a property in another organization.'], 403);
-        }
-        
-        // Auto-assign org_id from Property (secure now)
-        $data['org_id'] = $property->org_id;
-
-        $room = $this->service->create($data);
+        $room = $this->service->create($request->validated(), $request->user());
 
         return new RoomResource($room);
     }
 
     /**
      * Chi tiết phòng
-     * 
-     * Xem thông tin chi tiết của một phòng.
      */
     public function show(string $id)
     {
-        $room = $this->service->find($id);
-        if (! $room) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $room = $this->service->find($id) ?? abort(404, 'Room not found');
 
         $this->authorize('view', $room);
 
@@ -143,53 +103,38 @@ class RoomController extends Controller
 
     /**
      * Cập nhật phòng
-     * 
-     * Cập nhật thông tin của một phòng.
      */
     public function update(RoomUpdateRequest $request, string $id)
     {
-        $room = $this->service->find($id);
-        if (! $room) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $room = $this->service->find($id) ?? abort(404, 'Room not found');
 
         $this->authorize('update', $room);
 
-        $updated = $this->service->update($id, $request->validated());
+        $updated = $this->service->update($id, $request->validated(), $request->user());
 
         return new RoomResource($updated);
     }
 
     /**
      * Xóa phòng (Soft Delete)
-     * 
-     * Đưa phòng vào thùng rác tạm thời.
      */
     public function destroy(string $id)
     {
-        $room = $this->service->find($id);
-        if (! $room) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $room = $this->service->find($id) ?? abort(404, 'Room not found');
 
         $this->authorize('delete', $room);
 
         $this->service->delete($id);
 
-        return response()->json(['message' => 'Deleted successfully'], 200);
+        return response()->json(['message' => 'Deleted successfully']);
     }
 
     /**
      * Khôi phục phòng
-     * 
-     * Khôi phục phòng đã bị xóa tạm thời.
      */
     public function restore(string $id)
     {
-        $room = $this->service->findTrashed($id);
-        if (! $room) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $room = $this->service->findTrashed($id) ?? abort(404, 'Room not found in trash');
 
         $this->authorize('delete', $room);
 
@@ -200,20 +145,15 @@ class RoomController extends Controller
 
     /**
      * Xóa vĩnh viễn phòng
-     * 
-     * Xóa hoàn toàn phòng khỏi hệ thống. Không thể khôi phục.
      */
     public function forceDelete(string $id)
     {
-        $room = $this->service->findWithTrashed($id);
-        if (! $room) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $room = $this->service->findWithTrashed($id) ?? abort(404, 'Room not found');
 
         $this->authorize('delete', $room);
 
         $this->service->forceDelete($id);
 
-        return response()->json(['message' => 'Permanently deleted successfully'], 200);
+        return response()->json(['message' => 'Permanently deleted successfully']);
     }
 }
