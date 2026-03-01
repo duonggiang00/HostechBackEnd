@@ -16,7 +16,11 @@ class HandoverController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', \App\Models\Handover\Handover::class);
-        $handovers = $this->handoverService->paginate($request->user()->org);
+        $handovers = $this->handoverService->paginate(
+            $request->query('filter', []),
+            $request->query('per_page', 15),
+            $request->query('search')
+        );
         return \App\Http\Resources\Handover\HandoverResource::collection($handovers);
     }
 

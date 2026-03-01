@@ -2,114 +2,101 @@
 
 namespace App\Policies;
 
-use App\Models\Handover;
+use App\Contracts\RbacModuleProvider;
+use App\Models\Handover\Handover;
 use App\Models\Org\User;
-use Illuminate\Auth\Access\Response;
+use App\Traits\HandlesOrgScope;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
-class HandoverPolicy
+class HandoverPolicy implements RbacModuleProvider
 {
-    /**
-     * Perform pre-authorization checks.
-     */
-    public function before(User $user, string $ability): bool|null
-    {
-        if ($user->hasRole('admin')) {
-            return true;
-        }
+    use HandlesAuthorization, HandlesOrgScope;
 
-        return null; // fall through
+    /**
+     * Tên Module dùng làm tiền tố (prefix) cho các quyền.
+     */
+    public static function getModuleName(): string
+    {
+        return 'Handover';
     }
 
     /**
-     * Determine whether the user can view any models.
+     * Định nghĩa các quyền cơ bản (CRUD) áp dụng cho từng Role khi chạy rbac:sync.
      */
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'CRUD',
+            'Manager' => 'CRUD',
+            'Staff' => 'CRUD',
+            'Tenant' => 'R', // Tenant chỉ có quyền xem biên bản của hợp đồng mình
+        ];
+    }
+
     public function viewAny(User $user): bool
     {
-        return $user->hasAnyRole(['owner', 'manager', 'staff', 'tenant']);
+        return $user->hasPermissionTo('viewAny Handover');
     }
 
-    /**
-     * Determine whether the user can view the model.
-     */
-    public function view(User $user, \App\Models\Handover\Handover $handover): bool
+    public function view(User $user, Handover $handover): bool
     {
-        if ($user->hasRole('owner')) {
-            return $user->org_id === $handover->org_id;
+        if (! $user->hasPermissionTo('view Handover')) {
+            return false;
         }
-        
-        if ($user->hasAnyRole(['manager', 'staff'])) {
-            return $user->org_id === $handover->org_id; // in a real app, check property assignment
-        }
-        
-        if ($user->hasRole('tenant')) {
-            // Chỉ thấy biên bản đã Confirm gắn với hợp đồng thuê của họ
+
+        if ($user->hasRole('Tenant') || $user->hasRole('tenant')) {
             return $handover->status === 'CONFIRMED' && $user->contracts()->where('id', $handover->contract_id)->exists();
         }
 
-        return false;
+        return $this->checkOrgScope($user, $handover);
     }
 
-    /**
-     * Determine whether the user can create models.
-     */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['owner', 'manager', 'staff']);
+        return $user->hasPermissionTo('create Handover');
     }
 
-    /**
-     * Determine whether the user can update the model.
-     */
-    public function update(User $user, \App\Models\Handover\Handover $handover): bool
-    {
-        if ($handover->status === 'CONFIRMED') {
-            return false;
-        }
-        
-        if ($user->hasRole('owner')) {
-             return $user->org_id === $handover->org_id;
-        }
-
-        if ($user->hasAnyRole(['manager', 'staff'])) {
-             return $user->org_id === $handover->org_id;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the user can delete the model.
-     */
-    public function delete(User $user, \App\Models\Handover\Handover $handover): bool
+    public function update(User $user, Handover $handover): bool
     {
         if ($handover->status === 'CONFIRMED') {
             return false;
         }
 
-        if ($user->hasRole('owner')) {
-             return $user->org_id === $handover->org_id;
-        }
-        
-        if ($user->hasRole('manager')) {
-             return $user->org_id === $handover->org_id;
+        if (! $user->hasPermissionTo('update Handover')) {
+            return false;
         }
 
-        return false;
+        return $this->checkOrgScope($user, $handover);
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, \App\Models\Handover\Handover $handover): bool
+    public function delete(User $user, Handover $handover): bool
     {
-        return false;
+        if ($handover->status === 'CONFIRMED') {
+            return false;
+        }
+
+        if (! $user->hasPermissionTo('delete Handover')) {
+            return false;
+        }
+
+        return $this->checkOrgScope($user, $handover);
     }
 
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, \App\Models\Handover\Handover $handover): bool
+    public function restore(User $user, Handover $handover): bool
     {
-        return false;
+        if (! $user->hasPermissionTo('delete Handover')) {
+            return false;
+        }
+
+        return $this->checkOrgScope($user, $handover);
+    }
+
+    public function forceDelete(User $user, Handover $handover): bool
+    {
+        if (! $user->hasPermissionTo('delete Handover')) {
+            return false;
+        }
+
+        return $this->checkOrgScope($user, $handover);
     }
 }
