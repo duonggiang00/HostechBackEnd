@@ -28,8 +28,8 @@ class HandoverPolicy implements RbacModuleProvider
         return [
             'Owner' => 'CRUD',
             'Manager' => 'CRUD',
-            'Staff' => 'CRUD',
-            'Tenant' => 'R', // Tenant chỉ có quyền xem biên bản của hợp đồng mình
+            'Staff' => 'CRUD', // Staff thường cũng được tạo/sửa biên bản
+            'Tenant' => '-',   // Tenant không có quyền qua RBAC tiêu chuẩn, sẽ được check riêng trong logic policy
         ];
     }
 
@@ -40,15 +40,16 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function view(User $user, Handover $handover): bool
     {
-        if (! $user->hasPermissionTo('view Handover')) {
-            return false;
+        if ($user->hasPermissionTo('view Handover')) {
+            return $this->checkOrgScope($user, $handover);
         }
 
-        if ($user->hasRole('Tenant') || $user->hasRole('tenant')) {
-            return $handover->status === 'CONFIRMED' && $user->contracts()->where('id', $handover->contract_id)->exists();
+        if ($user->hasAnyRole(['tenant', 'Tenant'])) {
+            // Chỉ thấy biên bản đã Confirm gắn với hợp đồng thuê của họ
+            return $handover->status === 'CONFIRMED' && \App\Models\Contract\ContractMember::where('user_id', $user->id)->where('contract_id', $handover->contract_id)->exists();
         }
 
-        return $this->checkOrgScope($user, $handover);
+        return false;
     }
 
     public function create(User $user): bool

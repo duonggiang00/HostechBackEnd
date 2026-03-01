@@ -35,13 +35,8 @@ class HandoverTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['Owner', 'Manager', 'Staff', 'Tenant'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
-        // Lowercase aliases used by HandoverPolicy
-        foreach (['owner', 'manager', 'staff', 'tenant'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
+        // Chạy lệnh rbac:sync để tạo permissions và sync role dựa vào Policy
+        $this->artisan('rbac:sync');
 
         // Flush Spatie permission cache so assignRole() takes effect immediately
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
@@ -68,12 +63,8 @@ class HandoverTest extends TestCase
     private function makeUser(Org $org, string $role): User
     {
         $user = User::factory()->create(['org_id' => $org->id, 'full_name' => "User {$role}"]);
-        // Assign both PascalCase and lowercase to satisfy both Policy styles
+        // Only assign PascalCase to match RbacSyncCommand output
         $user->assignRole($role);
-        $lcRole = strtolower($role);
-        if ($lcRole !== $role) {
-            $user->assignRole($lcRole);
-        }
         // Flush cache after each role assignment
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         return $user;
@@ -109,7 +100,7 @@ class HandoverTest extends TestCase
             'room_id' => $room->id, 'contract_id' => $contract->id, 'type' => 'CHECKIN',
         ]);
 
-        $response->assertStatus(200); // Controller returns Resource without explicit 201
+        $response->assertStatus(201); // Controller returns Resource without explicit 201
         $this->assertDatabaseHas('handovers', ['org_id' => $org->id, 'type' => 'CHECKIN', 'status' => 'DRAFT']);
     }
 
@@ -120,7 +111,7 @@ class HandoverTest extends TestCase
 
         $this->actingAs($manager)->postJson('/api/handovers', [
             'room_id' => $room->id, 'contract_id' => $contract->id, 'type' => 'CHECKIN',
-        ])->assertStatus(200);
+        ])->assertStatus(201);
     }
 
     public function test_staff_can_create_handover()
@@ -130,7 +121,7 @@ class HandoverTest extends TestCase
 
         $this->actingAs($staff)->postJson('/api/handovers', [
             'room_id' => $room->id, 'contract_id' => $contract->id, 'type' => 'CHECKIN',
-        ])->assertStatus(200);
+        ])->assertStatus(201);
     }
 
     public function test_tenant_cannot_create_handover_directly()
@@ -245,9 +236,9 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'CONFIRMED');
         $handover->update(['locked_at' => now()]);
 
-        // Confirm lần 2 → 422 (ensureIsDraft validation)
+        // Confirm lần 2 → 403 (policy block)
         $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/confirm')
-             ->assertStatus(422);
+             ->assertStatus(403);
     }
 
     public function test_cannot_update_confirmed_handover()
@@ -258,7 +249,7 @@ class HandoverTest extends TestCase
         $handover->update(['locked_at' => now()]);
 
         $this->actingAs($manager)->putJson('/api/handovers/' . $handover->id, ['note' => 'Cố tình sửa'])
-             ->assertStatus(422); // hoặc 403
+             ->assertStatus(403); // hoặc 403
     }
 
     // ─── 5. Items CRUD ────────────────────────────────────────────────────────
@@ -273,7 +264,7 @@ class HandoverTest extends TestCase
             'name' => 'Điều hòa Daikin 12000 BTU',
             'status' => 'OK',
             'note' => 'Mới 100%',
-        ])->assertStatus(200);
+        ])->assertStatus(201);
 
         $this->assertDatabaseHas('handover_items', [
             'handover_id' => $handover->id,
@@ -346,7 +337,7 @@ class HandoverTest extends TestCase
         $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
             'meter_id' => $meter->id,
             'reading_value' => 1234,
-        ])->assertStatus(200)
+        ])->assertStatus(201)
           ->assertJsonPath('data.reading_value', 1234);
 
         $this->assertDatabaseHas('handover_meter_snapshots', [
@@ -369,12 +360,11 @@ class HandoverTest extends TestCase
         // First snapshot
         $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
             'meter_id' => $meter->id, 'reading_value' => 100,
-        ])->assertStatus(200);
-
+        ])->assertStatus(201);
         // Second call with same meter_id → updateOrCreate (still 200)
         $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
             'meter_id' => $meter->id, 'reading_value' => 150,
-        ]);
+        ])->assertStatus(200); // 2nd call is an update so it can be 200
 
         // Chỉ có 1 snapshot cho meter này
         $this->assertDatabaseCount('handover_meter_snapshots', 1);
@@ -417,18 +407,18 @@ class HandoverTest extends TestCase
             'room_id' => $room->id, 'contract_id' => $contract->id,
             'type' => 'CHECKOUT', 'note' => 'Trả phòng cuối tháng',
         ]);
-        $res->assertStatus(200);
+        $res->assertStatus(201);
         $handoverId = $res->json('data.id');
 
         // 2. Thêm item kiểm kê
         $this->actingAs($manager)->postJson("/api/handovers/{$handoverId}/items", [
             'name' => 'Máy lạnh', 'status' => 'OK',
-        ])->assertStatus(200);
+        ])->assertStatus(201);
 
         // 3. Chụp chỉ số đồng hồ
         $this->actingAs($manager)->postJson("/api/handovers/{$handoverId}/snapshots", [
             'meter_id' => $meter->id, 'reading_value' => 5000,
-        ])->assertStatus(200);
+        ])->assertStatus(201);
 
         // 4. Confirm (khóa biên bản)
         $this->actingAs($manager)->postJson("/api/handovers/{$handoverId}/confirm")
