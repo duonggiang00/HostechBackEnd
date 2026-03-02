@@ -3,10 +3,15 @@
 ## Tổng quan
 Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăng nhập, đăng xuất) và quản lý hồ sơ cá nhân (thông tin, avatar, đổi mật khẩu, bảo mật 2 lớp).
 
-**Controller:**
+**Controllers:**
 - `Laravel\Fortify` (Auth - đăng ký, đăng nhập, reset mật khẩu)
-- `App\Http\Controllers\Api\Org\ProfileController`
-- **Resource:** `App\Http\Resources\Org\UserResource`
+- `App\Http\Controllers\Api\Org\ProfileController` (Thin Controller)
+
+**Services:**
+- `App\Services\Org\ProfileService` (Xử lý logic cập nhật hồ sơ, đổi mật khẩu, upload avatar)
+
+**Resources:**
+- `App\Http\Resources\Org\UserResource`
 
 ---
 
@@ -34,9 +39,9 @@ Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăn
 | Method | Endpoint | Chức năng | Auth |
 |--------|----------|-----------|------|
 | `GET`  | `/api/profile` | Lấy đầy đủ hồ sơ cá nhân (identity, avatar URL, OTP status) | ✅ Required |
-| `PUT`  | `/api/profile` | Cập nhật hồ sơ (full_name, email, phone, identity_number, date_of_birth, address, ...) | ✅ Required |
-| `POST` | `/api/profile/change-password` | Đổi mật khẩu (yêu cầu mật khẩu cũ) | ✅ Required |
-| `POST` | `/api/profile/avatar` | Upload ảnh đại diện (JPG/PNG/WebP, max 2MB) | ✅ Required |
+| `PUT`  | `/api/profile` | Cập nhật hồ sơ (qua `ProfileUpdateRequest`) | ✅ Required |
+| `POST` | `/api/profile/change-password` | Đổi mật khẩu (qua `PasswordChangeRequest`) | ✅ Required |
+| `POST` | `/api/profile/avatar` | Upload ảnh đại diện (qua `ProfileService`) | ✅ Required |
 | `GET`  | `/api/profile/mfa-status` | Kiểm tra trạng thái MFA/OTP | ✅ Required |
 
 ---

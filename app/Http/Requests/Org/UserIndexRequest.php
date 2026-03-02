@@ -8,6 +8,11 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam per_page int Số lượng bản ghi trên một trang. Mặc định 15. Example: 10
  * @queryParam page int Trang hiện tại. Example: 1
  * @queryParam search string Từ khóa tìm kiếm (tên, email). Example: John Doe
+ * @queryParam filter[role] string Lọc theo vai trò (ADMIN, OWNER, MANAGER, STAFF, TENANT). Example: OWNER
+ * @queryParam filter[email] string Lọc chính xác theo email.
+ * @queryParam filter[is_active] boolean Lọc theo trạng thái hoạt động. Example: true
+ * @queryParam sort string Sắp xếp kết quả (full_name, email, created_at, prefixed with - for DESC). Example: -created_at
+ * @queryParam with_trashed boolean Bao gồm các bản ghi đã xóa. Example: true
  */
 class UserIndexRequest extends FormRequest
 {

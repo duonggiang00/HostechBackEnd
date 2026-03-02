@@ -93,7 +93,7 @@ To prevent hallucination and strictly follow the user's intended architecture, y
     - **Null-Safety**: Ensure optional fields return consistent types (or `null`) and handle relationships gracefully.
 - **Error Handling**: Standardize on `abort(code, message)` for consistent JSON Exception responses instead of manual `response()->json()`.
 - **Filtering**: Services should support standardized filtering (e.g., `allowedFilters` via Spatie QueryBuilder).
-- **Scramble Annotations**: Include standard `@queryParam` annotations (per_page, page, search, sort, filter, with_trashed).
+- **Scramble Annotations**: MANDATORY class-level `@queryParam` annotations in `IndexRequest` classes for: `per_page`, `page`, `search`, `sort`, `filter[...]`, and `with_trashed`.
 
 ### 5. Audit Logging & State Tracking
 - **Models**: High-value models tracking state changes MUST use `App\Traits\SystemLoggable`.

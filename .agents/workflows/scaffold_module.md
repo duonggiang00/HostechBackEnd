@@ -79,6 +79,10 @@ php artisan make:request {ModuleName}/{ModelName}StoreRequest
 php artisan make:request {ModuleName}/{ModelName}UpdateRequest
 ```
 
+**Scramble Docs**:
+- Mọi `IndexRequest` PHẢI có class-level DocBlock chứa đầy đủ `@queryParam` cho: `per_page`, `page`, `search`, `with_trashed`, `sort`, và tất cả các `filter[...]` được hỗ trợ.
+- Xem ví dụ tại `OrgIndexRequest.php`.
+
 ## Bước 7: Tạo Resource
 
 ```bash

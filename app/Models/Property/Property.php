@@ -3,15 +3,15 @@
 namespace App\Models\Property;
 
 use App\Models\Concerns\MultiTenant;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Traits\SystemLoggable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Property extends Model
 {
-    use HasFactory, HasUuids, SystemLoggable, MultiTenant, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
 
@@ -19,10 +19,13 @@ class Property extends Model
 
     protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts'];
 
-    protected $casts = [
-        'use_floors' => 'boolean',
-        'bank_accounts' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'use_floors' => 'boolean',
+            'bank_accounts' => 'array',
+        ];
+    }
 
     public function floors()
     {
@@ -40,7 +43,7 @@ class Property extends Model
     public function managers()
     {
         return $this->belongsToMany(\App\Models\Org\User::class, 'property_user')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     public function contracts()

@@ -4,8 +4,8 @@
 Module quản lý đơn vị tổ chức (Org) là Công ty/Ban quản lý, và toàn bộ thành viên trong tổ chức đó.
 
 **Controllers:**
-- `App\Http\Controllers\Api\Org\OrgController`
-- `App\Http\Controllers\Api\Org\UserController`
+- `App\Http\Controllers\Api\Org\OrgController` (Thin Controller)
+- `App\Http\Controllers\Api\Org\UserController` (Thin Controller)
 
 **Services:**
 - `App\Services\Org\OrgService`
@@ -93,3 +93,5 @@ Admin (System Level - no org_id)
 - `org_id` là `null` cho Admin (system level)
 - Owner tạo Org thông qua luồng invite với role `Owner` → auto tạo Org mới
 - User được scoped theo `org_id` qua `MultiTenant` trait và `HandlesOrgScope` trait trong Policy
+- **Security Logic**: Được đóng gói hoàn toàn trong `UserService` (kiểm tra role hierarchy, org scope khi tạo/cập nhật user).
+- **Laravel 12 Standard**: `User` model sử dụng phương thức `casts()` cho attribute casting.

@@ -14,6 +14,7 @@ class PropertyStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'org_id' => ['nullable', 'uuid', 'exists:orgs,id'],
             'code' => ['required', 'string', 'max:50', 'unique:properties,code'],
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
