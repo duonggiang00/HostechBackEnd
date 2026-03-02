@@ -7,12 +7,24 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class PropertyService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
             ->defaultSort('name')
             ->withCount(['floors', 'rooms']);
+
+        /** @var \App\Models\Org\User $user */
+        $user = auth()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('contracts', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
+            });
+        }
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -21,37 +33,35 @@ class PropertyService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        if (request()->boolean('with_trashed')) {
+        if ($withTrashed) {
             $query->withTrashed();
         }
 
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
-        $query = QueryBuilder::for(Property::onlyTrashed())
-            ->allowedFilters($allowedFilters)
-            ->defaultSort('name')
-            ->withCount(['floors', 'rooms']);
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
-            });
-        }
-
-        return $query->paginate($perPage)->withQueryString();
+        return $this->paginate($allowedFilters, $perPage, $search, null, true);
     }
 
-    public function find(string $id): ?Property
+    public function find(string $id, bool $loadRelations = false): ?Property
     {
-        return Property::find($id);
+        $property = Property::find($id);
+
+        if ($property && $loadRelations) {
+            if ($property->floors()->exists()) {
+                $property->load(['floors.rooms']);
+            } else {
+                $property->load('rooms');
+            }
+        }
+
+        return $property;
     }
 
     public function findTrashed(string $id): ?Property
@@ -64,48 +74,46 @@ class PropertyService
         return Property::withTrashed()->find($id);
     }
 
-    public function create(array $data): Property
+    public function create(array $data, \App\Models\Org\User $user): Property
     {
+        // Enforce Org ID
+        if ($user->org_id) {
+            $data['org_id'] = $user->org_id;
+        }
+
+        if (empty($data['org_id'])) {
+            abort(422, 'Organization ID is required.');
+        }
+
         return Property::create($data);
     }
 
     public function update(string $id, array $data): ?Property
     {
-        $property = $this->find($id);
-        if ($property) {
-            $property->update($data);
-        }
+        $property = $this->find($id) ?? abort(404, 'Property not found');
+        $property->update($data);
 
         return $property;
     }
 
     public function delete(string $id): bool
     {
-        $property = $this->find($id);
-        if ($property) {
-            return $property->delete();
-        }
+        $property = $this->find($id) ?? abort(404, 'Property not found');
 
-        return false;
+        return $property->delete();
     }
 
     public function restore(string $id): bool
     {
-        $property = $this->findTrashed($id);
-        if ($property) {
-            return $property->restore();
-        }
+        $property = $this->findTrashed($id) ?? abort(404, 'Property not found in trash');
 
-        return false;
+        return $property->restore();
     }
 
     public function forceDelete(string $id): bool
     {
-        $property = $this->findWithTrashed($id);
-        if ($property) {
-            return $property->forceDelete();
-        }
+        $property = $this->findWithTrashed($id) ?? abort(404, 'Property not found');
 
-        return false;
+        return $property->forceDelete();
     }
 }

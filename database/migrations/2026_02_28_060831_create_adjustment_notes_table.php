@@ -22,10 +22,14 @@ return new class extends Migration
             $table->bigInteger('before_value');
             $table->bigInteger('after_value');
             
+            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING');
             $table->foreignUuid('requested_by_user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignUuid('approved_by_user_id')->nullable()->constrained('users')->nullOnDelete();
-            
             $table->timestamp('approved_at')->nullable();
+            
+            $table->foreignUuid('rejected_by_user_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('rejected_at')->nullable();
+            $table->text('reject_reason')->nullable();
             $table->timestamp('created_at')->useCurrent();
             
             $table->index('org_id');

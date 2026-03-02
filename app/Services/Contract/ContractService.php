@@ -6,13 +6,13 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Org\User;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
-use Spatie\QueryBuilder\AllowedFilter;
 use Illuminate\Support\Str;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::class)
             ->allowedFilters(array_merge($allowedFilters, [
@@ -20,8 +20,6 @@ class ContractService
                 AllowedFilter::exact('property_id'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('status'),
-                AllowedFilter::scope('start_date_after', 'whereStartDateAfter'), // Needs scope in model or precise filter? Scramble usually likes simple. Let's start simple.
-                // We'll stick to basic exact filters for now based on previous patterns.
             ]))
             ->allowedSorts(['start_date', 'end_date', 'created_at', 'status', 'rent_price'])
             ->defaultSort('-created_at')
@@ -34,10 +32,10 @@ class ContractService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('join_code', 'like', "%{$search}%")
-                  ->orWhereHas('members.user', function ($uq) use ($search) {
-                      $uq->where('full_name', 'like', "%{$search}%")
-                         ->orWhere('email', 'like', "%{$search}%");
-                  });
+                    ->orWhereHas('members.user', function ($uq) use ($search) {
+                        $uq->where('full_name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -48,7 +46,7 @@ class ContractService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::onlyTrashed())
             ->allowedFilters($allowedFilters)
@@ -87,25 +85,30 @@ class ContractService
     /**
      * Create Contract and potentially Members
      */
-    public function create(array $data): Contract
+    public function create(array $data, ?User $user = null): Contract
     {
-        return DB::transaction(function () use ($data) {
-            // 1. Prepare Contract Data
+        return DB::transaction(function () use ($data, $user) {
             $contractData = collect($data)->except(['members'])->toArray();
-            
-            // Generate Join Code if not present? Or let Request handle it? 
-            // Better to handle here if logic is consistent.
+
+            // Auto-assign org_id if missing. Admin can pass it, others use their own.
+            if (! isset($contractData['org_id'])) {
+                $contractData['org_id'] = $user?->org_id;
+            }
+
+            $contractData['created_by_user_id'] = $user?->id;
+
             if (! isset($contractData['join_code'])) {
                 $contractData['join_code'] = $this->generateJoinCode();
             }
 
-            // 2. Create Contract
             $contract = Contract::create($contractData);
 
-            // 3. Handle Members (if passed in request, e.g. creating contract with tenant immediately)
             if (isset($data['members']) && is_array($data['members'])) {
                 foreach ($data['members'] as $memberData) {
-                    $this->addMember($contract, $memberData);
+                    // Members created during contract setup are approved by default
+                    $this->addMember($contract, array_merge($memberData, [
+                        'status' => 'APPROVED',
+                    ]), $user);
                 }
             }
 
@@ -119,10 +122,13 @@ class ContractService
     public function update(string $id, array $data): ?Contract
     {
         $contract = $this->find($id);
-        if (! $contract) return null;
+        if (! $contract) {
+            return null;
+        }
 
         return DB::transaction(function () use ($contract, $data) {
             $contract->update($data);
+
             return $contract->refresh();
         });
     }
@@ -133,6 +139,7 @@ class ContractService
         if ($contract) {
             return $contract->delete();
         }
+
         return false;
     }
 
@@ -142,6 +149,7 @@ class ContractService
         if ($contract) {
             return $contract->restore();
         }
+
         return false;
     }
 
@@ -151,14 +159,118 @@ class ContractService
         if ($contract) {
             return $contract->forceDelete();
         }
+
         return false;
     }
 
-    // Helpers
-
-    public function addMember(Contract $contract, array $memberData): ContractMember
+    /**
+     * Accept Contract Signature (Tenant)
+     */
+    public function acceptSignature(Contract $contract, User $user): bool
     {
-        if (!empty($memberData['user_id']) && empty($memberData['full_name'])) {
+        $member = ContractMember::where('contract_id', $contract->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'PENDING')
+            ->first();
+
+        if (! $member) {
+            return false;
+        }
+
+        return DB::transaction(function () use ($contract, $member) {
+            $member->update([
+                'status' => 'APPROVED',
+                'joined_at' => now(),
+            ]);
+
+            if (in_array($contract->status, ['DRAFT', 'PENDING_SIGNATURE'])) {
+                $contract->update([
+                    'status' => 'ACTIVE',
+                    'signed_at' => now(),
+                ]);
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Reject Contract Signature (Tenant)
+     */
+    public function rejectSignature(Contract $contract, User $user): bool
+    {
+        $member = ContractMember::where('contract_id', $contract->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'PENDING')
+            ->first();
+
+        if (! $member) {
+            return false;
+        }
+
+        return $member->update(['status' => 'REJECTED']);
+    }
+
+    /**
+     * Logic for listing contracts pending signature for a specific user
+     */
+    public function myPendingContracts(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        return Contract::whereHas('members', function ($q) use ($user) {
+            $q->where('user_id', $user->id)
+                ->where('status', 'PENDING');
+        })->with('property:id,name', 'room:id,code,name')->get();
+    }
+
+    /**
+     * Get available rooms for transfer within the same property
+     */
+    public function getAvailableRoomsForTransfer(Contract $contract): \Illuminate\Database\Eloquent\Collection
+    {
+        return \App\Models\Property\Room::where('property_id', $contract->property_id)
+            ->where('status', 'AVAILABLE')
+            ->where('id', '!=', $contract->room_id)
+            ->select(['id', 'code', 'name', 'type', 'area', 'base_price', 'floor', 'capacity'])
+            ->get();
+    }
+
+    /**
+     * Request a room transfer
+     */
+    public function requestRoomTransfer(Contract $contract, User $user, array $data): bool
+    {
+        $targetRoom = \App\Models\Property\Room::where('id', $data['target_room_id'])
+            ->where('property_id', $contract->property_id)
+            ->where('status', 'AVAILABLE')
+            ->first();
+
+        if (! $targetRoom) {
+            return false;
+        }
+
+        $transferRequests = $contract->meta['transfer_requests'] ?? [];
+        $transferRequests[] = [
+            'requested_by' => $user->id,
+            'from_room_id' => $contract->room_id,
+            'to_room_id' => $targetRoom->id,
+            'reason' => $data['reason'] ?? null,
+            'status' => 'PENDING',
+            'requested_at' => now()->toISOString(),
+        ];
+
+        return $contract->update([
+            'meta' => array_merge($contract->meta ?? [], ['transfer_requests' => $transferRequests]),
+        ]);
+    }
+
+    /**
+     * General Add Member logic.
+     * Status defaults to APPROVED for Managers, PENDING for others (Tenants).
+     */
+    public function addMember(Contract $contract, array $memberData, ?User $performer = null): ContractMember
+    {
+        // 1. Resolve User Details
+        if (! empty($memberData['user_id']) && empty($memberData['full_name'])) {
             $user = User::find($memberData['user_id']);
             if ($user) {
                 $memberData['full_name'] = $user->full_name;
@@ -166,7 +278,21 @@ class ContractService
             }
         }
 
-        $joinedAt = array_key_exists('joined_at', $memberData) ? $memberData['joined_at'] : now();
+        // 2. Intelligent Status Mapping
+        if (! isset($memberData['status'])) {
+            // If performer is Manager/Owner/Admin, approve immediately
+            if ($performer && ($performer->hasRole(['Admin', 'Owner', 'Manager', 'Staff']))) {
+                $memberData['status'] = 'APPROVED';
+            } else {
+                $memberData['status'] = 'PENDING';
+            }
+        }
+
+        // 3. Date Handling
+        $joinedAt = null;
+        if ($memberData['status'] === 'APPROVED') {
+            $joinedAt = $memberData['joined_at'] ?? now();
+        }
 
         return ContractMember::create(array_merge($memberData, [
             'contract_id' => $contract->id,
@@ -178,24 +304,42 @@ class ContractService
     public function updateMember(string $contractId, string $memberId, array $data): ?ContractMember
     {
         $member = ContractMember::where('contract_id', $contractId)->find($memberId);
-        if (! $member) return null;
+        if (! $member) {
+            return null;
+        }
 
         $member->update($data);
+
         return $member->refresh();
     }
 
     public function removeMember(string $contractId, string $memberId): bool
     {
-        // We do a soft-remove by setting left_at, marking the termination of residency
         $member = ContractMember::where('contract_id', $contractId)->find($memberId);
-        if (! $member) return false;
+        if (! $member) {
+            return false;
+        }
 
         return $member->update(['left_at' => now()]);
     }
 
+    public function approveMember(string $contractId, string $memberId): ?ContractMember
+    {
+        $member = ContractMember::where('contract_id', $contractId)->find($memberId);
+        if (! $member || $member->status === 'APPROVED') {
+            return null;
+        }
+
+        $member->update([
+            'status' => 'APPROVED',
+            'joined_at' => now(),
+        ]);
+
+        return $member->refresh();
+    }
+
     private function generateJoinCode(): string
     {
-        // Simple random string, ensure uniqueness logic if needed
         return strtoupper(Str::random(8));
     }
 }

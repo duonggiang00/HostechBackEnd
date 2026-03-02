@@ -17,6 +17,9 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Handover\Handover;
+use App\Models\Handover\HandoverItem;
+use App\Models\Handover\HandoverMeterSnapshot;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -367,6 +370,53 @@ class OrgSeeder extends Seeder
                         'approved_at' => now(),
                         'created_at' => now(),
                     ]);
+
+                    // Seed Handover (Checkin) cho hợp đồng Active
+                    $handoverId = Str::uuid()->toString();
+                    DB::table('handovers')->insert([
+                        'id' => $handoverId,
+                        'org_id' => $org->id,
+                        'contract_id' => $contract->id,
+                        'room_id' => $room->id,
+                        'type' => 'CHECKIN',
+                        'status' => 'CONFIRMED',
+                        'note' => 'Bàn giao phòng cho khách thuê mới',
+                        'confirmed_by_user_id' => $ownerId,
+                        'confirmed_at' => $contract->start_date,
+                        'locked_at' => $contract->start_date,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    // Seed Handover Meter Snapshot
+                    DB::table('handover_meter_snapshots')->insert([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $org->id,
+                        'handover_id' => $handoverId,
+                        'meter_id' => $meterId,
+                        'reading_value' => rand(10, 50),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    // Seed 1 Asset (Ví dụ Điều Hòa) để test link tới HandoverItem
+                    $assetId = Str::uuid()->toString();
+                    DB::table('room_assets')->insert([
+                        'id' => $assetId,
+                        'org_id' => $org->id,
+                        'room_id' => $room->id,
+                        'name' => 'Điều hòa Panasonic 9000BTU',
+                        'condition' => 'Tốt',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    // Seed Handover Items (1 linh hoạt + 1 link asset)
+                    DB::table('handover_items')->insert([
+                        ['id' => Str::uuid()->toString(), 'org_id' => $org->id, 'handover_id' => $handoverId, 'room_asset_id' => null, 'name' => '2 Chìa khóa cửa chính', 'status' => 'OK', 'sort_order' => 1, 'created_at' => now()],
+                        ['id' => Str::uuid()->toString(), 'org_id' => $org->id, 'handover_id' => $handoverId, 'room_asset_id' => null, 'name' => '1 Thẻ từ thang máy', 'status' => 'OK', 'sort_order' => 2, 'created_at' => now()],
+                        ['id' => Str::uuid()->toString(), 'org_id' => $org->id, 'handover_id' => $handoverId, 'room_asset_id' => $assetId, 'name' => 'Điều hòa Panasonic 9000BTU', 'status' => 'OK', 'sort_order' => 3, 'created_at' => now()],
+                    ]);
                 }
 
                 if (rand(0, 100) > 70) {
@@ -475,6 +525,7 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ Dịch vụ (Services): <fg=cyan>".Service::count()."</>");
         $this->command->line("✅ Hợp đồng (Contracts): <fg=cyan>".Contract::count()."</>");
         $this->command->line("✅ Hóa đơn (Invoices): <fg=cyan>".Invoice::count()."</>");
-        $this->command->line("✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>".DB::table('tickets')->count()."</>\n");
+        $this->command->line("✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>".DB::table('tickets')->count()."</>");
+        $this->command->line("✅ Bàn giao (Handovers): <fg=cyan>".Handover::count()."</>\n");
     }
 }

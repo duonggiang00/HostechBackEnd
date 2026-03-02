@@ -47,6 +47,17 @@ class InvoiceService
             $query->where('org_id', $orgId);
         }
 
+        $user = request()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('contract', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                  ->whereHas('members', function ($sq) use ($user) {
+                      $sq->where('user_id', $user->id)
+                         ->where('status', 'APPROVED');
+                  });
+            });
+        }
+
         // Tìm kiếm theo mã phòng hoặc tên property
         if ($search) {
             $query->where(function ($q) use ($search) {

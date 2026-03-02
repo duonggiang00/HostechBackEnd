@@ -10,18 +10,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
-
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasMedia
 {
-    use HasApiTokens, HasFactory, HasRoles, HasUuids, MultiTenant, Notifiable, SoftDeletes, SystemLoggable, InteractsWithMedia;
+    use HasApiTokens, HasFactory, HasRoles, HasUuids, InteractsWithMedia, MultiTenant, Notifiable, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
-    
+
     // Force Spatie Permission to use 'web' guard even for Sanctum auth
     public $guard_name = 'web';
 
@@ -36,20 +34,29 @@ class User extends Authenticatable implements HasMedia
         'password_hash',
         'is_active',
         'meta',
+        // Personal / identity
+        'identity_number',
+        'identity_issued_date',
+        'identity_issued_place',
+        'date_of_birth',
+        'address',
     ];
 
     protected $hidden = [
         'password_hash',
     ];
 
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'phone_verified_at' => 'datetime',
-        'mfa_enrolled_at' => 'datetime',
-        'mfa_enabled' => 'boolean',
-        'is_active' => 'boolean',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'mfa_enrolled_at' => 'datetime',
+            'mfa_enabled' => 'boolean',
+            'is_active' => 'boolean',
+            'meta' => 'array',
+        ];
+    }
 
     public function org()
     {
@@ -80,5 +87,14 @@ class User extends Authenticatable implements HasMedia
     public function setPasswordAttribute(string $value): void
     {
         $this->attributes['password_hash'] = \Illuminate\Support\Facades\Hash::make($value);
+    }
+
+    /**
+     * Managed properties for Manager/Staff roles
+     */
+    public function properties()
+    {
+        return $this->belongsToMany(\App\Models\Property\Property::class, 'property_user')
+            ->withTimestamps();
     }
 }

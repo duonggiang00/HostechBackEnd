@@ -2,17 +2,22 @@
 
 namespace App\Models\Contract;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Concerns\MultiTenant;
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContractMember extends Model
 {
     /** @use HasFactory<\Database\Factories\ContractMemberFactory> */
-    use HasFactory, HasUuids;
+    use \App\Traits\SystemLoggable, HasFactory, HasUuids, MultiTenant;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'org_id',
@@ -28,11 +33,14 @@ class ContractMember extends Model
         'left_at',
     ];
 
-    protected $casts = [
-        'is_primary' => 'boolean',
-        'joined_at' => 'datetime',
-        'left_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_primary' => 'boolean',
+            'joined_at' => 'datetime',
+            'left_at' => 'datetime',
+        ];
+    }
 
     public function contract(): BelongsTo
     {

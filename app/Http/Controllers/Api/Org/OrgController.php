@@ -3,28 +3,26 @@
 namespace App\Http\Controllers\Api\Org;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Org\OrgIndexRequest;
 use App\Http\Requests\Org\OrgStoreRequest;
 use App\Http\Requests\Org\OrgUpdateRequest;
-use App\Http\Resources\Org\OrgResource;
-use App\Models\Org\Org;
-
-use Illuminate\Http\Request;
-use App\Http\Requests\Org\OrgIndexRequest;
-use Dedoc\Scramble\Attributes\Group;
-use App\Services\Property\PropertyService;
-use App\Http\Resources\Property\PropertyResource;
-use App\Services\Org\UserService; // Added
-use App\Services\Org\OrgService; // Added
-use App\Http\Resources\Org\UserResource; // Added
-use App\Services\Service\ServiceService; // Added
-use App\Http\Resources\Service\ServiceResource; // Added
-use App\Http\Requests\Property\PropertyIndexRequest;
-use App\Http\Requests\Service\ServiceIndexRequest; // Added
 use App\Http\Requests\Org\UserIndexRequest;
+use App\Http\Requests\Property\PropertyIndexRequest;
+use App\Http\Requests\Service\ServiceIndexRequest;
+use App\Http\Resources\Org\OrgResource;
+use App\Http\Resources\Org\UserResource;
+use App\Http\Resources\Property\PropertyResource; // Added
+use App\Http\Resources\Service\ServiceResource; // Added
+use App\Models\Org\Org; // Added
+use App\Services\Org\OrgService; // Added
+use App\Services\Org\UserService; // Added
+use App\Services\Property\PropertyService;
+use App\Services\Service\ServiceService; // Added
+use Dedoc\Scramble\Attributes\Group;
 
 /**
  * Quản lý Tổ chức (Organizations)
- * 
+ *
  * API quản lý các tổ chức/công ty trong hệ thống.
  * Mỗi tổ chức có thể chứa nhiều Property (Bất động sản).
  */
@@ -40,43 +38,40 @@ class OrgController extends Controller
 
     /**
      * Danh sách tổ chức
-     * 
+     *
      * Lấy danh sách các tổ chức.
      */
     public function index(OrgIndexRequest $request)
     {
-         $this->authorize('viewAny', Org::class);
+        $this->authorize('viewAny', Org::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) {
-            $perPage = 15;
-        }
-
-        $allowed = ['name', 'email', 'phone'];
         $search = $request->input('search');
+        $allowed = ['name', 'email', 'phone'];
 
-        $paginator = $this->service->paginate($allowed, $perPage, $search);
+        $paginator = $this->service->paginate($allowed, $perPage, $search, $request->boolean('with_trashed'));
 
-        return OrgResource::collection($paginator)->response()->setStatusCode(200);
+        return OrgResource::collection($paginator);
     }
-    
-    // ...
+
+    /**
+     * Tạo mới tổ chức
+     */
+    public function store(OrgStoreRequest $request)
+    {
+        $this->authorize('create', Org::class);
+
+        $org = $this->service->create($request->validated());
+
+        return new OrgResource($org);
+    }
 
     /**
      * Chi tiết tổ chức
-     * 
-     * Lấy thông tin chi tiết của một tổ chức, bao gồm danh sách Property.
-     * 
-     * @queryParam per_page int Số lượng Property trên một trang. Mặc định 15. Example: 10
-     * @queryParam page int Trang hiện tại của danh sách Property. Example: 1
-     * @queryParam search string Từ khóa tìm kiếm Property (tên, mã). Example: Building A
      */
-    public function show(Request $request, string $id)
+    public function show(string $id)
     {
-        $org = $this->service->find($id);
-        if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $org = $this->service->find($id) ?? abort(404, 'Organization not found');
 
         $this->authorize('view', $org);
 
@@ -87,15 +82,10 @@ class OrgController extends Controller
 
     /**
      * Cập nhật tổ chức
-     * 
-     * Cập nhật thông tin tổ chức.
      */
     public function update(OrgUpdateRequest $request, string $id)
     {
-        $org = $this->service->find($id);
-        if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $org = $this->service->find($id) ?? abort(404, 'Organization not found');
 
         $this->authorize('update', $org);
 
@@ -106,25 +96,18 @@ class OrgController extends Controller
 
     /**
      * Danh sách tổ chức đã xóa (Thùng rác)
-     * 
-     * Lấy danh sách các tổ chức đã bị xóa tạm thời (Soft Delete).
-     * 
      */
     public function trash(OrgIndexRequest $request)
     {
         $this->authorize('viewAny', Org::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) {
-            $perPage = 15;
-        }
-
-        $allowed = ['name', 'email', 'phone'];
         $search = $request->input('search');
+        $allowed = ['name', 'email', 'phone'];
 
         $paginator = $this->service->paginateTrash($allowed, $perPage, $search);
 
-        return OrgResource::collection($paginator)->response()->setStatusCode(200);
+        return OrgResource::collection($paginator);
     }
 
     /**
@@ -132,8 +115,7 @@ class OrgController extends Controller
      */
     public function restore(string $id)
     {
-        $org = $this->service->findTrashed($id);
-        if (! $org) return response()->json(['message' => 'Not Found'], 404);
+        $org = $this->service->findTrashed($id) ?? abort(404, 'Organization not found in trash');
 
         $this->authorize('delete', $org);
 
@@ -144,21 +126,16 @@ class OrgController extends Controller
 
     /**
      * Xóa tổ chức (Soft Delete)
-     * 
-     * Đưa tổ chức vào thùng rác tạm thời.
      */
     public function destroy(string $id)
     {
-        $org = $this->service->find($id);
-        if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
-        }
+        $org = $this->service->find($id) ?? abort(404, 'Organization not found');
 
         $this->authorize('delete', $org);
 
         $this->service->delete($id);
 
-        return response()->json(['message' => 'Deleted successfully'], 200);
+        return response()->json(['message' => 'Deleted successfully']);
     }
 
     /**
@@ -166,8 +143,7 @@ class OrgController extends Controller
      */
     public function forceDelete(string $id)
     {
-        $org = $this->service->findWithTrashed($id);
-        if (! $org) return response()->json(['message' => 'Not Found'], 404);
+        $org = $this->service->findWithTrashed($id) ?? abort(404, 'Organization not found');
 
         $this->authorize('delete', $org);
 
@@ -178,7 +154,7 @@ class OrgController extends Controller
 
     /**
      * Danh sách Property của tổ chức
-     * 
+     *
      * Lấy danh sách Property thuộc về tổ chức này.
      */
     public function properties(PropertyIndexRequest $request, string $id)
@@ -191,7 +167,9 @@ class OrgController extends Controller
         $this->authorize('view', $org);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) $perPage = 15;
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 15;
+        }
         $search = $request->input('search');
 
         $paginator = $this->propertyService->paginate(['name', 'code'], $perPage, $search, $org->id);
@@ -201,7 +179,7 @@ class OrgController extends Controller
 
     /**
      * Danh sách người dùng của tổ chức
-     * 
+     *
      * Lấy danh sách người dùng thuộc về tổ chức này.
      */
     public function users(UserIndexRequest $request, string $id)
@@ -214,7 +192,9 @@ class OrgController extends Controller
         $this->authorize('view', $org);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) $perPage = 15;
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 15;
+        }
         $search = $request->input('search');
 
         $paginator = $this->userService->paginate(['full_name', 'email'], $perPage, $search, $org->id);
@@ -224,15 +204,8 @@ class OrgController extends Controller
 
     /**
      * Danh sách dịch vụ của tổ chức
-     * 
+     *
      * Lấy danh sách dịch vụ thuộc về tổ chức này.
-     * 
-     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
-     * @queryParam page int Số trang. Example: 1
-     * @queryParam search string Tìm kiếm theo tên hoặc mã dịch vụ. Example: Electric
-     * @queryParam filter[is_active] boolean Lọc theo trạng thái hoạt động. Example: 1
-     * @queryParam filter[unit] string Lọc theo đơn vị tính. Example: kwh
-     * @queryParam sort string Sắp xếp. Default: code. Example: -created_at
      */
     public function services(ServiceIndexRequest $request, string $id)
     {
@@ -244,7 +217,9 @@ class OrgController extends Controller
         $this->authorize('view', $org);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100) $perPage = 15;
+        if ($perPage < 1 || $perPage > 100) {
+            $perPage = 15;
+        }
         $search = $request->input('search');
         $allowed = ['code', 'name', 'is_active', 'unit'];
 

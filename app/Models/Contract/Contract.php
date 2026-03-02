@@ -2,21 +2,27 @@
 
 namespace App\Models\Contract;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Concerns\MultiTenant;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Traits\SystemLoggable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Contract extends Model
 {
     /** @use HasFactory<\Database\Factories\ContractFactory> */
-    use HasFactory, HasUuids, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'org_id',
@@ -39,17 +45,20 @@ class Contract extends Model
         'meta',
     ];
 
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
-        'rent_price' => 'decimal:2',
-        'deposit_amount' => 'decimal:2',
-        'join_code_expires_at' => 'datetime',
-        'join_code_revoked_at' => 'datetime',
-        'signed_at' => 'datetime',
-        'terminated_at' => 'datetime',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'rent_price' => 'decimal:2',
+            'deposit_amount' => 'decimal:2',
+            'join_code_expires_at' => 'datetime',
+            'join_code_revoked_at' => 'datetime',
+            'signed_at' => 'datetime',
+            'terminated_at' => 'datetime',
+            'meta' => 'array',
+        ];
+    }
 
     public function members(): HasMany
     {

@@ -23,7 +23,7 @@ class PropertyPolicy implements RbacModuleProvider
             'Owner' => 'CRUD',
             'Manager' => 'RU',
             'Staff' => 'R',
-            'Tenant' => '-',
+            'Tenant' => 'R', // Granted but Scoped via Service/Policy contract check
         ];
     }
 
@@ -39,6 +39,16 @@ class PropertyPolicy implements RbacModuleProvider
     {
         if (! $user->hasPermissionTo('view Properties')) {
             return false;
+        }
+
+        if ($user->hasRole('Tenant')) {
+            // Tenant chỉ được xem chi tiết Tòa nhà nếu đang có Contract ACTIVE tại đó
+            return \App\Models\Contract\Contract::where('property_id', $property->id)
+                ->where('status', 'ACTIVE')
+                ->whereHas('members', function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->where('status', 'APPROVED');
+                })
+                ->exists();
         }
 
         return $this->checkOrgScope($user, $property);

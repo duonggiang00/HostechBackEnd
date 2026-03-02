@@ -7,7 +7,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class OrgService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, bool $withTrashed = false)
     {
         $query = QueryBuilder::for(Org::class)
             ->allowedFilters($allowedFilters)
@@ -17,12 +17,12 @@ class OrgService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
-        if (request()->boolean('with_trashed')) {
+        if ($withTrashed) {
             $query->withTrashed();
         }
 
@@ -31,20 +31,7 @@ class OrgService
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
     {
-        $query = QueryBuilder::for(Org::onlyTrashed())
-            ->allowedFilters($allowedFilters)
-            ->defaultSort('name')
-            ->withCount(['properties', 'users']);
-
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
-            });
-        }
-
-        return $query->paginate($perPage)->withQueryString();
+        return $this->paginate($allowedFilters, $perPage, $search, true);
     }
 
     public function find(string $id): ?Org

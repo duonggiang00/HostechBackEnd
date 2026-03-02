@@ -8,10 +8,14 @@ use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Image\Enums\Fit;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class MeterReading extends Model
+class MeterReading extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, InteractsWithMedia;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -55,5 +59,15 @@ class MeterReading extends Model
     public function adjustmentNotes()
     {
         return $this->hasMany(AdjustmentNote::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('reading_proofs')
+            ->registerMediaConversions(function (Media $media) {
+                $this->addMediaConversion('thumb')
+                    ->fit(Fit::Crop, 300, 300)
+                    ->nonQueued();
+            });
     }
 }

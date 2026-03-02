@@ -38,6 +38,17 @@ class MeterService
             ->defaultSort('-created_at')
             ->allowedIncludes(['room', 'room.property', 'room.floor']);
 
+        $user = request()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('room.contracts', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                  ->whereHas('members', function ($sq) use ($user) {
+                      $sq->where('user_id', $user->id)
+                         ->where('status', 'APPROVED');
+                  });
+            });
+        }
+
         if ($search) {
             $query->where(function (Builder $q) use ($search) {
                 $q->where('code', 'LIKE', "%{$search}%")
