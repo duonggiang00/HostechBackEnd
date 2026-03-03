@@ -2,8 +2,8 @@
 
 namespace App\Models\Invoice;
 
+use App\Models\Concerns\MultiTenant;
 use App\Models\Org\User;
-use App\Traits\OrgScoped;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +11,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InvoiceAdjustment extends Model
 {
-    use HasFactory, HasUuids, OrgScoped;
+    use HasFactory, HasUuids, MultiTenant;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    /**
+     * Bảng chỉ có created_at, không có updated_at.
+     */
+    const UPDATED_AT = null;
 
     protected $fillable = [
         'org_id',
@@ -28,6 +37,14 @@ class InvoiceAdjustment extends Model
         'amount' => 'decimal:2',
         'approved_at' => 'datetime',
     ];
+
+    /**
+     * Kiểm tra xem adjustment đã được duyệt chưa.
+     */
+    public function isApproved(): bool
+    {
+        return $this->approved_at !== null;
+    }
 
     /**
      * @return BelongsTo

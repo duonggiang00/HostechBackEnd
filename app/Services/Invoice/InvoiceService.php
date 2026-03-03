@@ -4,6 +4,7 @@ namespace App\Services\Invoice;
 
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Invoice\InvoiceStatusHistory;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -51,10 +52,10 @@ class InvoiceService
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('contract', function ($q) use ($user) {
                 $q->where('status', 'ACTIVE')
-                  ->whereHas('members', function ($sq) use ($user) {
-                      $sq->where('user_id', $user->id)
-                         ->where('status', 'APPROVED');
-                  });
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
             });
         }
 
@@ -226,6 +227,9 @@ class InvoiceService
             'items',
             'createdBy',
             'issuedBy',
+            'statusHistories.changedBy',
+            'adjustments.createdBy',
+            'adjustments.approvedBy',
         ])->find($id);
     }
 
@@ -282,6 +286,7 @@ class InvoiceService
 
     /**
      * Cập nhật hóa đơn.
+     * Nếu trạng thái thay đổi, tự động ghi lịch sử.
      */
     public function update(string $id, array $data): ?Invoice
     {
@@ -290,7 +295,87 @@ class InvoiceService
             return null;
 
         return DB::transaction(function () use ($invoice, $data) {
+            $oldStatus = $invoice->status;
+
             $invoice->update($data);
+
+            // Hook: Ghi lịch sử nếu status thay đổi
+            $newStatus = $data['status'] ?? null;
+            if ($newStatus && $oldStatus !== $newStatus) {
+                $this->recordStatusHistory(
+                    $invoice,
+                    $oldStatus,
+                    $newStatus,
+                    $data['status_note'] ?? null
+                );
+            }
+
+            return $invoice->refresh();
+        });
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
+    // ║  STATUS TRANSITION METHODS                            ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Phát hành hóa đơn: DRAFT -> ISSUED/PENDING.
+     */
+    public function issueInvoice(Invoice $invoice, string $userId, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $userId, $note) {
+            $oldStatus = $invoice->status;
+            $newStatus = 'ISSUED';
+
+            $invoice->update([
+                'status' => $newStatus,
+                'issued_by_user_id' => $userId,
+                'issued_at' => now(),
+                'issue_date' => now()->toDateString(),
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
+
+            return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Thanh toán hóa đơn: ISSUED/PENDING -> PAID.
+     */
+    public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $note) {
+            $oldStatus = $invoice->status;
+            $newStatus = 'PAID';
+
+            $invoice->update([
+                'status' => $newStatus,
+                'paid_amount' => $invoice->total_amount,
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
+
+            return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Hủy hóa đơn: Any -> CANCELLED.
+     */
+    public function cancelInvoice(Invoice $invoice, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $note) {
+            $oldStatus = $invoice->status;
+            $newStatus = 'CANCELLED';
+
+            $invoice->update([
+                'status' => $newStatus,
+                'cancelled_at' => now(),
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
+
             return $invoice->refresh();
         });
     }
@@ -343,8 +428,7 @@ class InvoiceService
             $item = $invoice->items()->create($itemData);
 
             // Recalculate total
-            $total = $invoice->items()->sum('amount');
-            $invoice->update(['total_amount' => $total]);
+            $this->recalculateTotalAmount($invoice);
 
             return $item;
         });
@@ -361,10 +445,57 @@ class InvoiceService
             $item->delete();
 
             // Recalculate total
-            $total = $invoice->items()->sum('amount');
-            $invoice->update(['total_amount' => $total]);
+            $this->recalculateTotalAmount($invoice);
 
             return true;
         });
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
+    // ║  STATUS HISTORY & RECALCULATION HOOKS                 ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Ghi lịch sử thay đổi trạng thái hóa đơn.
+     */
+    private function recordStatusHistory(
+        Invoice $invoice,
+        ?string $oldStatus,
+        string $newStatus,
+        ?string $note = null
+    ): InvoiceStatusHistory {
+        return InvoiceStatusHistory::create([
+            'org_id' => $invoice->org_id,
+            'invoice_id' => $invoice->id,
+            'from_status' => $oldStatus,
+            'to_status' => $newStatus,
+            'note' => $note,
+            'changed_by_user_id' => request()->user()?->id,
+        ]);
+    }
+
+    /**
+     * Tính lại total_amount từ toàn bộ items + approved adjustments.
+     *
+     * Công thức:
+     * Final Amount = SUM(items.amount) + SUM(approved DEBIT) - SUM(approved CREDIT)
+     */
+    public function recalculateTotalAmount(Invoice $invoice): void
+    {
+        $itemsTotal = $invoice->items()->sum('amount');
+
+        $approvedDebits = $invoice->adjustments()
+            ->where('type', 'DEBIT')
+            ->whereNotNull('approved_at')
+            ->sum('amount');
+
+        $approvedCredits = $invoice->adjustments()
+            ->where('type', 'CREDIT')
+            ->whereNotNull('approved_at')
+            ->sum('amount');
+
+        $finalAmount = $itemsTotal + $approvedDebits - $approvedCredits;
+
+        $invoice->update(['total_amount' => max(0, $finalAmount)]);
     }
 }

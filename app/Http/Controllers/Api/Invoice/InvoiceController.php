@@ -222,6 +222,90 @@ class InvoiceController extends Controller
     }
 
     // ╔═══════════════════════════════════════════════════════╗
+    // ║  STATUS TRANSITION ENDPOINTS                          ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Phát hành hóa đơn
+     *
+     * Chuyển trạng thái hóa đơn từ DRAFT sang ISSUED.
+     * Tự động ghi lịch sử thay đổi trạng thái.
+     */
+    public function issue(Request $request, string $id)
+    {
+        $invoice = $this->service->find($id);
+        if (!$invoice) {
+            abort(404, 'Invoice Not Found');
+        }
+
+        $this->authorize('update', $invoice);
+
+        if ($invoice->status !== 'DRAFT') {
+            abort(422, 'Chỉ có thể phát hành hóa đơn ở trạng thái Nháp (DRAFT).');
+        }
+
+        $updated = $this->service->issueInvoice(
+            $invoice,
+            $request->user()->id,
+            $request->input('note')
+        );
+
+        return new InvoiceResource($updated);
+    }
+
+    /**
+     * Thanh toán hóa đơn
+     *
+     * Chuyển trạng thái hóa đơn sang PAID.
+     * Chỉ áp dụng cho hóa đơn ISSUED hoặc PENDING.
+     */
+    public function pay(Request $request, string $id)
+    {
+        $invoice = $this->service->find($id);
+        if (!$invoice) {
+            abort(404, 'Invoice Not Found');
+        }
+
+        $this->authorize('update', $invoice);
+
+        if (!in_array($invoice->status, ['ISSUED', 'PENDING'])) {
+            abort(422, 'Chỉ có thể thanh toán hóa đơn ở trạng thái Đã phát hành (ISSUED) hoặc Chờ thanh toán (PENDING).');
+        }
+
+        $updated = $this->service->payInvoice($invoice, $request->input('note'));
+
+        return new InvoiceResource($updated);
+    }
+
+    /**
+     * Hủy hóa đơn
+     *
+     * Chuyển trạng thái hóa đơn sang CANCELLED.
+     * Không áp dụng cho hóa đơn đã thanh toán (PAID).
+     */
+    public function cancel(Request $request, string $id)
+    {
+        $invoice = $this->service->find($id);
+        if (!$invoice) {
+            abort(404, 'Invoice Not Found');
+        }
+
+        $this->authorize('update', $invoice);
+
+        if ($invoice->status === 'PAID') {
+            abort(422, 'Không thể hủy hóa đơn đã thanh toán.');
+        }
+
+        if ($invoice->status === 'CANCELLED') {
+            abort(422, 'Hóa đơn đã ở trạng thái Đã hủy.');
+        }
+
+        $updated = $this->service->cancelInvoice($invoice, $request->input('note'));
+
+        return new InvoiceResource($updated);
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
     // ║  SOFT-DELETES: TRASH / RESTORE / FORCE-DELETE         ║
     // ╠═══════════════════════════════════════════════════════╣
 
