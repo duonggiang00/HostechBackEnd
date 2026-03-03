@@ -4,6 +4,10 @@ namespace App\Http\Requests\System;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * @bodyParam file file required File cần upload (Tối đa 5MB).
+ * @bodyParam collection string Tên collection để phân loại file. Example: avatars
+ */
 class UploadRequest extends FormRequest
 {
     /**

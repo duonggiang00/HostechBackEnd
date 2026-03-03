@@ -8,35 +8,31 @@ use Illuminate\Http\Request;
 use App\Http\Requests\System\UploadRequest;
 use App\Models\System\TemporaryUpload;
 
+use App\Services\System\MediaService;
+use Dedoc\Scramble\Attributes\Group;
+
+/**
+ * Quản lý File (Media)
+ */
+#[Group('Hệ thống')]
 class MediaController extends Controller
 {
+    public function __construct(protected MediaService $service) {}
+
     /**
      * Upload file (Temporary)
      */
-    public function store(UploadRequest $request)
+    public function store(UploadRequest $request): \Illuminate\Http\JsonResponse
     {
-        $file = $request->file('file');
-        $collection = $request->input('collection', 'default');
-
-        // Tạo 1 bản ghi tạm (gắn với user đang đăng nhập nếu có)
-        $tempUpload = TemporaryUpload::create([
-            'user_id' => $request->user() ? $request->user()->id : null
-        ]);
-
-        // Sử dụng MediaLibrary để lưu file
-        $media = $tempUpload->addMedia($file)
-                             ->toMediaCollection($collection);
+        $result = $this->service->uploadTemporary(
+            $request->file('file'),
+            $request->input('collection', 'default'),
+            $request->user()
+        );
 
         return response()->json([
             'message' => 'File uploaded successfully',
-            'data' => [
-                'media_id' => $media->uuid,
-                'temporary_upload_id' => $tempUpload->id,
-                'url' => $media->getUrl(),
-                'file_name' => $media->file_name,
-                'mime_type' => $media->mime_type,
-                'size' => $media->size,
-            ]
+            'data' => $result
         ], 201);
     }
 }

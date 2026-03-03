@@ -23,18 +23,7 @@ class ContractController extends Controller
     public function __construct(protected ContractService $service) {}
 
     /**
-     * Danh sách hợp đồng
-     *
      * Lấy danh sách hợp đồng. Hỗ trợ lọc theo Property, Room, Status.
-     *
-     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
-     * @queryParam page int Số trang. Example: 1
-     * @queryParam search string Tìm kiếm chung (mã join, tên khách, email). Example: keyword
-     * @queryParam sort string Sắp xếp theo trường (prefix '-' để giảm dần). Các trường hỗ trợ: [start_date, end_date, created_at, status, rent_price]. Default: -created_at. Example: -created_at
-     * @queryParam filter[property_id] string UUID Bất động sản.
-     * @queryParam filter[room_id] string UUID Phòng.
-     * @queryParam filter[status] string Trạng thái hợp đồng.
-     * @queryParam with_trashed boolean Bao gồm cả các mục đã xóa tạm. Example: 1
      */
     public function index(ContractIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
@@ -44,7 +33,7 @@ class ContractController extends Controller
             allowedFilters: ['property_id', 'room_id', 'status'],
             perPage: (int) $request->input('per_page', 15),
             search: $request->input('search'),
-            orgId: $request->user()->hasRole('Admin') ? $request->input('org_id') : $request->user()->org_id
+            user: $request->user()
         );
 
         return ContractResource::collection($paginator);
@@ -52,16 +41,8 @@ class ContractController extends Controller
 
     /**
      * Danh sách hợp đồng đã xóa (Thùng rác)
-     *
-     * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 10
-     * @queryParam page int Trang hiện tại. Example: 1
-     * @queryParam search string Từ khóa tìm kiếm.
-     * @queryParam filter[property_id] string ID Bất động sản.
-     * @queryParam filter[room_id] string ID Phòng.
-     * @queryParam filter[status] string Trạng thái.
-     * @queryParam sort string Sắp xếp.
      */
-    public function trash(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function trash(ContractIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
     {
         $this->authorize('viewAny', Contract::class);
 
@@ -69,7 +50,7 @@ class ContractController extends Controller
             allowedFilters: ['property_id', 'room_id', 'status'],
             perPage: (int) $request->input('per_page', 15),
             search: $request->input('search'),
-            orgId: $request->user()->hasRole('Admin') ? $request->input('org_id') : $request->user()->org_id
+            user: $request->user()
         );
 
         return ContractResource::collection($paginator);
@@ -249,23 +230,15 @@ class ContractController extends Controller
      * Xin đổi phòng (Room Transfer Request)
      *
      * Tenant gửi yêu cầu đổi sang phòng khác trong cùng Tòa nhà.
-     * Manager / Owner phê duyệt / từ chối yêu cầu này.
-     *
-     * @bodyParam target_room_id string required UUID phòng muốn chuyển sang. Example: uuid-here
-     * @bodyParam reason string Lý do muốn đổi phòng. Example: Phòng quá nhỏ cho 2 người
+     * Quản lý sẽ xem xét và phê duyệt hoặc từ chối yêu cầu.
      */
-    public function roomTransferRequest(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function roomTransferRequest(RoomTransferRequest $request, string $id): \Illuminate\Http\JsonResponse
     {
         $contract = Contract::findOrFail($id);
 
         $this->authorize('view', $contract);
 
-        $validated = $request->validate([
-            'target_room_id' => 'required|uuid|exists:rooms,id',
-            'reason' => 'nullable|string|max:1000',
-        ]);
-
-        $success = $this->service->requestRoomTransfer($contract, $request->user(), $validated);
+        $success = $this->service->requestRoomTransfer($contract, $request->user(), $request->validated());
 
         if (! $success) {
             abort(422, 'Phòng đích không hợp lệ hoặc không còn trống.');

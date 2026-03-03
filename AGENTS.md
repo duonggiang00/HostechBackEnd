@@ -51,6 +51,7 @@ To prevent hallucination and strictly follow the user's intended architecture, y
 - Nếu người dùng yêu cầu chạy workflow:
     - `/scaffold_module`: Khởi tạo nhanh module mới chuẩn DDD.
     - `/audit_module`: Rà soát kiến trúc và compliance của một Domain (Models, Services, Policies, Resources).
+    - `/extend_module`: Mở rộng chức năng cho một module đã tồn tại (thêm fields, endpoints, service logic).
     - `/add_status_history`: Tự động tạo bảng history và logic logging cho Model.
     - `/finalize_module`: Kiểm tra cuối cùng (Pint, Tests, RBAC Sync) trước khi báo cáo hoàn tất.
 - Luôn sử dụng `view_file` để đọc nội dung workflow tương ứng trong `.agents/workflows/` và thực hiện CHÍNH XÁC từng bước.

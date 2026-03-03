@@ -1,7 +1,7 @@
 # MODULE_GUIDE — Hướng dẫn tạo Module mới
 
 > Xem chi tiết hơn tại [`project_specs/MODULE_GUIDE_FULL.md`](project_specs/MODULE_GUIDE_FULL.md)
-> Dùng workflow `/scaffold_module` để tạo module tự động theo đúng chuẩn.
+> Dùng workflow `/scaffold_module` để tạo, `/extend_module` để mở rộng và `/audit_module` để rà soát module.
 
 ---
 
@@ -32,6 +32,13 @@ app/
 class Invoice extends Model {
     use HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
     protected $fillable = ['org_id', 'property_id', ...];
+
+    protected function casts(): array {
+        return [
+            'amount' => 'decimal:2',
+            'paid_at' => 'datetime',
+        ];
+    }
 }
 ```
 
@@ -138,9 +145,8 @@ Route::delete('{resource}/{id}/force', [Controller::class, 'forceDelete']);
 - [ ] Model với đúng traits (HasUuids, MultiTenant, SoftDeletes)
 - [ ] Policy implement RbacModuleProvider + getRolePermissions()
 - [ ] Service với paginate() + CRUD + Tenant scope (nếu cần)
-- [ ] Form Requests (Index, Store, Update)
-- [ ] Resource với đầy đủ fields (không dùng parent::toArray)
-- [ ] Controller với Scramble #[Group] annotation
+- [ ] Controller với Scramble #[Group] attribute
+- [ ] Form Requests (Index, Store, Update) với Scramble DocBlocks (@queryParam, @bodyParam)
 - [ ] Routes đăng ký trong api.php
 - [ ] Policy đăng ký trong AuthServiceProvider
 - [ ] `php artisan db:seed --class=RbacSeeder`

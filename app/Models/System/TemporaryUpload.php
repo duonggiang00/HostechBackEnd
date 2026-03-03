@@ -8,9 +8,11 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use App\Models\Org\User;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class TemporaryUpload extends \Illuminate\Database\Eloquent\Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia, SoftDeletes;
 
     public $incrementing = false;
     protected $keyType = 'string';

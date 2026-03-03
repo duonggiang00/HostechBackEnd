@@ -8,9 +8,13 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Concerns\MultiTenant;
+
 class UserInvitation extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, SoftDeletes, MultiTenant;
 
     protected $fillable = [
         'email',
@@ -23,18 +27,21 @@ class UserInvitation extends Model
         'registered_at',
     ];
 
-    protected $casts = [
-        'properties_scope' => 'array',
-        'expires_at' => 'datetime',
-        'registered_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'properties_scope' => 'array',
+            'expires_at' => 'datetime',
+            'registered_at' => 'datetime',
+        ];
+    }
 
-    public function org()
+    public function org(): BelongsTo
     {
         return $this->belongsTo(Org::class);
     }
 
-    public function inviter()
+    public function inviter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'invited_by');
     }

@@ -28,6 +28,7 @@ return new class extends Migration
             $table->timestamp('left_at')->nullable();
             
             $table->timestamps();
+            $table->softDeletes();
 
             // Replace the unique index on user_id with index since user_id can be null
             $table->index(['contract_id', 'user_id']);
