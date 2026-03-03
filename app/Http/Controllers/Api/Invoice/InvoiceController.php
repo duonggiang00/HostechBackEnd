@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Invoice\InvoiceIndexRequest;
 use App\Http\Requests\Invoice\InvoiceStoreRequest;
 use App\Http\Requests\Invoice\InvoiceUpdateRequest;
-use App\Http\Resources\Invoice\InvoiceResource;
 use App\Http\Resources\Invoice\InvoiceItemResource;
+use App\Http\Resources\Invoice\InvoiceResource;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Services\Invoice\InvoiceService;
@@ -22,9 +22,7 @@ use Illuminate\Http\Request;
 #[Group('Quản lý Hóa đơn')]
 class InvoiceController extends Controller
 {
-    public function __construct(protected InvoiceService $service)
-    {
-    }
+    public function __construct(protected InvoiceService $service) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  LIST / READ ENDPOINTS                                ║
@@ -40,17 +38,14 @@ class InvoiceController extends Controller
         $this->authorize('viewAny', Invoice::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100)
+        if ($perPage < 1 || $perPage > 100) {
             $perPage = 15;
+        }
 
         $allowed = ['status', 'property_id', 'room_id', 'contract_id'];
         $search = $request->input('search');
 
-        // Security: non-Admin chỉ thấy data trong org của mình
-        $user = $request->user();
-        $orgId = $user->hasRole('Admin') ? $request->input('org_id') : $user->org_id;
-
-        $paginator = $this->service->paginate($allowed, $perPage, $search, $orgId);
+        $paginator = $this->service->paginate($allowed, $perPage, $search);
 
         return InvoiceResource::collection($paginator)->response()->setStatusCode(200);
     }
@@ -65,14 +60,12 @@ class InvoiceController extends Controller
         $this->authorize('viewAny', Invoice::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100)
+        if ($perPage < 1 || $perPage > 100) {
             $perPage = 15;
+        }
 
         $search = $request->input('search');
-        $user = $request->user();
-        $orgId = $user->hasRole('Admin') ? $request->input('org_id') : $user->org_id;
-
-        $paginator = $this->service->paginateByProperty($property_id, $perPage, $search, $orgId);
+        $paginator = $this->service->paginateByProperty($property_id, $perPage, $search);
 
         return InvoiceResource::collection($paginator)->response()->setStatusCode(200);
     }
@@ -87,14 +80,12 @@ class InvoiceController extends Controller
         $this->authorize('viewAny', Invoice::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100)
+        if ($perPage < 1 || $perPage > 100) {
             $perPage = 15;
+        }
 
         $search = $request->input('search');
-        $user = $request->user();
-        $orgId = $user->hasRole('Admin') ? $request->input('org_id') : $user->org_id;
-
-        $paginator = $this->service->paginateByFloor($property_id, $floor_id, $perPage, $search, $orgId);
+        $paginator = $this->service->paginateByFloor($property_id, $floor_id, $perPage, $search);
 
         return InvoiceResource::collection($paginator)->response()->setStatusCode(200);
     }
@@ -109,16 +100,14 @@ class InvoiceController extends Controller
         $this->authorize('viewAny', Invoice::class);
 
         $perPage = (int) $request->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100)
+        if ($perPage < 1 || $perPage > 100) {
             $perPage = 15;
+        }
 
         $allowed = ['status', 'property_id', 'room_id'];
         $search = $request->input('search');
 
-        $user = $request->user();
-        $orgId = $user->hasRole('Admin') ? $request->input('org_id') : $user->org_id;
-
-        $paginator = $this->service->paginateTrash($allowed, $perPage, $search, $orgId);
+        $paginator = $this->service->paginateTrash($allowed, $perPage, $search);
 
         return InvoiceResource::collection($paginator)->response()->setStatusCode(200);
     }
@@ -131,8 +120,8 @@ class InvoiceController extends Controller
     public function show(string $id)
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
-            return response()->json(['message' => 'Not Found'], 404);
+        if (! $invoice) {
+            abort(404, 'Not Found');
         }
 
         $this->authorize('view', $invoice);
@@ -156,19 +145,6 @@ class InvoiceController extends Controller
         $data = $request->except('items');
         $itemsData = $request->input('items', []);
 
-        // Auto-assign org_id
-        $user = $request->user();
-        if (!$user->hasRole('Admin') && $user->org_id) {
-            $data['org_id'] = $user->org_id;
-        } else {
-            // Admin: lấy org_id từ room nếu không truyền
-            if (!isset($data['org_id'])) {
-                $room = \App\Models\Property\Room::find($data['room_id']);
-                $data['org_id'] = $room?->org_id;
-            }
-        }
-
-        $data['created_by_user_id'] = $user->id;
         $data['status'] = $data['status'] ?? 'DRAFT';
 
         $invoice = $this->service->create($data, $itemsData);
@@ -184,8 +160,8 @@ class InvoiceController extends Controller
     public function update(InvoiceUpdateRequest $request, string $id)
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
-            return response()->json(['message' => 'Not Found'], 404);
+        if (! $invoice) {
+            abort(404, 'Not Found');
         }
 
         $this->authorize('update', $invoice);
@@ -203,8 +179,8 @@ class InvoiceController extends Controller
     public function destroy(string $id)
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
-            return response()->json(['message' => 'Not Found'], 404);
+        if (! $invoice) {
+            abort(404, 'Not Found');
         }
 
         $this->authorize('delete', $invoice);
@@ -212,7 +188,7 @@ class InvoiceController extends Controller
         // Business rule: chỉ xóa được DRAFT
         if ($invoice->status !== 'DRAFT') {
             return response()->json([
-                'message' => 'Chỉ có thể xóa hóa đơn ở trạng thái Nháp (DRAFT).'
+                'message' => 'Chỉ có thể xóa hóa đơn ở trạng thái Nháp (DRAFT).',
             ], 422);
         }
 
@@ -231,8 +207,8 @@ class InvoiceController extends Controller
     public function restore(string $id)
     {
         $invoice = $this->service->findTrashed($id);
-        if (!$invoice) {
-            return response()->json(['message' => 'Not Found'], 404);
+        if (! $invoice) {
+            abort(404, 'Not Found');
         }
 
         $this->authorize('restore', $invoice);
@@ -248,8 +224,8 @@ class InvoiceController extends Controller
     public function forceDelete(string $id)
     {
         $invoice = $this->service->findWithTrashed($id);
-        if (!$invoice) {
-            return response()->json(['message' => 'Not Found'], 404);
+        if (! $invoice) {
+            abort(404, 'Not Found');
         }
 
         $this->authorize('forceDelete', $invoice);
@@ -272,8 +248,8 @@ class InvoiceController extends Controller
     public function storeItem(Request $request, string $invoice)
     {
         $invoiceModel = $this->service->find($invoice);
-        if (!$invoiceModel) {
-            return response()->json(['message' => 'Invoice Not Found'], 404);
+        if (! $invoiceModel) {
+            abort(404, 'Invoice Not Found');
         }
 
         $this->authorize('update', $invoiceModel);
@@ -301,8 +277,8 @@ class InvoiceController extends Controller
     public function destroyItem(string $item)
     {
         $invoiceItem = InvoiceItem::with('invoice')->find($item);
-        if (!$invoiceItem) {
-            return response()->json(['message' => 'Invoice Item Not Found'], 404);
+        if (! $invoiceItem) {
+            abort(404, 'Invoice Item Not Found');
         }
 
         $this->authorize('update', $invoiceItem->invoice);

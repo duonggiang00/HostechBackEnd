@@ -16,7 +16,7 @@ class PropertyUpdateRequest extends FormRequest
         $propertyId = $this->route('id');
 
         return [
-            'code' => ['sometimes', 'string', 'max:50', 'unique:properties,code,' . $propertyId . ',id'],
+            'code' => ['sometimes', 'string', 'max:50', 'unique:properties,code,'.$propertyId.',id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
             'note' => ['nullable', 'string'],

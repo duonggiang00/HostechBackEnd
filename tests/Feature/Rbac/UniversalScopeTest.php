@@ -3,8 +3,8 @@
 namespace Tests\Feature\Rbac;
 
 use App\Models\Org\Org;
-use App\Models\Property\Property;
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -40,21 +40,21 @@ class UniversalScopeTest extends TestCase
         $response = $this->actingAs($owner)->postJson('/api/properties', [
             'name' => 'Sneaky Property',
             'code' => 'SP-001',
-            'org_id' => $org2->id // Trying to inject
+            'org_id' => $org2->id, // Trying to inject
         ]);
-        
+
         // It might succeed (201) but the org_id should be FORCED to org1.
         // So we assertCreated, then check DB.
         $response->assertCreated();
-        
+
         $this->assertDatabaseHas('properties', [
             'name' => 'Sneaky Property',
-            'org_id' => $org1->id // MUST be org1
+            'org_id' => $org1->id, // MUST be org1
         ]);
-        
+
         $this->assertDatabaseMissing('properties', [
             'name' => 'Sneaky Property',
-            'org_id' => $org2->id
+            'org_id' => $org2->id,
         ]);
     }
 
@@ -71,12 +71,12 @@ class UniversalScopeTest extends TestCase
         $org2 = Org::factory()->create();
 
         $response = $this->actingAs($owner)->putJson("/api/orgs/{$org2->id}", [
-            'name' => 'Hacked Name'
+            'name' => 'Hacked Name',
         ]);
 
         $response->assertForbidden();
     }
-    
+
     /**
      * RESOURCE: ORG
      * Verify Owner cannot delete other org

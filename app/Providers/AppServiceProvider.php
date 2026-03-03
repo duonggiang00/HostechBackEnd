@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,24 +31,24 @@ class AppServiceProvider extends ServiceProvider
             foreach ($openApi->paths as $path => $pathItem) {
                 foreach ($pathItem->operations as $operation) {
                     $tags = $operation->tags;
-                    
+
                     // List of Fortify/Auth related tags (Controller names)
                     $authTags = [
-                        'AuthenticatedSession', 
-                        'ConfirmablePassword', 
+                        'AuthenticatedSession',
+                        'ConfirmablePassword',
                         'ConfirmedPasswordStatus',
-                        'ConfirmedTwoFactorAuthentication', 
-                        'NewPassword', 
-                        'Password', 
+                        'ConfirmedTwoFactorAuthentication',
+                        'NewPassword',
+                        'Password',
                         'PasswordResetLink',
-                        'ProfileInformation', 
-                        'RecoveryCode', 
-                        'RegisteredUser', 
-                        'TwoFactorAuthenticatedSession', 
-                        'TwoFactorAuthentication', 
-                        'TwoFactorQrCode', 
+                        'ProfileInformation',
+                        'RecoveryCode',
+                        'RegisteredUser',
+                        'TwoFactorAuthenticatedSession',
+                        'TwoFactorAuthentication',
+                        'TwoFactorQrCode',
                         'VerifyEmail',
-                        'Authentication' // Default tag if using AuthenticationController
+                        'Authentication', // Default tag if using AuthenticationController
                     ];
 
                     // Check if any existing tag matches standard Fortify controllers

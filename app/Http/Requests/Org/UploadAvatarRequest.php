@@ -1,17 +1,17 @@
 <?php
 
-namespace App\Http\Requests\Meter;
+namespace App\Http\Requests\Org;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ApproveAdjustmentNoteRequest extends FormRequest
+class UploadAvatarRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return true; // Users must be authenticated via middleware
     }
 
     /**
@@ -22,8 +22,7 @@ class ApproveAdjustmentNoteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // No specific fields required for approval body usually,
-            // but we can leave this empty or add an optional note.
+            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
         ];
     }
 }

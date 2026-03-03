@@ -19,7 +19,7 @@ class UserUpdateRequest extends FormRequest
             'role' => ['sometimes', 'string', 'in:ADMIN,OWNER,MANAGER,STAFF,TENANT', 'max:20'],
             'full_name' => ['sometimes', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
-            'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,' . $userId . ',id'],
+            'email' => ['sometimes', 'email', 'max:255', 'unique:users,email,'.$userId.',id'],
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
             'mfa_enabled' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],

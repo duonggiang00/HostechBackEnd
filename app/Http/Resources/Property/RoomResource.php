@@ -38,12 +38,12 @@ class RoomResource extends JsonResource
             'utilities' => $this->utilities,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            
+
             // Relations (eager loaded via QueryBuilder allowedIncludes or via direct load)
             'assets' => $this->whenLoaded('assets'),
             'price_histories' => $this->whenLoaded('prices'),
             'status_histories' => $this->whenLoaded('statusHistories'),
-            
+
             // Media (Spatie MediaLibrary)
             'images' => $this->whenLoaded('media', function () {
                 return $this->getMedia('gallery')->map(function ($media) {

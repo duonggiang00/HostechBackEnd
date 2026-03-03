@@ -2,15 +2,15 @@
 
 namespace Database\Factories\Property;
 
-use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
+use App\Models\Meter\Meter;
+use App\Models\Meter\MeterReading;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomStatusHistory;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class RoomFactory extends Factory
 {
@@ -21,7 +21,7 @@ class RoomFactory extends Factory
             'org_id' => null,
             'property_id' => null,
             'floor_id' => null,
-            'code' => strtoupper(fake()->lexify('?')) . str_pad(fake()->numberBetween(1, 99999), 5, '0', STR_PAD_LEFT),
+            'code' => strtoupper(fake()->lexify('?')).str_pad(fake()->numberBetween(1, 99999), 5, '0', STR_PAD_LEFT),
             'name' => 'Room '.fake()->numberBetween(101, 999),
             'type' => fake()->randomElement(['studio', 'apartment', 'house', 'dormitory']),
             'area' => fake()->numberBetween(20, 150),
@@ -39,19 +39,21 @@ class RoomFactory extends Factory
     {
         return $this->afterCreating(function (Room $room) {
             // Cần đảm bảo room có org_id trước khi tạo relations
-            if (! $room->org_id) return;
+            if (! $room->org_id) {
+                return;
+            }
 
             // Sinh Assets (1-4 tài sản)
             $assetNames = ['Điều hòa', 'Tivi', 'Tủ lạnh', 'Máy giặt', 'Bình nóng lạnh', 'Giường', 'Tủ quần áo'];
             $assetsToCreate = fake()->randomElements($assetNames, fake()->numberBetween(1, 4));
-            
+
             foreach ($assetsToCreate as $assetName) {
                 RoomAsset::create([
                     'id' => Str::uuid(),
                     'org_id' => $room->org_id,
                     'room_id' => $room->id,
                     'name' => $assetName,
-                    'serial' => strtoupper(fake()->lexify('???')) . fake()->numberBetween(1000, 9999),
+                    'serial' => strtoupper(fake()->lexify('???')).fake()->numberBetween(1000, 9999),
                     'condition' => fake()->randomElement(['Mới', 'Tốt', 'Khá', 'Cần sửa chữa']),
                     'purchased_at' => fake()->dateTimeBetween('-3 years', 'now')->format('Y-m-d'),
                     'warranty_end' => fake()->dateTimeBetween('now', '+2 years')->format('Y-m-d'),
@@ -85,7 +87,7 @@ class RoomFactory extends Factory
                     'id' => Str::uuid(),
                     'org_id' => $room->org_id,
                     'room_id' => $room->id,
-                    'code' => $type === 'ELECTRIC' ? 'E-' . strtoupper(Str::random(6)) : 'W-' . strtoupper(Str::random(6)),
+                    'code' => $type === 'ELECTRIC' ? 'E-'.strtoupper(Str::random(6)) : 'W-'.strtoupper(Str::random(6)),
                     'type' => $type,
                     'installed_at' => Carbon::now()->subMonths(6)->format('Y-m-d'),
                     'is_active' => true,

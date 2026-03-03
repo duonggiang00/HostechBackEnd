@@ -2,10 +2,10 @@
 
 namespace App\Models\System;
 
+use App\Models\Org\Org;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\Models\Activity;
-use App\Models\Org\Org;
 
 class AuditLog extends Activity
 {

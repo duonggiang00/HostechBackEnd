@@ -22,17 +22,11 @@ class InvoiceStatusHistory extends Model
         'changed_by_user_id',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by_user_id');

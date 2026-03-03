@@ -1,10 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\FloorController;
-use App\Http\Controllers\Api\Property\RoomController;
+use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomAssetController;
+use App\Http\Controllers\Api\Property\RoomController;
+use Illuminate\Support\Facades\Route;
 
 // Properties
 Route::get('properties/trash', [PropertyController::class, 'trash']);

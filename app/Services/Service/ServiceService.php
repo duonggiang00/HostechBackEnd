@@ -6,8 +6,8 @@ use App\Models\Service\Service;
 use App\Models\Service\ServiceRate;
 use App\Models\Service\TieredRate;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
 use Illuminate\Support\Str;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class ServiceService
 {
@@ -27,7 +27,7 @@ class ServiceService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -53,7 +53,7 @@ class ServiceService
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -85,7 +85,7 @@ class ServiceService
             $price = $data['price'];
             $effectiveFrom = $data['effective_from'] ?? now()->toDateString();
             $tieredRates = $data['tiered_rates'] ?? [];
-            
+
             // Remove rate data from service data
             $serviceData = collect($data)->except(['price', 'effective_from', 'tiered_rates'])->toArray();
 
@@ -102,7 +102,7 @@ class ServiceService
             ]);
 
             // 4. Create Tiered Rates
-            if ($service->calc_mode === 'PER_METER' && !empty($tieredRates)) {
+            if ($service->calc_mode === 'PER_METER' && ! empty($tieredRates)) {
                 $tiersToInsert = collect($tieredRates)->map(function ($tier) use ($serviceRate) {
                     return [
                         'id' => Str::uuid()->toString(),
@@ -113,7 +113,7 @@ class ServiceService
                         'price' => $tier['price'],
                     ];
                 })->toArray();
-                
+
                 TieredRate::insert($tiersToInsert);
             }
 
@@ -127,7 +127,9 @@ class ServiceService
     public function update(string $id, array $data): ?Service
     {
         $service = $this->find($id);
-        if (! $service) return null;
+        if (! $service) {
+            return null;
+        }
 
         return DB::transaction(function () use ($service, $data) {
             // 1. Handle Price Update
@@ -139,22 +141,22 @@ class ServiceService
             $hasTiersChanged = false;
             $newTiers = [];
             if ($service->calc_mode === 'PER_METER' && isset($data['tiered_rates'])) {
-                $currentTiers = $service->currentRate?->tieredRates->map(function($t) {
+                $currentTiers = $service->currentRate?->tieredRates->map(function ($t) {
                     return [
-                        'tier_from' => (int)$t->tier_from,
-                        'tier_to' => $t->tier_to !== null ? (int)$t->tier_to : null,
-                        'price' => (float)$t->price,
+                        'tier_from' => (int) $t->tier_from,
+                        'tier_to' => $t->tier_to !== null ? (int) $t->tier_to : null,
+                        'price' => (float) $t->price,
                     ];
                 })->toArray() ?? [];
-                
-                $newTiers = collect($data['tiered_rates'])->map(function($t) {
+
+                $newTiers = collect($data['tiered_rates'])->map(function ($t) {
                     return [
-                        'tier_from' => (int)$t['tier_from'],
-                        'tier_to' => $t['tier_to'] !== null ? (int)$t['tier_to'] : null,
-                        'price' => (float)$t['price'],
+                        'tier_from' => (int) $t['tier_from'],
+                        'tier_to' => $t['tier_to'] !== null ? (int) $t['tier_to'] : null,
+                        'price' => (float) $t['price'],
                     ];
                 })->toArray();
-                
+
                 $hasTiersChanged = json_encode($currentTiers) !== json_encode($newTiers);
             }
 
@@ -177,7 +179,7 @@ class ServiceService
                 // If updated an existing rate today, replace its tiers
                 TieredRate::where('service_rate_id', $serviceRate->id)->delete();
 
-                if ($service->calc_mode === 'PER_METER' && !empty($newTiers)) {
+                if ($service->calc_mode === 'PER_METER' && ! empty($newTiers)) {
                     $tiersToInsert = collect($newTiers)->map(function ($tier) use ($serviceRate) {
                         return array_merge($tier, [
                             'id' => Str::uuid()->toString(),
@@ -185,7 +187,7 @@ class ServiceService
                             'service_rate_id' => $serviceRate->id,
                         ]);
                     })->toArray();
-                    
+
                     TieredRate::insert($tiersToInsert);
                 }
             }
@@ -206,6 +208,7 @@ class ServiceService
         if ($service) {
             return $service->delete();
         }
+
         return false;
     }
 
@@ -215,6 +218,7 @@ class ServiceService
         if ($service) {
             return $service->restore();
         }
+
         return false;
     }
 
@@ -222,11 +226,12 @@ class ServiceService
     {
         $service = $this->findWithTrashed($id);
         if ($service) {
-            // ServiceRates satisfy foreign key cascade? 
+            // ServiceRates satisfy foreign key cascade?
             // Migration defined: $table->foreignUuid('service_id')->constrained('services')->cascadeOnDelete();
             // So DB will auto-delete rates.
             return $service->forceDelete();
         }
+
         return false;
     }
 }

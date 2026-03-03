@@ -4,9 +4,8 @@ namespace Tests\Feature\Rbac;
 
 use App\Models\Org\Org;
 use App\Models\Org\User;
-use Spatie\Permission\Models\Role;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class UserCreationScopeTest extends TestCase
 {
@@ -33,12 +32,12 @@ class UserCreationScopeTest extends TestCase
             'email' => 'intruder@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-            'role' => 'STAFF'
+            'role' => 'STAFF',
         ]);
 
         // Should return 403 Forbidden or 422 with validation error
         // Currently expecting this to FAIL (i.e., return 201) because logic is missing.
-        $response->assertStatus(403); 
+        $response->assertStatus(403);
     }
 
     public function test_owner_cannot_create_admin_user()
@@ -53,7 +52,7 @@ class UserCreationScopeTest extends TestCase
             'email' => 'fakeadmin@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-            'role' => 'ADMIN' // Maliciously trying to create Admin
+            'role' => 'ADMIN', // Maliciously trying to create Admin
         ]);
 
         $response->assertStatus(403);
@@ -71,7 +70,7 @@ class UserCreationScopeTest extends TestCase
             'email' => 'staff@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
-            'role' => 'STAFF'
+            'role' => 'STAFF',
         ]);
 
         $response->assertStatus(201);
@@ -83,13 +82,13 @@ class UserCreationScopeTest extends TestCase
         $org = Org::factory()->create();
         $owner = User::factory()->create(['org_id' => $org->id]);
         $owner->assignRole('Owner');
-        
+
         $staff = User::factory()->create(['org_id' => $org->id]);
         $staff->assignRole('Staff'); // Staff in same org
 
         // Ty to upgrade Staff to Admin
         $response = $this->actingAs($owner)->putJson("/api/users/{$staff->id}", [
-            'role' => 'ADMIN'
+            'role' => 'ADMIN',
         ]);
 
         $response->assertStatus(403);

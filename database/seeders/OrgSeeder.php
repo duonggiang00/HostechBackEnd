@@ -2,28 +2,24 @@
 
 namespace Database\Seeders;
 
-use App\Models\Property\Floor;
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
+use App\Models\Handover\Handover;
+use App\Models\Handover\HandoverItem;
+use App\Models\Invoice\Invoice;
+use App\Models\Invoice\InvoiceItem;
 use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
-use App\Models\Org\User;
 use App\Models\Service\Service;
-use App\Models\Service\ServiceRate;
-use App\Models\Service\TieredRate;
-use App\Models\Service\RoomService;
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
-use App\Models\Invoice\Invoice;
-use App\Models\Invoice\InvoiceItem;
-use App\Models\Handover\Handover;
-use App\Models\Handover\HandoverItem;
-use App\Models\Handover\HandoverMeterSnapshot;
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class OrgSeeder extends Seeder
 {
@@ -58,7 +54,7 @@ class OrgSeeder extends Seeder
 
             // Note: We no longer create "Admin" per org. Roles start from Owner.
             // Adjust usersPerOrg logic if exact number needed, but usually factory count is just total.
-            
+
             User::factory($usersPerOrg)
                 ->state(['org_id' => $org->id])
                 ->create()
@@ -91,12 +87,12 @@ class OrgSeeder extends Seeder
             // ---------------------------------------------------------
             $this->command->info("\n🔧 Tạo Dịch vụ cơ bản cho tổ chức...");
             $serviceDataList = [
-                ['code' => 'DIEN','name' => 'Tiền điện', 'calc_mode' => 'PER_METER','unit' => 'kwh','price' => 3500],
-                ['code' => 'NUOC','name' => 'Tiền nước', 'calc_mode' => 'PER_METER','unit' => 'm3','price' => 15000],
-                ['code' => 'INTERNET','name' => 'Internet', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 100000],
-                ['code' => 'QL','name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 50000],
-                ['code' => 'GUIXE','name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY','unit' => 'bike','price' => 100000],
-                ['code' => 'VS','name' => 'Vệ sinh', 'calc_mode' => 'PER_ROOM','unit' => 'month','price' => 30000]
+                ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 3500],
+                ['code' => 'NUOC', 'name' => 'Tiền nước', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 15000],
+                ['code' => 'INTERNET', 'name' => 'Internet', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 100000],
+                ['code' => 'QL', 'name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 50000],
+                ['code' => 'GUIXE', 'name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY', 'unit' => 'bike', 'price' => 100000],
+                ['code' => 'VS', 'name' => 'Vệ sinh', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 30000],
             ];
 
             $serviceIds = [];
@@ -162,10 +158,10 @@ class OrgSeeder extends Seeder
 
                     for ($i = 1; $i <= $floorsPerProperty; $i++) {
                         $floor = Floor::factory()->create([
-                            'org_id' => $org->id, 
+                            'org_id' => $org->id,
                             'property_id' => $property->id,
                             'name' => "Tầng $i",
-                            'code' => "F" . str_pad($i, 2, '0', STR_PAD_LEFT),
+                            'code' => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
                             'sort_order' => $i,
                         ]);
 
@@ -251,7 +247,7 @@ class OrgSeeder extends Seeder
 
                     // Generate Invoices for this Active Contract
                     $servicesToInvoice = Service::where('org_id', $org->id)->inRandomOrder()->limit(3)->get();
-                    
+
                     // Paid Invoice (Last month)
                     $lastMonthStart = Carbon::now()->subMonth()->startOfMonth();
                     $paidInvoice = Invoice::factory()->paid()->create([
@@ -331,7 +327,7 @@ class OrgSeeder extends Seeder
                         'id' => $meterId,
                         'org_id' => $org->id,
                         'room_id' => $room->id,
-                        'code' => 'METER_E_' . rand(1000,9999),
+                        'code' => 'METER_E_'.rand(1000, 9999),
                         'type' => 'ELECTRIC',
                         'installed_at' => now()->subYear()->toDateString(),
                         'is_active' => true,
@@ -443,7 +439,7 @@ class OrgSeeder extends Seeder
                 // C. Seed Tickets (40% chance per room to have a ticket)
                 if (rand(0, 100) > 60) {
                     $ticketId = Str::uuid()->toString();
-                    $tenantId = User::where('org_id', $org->id)->whereHas('roles', function($q) {
+                    $tenantId = User::where('org_id', $org->id)->whereHas('roles', function ($q) {
                         $q->where('name', 'Tenant');
                     })->inRandomOrder()->first()?->id ?? $ownerId;
 
@@ -487,7 +483,7 @@ class OrgSeeder extends Seeder
                             'ticket_id' => $ticketId,
                             'actor_user_id' => $ownerId,
                             'type' => 'STATUS_CHANGED',
-                            'message' => 'Chuyển trạng thái sang ' . $status,
+                            'message' => 'Chuyển trạng thái sang '.$status,
                             'created_at' => $createdAt->copy()->addHours(2),
                         ]);
                     }
@@ -517,15 +513,15 @@ class OrgSeeder extends Seeder
         $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
         $this->command->line('✅ Bất động sản: <fg=cyan>'.($orgCount * $propertiesPerOrg).'</>');
         $this->command->line('✅ Tầng: <fg=cyan>'.($orgCount * $propertiesPerOrg * $floorsPerProperty).'</>');
-        $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor))."</>");
-        
+        $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor)).'</>');
+
         // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
-        $this->command->line("✅ Tài sản phòng (Assets): <fg=cyan>".RoomAsset::count()."</>");
-        $this->command->line("✅ Lịch sử giá (Prices): <fg=cyan>".RoomPrice::count()."</>");
-        $this->command->line("✅ Dịch vụ (Services): <fg=cyan>".Service::count()."</>");
-        $this->command->line("✅ Hợp đồng (Contracts): <fg=cyan>".Contract::count()."</>");
-        $this->command->line("✅ Hóa đơn (Invoices): <fg=cyan>".Invoice::count()."</>");
-        $this->command->line("✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>".DB::table('tickets')->count()."</>");
-        $this->command->line("✅ Bàn giao (Handovers): <fg=cyan>".Handover::count()."</>\n");
+        $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
+        $this->command->line('✅ Lịch sử giá (Prices): <fg=cyan>'.RoomPrice::count().'</>');
+        $this->command->line('✅ Dịch vụ (Services): <fg=cyan>'.Service::count().'</>');
+        $this->command->line('✅ Hợp đồng (Contracts): <fg=cyan>'.Contract::count().'</>');
+        $this->command->line('✅ Hóa đơn (Invoices): <fg=cyan>'.Invoice::count().'</>');
+        $this->command->line('✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>'.DB::table('tickets')->count().'</>');
+        $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
     }
 }

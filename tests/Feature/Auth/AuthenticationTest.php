@@ -24,13 +24,29 @@ class AuthenticationTest extends TestCase
      */
     public function test_user_can_register(): void
     {
-        $response = $this->postJson('/api/auth/register', [
-            'full_name' => 'John Doe',
+        $this->withoutExceptionHandling();
+        $invitation = \App\Models\System\UserInvitation::create([
             'email' => 'john@example.com',
-            'phone' => '1234567890',
-            'password' => 'Password123!',
-            'password_confirmation' => 'Password123!',
+            'token' => 'mock-token-123',
+            'role_name' => 'Tenant',
+            'expires_at' => now()->addDays(1),
+            'org_id' => \App\Models\Org\Org::factory()->create()->id,
+            'invited_by' => \App\Models\Org\User::factory()->create()->id,
         ]);
+
+        try {
+            $response = $this->postJson('/api/auth/register', [
+                'full_name' => 'John Doe',
+                'email' => 'john@example.com',
+                'phone' => '1234567890',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'invite_token' => 'mock-token-123',
+            ]);
+        } catch (\Throwable $e) {
+            file_put_contents('error_dump.txt', $e->getMessage());
+            throw $e;
+        }
 
         $response->assertStatus(201);
         $response->assertJsonStructure([
@@ -61,6 +77,7 @@ class AuthenticationTest extends TestCase
             'email' => 'john@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(422);
@@ -77,6 +94,7 @@ class AuthenticationTest extends TestCase
             'email' => 'invalid-email',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(422);
@@ -93,6 +111,7 @@ class AuthenticationTest extends TestCase
             'email' => 'john@example.com',
             'password' => 'weak',
             'password_confirmation' => 'weak',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(422);
@@ -111,6 +130,7 @@ class AuthenticationTest extends TestCase
             'email' => 'john@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(422);
@@ -122,11 +142,21 @@ class AuthenticationTest extends TestCase
      */
     public function test_registered_user_has_tenant_role_permissions(): void
     {
+        $invitation = \App\Models\System\UserInvitation::create([
+            'email' => 'john@example.com',
+            'token' => 'mock-token-123',
+            'role_name' => 'Tenant',
+            'expires_at' => now()->addDays(1),
+            'org_id' => \App\Models\Org\Org::factory()->create()->id,
+            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+        ]);
+
         $response = $this->postJson('/api/auth/register', [
             'full_name' => 'John Doe',
             'email' => 'john@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(201);
@@ -342,6 +372,7 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(401);
     }
+
     /**
      * Test authenticated user can get profile via /api/auth/me
      */
@@ -356,8 +387,10 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'id' => $user->id,
-            'email' => $user->email,
+            'data' => [
+                'id' => $user->id,
+                'email' => $user->email,
+            ]
         ]);
     }
 }

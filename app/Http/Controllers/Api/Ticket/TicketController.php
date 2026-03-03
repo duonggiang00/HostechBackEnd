@@ -14,7 +14,6 @@ use App\Http\Resources\Ticket\TicketResource;
 use App\Models\Ticket\Ticket;
 use App\Services\Ticket\TicketService;
 use Dedoc\Scramble\Attributes\Group;
-use Illuminate\Http\Request;
 
 /**
  * Quản lý Phiếu Sự cố / Yêu cầu (Tickets)
@@ -46,17 +45,6 @@ class TicketController extends Controller
      * - **Owner / Manager / Staff**: Thấy tất cả tickets trong org.
      * - **Tenant**: Chỉ thấy tickets do chính mình tạo.
      *
-     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
-     * @queryParam page int Số trang. Example: 1
-     * @queryParam search string Tìm kiếm theo mô tả hoặc loại sự cố. Example: điện
-     * @queryParam sort string Sắp xếp theo trường (prefix `-` để giảm dần). Các trường hỗ trợ: `created_at`, `updated_at`, `due_at`, `priority`, `status`. Default: -created_at. Example: -created_at
-     * @queryParam filter[status] string Lọc theo trạng thái. Enum: `OPEN`, `RECEIVED`, `IN_PROGRESS`, `WAITING_PARTS`, `DONE`, `CANCELLED`. Example: OPEN
-     * @queryParam filter[priority] string Lọc theo độ ưu tiên. Enum: `LOW`, `MEDIUM`, `HIGH`, `URGENT`. Example: HIGH
-     * @queryParam filter[property_id] string UUID Lọc theo Tòa nhà. Example: 9d8e7f6a-5b4c-3d2e-1f0a-9b8c7d6e5f4a
-     * @queryParam filter[room_id] string UUID Lọc theo Phòng. Example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
-     * @queryParam filter[assigned_to_user_id] string UUID Nhân viên được giao xử lý. Example: uuid
-     * @queryParam filter[contract_id] string UUID Hợp đồng liên quan. Example: uuid
-     *
      * @responseField data array Danh sách phiếu sự cố.
      * @responseField data[].id string UUID phiếu sự cố.
      * @responseField data[].org_id string UUID tổ chức.
@@ -80,29 +68,17 @@ class TicketController extends Controller
      * @responseField meta object Thông tin pagination.
      * @responseField links object Các link pagination.
      */
-    public function index(Request $request)
+    public function index(\App\Http\Requests\Ticket\TicketIndexRequest $request)
     {
         $this->authorize('viewAny', Ticket::class);
 
         $perPage = min((int) $request->input('per_page', 15), 100);
         $perPage = $perPage < 1 ? 15 : $perPage;
 
-        // Tenant: chỉ thấy ticket của chính mình
-        $user = $request->user();
-        if ($user->hasRole('Tenant')) {
-            return TicketResource::collection(
-                Ticket::with(['property', 'room', 'createdBy', 'assignedTo'])
-                    ->where('created_by_user_id', $user->id)
-                    ->orderBy('created_at', 'desc')
-                    ->paginate($perPage)
-            );
-        }
-
         $paginator = $this->service->paginate(
             [],
             $perPage,
-            $request->input('search'),
-            $user->org_id
+            $request->input('search')
         );
 
         return TicketResource::collection($paginator);
@@ -159,7 +135,7 @@ class TicketController extends Controller
         $ticket = $this->service->find($id);
 
         if (! $ticket) {
-            return response()->json(['message' => 'Không tìm thấy phiếu sự cố.'], 404);
+            abort(404, 'Không tìm thấy phiếu sự cố.');
         }
 
         $this->authorize('view', $ticket);
@@ -191,12 +167,7 @@ class TicketController extends Controller
     {
         $this->authorize('create', Ticket::class);
 
-        $data = $request->validated();
-        $data['org_id'] = $request->user()->org_id;
-        $data['created_by_user_id'] = $request->user()->id;
-        $data['priority'] = $data['priority'] ?? 'MEDIUM';
-
-        $ticket = $this->service->create($data);
+        $ticket = $this->service->create($request->validated());
 
         $ticket->load(['property', 'room', 'createdBy', 'assignedTo']);
 
@@ -352,7 +323,7 @@ class TicketController extends Controller
         try {
             $cost = $this->service->addCost($ticket, $request->validated(), $request->user()->id);
         } catch (\InvalidArgumentException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            abort(422, $e->getMessage());
         }
 
         $cost->load('createdBy');

@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('property_user', function (Blueprint $table) {
             $table->id();
-            
+
             $table->uuid('property_id');
             $table->foreign('property_id')->references('id')->on('properties')->onDelete('cascade');
-            
+
             $table->uuid('user_id');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            
+
             $table->timestamps();
 
             $table->unique(['property_id', 'user_id']); // Ensure uniqueness

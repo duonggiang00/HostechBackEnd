@@ -38,7 +38,7 @@ class ServiceResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'deleted_at' => $this->deleted_at,
-            
+
             // Optional: Include rates history if requested or if it's a detail view
             'rates' => ServiceRateResource::collection($this->whenLoaded('rates')),
         ];

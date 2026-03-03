@@ -4,8 +4,6 @@ namespace App\Http\Requests\Contract;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-
-
 /**
  * @queryParam per_page int Số lượng bản ghi trên một trang. Mặc định 15. Example: 10
  * @queryParam page int Trang hiện tại. Example: 1
@@ -31,11 +29,11 @@ class ContractIndexRequest extends FormRequest
             'search' => ['nullable', 'string'],
             'with_trashed' => ['nullable', 'boolean'],
             'org_id' => ['nullable', 'uuid'],
-            
+
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.room_id' => ['nullable', 'uuid'],
             'filter.status' => ['nullable', 'string', 'in:DRAFT,ACTIVE,ENDED,CANCELLED'],
-            
+
             'sort' => ['nullable', 'string', 'in:start_date,end_date,created_at,status,rent_price,-start_date,-end_date,-created_at,-status,-rent_price'],
         ];
     }

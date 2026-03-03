@@ -1,12 +1,9 @@
 <?php
 
-use App\Models\Org\User;
 use App\Models\Org\Org;
+use App\Models\Org\User;
+
 use function Pest\Laravel\actingAs;
-use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -29,7 +26,7 @@ test('system admin can update org', function () {
     actingAs($admin)
         ->putJson("/api/orgs/{$org->id}", [
             'name' => 'Updated Org Name',
-            'address' => 'Updated Address'
+            'address' => 'Updated Address',
         ])
         ->assertStatus(200)
         ->assertJsonFragment(['name' => 'Updated Org Name']);

@@ -2,8 +2,8 @@
 
 namespace App\Models\Meter;
 
-use App\Models\Org\User;
 use App\Models\Concerns\MultiTenant;
+use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,7 +13,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class AdjustmentNote extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
 
     const UPDATED_AT = null;
 
@@ -37,33 +37,21 @@ class AdjustmentNote extends Model implements HasMedia
         'rejected_at' => 'datetime',
     ];
 
-    /**
-     * @return BelongsTo
-     */
     public function meterReading(): BelongsTo
     {
         return $this->belongsTo(MeterReading::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function requestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by_user_id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function rejectedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by_user_id');

@@ -2,8 +2,8 @@
 
 namespace App\Services\System;
 
-use App\Models\System\AuditLog;
 use App\Models\Org\User;
+use App\Models\System\AuditLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;

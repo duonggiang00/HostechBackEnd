@@ -1,13 +1,14 @@
 <?php
 
-use App\Models\Org\User;
 use App\Models\Org\Org;
+use App\Models\Org\User;
 use App\Models\Property\Property;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -25,7 +26,7 @@ test('admin can crud property', function () {
         'code' => 'PROP-TEST-01',
         'name' => 'Test Property',
         'status' => 'active',
-        'type' => 'apartment'
+        'type' => 'apartment',
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
@@ -60,7 +61,7 @@ test('owner can crud property within org', function () {
         'code' => 'PROP-OWNER-01',
         'name' => 'Owner Property',
         'status' => 'active',
-        'type' => 'office'
+        'type' => 'office',
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');

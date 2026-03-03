@@ -2,8 +2,8 @@
 
 namespace App\Actions\Fortify;
 
-use App\Models\Org\User;
 use App\Models\Org\Org;
+use App\Models\Org\User;
 use App\Services\System\UserInvitationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -47,7 +47,7 @@ class CreateNewUser implements CreatesNewUsers
         $invitation = $this->invitationService->validateToken($input['invite_token']);
 
         if ($invitation->email !== $input['email']) {
-            throw new \Exception("The registration email must match the invited email.");
+            throw new \Exception('The registration email must match the invited email.');
         }
 
         return DB::transaction(function () use ($input, $invitation) {
@@ -56,15 +56,15 @@ class CreateNewUser implements CreatesNewUsers
             // 2. Handle Org Creation for Owners
             if (is_null($orgId) && $invitation->role_name === 'Owner') {
                 if (empty($input['org_name'])) {
-                    throw new \InvalidArgumentException("org_name is required when creating an Owner account.");
+                    throw new \InvalidArgumentException('org_name is required when creating an Owner account.');
                 }
-                
+
                 $org = Org::create([
                     'name' => $input['org_name'],
                     'phone' => $input['org_phone'] ?? null,
                     'email' => $input['email'], // Using owner's email for Org default
                 ]);
-                
+
                 $orgId = $org->id;
             }
 
@@ -83,7 +83,7 @@ class CreateNewUser implements CreatesNewUsers
             $user->assignRole($invitation->role_name);
 
             // 5. Assign Property Scopes (for Manager/Staff)
-            if (!empty($invitation->properties_scope)) {
+            if (! empty($invitation->properties_scope)) {
                 $user->properties()->sync($invitation->properties_scope);
             }
 

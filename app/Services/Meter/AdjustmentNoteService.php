@@ -41,18 +41,18 @@ class AdjustmentNoteService
             ]);
 
             // Clean up and attach media
-            if (!empty($data['proof_media_ids'])) {
+            if (! empty($data['proof_media_ids'])) {
                 $temporaryUploads = TemporaryUpload::whereIn('id', $data['proof_media_ids'])->get();
 
                 foreach ($temporaryUploads as $tempUpload) {
                     $mediaItem = $tempUpload->getFirstMedia();
-                    
+
                     if ($mediaItem && file_exists($mediaItem->getPath())) {
                         $note->addMedia($mediaItem->getPath())
                             ->preservingOriginal()
                             ->toMediaCollection('adjustment_proofs');
                     }
-                    
+
                     // Optional: delete temporary upload record if you want to clean up immediately
                     // $tempUpload->delete();
                 }
@@ -82,7 +82,7 @@ class AdjustmentNoteService
             // Hook 2: Overwrite original reading value
             $reading = $note->meterReading;
             $reading->update([
-                'reading_value' => $note->after_value
+                'reading_value' => $note->after_value,
             ]);
 
             $this->triggerInvoiceUpdateHooks($reading, $note->before_value, $note->after_value);
@@ -90,7 +90,7 @@ class AdjustmentNoteService
             return $note;
         });
     }
-    
+
     /**
      * Reject an adjustment note.
      */
@@ -117,11 +117,11 @@ class AdjustmentNoteService
     protected function triggerInvoiceUpdateHooks(MeterReading $reading, int $oldValue, int $newValue)
     {
         $difference = $newValue - $oldValue;
-        
+
         if ($difference === 0) {
             return;
         }
-        
+
         // TODO: Implement the actual invoice update logic here
         // Example:
         // InvoiceService::recalculateDraftInvoicesForMeter($reading->meter_id);

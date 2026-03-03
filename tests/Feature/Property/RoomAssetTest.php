@@ -1,16 +1,17 @@
 <?php
 
 use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Property\Floor;
 use App\Models\Property\RoomAsset;
-use App\Models\Org\User;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -22,9 +23,9 @@ test('admin can manage room assets', function () {
     $property = Property::factory()->create(['org_id' => $org->id]);
     $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $room = Room::factory()->create([
-        'property_id' => $property->id, 
-        'org_id' => $org->id, 
-        'floor_id' => $floor->id
+        'property_id' => $property->id,
+        'org_id' => $org->id,
+        'floor_id' => $floor->id,
     ]);
 
     actingAs($admin);
@@ -36,7 +37,7 @@ test('admin can manage room assets', function () {
         'condition' => 'Mới',
         'purchased_at' => '2024-01-01',
     ]);
-    
+
     $response->assertStatus(201);
     $assetId = $response->json('data.id');
 
@@ -54,7 +55,7 @@ test('admin can manage room assets', function () {
     // Update Asset
     putJson("/api/properties/{$property->id}/rooms/{$room->id}/assets/{$assetId}", [
         'name' => 'Tivi LG 55 Inch',
-        'condition' => 'Đã qua sử dụng'
+        'condition' => 'Đã qua sử dụng',
     ])
         ->assertStatus(200)
         ->assertJsonFragment(['name' => 'Tivi LG 55 Inch']);
@@ -66,6 +67,6 @@ test('admin can manage room assets', function () {
     // Verify deletion
     $this->assertDatabaseMissing('room_assets', [
         'id' => $assetId,
-        'deleted_at' => null // since soft deletes
+        'deleted_at' => null, // since soft deletes
     ]);
 });

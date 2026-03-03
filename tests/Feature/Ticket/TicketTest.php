@@ -587,7 +587,7 @@ test('[Owner] xóa ticket thành công', function () {
 
     deleteJson("/api/tickets/{$ticket->id}")->assertStatus(200);
 
-    assertDatabaseMissing('tickets', ['id' => $ticket->id]);
+    $this->assertSoftDeleted('tickets', ['id' => $ticket->id]);
 });
 
 test('[Staff] không được xóa ticket (403)', function () {
@@ -646,7 +646,7 @@ test('[Manager] CRUD ticket giống Owner', function () {
     // Delete
     deleteJson("/api/tickets/{$ticketId}")->assertStatus(200);
 
-    assertDatabaseMissing('tickets', ['id' => $ticketId]);
+    $this->assertSoftDeleted('tickets', ['id' => $ticketId]);
 });
 
 test('[Tenant] không được cập nhật ticket (403)', function () {

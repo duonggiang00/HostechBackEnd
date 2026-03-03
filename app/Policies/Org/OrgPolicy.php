@@ -6,7 +6,6 @@ use App\Contracts\RbacModuleProvider;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Traits\HandlesOrgScope;
-use Illuminate\Auth\Access\Response;
 
 class OrgPolicy implements RbacModuleProvider
 {
@@ -32,6 +31,7 @@ class OrgPolicy implements RbacModuleProvider
         if ($user->hasPermissionTo('viewAny Orgs')) {
             return true;
         }
+
         return false;
     }
 

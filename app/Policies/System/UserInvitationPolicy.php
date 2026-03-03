@@ -3,8 +3,8 @@
 namespace App\Policies\System;
 
 use App\Contracts\RbacModuleProvider;
-use App\Models\System\UserInvitation;
 use App\Models\Org\User;
+use App\Models\System\UserInvitation;
 use App\Traits\HandlesOrgScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 

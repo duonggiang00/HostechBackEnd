@@ -52,7 +52,7 @@ class RoomStoreRequest extends FormRequest
             // Thêm các trường upload/relation
             'media_ids' => ['nullable', 'array'],
             'media_ids.*' => ['uuid'],
-            
+
             'assets' => ['nullable', 'array'],
             'assets.*.name' => ['required', 'string', 'max:255'],
             'assets.*.serial' => ['nullable', 'string', 'max:100'],

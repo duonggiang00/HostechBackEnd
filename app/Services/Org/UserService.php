@@ -46,6 +46,9 @@ class UserService
     {
         // Security: Enforce Org Scope & Role Hierarchy for non-Admins
         if (! $performer->hasRole('Admin')) {
+            if (isset($data['org_id']) && (string) $data['org_id'] !== (string) $performer->org_id) {
+                abort(403, 'Unauthorized: You cannot create users for another organization.');
+            }
             $data['org_id'] = $performer->org_id;
 
             if (isset($data['role'])) {

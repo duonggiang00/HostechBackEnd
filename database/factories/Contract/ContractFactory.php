@@ -35,7 +35,7 @@ class ContractFactory extends Factory
             },
             'join_code' => \Illuminate\Support\Str::random(8),
             'join_code_expires_at' => $this->faker->dateTimeBetween('now', '+1 month'),
-            'created_by_user_id' => \App\Models\Org\User::factory(), 
+            'created_by_user_id' => \App\Models\Org\User::factory(),
         ];
     }
 

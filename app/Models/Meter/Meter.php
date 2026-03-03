@@ -16,17 +16,21 @@ class Meter extends Model
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'room_id', 'code', 'type', 'installed_at', 'is_active', 'meta'
+        'org_id', 'room_id', 'code', 'type', 'installed_at', 'is_active', 'meta',
     ];
 
-    protected $casts = [
-        'installed_at' => 'date',
-        'is_active' => 'boolean',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'installed_at' => 'date',
+            'is_active' => 'boolean',
+            'meta' => 'array',
+        ];
+    }
 
     public function org()
     {

@@ -30,9 +30,9 @@ class UploadRequest extends FormRequest
                 'required',
                 'file',
                 'max:5120', // Tối đa 5MB
-                'mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx,xls,xlsx'
+                'mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx,xls,xlsx',
             ],
-            'collection' => ['nullable', 'string', 'max:50']
+            'collection' => ['nullable', 'string', 'max:50'],
         ];
     }
 }
