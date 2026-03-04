@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -19,15 +19,15 @@ class DormantTenantAccessTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Roles and permissions required
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Properties', 'guard_name' => 'web']);
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Rooms', 'guard_name' => 'web']);
         \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Room', 'guard_name' => 'web']); // Some policies use singular/plural mixed depending on your setup
-        
+
         Role::firstOrCreate(['name' => 'Manager', 'guard_name' => 'web']);
         $tenantRole = Role::firstOrCreate(['name' => 'Tenant', 'guard_name' => 'web']);
-        
+
         // Tenants must legally have the basic view permission before the Eloquent tenant Contract Scope can kick in
         $tenantRole->givePermissionTo(['viewAny Properties', 'viewAny Rooms', 'viewAny Room']);
     }
@@ -37,9 +37,10 @@ class DormantTenantAccessTest extends TestCase
         $org = Org::create(['name' => 'Real Estate Org']);
         $tenant = User::factory()->create([
             'org_id' => $org->id,
-            'full_name' => 'John Doe'
+            'full_name' => 'John Doe',
         ]);
         $tenant->assignRole('Tenant');
+
         return $tenant;
     }
 
@@ -48,14 +49,14 @@ class DormantTenantAccessTest extends TestCase
         $property = Property::create([
             'org_id' => $tenant->org_id,
             'name' => 'Test Property',
-            'code' => 'T001'
+            'code' => 'T001',
         ]);
 
         $room = Room::create([
             'org_id' => $tenant->org_id,
             'property_id' => $property->id,
             'name' => 'Room 101',
-            'code' => 'R101'
+            'code' => 'R101',
         ]);
 
         $contract = Contract::create([
@@ -73,7 +74,7 @@ class DormantTenantAccessTest extends TestCase
             'user_id' => $tenant->id,
             'status' => $memberStatus,
             'is_primary' => true,
-            'full_name' => $tenant->full_name
+            'full_name' => $tenant->full_name,
         ]);
 
         return [$property, $room, $contract];
@@ -89,12 +90,12 @@ class DormantTenantAccessTest extends TestCase
         // Check Rooms API
         $responseRooms = $this->actingAs($tenant)->getJson('/api/rooms');
         $responseRooms->assertStatus(200)
-             ->assertJsonCount(0, 'data'); // Empty result due to Scope filter
+            ->assertJsonCount(0, 'data'); // Empty result due to Scope filter
 
         // Check Properties API
         $responseProperties = $this->actingAs($tenant)->getJson('/api/properties');
         $responseProperties->assertStatus(200)
-             ->assertJsonCount(0, 'data'); // Empty result due to Scope filter
+            ->assertJsonCount(0, 'data'); // Empty result due to Scope filter
     }
 
     public function test_tenant_can_see_pending_contracts()
@@ -103,11 +104,11 @@ class DormantTenantAccessTest extends TestCase
         [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
 
         $response = $this->actingAs($tenant)->getJson('/api/contracts/my-pending');
-        
+
         $response->assertStatus(200)
-                 ->assertJsonCount(1, 'data')
-                 ->assertJsonPath('data.0.id', $contract->id)
-                 ->assertJsonMissingPath('data.0.join_code'); // Masked data test
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $contract->id)
+            ->assertJsonMissingPath('data.0.join_code'); // Masked data test
     }
 
     public function test_tenant_can_accept_signature_and_unlock_access()
@@ -116,7 +117,7 @@ class DormantTenantAccessTest extends TestCase
         [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
 
         // Accept Signature
-        $acceptResponse = $this->actingAs($tenant)->postJson('/api/contracts/' . $contract->id . '/accept-signature');
+        $acceptResponse = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/accept-signature');
         $acceptResponse->assertStatus(200);
 
         // Verify DB update
@@ -133,23 +134,23 @@ class DormantTenantAccessTest extends TestCase
         // Attempt to fetch rooms now (Should be unlocked)
         $responseRooms = $this->actingAs($tenant)->getJson('/api/rooms');
         $responseRooms->assertStatus(200)
-             ->assertJsonCount(1, 'data')
-             ->assertJsonPath('data.0.id', $room->id);
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $room->id);
     }
 
     public function test_tenant_can_reject_contract()
     {
-         $tenant = $this->createTenant();
-         [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
-         
-         $rejectResponse = $this->actingAs($tenant)->postJson('/api/contracts/' . $contract->id . '/reject-signature');
-         $rejectResponse->assertStatus(200);
-         
-         $this->assertDatabaseHas('contract_members', [
-             'contract_id' => $contract->id,
-             'user_id' => $tenant->id,
-             'status' => 'REJECTED',
-         ]);
+        $tenant = $this->createTenant();
+        [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
+
+        $rejectResponse = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/reject-signature');
+        $rejectResponse->assertStatus(200);
+
+        $this->assertDatabaseHas('contract_members', [
+            'contract_id' => $contract->id,
+            'user_id' => $tenant->id,
+            'status' => 'REJECTED',
+        ]);
     }
 
     public function test_unrelated_tenant_cannot_sign_others_contract()
@@ -166,7 +167,7 @@ class DormantTenantAccessTest extends TestCase
         [$property, $room, $contract] = $this->setupContractScenario($tenant1, 'DRAFT', 'PENDING');
 
         // Tenant 2 cố gắng ký hợp đồng của Tenant 1
-        $response = $this->actingAs($tenant2)->postJson('/api/contracts/' . $contract->id . '/accept-signature');
+        $response = $this->actingAs($tenant2)->postJson('/api/contracts/'.$contract->id.'/accept-signature');
         $response->assertStatus(403);
     }
 }

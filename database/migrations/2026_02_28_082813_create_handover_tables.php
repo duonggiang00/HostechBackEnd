@@ -16,16 +16,16 @@ return new class extends Migration
             $table->uuid('org_id')->index();
             $table->uuid('contract_id')->index();
             $table->uuid('room_id')->index();
-            
+
             $table->string('type', 10); // ENUM: CHECKIN, CHECKOUT
             $table->string('status', 10)->default('DRAFT'); // ENUM: DRAFT, CONFIRMED
             $table->text('note')->nullable();
-            
+
             $table->uuid('confirmed_by_user_id')->nullable()->index();
-            
+
             $table->timestamp('confirmed_at')->nullable();
             $table->timestamp('locked_at')->nullable(); // Khóa không cho sửa sau confirm
-            
+
             $table->timestamps();
             $table->softDeletes();
 
@@ -42,15 +42,15 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('org_id')->index();
             $table->uuid('handover_id')->index();
-            
+
             // Link sang tài sản phòng (Tùy chọn)
             $table->uuid('room_asset_id')->nullable()->index();
-            
+
             $table->string('name');
             $table->string('status', 10)->default('OK'); // ENUM: OK, MISSING, DAMAGED
             $table->text('note')->nullable();
             $table->integer('sort_order')->default(0);
-            
+
             $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
 
@@ -65,7 +65,7 @@ return new class extends Migration
             $table->uuid('org_id')->index();
             $table->uuid('handover_id')->index();
             $table->uuid('meter_id')->index();
-            
+
             $table->bigInteger('reading_value');
 
             $table->timestamps();

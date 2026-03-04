@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Contract\ContractMemberIndexRequest;
 use App\Http\Requests\Contract\ContractMemberStoreRequest;
 use App\Http\Requests\Contract\ContractMemberUpdateRequest;
 use App\Http\Resources\Contract\ContractMemberResource;
@@ -10,7 +11,7 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
-use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Thành viên hợp đồng
@@ -23,11 +24,9 @@ class ContractMemberController extends Controller
     public function __construct(protected ContractService $service) {}
 
     /**
-     * Danh sách khách thuê
-     *
      * Lấy toàn bộ thành viên đang và đã từng ở trong hợp đồng.
      */
-    public function index(Request $request, string $contractId): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(ContractMemberIndexRequest $request, string $contractId): AnonymousResourceCollection
     {
         $contract = $this->service->find($contractId);
         if (! $contract) {

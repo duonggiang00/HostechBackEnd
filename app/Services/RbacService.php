@@ -36,7 +36,7 @@ class RbacService
         foreach ($files as $file) {
             $relativePath = $file->getRelativePathname();
             $classPath = str_replace(['/', '.php'], ['\\', ''], $relativePath);
-            $className = 'App\\Policies\\' . $classPath;
+            $className = 'App\\Policies\\'.$classPath;
 
             if (! class_exists($className)) {
                 continue;

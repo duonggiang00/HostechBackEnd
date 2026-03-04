@@ -3,11 +3,9 @@
 namespace Tests\Feature\Rbac;
 
 use App\Models\Org\Org;
-use App\Models\Property\Property;
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class RoleAccessTest extends TestCase
@@ -15,9 +13,13 @@ class RoleAccessTest extends TestCase
     use RefreshDatabase;
 
     protected $org;
+
     protected $owner;
+
     protected $manager;
+
     protected $staff;
+
     protected $tenant;
 
     protected function setUp(): void
@@ -41,6 +43,7 @@ class RoleAccessTest extends TestCase
     {
         $user = User::factory()->create(['org_id' => $this->org->id]);
         $user->assignRole($roleName);
+
         return $user;
     }
 
@@ -52,7 +55,7 @@ class RoleAccessTest extends TestCase
         $response = $this->actingAs($this->owner)->postJson('/api/properties', [
             'name' => 'Test Property',
             'code' => 'TEST-001',
-            'org_id' => $this->org->id
+            'org_id' => $this->org->id,
         ]);
 
         $response->assertCreated();
@@ -64,7 +67,7 @@ class RoleAccessTest extends TestCase
         $response = $this->actingAs($this->manager)->postJson('/api/properties', [
             'name' => 'Manager Property',
             'code' => 'MGR-001',
-            'org_id' => $this->org->id
+            'org_id' => $this->org->id,
         ]);
 
         $response->assertForbidden();
@@ -82,12 +85,12 @@ class RoleAccessTest extends TestCase
     public function test_staff_cannot_update_property()
     {
         $property = Property::factory()->create(['org_id' => $this->org->id]);
-        
+
         // Debug
         // dump($this->staff->getAllPermissions()->pluck('name')->toArray());
 
         $response = $this->actingAs($this->staff)->putJson("/api/properties/{$property->id}", [
-            'name' => 'Updated Name'
+            'name' => 'Updated Name',
         ]);
 
         $response->assertForbidden();
@@ -99,7 +102,7 @@ class RoleAccessTest extends TestCase
     public function test_owner_can_view_audit_logs()
     {
         $response = $this->actingAs($this->owner)->getJson('/api/audit-logs');
-        
+
         $response->assertOk();
     }
 

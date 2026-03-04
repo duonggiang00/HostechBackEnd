@@ -10,9 +10,7 @@ trait HandlesOrgScope
     /**
      * Check if user can access the model within their organization.
      *
-     * @param  User  $user
-     * @param  Model  $model Matches valid models with org_id
-     * @return bool
+     * @param  Model  $model  Matches valid models with org_id
      */
     protected function checkOrgScope(User $user, Model $model): bool
     {

@@ -1,7 +1,7 @@
 # MODULE_GUIDE — Hướng dẫn tạo Module mới
 
 > Xem chi tiết hơn tại [`project_specs/MODULE_GUIDE_FULL.md`](project_specs/MODULE_GUIDE_FULL.md)
-> Dùng workflow `/scaffold_module` để tạo module tự động theo đúng chuẩn.
+> Dùng workflow `/scaffold_module` để tạo, `/extend_module` để mở rộng và `/audit_module` để rà soát module.
 
 ---
 
@@ -20,7 +20,13 @@ app/
 
 ---
 
-## Quy tắc bắt buộc
+## Quy tắc bắt buộc (Nghiêm ngặt)
+
+### 0. Tiêu chuẩn Mã Nguồn (Coding Conventions)
+- **PSR-12**: Chỉ dùng lệnh `use` ở đầu file, **nghiêm cấm** viết trực tiếp Fully Qualified Class Name (FQCN) trong định nghĩa hàm (như `public function index(): \Illuminate\Http...`).
+- **Thin Controller Mức độ cao**: Controller không được rẽ nhánh phức tạp hay tạo/merge `org_id` thủ công vào request. Mọi xử lý đổ dồn về Service.
+- **Error Handling**: Yêu cầu bắt buộc dùng `abort(4xx, 'lỗi')` ở tầng Controller, **tuyệt đối cấm** dùng `return response()->json(...)`.
+- **Scramble Docs**: Tất cả `@queryParam` phải đặt ở đầu các lớp FormRequest (VD: `IndexRequest`), cấm viết docblock ở hàm của Controller.
 
 ### 1. Model
 - Luôn dùng UUID: `HasUuids`
@@ -32,6 +38,13 @@ app/
 class Invoice extends Model {
     use HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
     protected $fillable = ['org_id', 'property_id', ...];
+
+    protected function casts(): array {
+        return [
+            'amount' => 'decimal:2',
+            'paid_at' => 'datetime',
+        ];
+    }
 }
 ```
 
@@ -138,9 +151,8 @@ Route::delete('{resource}/{id}/force', [Controller::class, 'forceDelete']);
 - [ ] Model với đúng traits (HasUuids, MultiTenant, SoftDeletes)
 - [ ] Policy implement RbacModuleProvider + getRolePermissions()
 - [ ] Service với paginate() + CRUD + Tenant scope (nếu cần)
-- [ ] Form Requests (Index, Store, Update)
-- [ ] Resource với đầy đủ fields (không dùng parent::toArray)
-- [ ] Controller với Scramble #[Group] annotation
+- [ ] Controller với Scramble #[Group] attribute
+- [ ] Form Requests (Index, Store, Update) với Scramble DocBlocks (@queryParam, @bodyParam)
 - [ ] Routes đăng ký trong api.php
 - [ ] Policy đăng ký trong AuthServiceProvider
 - [ ] `php artisan db:seed --class=RbacSeeder`

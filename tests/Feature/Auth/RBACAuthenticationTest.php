@@ -22,11 +22,21 @@ class RBACAuthenticationTest extends TestCase
      */
     public function test_registered_user_gets_tenant_role(): void
     {
+        $invitation = \App\Models\System\UserInvitation::create([
+            'email' => 'john@example.com',
+            'token' => 'mock-token-123',
+            'role_name' => 'Tenant',
+            'expires_at' => now()->addDays(1),
+            'org_id' => \App\Models\Org\Org::factory()->create()->id,
+            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+        ]);
+
         $response = $this->postJson('/api/auth/register', [
             'full_name' => 'John Doe',
             'email' => 'john@example.com',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
         ]);
 
         $response->assertStatus(201);
@@ -35,7 +45,7 @@ class RBACAuthenticationTest extends TestCase
         $this->assertTrue($user->hasRole('Tenant'));
     }
 
-        // Verify tenant user has read room permission
+    // Verify tenant user has read room permission
     public function test_tenant_user_has_read_room_permission(): void
     {
         $user = User::factory()->create(['email' => 'john@example.com']);
@@ -131,7 +141,6 @@ class RBACAuthenticationTest extends TestCase
         // Should have access to protected route with valid token
         $response->assertStatus(200);
     }
-
 
     /**
      * Test role assignment is persistent after login

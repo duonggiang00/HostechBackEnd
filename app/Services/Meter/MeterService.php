@@ -42,10 +42,10 @@ class MeterService
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('room.contracts', function ($q) use ($user) {
                 $q->where('status', 'ACTIVE')
-                  ->whereHas('members', function ($sq) use ($user) {
-                      $sq->where('user_id', $user->id)
-                         ->where('status', 'APPROVED');
-                  });
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
             });
         }
 
@@ -66,6 +66,15 @@ class MeterService
      */
     public function create(array $data): Meter
     {
+        $user = request()->user();
+        
+        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
+            $data['org_id'] = $user->org_id;
+        } elseif (!isset($data['org_id']) && isset($data['room_id'])) {
+            $room = \App\Models\Property\Room::find($data['room_id']);
+            $data['org_id'] = $room?->org_id;
+        }
+
         return Meter::create($data);
     }
 

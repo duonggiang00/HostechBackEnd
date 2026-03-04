@@ -15,23 +15,29 @@ use Tests\TestCase;
 class AdjustmentNoteTest extends TestCase
 {
     // Use RefreshDatabase if using in-memory testing DB. Assuming hostech uses test DB configs.
-    // use RefreshDatabase; 
+    // use RefreshDatabase;
 
     protected $user;
+
     protected $org;
+
     protected $property;
+
     protected $room;
+
     protected $meter;
+
     protected $lockedReading;
+
     protected $unlockedReading;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->user = User::factory()->create();
         $this->org = Org::factory()->create();
-        
+
         $this->property = \App\Models\Property\Property::factory()->create(['org_id' => $this->org->id]);
         $this->room = \App\Models\Property\Room::factory()->create([
             'org_id' => $this->org->id,
@@ -52,7 +58,7 @@ class AdjustmentNoteTest extends TestCase
             'status' => 'APPROVED',
             'locked_at' => now(), // MUST BE LOCKED
         ]);
-        
+
         $this->unlockedReading = MeterReading::factory()->create([
             'org_id' => $this->org->id,
             'meter_id' => $this->meter->id,
@@ -71,36 +77,36 @@ class AdjustmentNoteTest extends TestCase
             [
                 'reason' => 'Mistyped the reading',
                 'after_value' => 1050,
-                // Assuming we don't strictly require valid TemporaryUpload records 
-                // for standard request testing, or we mock it. 
+                // Assuming we don't strictly require valid TemporaryUpload records
+                // for standard request testing, or we mock it.
                 // Removing proof_media_ids here to avoid foreign key failures on temporary uploads mock if lacking.
-                // In full integration tests, we'd create a mock temporary upload 
+                // In full integration tests, we'd create a mock temporary upload
             ]
         );
 
         // This might fail validation if we strictly enforce temporary uploads existent IDs.
         // If it returns 422 because of proof_media_ids, it means validation is active.
         if ($response->status() === 422) {
-             // Let's create a temporary upload mock
-             Storage::fake('local');
-             $file = UploadedFile::fake()->image('proof.jpg');
-             
-             $tempUpload = \App\Models\System\TemporaryUpload::factory()->create();
+            // Let's create a temporary upload mock
+            Storage::fake('local');
+            $file = UploadedFile::fake()->image('proof.jpg');
 
-             $response = $this->actingAs($this->user)->postJson(
+            $tempUpload = \App\Models\System\TemporaryUpload::factory()->create();
+
+            $response = $this->actingAs($this->user)->postJson(
                 "/api/meter-readings/{$this->lockedReading->id}/adjustments",
                 [
                     'reason' => 'Mistyped the reading',
                     'after_value' => 1050,
-                    'proof_media_ids' => [$tempUpload->id]
+                    'proof_media_ids' => [$tempUpload->id],
                 ]
             );
         }
 
         $response->assertStatus(201)
-                 ->assertJsonPath('data.status', 'PENDING')
-                 ->assertJsonPath('data.before_value', 1000)
-                 ->assertJsonPath('data.after_value', 1050);
+            ->assertJsonPath('data.status', 'PENDING')
+            ->assertJsonPath('data.before_value', 1000)
+            ->assertJsonPath('data.after_value', 1050);
 
         $this->assertDatabaseHas('adjustment_notes', [
             'meter_reading_id' => $this->lockedReading->id,
@@ -114,18 +120,18 @@ class AdjustmentNoteTest extends TestCase
         $file = UploadedFile::fake()->image('proof.jpg');
 
         $tempUpload = \App\Models\System\TemporaryUpload::factory()->create();
-        
+
         $response = $this->actingAs($this->user)->postJson(
             "/api/meter-readings/{$this->unlockedReading->id}/adjustments",
             [
                 'reason' => 'Mistyped the reading',
                 'after_value' => 1050,
-                'proof_media_ids' => [$tempUpload->id]
+                'proof_media_ids' => [$tempUpload->id],
             ]
         );
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors('reading');
+            ->assertJsonValidationErrors('reading');
     }
 
     public function test_can_approve_adjustment_note()
@@ -143,7 +149,7 @@ class AdjustmentNoteTest extends TestCase
         );
 
         $response->assertStatus(200)
-                 ->assertJsonPath('data.status', 'APPROVED');
+            ->assertJsonPath('data.status', 'APPROVED');
 
         // Check DB hooks
         $this->assertDatabaseHas('adjustment_notes', [
@@ -171,12 +177,12 @@ class AdjustmentNoteTest extends TestCase
         $response = $this->actingAs($this->user)->putJson(
             "/api/meter-readings/{$this->lockedReading->id}/adjustments/{$note->id}/reject",
             [
-                'reject_reason' => 'Proof image is blurry'
+                'reject_reason' => 'Proof image is blurry',
             ]
         );
 
         $response->assertStatus(200)
-                 ->assertJsonPath('data.status', 'REJECTED');
+            ->assertJsonPath('data.status', 'REJECTED');
 
         // Check DB hooks
         $this->assertDatabaseHas('adjustment_notes', [
@@ -189,7 +195,7 @@ class AdjustmentNoteTest extends TestCase
         // Original value should remain untouched
         $this->assertDatabaseHas('meter_readings', [
             'id' => $this->lockedReading->id,
-            'reading_value' => 1000, 
+            'reading_value' => 1000,
         ]);
     }
 }

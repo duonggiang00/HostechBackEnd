@@ -13,9 +13,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class HandoverMeterSnapshot extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

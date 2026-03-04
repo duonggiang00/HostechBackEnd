@@ -28,7 +28,7 @@ class HandoverResource extends JsonResource
             'document_scan_urls' => $this->getMedia('document_scans')->map->getUrl(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            
+
             'org' => $this->whenLoaded('org'),
             'contract' => $this->whenLoaded('contract'),
             'room' => $this->whenLoaded('room'),

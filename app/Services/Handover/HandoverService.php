@@ -6,7 +6,6 @@ use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
 use App\Models\Org\Org;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -38,13 +37,13 @@ class HandoverService
     public function getDetails(Handover $handover)
     {
         $handover->load([
-            'items', 
-            'meterSnapshots.meter', 
-            'room', 
-            'contract', 
-            'confirmedBy'
+            'items',
+            'meterSnapshots.meter',
+            'room',
+            'contract',
+            'confirmedBy',
         ]);
-        
+
         return $handover;
     }
 
@@ -55,12 +54,12 @@ class HandoverService
     {
         $data['org_id'] = $org->id;
         $data['status'] = 'DRAFT';
-        
+
         return DB::transaction(function () use ($data) {
             $handover = Handover::create($data);
-            
+
             // Tương lai: Có thể auto clone danh sách từ room_assets vào handover_items ở đây
-            
+
             return $handover;
         });
     }
@@ -71,8 +70,9 @@ class HandoverService
     public function updateDraft(Handover $handover, array $data): Handover
     {
         $this->ensureIsDraft($handover);
-        
+
         $handover->update($data);
+
         return $handover;
     }
 
@@ -100,7 +100,7 @@ class HandoverService
                 'locked_at' => now(),
             ]);
         });
-        
+
         return $handover;
     }
 
@@ -111,7 +111,7 @@ class HandoverService
     {
         if ($handover->status !== 'DRAFT' || $handover->locked_at !== null) {
             throw ValidationException::withMessages([
-                'status' => 'Không thể chỉnh sửa biên bản đã xác nhận (CONFIRMED) hoặc đã khóa.'
+                'status' => 'Không thể chỉnh sửa biên bản đã xác nhận (CONFIRMED) hoặc đã khóa.',
             ]);
         }
     }
@@ -128,10 +128,10 @@ class HandoverService
     public function addItem(Handover $handover, array $data): HandoverItem
     {
         $this->ensureIsDraft($handover);
-        
+
         $data['org_id'] = $handover->org_id;
         $data['handover_id'] = $handover->id;
-        
+
         return HandoverItem::create($data);
     }
 
@@ -139,8 +139,9 @@ class HandoverService
     {
         $item->loadMissing('handover');
         $this->ensureIsDraft($item->handover);
-        
+
         $item->update($data);
+
         return $item;
     }
 
@@ -163,14 +164,14 @@ class HandoverService
     public function addSnapshot(Handover $handover, array $data): HandoverMeterSnapshot
     {
         $this->ensureIsDraft($handover);
-        
+
         $data['org_id'] = $handover->org_id;
         $data['handover_id'] = $handover->id;
-        
+
         return HandoverMeterSnapshot::updateOrCreate(
             [
                 'handover_id' => $handover->id,
-                'meter_id' => $data['meter_id']
+                'meter_id' => $data['meter_id'],
             ],
             $data
         );

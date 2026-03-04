@@ -29,8 +29,9 @@ class AdjustmentNoteController extends Controller
     {
         // Require authorization? Usually Owner/Manager or specific policies
         // $this->authorize('viewAny', AdjustmentNote::class);
-        
+
         $notes = $this->adjustmentNoteService->indexForReading($reading->id);
+
         return AdjustmentNoteResource::collection($notes);
     }
 
@@ -42,12 +43,12 @@ class AdjustmentNoteController extends Controller
     public function store(StoreAdjustmentNoteRequest $request, MeterReading $reading)
     {
         // $this->authorize('create', AdjustmentNote::class);
-        
+
         $adjustmentNote = $this->adjustmentNoteService->create($reading, $request->validated());
 
         return response()->json([
             'message' => 'Adjustment note created successfully',
-            'data' => new AdjustmentNoteResource($adjustmentNote->load('media'))
+            'data' => new AdjustmentNoteResource($adjustmentNote->load('media')),
         ], 201);
     }
 
@@ -61,7 +62,7 @@ class AdjustmentNoteController extends Controller
     public function approve(ApproveAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment)
     {
         // $this->authorize('update', $adjustment);
-        
+
         // Ensure note belongs to reading
         if ($adjustment->meter_reading_id !== $reading->id) {
             abort(404, 'Adjustment note not found for this meter reading');
@@ -71,10 +72,10 @@ class AdjustmentNoteController extends Controller
 
         return response()->json([
             'message' => 'Adjustment note approved successfully',
-            'data' => new AdjustmentNoteResource($approvedNote)
+            'data' => new AdjustmentNoteResource($approvedNote),
         ]);
     }
-    
+
     /**
      * Từ chối phiếu xin sửa chỉ số
      *
@@ -83,7 +84,7 @@ class AdjustmentNoteController extends Controller
     public function reject(RejectAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment)
     {
         // $this->authorize('update', $adjustment);
-        
+
         // Ensure note belongs to reading
         if ($adjustment->meter_reading_id !== $reading->id) {
             abort(404, 'Adjustment note not found for this meter reading');
@@ -93,7 +94,7 @@ class AdjustmentNoteController extends Controller
 
         return response()->json([
             'message' => 'Adjustment note rejected successfully',
-            'data' => new AdjustmentNoteResource($rejectedNote)
+            'data' => new AdjustmentNoteResource($rejectedNote),
         ]);
     }
 }

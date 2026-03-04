@@ -3,8 +3,8 @@
 namespace Tests\Feature\Rbac;
 
 use App\Models\Org\Org;
-use App\Models\Property\Property;
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -34,7 +34,7 @@ class ResourceCreationScopeTest extends TestCase
             'property_id' => $otherProperty->id,
             'name' => 'Intruder Floor',
             'code' => 'IF-001',
-            'sort_order' => 1
+            'sort_order' => 1,
         ]);
 
         // Expect Forbidden (403) or Validation Error (422) if scoped
@@ -59,7 +59,7 @@ class ResourceCreationScopeTest extends TestCase
             'name' => 'Intruder Room',
             'code' => 'IR-001',
             'base_price' => 1000000,
-            'status' => 'available'
+            'status' => 'available',
         ]);
 
         $response->assertStatus(403);
@@ -67,18 +67,18 @@ class ResourceCreationScopeTest extends TestCase
 
     public function test_owner_requires_property_id_to_create_room()
     {
-         $org = Org::factory()->create();
-         $owner = User::factory()->create(['org_id' => $org->id]);
-         $owner->assignRole('Owner');
+        $org = Org::factory()->create();
+        $owner = User::factory()->create(['org_id' => $org->id]);
+        $owner->assignRole('Owner');
 
-         $response = $this->actingAs($owner)->postJson('/api/rooms', [
-             // missing property_id
-             'name' => 'No Property Room',
-             'code' => 'NPR-001',
-             'base_price' => 1000000
-         ]);
+        $response = $this->actingAs($owner)->postJson('/api/rooms', [
+            // missing property_id
+            'name' => 'No Property Room',
+            'code' => 'NPR-001',
+            'base_price' => 1000000,
+        ]);
 
-         $response->assertStatus(422);
-         $response->assertJsonValidationErrors('property_id');
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('property_id');
     }
 }

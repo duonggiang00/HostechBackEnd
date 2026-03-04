@@ -1,16 +1,17 @@
 <?php
 
 use App\Models\Org\Org;
-use App\Models\Service\Service;
 use App\Models\Org\User;
+use App\Models\Service\Service;
 use Spatie\Permission\Models\Role;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\assertDatabaseHas;
+use function Pest\Laravel\assertDatabaseMissing;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
-use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -66,7 +67,7 @@ test('updating price creates new rate history', function () {
         'unit' => 'kwh',
         'price' => 1000,
     ]);
-    
+
     $serviceId = $response->json('data.id');
 
     // 2. Update Price
@@ -79,7 +80,7 @@ test('updating price creates new rate history', function () {
 
     // Check DB has 2 rates
     $this->assertDatabaseCount('service_rates', 2);
-    
+
     // Check old rate
     assertDatabaseHas('service_rates', [
         'service_id' => $serviceId,
@@ -100,7 +101,7 @@ test('owner can view their services only', function () {
     $owner1->assignRole($role);
 
     $org2 = Org::factory()->create();
-    
+
     // Create service for Org 2 manually since we don't have Factory for Service yet
     $service2 = Service::create([
         'id' => \Illuminate\Support\Str::uuid(),
@@ -164,7 +165,7 @@ test('admin can list services of specific org', function () {
     $response = getJson("/api/orgs/{$org->id}/services");
 
     $response->assertStatus(200)
-             ->assertJsonFragment(['code' => 'ORG_SVC']);
+        ->assertJsonFragment(['code' => 'ORG_SVC']);
 });
 
 // Search, Filter, Sort, Pagination Tests
@@ -232,7 +233,7 @@ test('can sort services', function () {
     // Sort Descending by Code
     $response = getJson('/api/services?sort=-code')
         ->assertStatus(200);
-    
+
     $data = $response->json('data');
     expect($data[0]['code'])->toBe('C001');
     expect($data[1]['code'])->toBe('B001');
@@ -241,7 +242,7 @@ test('can sort services', function () {
     // Sort Ascending by Name
     $response = getJson('/api/services?sort=name')
         ->assertStatus(200);
-    
+
     $data = $response->json('data');
     expect($data[0]['name'])->toBe('A Service');
 });
@@ -259,9 +260,9 @@ test('can paginate services', function () {
     $response = getJson('/api/services?per_page=5')
         ->assertStatus(200)
         ->assertJsonCount(5, 'data');
-    
+
     $response->assertJsonPath('meta.per_page', 5)
-             ->assertJsonPath('meta.total', 20);
+        ->assertJsonPath('meta.total', 20);
 });
 
 test('can filter and sort trashed services', function () {
@@ -274,7 +275,7 @@ test('can filter and sort trashed services', function () {
 
     $s1 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Deleted A', 'code' => 'DEL001', 'is_active' => false]);
     $s2 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Deleted B', 'code' => 'DEL002', 'is_active' => true]);
-    
+
     $s1->delete();
     $s2->delete();
 
@@ -287,7 +288,7 @@ test('can filter and sort trashed services', function () {
     // Sort in trash
     $response = getJson('/api/services/trash?sort=-code')
         ->assertStatus(200);
-    
+
     $data = $response->json('data');
     expect($data[0]['code'])->toBe('DEL002');
     expect($data[1]['code'])->toBe('DEL001');
@@ -334,7 +335,7 @@ test('owner cannot create service without price', function () {
     ]);
 
     $response->assertStatus(422)
-             ->assertJsonValidationErrors(['price']);
+        ->assertJsonValidationErrors(['price']);
 });
 
 test('owner cannot create service for another org', function () {
@@ -360,18 +361,18 @@ test('owner cannot create service for another org', function () {
     // System should either ignore org_id input and use user's org_id (201) OR reject (403/422).
     // Our Controller forces: $data['org_id'] = $request->user()->org_id;
     // So it should be created under Org 1, IGNORING the input org_id.
-    
+
     $response->assertStatus(201);
-    
+
     // Assert it was created for ORG 1 (User's Org), NOT Org 2
     assertDatabaseHas('services', [
-        'code' => 'HACK_ORG_2', 
-        'org_id' => $org1->id 
+        'code' => 'HACK_ORG_2',
+        'org_id' => $org1->id,
     ]);
-    
+
     assertDatabaseMissing('services', [
-        'code' => 'HACK_ORG_2', 
-        'org_id' => $org2->id 
+        'code' => 'HACK_ORG_2',
+        'org_id' => $org2->id,
     ]);
 });
 
@@ -415,15 +416,15 @@ test('manager cannot create service for another org', function () {
     ]);
 
     $response->assertStatus(201);
-    
+
     // Assert it was created for ORG 1
     assertDatabaseHas('services', [
-        'code' => 'MGR_HACK', 
-        'org_id' => $org1->id 
+        'code' => 'MGR_HACK',
+        'org_id' => $org1->id,
     ]);
-    
+
     assertDatabaseMissing('services', [
-        'code' => 'MGR_HACK', 
-        'org_id' => $org2->id 
+        'code' => 'MGR_HACK',
+        'org_id' => $org2->id,
     ]);
 });

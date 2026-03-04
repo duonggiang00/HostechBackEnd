@@ -13,25 +13,26 @@ return new class extends Migration
     {
         Schema::create('user_invitations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            
+
             $table->string('email')->unique();
             $table->string('token')->unique();
             $table->string('role_name');
-            
+
             // nullable because an invitation might be for an Owner (to create a new Org)
             $table->uuid('org_id')->nullable();
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');
-            
+
             // Scope property_ids for Manager/Staff types
             $table->json('properties_scope')->nullable();
-            
+
             $table->uuid('invited_by');
             $table->foreign('invited_by')->references('id')->on('users')->onDelete('cascade');
-            
+
             $table->timestamp('expires_at');
             $table->timestamp('registered_at')->nullable();
-            
+
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -5,8 +5,8 @@ namespace App\Services\Invoice;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class InvoiceService
 {
@@ -42,19 +42,20 @@ class InvoiceService
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
 
-        // Lọc theo org (non-Admin users)
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
+
         if ($orgId) {
             $query->where('org_id', $orgId);
         }
 
-        $user = request()->user();
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('contract', function ($q) use ($user) {
                 $q->where('status', 'ACTIVE')
-                  ->whereHas('members', function ($sq) use ($user) {
-                      $sq->where('user_id', $user->id)
-                         ->where('status', 'APPROVED');
-                  });
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
             });
         }
 
@@ -101,6 +102,9 @@ class InvoiceService
             ->defaultSort('-created_at')
             ->with(['property', 'room']);
 
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
+
         if ($orgId) {
             $query->where('org_id', $orgId);
         }
@@ -109,8 +113,7 @@ class InvoiceService
             $query->where(function ($q) use ($search) {
                 $q->whereHas(
                     'room',
-                    fn($rq) =>
-                    $rq->where('code', 'like', "%{$search}%")
+                    fn ($rq) => $rq->where('code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                 )
                     ->orWhereHas('property', function ($pq) use ($search) {
@@ -149,6 +152,9 @@ class InvoiceService
             ])
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
+
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -197,6 +203,9 @@ class InvoiceService
             ])
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
+
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -251,7 +260,7 @@ class InvoiceService
 
     /**
      * Tạo hóa đơn mới kèm danh sách items.
-     * 
+     *
      * Sử dụng DB::transaction để đảm bảo tính toàn vẹn:
      * - Tạo Invoice
      * - Tạo các InvoiceItem
@@ -259,6 +268,20 @@ class InvoiceService
      */
     public function create(array $data, array $itemsData = []): Invoice
     {
+        $user = request()->user();
+        
+        // Auto-assign org_id if not explicitly provided or by non-admin
+        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
+            $data['org_id'] = $user->org_id;
+        } else {
+            // Admin: lấy org_id từ room nếu không truyền
+            if (! isset($data['org_id'])) {
+                $room = \App\Models\Property\Room::find($data['room_id'] ?? null);
+                $data['org_id'] = $room?->org_id;
+            }
+        }
+        $data['created_by_user_id'] = $user?->id;
+
         return DB::transaction(function () use ($data, $itemsData) {
             // 1. Tạo hóa đơn gốc
             $invoice = Invoice::create($data);
@@ -286,11 +309,13 @@ class InvoiceService
     public function update(string $id, array $data): ?Invoice
     {
         $invoice = $this->find($id);
-        if (!$invoice)
+        if (! $invoice) {
             return null;
+        }
 
         return DB::transaction(function () use ($invoice, $data) {
             $invoice->update($data);
+
             return $invoice->refresh();
         });
     }
@@ -301,8 +326,10 @@ class InvoiceService
     public function delete(string $id): bool
     {
         $invoice = $this->find($id);
-        if (!$invoice)
+        if (! $invoice) {
             return false;
+        }
+
         return $invoice->delete();
     }
 
@@ -312,8 +339,10 @@ class InvoiceService
     public function restore(string $id): bool
     {
         $invoice = $this->findTrashed($id);
-        if (!$invoice)
+        if (! $invoice) {
             return false;
+        }
+
         return $invoice->restore();
     }
 
@@ -323,8 +352,10 @@ class InvoiceService
     public function forceDelete(string $id): bool
     {
         $invoice = $this->findWithTrashed($id);
-        if (!$invoice)
+        if (! $invoice) {
             return false;
+        }
+
         return $invoice->forceDelete();
     }
 

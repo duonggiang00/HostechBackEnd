@@ -3,10 +3,9 @@
 namespace App\Policies\Property;
 
 use App\Contracts\RbacModuleProvider;
-use App\Models\Property\Property;
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use App\Traits\HandlesOrgScope;
-use Illuminate\Auth\Access\Response;
 
 class PropertyPolicy implements RbacModuleProvider
 {
@@ -32,6 +31,7 @@ class PropertyPolicy implements RbacModuleProvider
         if ($user->hasPermissionTo('viewAny Properties')) {
             return true;
         }
+
         return false;
     }
 

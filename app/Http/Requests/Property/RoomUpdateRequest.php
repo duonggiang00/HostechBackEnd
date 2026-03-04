@@ -45,11 +45,11 @@ class RoomUpdateRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'amenities' => ['nullable', 'json'],
             'utilities' => ['nullable', 'json'],
-            
+
             // Thêm các trường upload/relation
             'media_ids' => ['nullable', 'array'],
             'media_ids.*' => ['uuid'],
-            
+
             'assets' => ['nullable', 'array'],
             'assets.*.id' => ['nullable', 'uuid'],
             'assets.*.name' => ['required', 'string', 'max:255'],

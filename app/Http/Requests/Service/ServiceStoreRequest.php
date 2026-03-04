@@ -25,24 +25,24 @@ class ServiceStoreRequest extends FormRequest
 
         return [
             'code' => [
-                'required', 
-                'string', 
-                'max:50', 
+                'required',
+                'string',
+                'max:50',
                 // Unique code per Org
                 Rule::unique('services')->where(function ($query) use ($orgId) {
                     return $query->where('org_id', $orgId);
-                })
+                }),
             ],
             'name' => ['required', 'string', 'max:255'],
             'calc_mode' => ['required', 'string', 'in:PER_ROOM,PER_PERSON,PER_QUANTITY,PER_METER'],
             'unit' => ['required', 'string', 'max:20'],
             'is_recurring' => ['boolean'],
             'is_active' => ['boolean'],
-            
+
             // Rate fields
             'price' => ['required', 'numeric', 'min:0'],
             'effective_from' => ['nullable', 'date'],
-            
+
             // Tiered rates fields
             'tiered_rates' => ['nullable', 'array'],
             'tiered_rates.*.tier_from' => ['required', 'integer', 'min:0'],

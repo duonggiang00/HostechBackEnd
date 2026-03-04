@@ -3,16 +3,17 @@
 namespace App\Models\Property;
 
 use App\Models\Concerns\MultiTenant;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use App\Traits\SystemLoggable;
-use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Traits\SystemLoggable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 class RoomStatusHistory extends Model
 {
     use HasUuids, MultiTenant, SystemLoggable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

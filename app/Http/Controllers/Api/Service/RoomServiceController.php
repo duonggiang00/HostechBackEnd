@@ -12,7 +12,7 @@ use Dedoc\Scramble\Attributes\Group;
 
 /**
  * Quản lý Dịch vụ từng Phòng
- * 
+ *
  * API gán, sửa, xóa và liệt kê các dịch vụ đang được sử dụng tại một phòng cụ thể.
  */
 #[Group('Dịch vụ Phòng')]
@@ -20,14 +20,14 @@ class RoomServiceController extends Controller
 {
     /**
      * Danh sách Dịch vụ của Phòng
-     * 
+     *
      * Lấy danh sách các dịch vụ đang được gán cho một phòng.
      */
     public function index(string $roomId)
     {
         // Require the room to be located first
         $room = Room::where('org_id', request()->user()->org_id)->findOrFail($roomId);
-        
+
         $services = RoomService::with(['service.currentRate.tieredRates'])
             ->where('room_id', $room->id)
             ->get();
@@ -37,13 +37,13 @@ class RoomServiceController extends Controller
 
     /**
      * Gán Dịch vụ cho Phòng
-     * 
+     *
      * Thêm một dịch vụ mới vào sử dụng tại phòng này.
      */
     public function store(RoomServiceStoreRequest $request, string $roomId)
     {
         $room = Room::where('org_id', request()->user()->org_id)->findOrFail($roomId);
-        
+
         $data = $request->validated();
         $data['org_id'] = $room->org_id;
         $data['room_id'] = $room->id;
@@ -63,13 +63,13 @@ class RoomServiceController extends Controller
             ->where('room_id', $roomId)
             ->where('org_id', request()->user()->org_id)
             ->findOrFail($id);
-            
+
         return new RoomServiceResource($roomService);
     }
 
     /**
      * Cập nhật cài đặt Dịch vụ trên Phòng
-     * 
+     *
      * Chỉnh sửa số lượng, định mức bao hoặc metadata.
      */
     public function update(RoomServiceUpdateRequest $request, string $roomId, string $id)

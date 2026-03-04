@@ -22,7 +22,7 @@ class ApproveAdjustmentNoteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // No specific fields required for approval body usually, 
+            // No specific fields required for approval body usually,
             // but we can leave this empty or add an optional note.
         ];
     }

@@ -13,7 +13,7 @@ class PropertyFactory extends Factory
             'id' => Str::uuid(),
             'org_id' => null,
             'code' => strtoupper(fake()->unique()->lexify('PROP-???')),
-            'name' => 'Tòa nhà ' . fake('vi_VN')->lastName(),
+            'name' => 'Tòa nhà '.fake('vi_VN')->lastName(),
             'address' => fake('vi_VN')->address(),
             'note' => fake('vi_VN')->realText(50),
             'use_floors' => true,

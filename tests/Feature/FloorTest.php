@@ -1,15 +1,16 @@
 <?php
 
 use App\Models\Org\Org;
-use App\Models\Property\Property;
-use App\Models\Property\Floor;
 use App\Models\Org\User;
+use App\Models\Property\Floor;
+use App\Models\Property\Property;
 use Spatie\Permission\Models\Role;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -27,7 +28,7 @@ test('admin can crud floor', function () {
         'property_id' => $property->id,
         'code' => 'FL-TEST-01',
         'name' => 'Test Floor',
-        'sort_order' => 1
+        'sort_order' => 1,
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
@@ -63,7 +64,7 @@ test('owner can crud floor within org', function () {
         'property_id' => $property->id,
         'code' => 'FL-OWNER-01',
         'name' => 'Owner Floor',
-        'sort_order' => 1
+        'sort_order' => 1,
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');

@@ -1,8 +1,34 @@
-# Hướng dẫn Phát triển Module mới (Full Stack)
+# Hướng dẫn Phát triển & Mở rộng Module (Full Stack)
 
-Tài liệu này hướng dẫn chi tiết quy trình xây dựng một module chức năng mới từ con số 0, tuân thủ kiến trúc **Domain-Driven Directory Structuring** (Gom nhóm theo nghiệp vụ) của dự án. 
+Tài liệu này hướng dẫn chi tiết quy trình xây dựng hoặc mở rộng một module chức năng, tuân thủ kiến trúc **Domain-Driven Directory Structuring** (Gom nhóm theo nghiệp vụ) của dự án. 
 
-Ví dụ mẫu xuyên suốt bài hướng dẫn này là Module **`Test`** (Chứa tính năng tên là `TestFeature`).
+> [!IMPORTANT]
+> **Ưu tiên sử dụng AI Workflows**: Để đảm bảo tính đồng nhất và tốc độ, hãy ưu tiên sử dụng các slash commands tích hợp sẵn trong tệp cấu trúc `.agents/workflows/`.
+
+## 🚀 AI-Assisted Workflows (Recommended)
+Sử dụng các lệnh sau để tự động hóa quy trình:
+- `/scaffold_module`: Thực hiện Bước 1 đến Bước 11 một cách tự động khi tạo module mới.
+- `/extend_module`: Sử dụng khi cần thêm tính năng mới vào module đã có.
+- `/audit_module`: Kiểm tra sự tuân thủ kiến trúc của một Domain bất kỳ.
+- `/finalize_module`: Chạy Pint, Sync RBAC và kiểm tra cuối cùng trước khi hoàn tất.
+
+---
+
+## Tiêu chuẩn Bắt buộc (Coding Conventions & Rules)
+
+Để duy trì kiến trúc sạch và ngăn ngừa nợ kỹ thuật, **NGHIÊM CẤM** vi phạm các nguyên tắc sau:
+
+1. **Chuẩn Coding Convention (PSR-12)**:
+   - **Tuyệt đối không** sử dụng Fully Qualified Class Name (FQCN) trực tiếp trong tham số hoặc return type của hàm (VD: cấm viết `public function index(): \Illuminate\Http\Resources\Json\AnonymousResourceCollection`).
+   - **Bắt buộc** khai báo thư viện bằng lệnh `use` ở đầu file và gọi tên class ngắn gọn.
+2. **Chuẩn Laravel 12 Models**:
+   - Khai báo ép kiểu bắt buộc phải thông qua phương thức `protected function casts(): array`.
+   - Cấm sử dụng property `$casts` kiểu cũ.
+3. **Nguyên tắc "Thin Controller" Mức độ cao**:
+   - Tuyệt đối **không** merge `org_id` hay rẽ nhánh quyền phức tạp trong Controller. Trọng trách gán thông tin theo người dùng thuộc về `Service`.
+   - **Xóa bỏ** việc trả về lỗi thủ công bằng JSON kiểu `return response()->json(['message' => 'Error'], 400);`. Bắt buộc dùng `abort(400, 'Error Message');`.
+4. **Chuẩn Scramble API Docs**:
+   - Tất cả các docblock `@queryParam` phải được định nghĩa trong class-level docblock của một lớp `FormRequest` độc lập (như `IndexRequest`). Không được viết rác trên đầu các Controller method.
 
 ---
 
@@ -80,10 +106,14 @@ class TestFeature extends Model
 {
     use HasUuids, MultiTenant, SystemLoggable, SoftDeletes;
 
-    public $incrementing = false;     // Bắt buộc với UUID
-    protected $keyType = 'string';    // Bắt buộc với UUID
-    
     protected $fillable = ['org_id', 'name', 'is_active'];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 }
 ```
 
@@ -128,6 +158,12 @@ class TestFeatureService
 namespace App\Http\Requests\Test;
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Yêu cầu lưu TestFeature.
+ * 
+ * @bodyParam name string Tên của feature. Example: Tính năng A
+ * @bodyParam is_active boolean Trạng thái hoạt động. Example: true
+ */
 class TestFeatureStoreRequest extends FormRequest
 {
     public function authorize(): bool { return true; } // Policy sẽ quản lý auth thực tế
@@ -246,9 +282,8 @@ class TestFeatureController extends Controller
 
         // 3. Chạy qua Service
         $paginator = $this->service->paginate(
-            $filters, 
-            $request->query('per_page', 15), 
-            $request->input('search')
+            user: $request->user(),
+            perPage: (int) $request->input('per_page', 15)
         );
 
         // 4. Output List

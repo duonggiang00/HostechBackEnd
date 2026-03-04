@@ -159,9 +159,9 @@ class OrgController extends Controller
      */
     public function properties(PropertyIndexRequest $request, string $id)
     {
-        $org = Org::find($id);
+        $org = $this->service->find($id);
         if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('view', $org);
@@ -184,9 +184,9 @@ class OrgController extends Controller
      */
     public function users(UserIndexRequest $request, string $id)
     {
-        $org = Org::find($id);
+        $org = $this->service->find($id);
         if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('view', $org);
@@ -209,9 +209,9 @@ class OrgController extends Controller
      */
     public function services(ServiceIndexRequest $request, string $id)
     {
-        $org = Org::find($id);
+        $org = $this->service->find($id);
         if (! $org) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('view', $org);

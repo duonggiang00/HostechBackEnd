@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Invoice extends Model
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
 
@@ -41,17 +41,20 @@ class Invoice extends Model
         'cancelled_at',
     ];
 
-    protected $casts = [
-        'period_start' => 'date',
-        'period_end' => 'date',
-        'issue_date' => 'date',
-        'due_date' => 'date',
-        'total_amount' => 'decimal:2',
-        'paid_amount' => 'decimal:2',
-        'snapshot' => 'array',
-        'issued_at' => 'datetime',
-        'cancelled_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'period_start' => 'date',
+            'period_end' => 'date',
+            'issue_date' => 'date',
+            'due_date' => 'date',
+            'total_amount' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
+            'snapshot' => 'array',
+            'issued_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+        ];
+    }
 
     public function org()
     {

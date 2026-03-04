@@ -20,13 +20,13 @@ class RBACSeeder extends Seeder
         foreach ($systemRoles as $roleName) {
             Role::firstOrCreate(['name' => $roleName]);
         }
-        $this->command->info('✅ System Roles created: ' . implode(', ', $systemRoles));
+        $this->command->info('✅ System Roles created: '.implode(', ', $systemRoles));
 
         // 2. Sync Roles & Permissions from Policies
         $this->command->info('🔄 Syncing permissions from Policies...');
         $stats = $rbacService->sync();
 
-        $this->command->info("✅ Sync complete:");
+        $this->command->info('✅ Sync complete:');
         $this->command->info("   - Modules scanned: {$stats['modules']}");
         $this->command->info("   - Permissions: {$stats['permissions_created']}");
         $this->command->info("   - Roles synced: {$stats['roles_synced']}");

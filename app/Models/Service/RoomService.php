@@ -2,10 +2,10 @@
 
 namespace App\Models\Service;
 
+use App\Models\Property\Room;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use App\Models\Property\Room;
 
 class RoomService extends Model
 {

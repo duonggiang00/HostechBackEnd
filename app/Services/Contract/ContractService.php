@@ -12,7 +12,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::class)
             ->allowedFilters(array_merge($allowedFilters, [
@@ -25,8 +25,17 @@ class ContractService
             ->defaultSort('-created_at')
             ->with(['room', 'property', 'members.user']);
 
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        // Role-based scoping
+        if ($user) {
+            if ($user->hasRole('Tenant')) {
+                // Tenant chỉ thấy hợp đồng mà mình là thành viên
+                $query->whereHas('members', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            } elseif (! $user->hasRole('Admin')) {
+                // Các role khác (Manager, Owner, Staff) thấy trong org của mình
+                $query->where('org_id', $user->org_id);
+            }
         }
 
         if ($search) {
@@ -46,7 +55,7 @@ class ContractService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::onlyTrashed())
             ->allowedFilters($allowedFilters)
@@ -54,8 +63,15 @@ class ContractService
             ->defaultSort('-created_at')
             ->with(['room', 'property']);
 
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        // Role-based scoping
+        if ($user) {
+            if ($user->hasRole('Tenant')) {
+                $query->whereHas('members', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            } elseif (! $user->hasRole('Admin')) {
+                $query->where('org_id', $user->org_id);
+            }
         }
 
         if ($search) {

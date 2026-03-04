@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Service extends Model
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable, SoftDeletes;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     protected $fillable = [
         'org_id',
@@ -26,11 +26,14 @@ class Service extends Model
         'meta',
     ];
 
-    protected $casts = [
-        'is_recurring' => 'boolean',
-        'is_active' => 'boolean',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'is_recurring' => 'boolean',
+            'is_active' => 'boolean',
+            'meta' => 'array',
+        ];
+    }
 
     public function rates(): HasMany
     {

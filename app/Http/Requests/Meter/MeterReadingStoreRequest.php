@@ -24,7 +24,7 @@ class MeterReadingStoreRequest extends FormRequest
             'period_start' => ['required', 'date'],
             'period_end' => ['required', 'date', 'after_or_equal:period_start'],
             'reading_value' => ['required', 'integer', 'min:0'],
-            'meta' => ['nullable', 'array']
+            'meta' => ['nullable', 'array'],
         ];
     }
 }

@@ -26,14 +26,14 @@ class InvoicePolicy implements RbacModuleProvider
 
     /**
      * Ma trận quyền theo role.
-     * 
+     *
      * 'CRUD' = Create + Read (viewAny, view) + Update + Delete
      * 'R'    = Read only (viewAny, view)
      * 'RU'   = Read + Update
-     * 
+     *
      * Shorthand mapping (xem app/Enums/RbacAction.php):
      *   C → create
-     *   R → viewAny + view  
+     *   R → viewAny + view
      *   U → update
      *   D → delete
      */
@@ -41,7 +41,7 @@ class InvoicePolicy implements RbacModuleProvider
     {
         return [
             'Owner' => 'CRUD',   // Full quyền
-            'Manager' => 'CRUD',   // Full quyền  
+            'Manager' => 'CRUD',   // Full quyền
             'Staff' => 'R',      // Chỉ xem danh sách + chi tiết
             'Tenant' => 'R',      // Chỉ xem (logic riêng: chỉ thấy hóa đơn của mình)
         ];
@@ -61,7 +61,7 @@ class InvoicePolicy implements RbacModuleProvider
 
     /**
      * Xem CHI TIẾT 1 hóa đơn?
-     * 
+     *
      * Tenant: chỉ xem hóa đơn thuộc hợp đồng của mình.
      * Các role khác: check permission + org scope.
      */
@@ -75,7 +75,7 @@ class InvoicePolicy implements RbacModuleProvider
                     ->exists();
         }
 
-        if (!$user->hasPermissionTo('view Invoice')) {
+        if (! $user->hasPermissionTo('view Invoice')) {
             return false;
         }
 
@@ -95,9 +95,10 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function update(User $user, Invoice $invoice): bool
     {
-        if (!$user->hasPermissionTo('update Invoice')) {
+        if (! $user->hasPermissionTo('update Invoice')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $invoice);
     }
 
@@ -107,9 +108,10 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function delete(User $user, Invoice $invoice): bool
     {
-        if (!$user->hasPermissionTo('delete Invoice')) {
+        if (! $user->hasPermissionTo('delete Invoice')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $invoice);
     }
 
@@ -118,9 +120,10 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function restore(User $user, Invoice $invoice): bool
     {
-        if (!$user->hasPermissionTo('delete Invoice')) {
+        if (! $user->hasPermissionTo('delete Invoice')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $invoice);
     }
 
@@ -129,9 +132,10 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function forceDelete(User $user, Invoice $invoice): bool
     {
-        if (!$user->hasPermissionTo('delete Invoice')) {
+        if (! $user->hasPermissionTo('delete Invoice')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $invoice);
     }
 }
