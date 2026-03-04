@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Handover\HandoverController;
+use Illuminate\Support\Facades\Route;
 
 // Handovers
 Route::apiResource('handovers', HandoverController::class);

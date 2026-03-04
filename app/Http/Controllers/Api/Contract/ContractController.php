@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Contract\ContractIndexRequest;
 use App\Http\Requests\Contract\ContractStoreRequest;
 use App\Http\Requests\Contract\ContractUpdateRequest;
+use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\Contract\Contract;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Hợp đồng (Contracts)
@@ -25,7 +27,7 @@ class ContractController extends Controller
     /**
      * Lấy danh sách hợp đồng. Hỗ trợ lọc theo Property, Room, Status.
      */
-    public function index(ContractIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(ContractIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Contract::class);
 
@@ -42,7 +44,7 @@ class ContractController extends Controller
     /**
      * Danh sách hợp đồng đã xóa (Thùng rác)
      */
-    public function trash(ContractIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function trash(ContractIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Contract::class);
 
@@ -75,7 +77,7 @@ class ContractController extends Controller
     {
         $contract = $this->service->find($id);
         if (! $contract) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('view', $contract);
@@ -90,7 +92,7 @@ class ContractController extends Controller
     {
         $contract = $this->service->find($id);
         if (! $contract) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('update', $contract);
@@ -107,7 +109,7 @@ class ContractController extends Controller
     {
         $contract = $this->service->find($id);
         if (! $contract) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('delete', $contract);
@@ -124,7 +126,7 @@ class ContractController extends Controller
     {
         $contract = $this->service->findTrashed($id);
         if (! $contract) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('restore', $contract);
@@ -141,7 +143,7 @@ class ContractController extends Controller
     {
         $contract = $this->service->findWithTrashed($id);
         if (! $contract) {
-            return response()->json(['message' => 'Not Found'], 404);
+            abort(404, 'Not Found');
         }
 
         $this->authorize('forceDelete', $contract);
@@ -156,7 +158,7 @@ class ContractController extends Controller
      *
      * Liệt kê các hợp đồng mà user hiện tại đang được gán nhưng chưa xác nhận.
      */
-    public function myPendingContracts(Request $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function myPendingContracts(Request $request): AnonymousResourceCollection
     {
         $contracts = $this->service->myPendingContracts($request->user());
 
@@ -247,7 +249,7 @@ class ContractController extends Controller
         return response()->json([
             'message' => 'Đã gửi yêu cầu đổi phòng thành công. Quản lý sẽ xem xét trong thời gian sớm nhất.',
             'target_room' => [
-                'id' => $validated['target_room_id'],
+                'id' => $request->validated()['target_room_id'],
             ],
         ]);
     }

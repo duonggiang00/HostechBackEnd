@@ -4,7 +4,6 @@ namespace App\Services\Meter;
 
 use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
-use Illuminate\Database\Eloquent\Builder;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -45,7 +44,7 @@ class MeterReadingService
         $data['submitted_by_user_id'] = auth()->id();
 
         $reading = MeterReading::create($data);
-        
+
         $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
         return $reading;
@@ -62,14 +61,14 @@ class MeterReadingService
         }
 
         $reading->update($data);
-        
+
         if (isset($data['proof_media_ids'])) {
             $this->attachProofs($reading, $data['proof_media_ids']);
         }
 
         return $reading;
     }
-    
+
     protected function attachProofs(MeterReading $reading, array $mediaIds)
     {
         if (empty($mediaIds)) {
@@ -79,8 +78,8 @@ class MeterReadingService
         $temporaryUploads = TemporaryUpload::whereIn('id', $mediaIds)->get();
 
         foreach ($temporaryUploads as $tempUpload) {
-            $mediaPath = storage_path('app/' . $tempUpload->file_path);
-            
+            $mediaPath = storage_path('app/'.$tempUpload->file_path);
+
             if (file_exists($mediaPath)) {
                 $reading->addMedia($mediaPath)
                     ->preservingOriginal()

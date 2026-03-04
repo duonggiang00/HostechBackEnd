@@ -4,14 +4,11 @@ namespace App\Http\Controllers\Api\System;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\System\StoreUserInvitationRequest;
-use App\Services\System\UserInvitationService;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Exception;
-
 use App\Http\Resources\System\UserInvitationResource;
 use App\Models\System\UserInvitation;
+use App\Services\System\UserInvitationService;
 use Dedoc\Scramble\Attributes\Group;
+use Exception;
 
 /**
  * Lời mời người dùng (User Invitations)
@@ -57,8 +54,8 @@ class UserInvitationController extends Controller
                     'email' => $invitation->email,
                     'role_name' => $invitation->role_name,
                     'org' => $invitation->org,
-                    'requires_org_creation' => is_null($invitation->org_id) && $invitation->role_name === 'Owner'
-                ]
+                    'requires_org_creation' => is_null($invitation->org_id) && $invitation->role_name === 'Owner',
+                ],
             ]);
         } catch (Exception $e) {
             abort(400, $e->getMessage());

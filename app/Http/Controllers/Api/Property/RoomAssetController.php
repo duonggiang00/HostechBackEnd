@@ -37,7 +37,7 @@ class RoomAssetController extends Controller
         $this->authorize('viewAny', [RoomAsset::class, $roomModel]);
 
         $perPage = $request->integer('per_page', 15);
-        
+
         $assets = $this->assetService->getAssetsByRoom($room, $perPage);
 
         return RoomAssetResource::collection($assets);
@@ -85,7 +85,7 @@ class RoomAssetController extends Controller
         $assetModel = $this->assetService->getAssetById($asset);
 
         $this->authorize('update', $assetModel);
-        
+
         abort_if($assetModel->room_id !== $room, 404, 'Tài sản không thuộc phòng này.');
 
         $updated = $this->assetService->updateAsset($asset, $request->validated());
@@ -103,7 +103,7 @@ class RoomAssetController extends Controller
         $assetModel = $this->assetService->getAssetById($asset);
 
         $this->authorize('delete', $assetModel);
-        
+
         abort_if($assetModel->room_id !== $room, 404, 'Tài sản không thuộc phòng này.');
 
         $this->assetService->deleteAsset($asset);

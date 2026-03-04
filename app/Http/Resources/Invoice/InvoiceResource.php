@@ -3,9 +3,9 @@
 namespace App\Http\Resources\Invoice;
 
 use App\Http\Resources\Contract\ContractResource;
+use App\Http\Resources\Org\UserResource;
 use App\Http\Resources\Property\PropertyResource;
 use App\Http\Resources\Property\RoomResource;
-use App\Http\Resources\Org\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -35,11 +35,13 @@ class InvoiceResource extends JsonResource
             'contract' => new ContractResource($this->whenLoaded('contract')),
             'items' => InvoiceItemResource::collection($this->whenLoaded('items')),
 
+
             // Lịch sử thay đổi trạng thái
             'status_histories' => InvoiceStatusHistoryResource::collection($this->whenLoaded('statusHistories')),
 
             // Các khoản điều chỉnh (CREDIT/DEBIT)
             'adjustments' => InvoiceAdjustmentResource::collection($this->whenLoaded('adjustments')),
+
 
             // Người tạo / phát hành
             'created_by' => new UserResource($this->whenLoaded('createdBy')),

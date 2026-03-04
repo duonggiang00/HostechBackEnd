@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Property\Floor;
 use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Org\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -92,13 +92,13 @@ class SearchFilterPaginationTest extends TestCase
         $response->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Grand Hotel');
-            
+
         // Filter by Org (Admin only)
         $otherOrg = Org::factory()->create();
         Property::factory()->create(['org_id' => $otherOrg->id, 'name' => 'Other Prop']);
-        
+
         $response = $this->actingAs($admin)->getJson("/api/properties?org_id={$org->id}");
-        $response->assertOk(); 
+        $response->assertOk();
         // Should verify it only returns org's properties.
         // Total expected: 5 + 1 = 6.
         $this->assertEquals(6, $response->json('meta.total'));
@@ -127,7 +127,7 @@ class SearchFilterPaginationTest extends TestCase
         // Filter by Property
         $otherProp = Property::factory()->create(['org_id' => $org->id]);
         Floor::factory()->create(['property_id' => $otherProp->id, 'org_id' => $org->id, 'name' => 'Basement']);
-        
+
         $response = $this->actingAs($owner)->getJson("/api/floors?property_id={$property->id}");
         $response->assertOk();
         // Expected: 3 + 1 = 4
@@ -145,11 +145,11 @@ class SearchFilterPaginationTest extends TestCase
 
         Room::factory()->count(5)->create(['floor_id' => $floor->id, 'property_id' => $property->id, 'org_id' => $org->id]);
         $target = Room::factory()->create([
-            'floor_id' => $floor->id, 
+            'floor_id' => $floor->id,
             'property_id' => $property->id,
             'org_id' => $org->id,
             'name' => 'Master Room',
-            'status' => 'available'
+            'status' => 'available',
         ]);
 
         // Search

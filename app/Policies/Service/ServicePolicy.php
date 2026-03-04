@@ -3,8 +3,8 @@
 namespace App\Policies\Service;
 
 use App\Contracts\RbacModuleProvider;
-use App\Models\Service\Service;
 use App\Models\Org\User;
+use App\Models\Service\Service;
 use App\Traits\HandlesOrgScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
@@ -37,6 +37,7 @@ class ServicePolicy implements RbacModuleProvider
         if (! $user->hasPermissionTo('view Services')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $service);
     }
 
@@ -50,6 +51,7 @@ class ServicePolicy implements RbacModuleProvider
         if (! $user->hasPermissionTo('update Services')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $service);
     }
 
@@ -58,6 +60,7 @@ class ServicePolicy implements RbacModuleProvider
         if (! $user->hasPermissionTo('delete Services')) {
             return false;
         }
+
         return $this->checkOrgScope($user, $service);
     }
 }

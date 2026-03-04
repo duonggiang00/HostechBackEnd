@@ -44,8 +44,15 @@ class TicketService
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'createdBy', 'assignedTo']);
 
-        if ($orgId) {
-            $query->where('tickets.org_id', $orgId);
+        $user = request()->user();
+        
+        if ($user && $user->hasRole('Tenant')) {
+            $query->where('created_by_user_id', $user->id);
+        } else {
+            $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
+            if ($orgId) {
+                $query->where('tickets.org_id', $orgId);
+            }
         }
 
         if ($search) {
@@ -85,6 +92,12 @@ class TicketService
      */
     public function create(array $data): Ticket
     {
+        $user = request()->user();
+        $data['org_id'] = $data['org_id'] ?? $user?->org_id;
+        $data['created_by_user_id'] = $data['created_by_user_id'] ?? $user?->id;
+        $data['priority'] = $data['priority'] ?? 'MEDIUM';
+        $data['status'] = $data['status'] ?? 'OPEN';
+
         return DB::transaction(function () use ($data) {
             // Tự động gán contract_id nếu phòng đang có hợp đồng Active
             if (empty($data['contract_id']) && ! empty($data['room_id'])) {

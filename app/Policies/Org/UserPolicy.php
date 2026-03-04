@@ -5,7 +5,6 @@ namespace App\Policies\Org;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Traits\HandlesOrgScope;
-use Illuminate\Auth\Access\Response;
 
 class UserPolicy implements RbacModuleProvider
 {
@@ -31,6 +30,7 @@ class UserPolicy implements RbacModuleProvider
         if ($user->hasPermissionTo('viewAny Users')) {
             return true;
         }
+
         return false;
     }
 

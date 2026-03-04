@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\Api\System;
 
 use App\Http\Controllers\Controller;
-use App\Models\System\AuditLog;
-use Illuminate\Http\Request;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
-
 use App\Http\Requests\System\AuditLogIndexRequest;
 use App\Http\Resources\System\AuditLogResource;
+use App\Models\System\AuditLog;
 use App\Services\System\AuditLogService;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Hoạt động hệ thống (Audit Logs)
@@ -23,7 +20,7 @@ class AuditLogController extends Controller
     /**
      * Danh sách nhật ký
      */
-    public function index(AuditLogIndexRequest $request): \Illuminate\Http\Resources\Json\AnonymousResourceCollection
+    public function index(AuditLogIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', AuditLog::class);
 

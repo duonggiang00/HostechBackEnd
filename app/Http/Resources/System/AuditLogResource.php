@@ -21,7 +21,7 @@ class AuditLogResource extends JsonResource
             'event' => $this->event,
             'org_id' => $this->org_id,
             'created_at' => $this->created_at,
-            
+
             // Relationships
             'causer' => $this->whenLoaded('causer'),
             'subject' => $this->whenLoaded('subject'),

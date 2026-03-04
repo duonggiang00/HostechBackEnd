@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Org\OrgController;
-use App\Http\Controllers\Api\Org\UserController;
 use App\Http\Controllers\Api\Org\ProfileController;
+use App\Http\Controllers\Api\Org\UserController;
+use Illuminate\Support\Facades\Route;
 
 // Profile — Hồ sơ cá nhân
 Route::get('profile', [ProfileController::class, 'show']);

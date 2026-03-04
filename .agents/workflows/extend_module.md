@@ -19,7 +19,7 @@ Nếu tính năng mới yêu cầu thêm dữ liệu:
 
 ## Bước 3: Cập nhật Model
 - **Traits**: Đảm bảo vẫn giữ `HasUuids`, `MultiTenant`, `SoftDeletes`.
-- **Casts**: Cập nhật phương thức `casts()` (Laravel 12).
+- **Casts (Laravel 12 Standard)**: Đảm bảo sử dụng phương thức `protected function casts(): array` (Chuyển đổi nếu Model đang dùng thuộc tính mảng `$casts` lỗi thời).
 - **Relationships**: Thêm các quan hệ mới nếu có bảng mới liên quan. Dùng return type hint cụ thể (ví dụ: `HasMany`, `BelongsTo`).
 
 ## Bước 4: Mở rộng Service Layer
@@ -41,7 +41,9 @@ Nếu endpoint mới yêu cầu quyền mới:
 
 ## Bước 7: Controller Refinement
 - Thêm method mới vào Controller.
-- Đảm bảo Controller vẫn giữ vai trò "Thin Controller" (chỉ authorize và gọi Service).
+- Đảm bảo Controller vẫn giữ vai trò "Thin Controller" (chỉ authorize và gọi Service, không tự tạo org_id hoặc merge biến vào Request).
+- Yêu cầu bắt buộc sử dụng `abort(code, 'message')`, **nghiêm cấm** dùng `return response()->json(...)` để bắt lỗi nghiệp vụ.
+- **PSR-12**: Chỉ sử dụng kiểu tên lớp ngắn gọn cùng khai báo `use` ở đầu file. Bỏ ngay các Fully Qualified Class Name inline nếu có.
 - Kiểm tra Attribute `#[Group('...')]` để endpoint mới hiển thị đúng nhóm trong tài liệu.
 
 ## Bước 8: Kiểm thử & Xác minh (Verification)

@@ -2,10 +2,10 @@
 
 namespace App\Models\Property;
 
+use App\Models\Org\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use App\Models\Org\User;
 
 class RoomPrice extends Model
 {

@@ -33,10 +33,14 @@ class InvoiceAdjustment extends Model
         'approved_at',
     ];
 
-    protected $casts = [
-        'amount' => 'decimal:2',
-        'approved_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'amount' => 'decimal:2',
+            'approved_at' => 'datetime',
+        ];
+    }
+
 
     /**
      * Kiểm tra xem adjustment đã được duyệt chưa.
@@ -49,22 +53,17 @@ class InvoiceAdjustment extends Model
     /**
      * @return BelongsTo
      */
+
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(Invoice::class);
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
-    /**
-     * @return BelongsTo
-     */
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');

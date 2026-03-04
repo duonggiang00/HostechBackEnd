@@ -24,12 +24,15 @@ class InvoiceItem extends Model
         'description', 'quantity', 'unit_price', 'amount', 'meta',
     ];
 
-    protected $casts = [
-        'quantity' => 'decimal:2',
-        'unit_price' => 'decimal:2',
-        'amount' => 'decimal:2',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'decimal:2',
+            'unit_price' => 'decimal:2',
+            'amount' => 'decimal:2',
+            'meta' => 'array',
+        ];
+    }
 
     public function org()
     {

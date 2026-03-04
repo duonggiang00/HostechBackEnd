@@ -46,17 +46,18 @@ class HandoverTest extends TestCase
 
     private function setupOrg(): array
     {
-        $org = Org::create(['name' => 'Test Org ' . uniqid()]);
-        $property = Property::create(['org_id' => $org->id, 'name' => 'Tòa A', 'code' => 'TA' . uniqid()]);
+        $org = Org::create(['name' => 'Test Org '.uniqid()]);
+        $property = Property::create(['org_id' => $org->id, 'name' => 'Tòa A', 'code' => 'TA'.uniqid()]);
         $floor = Floor::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => '1', 'floor_number' => 1]);
         $room = Room::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id,
-            'name' => 'Phòng 101', 'code' => 'P' . uniqid(), 'status' => 'OCCUPIED',
+            'name' => 'Phòng 101', 'code' => 'P'.uniqid(), 'status' => 'OCCUPIED',
         ]);
         $contract = Contract::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'status' => 'ACTIVE', 'start_date' => now()->toDateString(), 'rent_price' => 5000000,
         ]);
+
         return [$org, $property, $floor, $room, $contract];
     }
 
@@ -67,6 +68,7 @@ class HandoverTest extends TestCase
         $user->assignRole($role);
         // Flush cache after each role assignment
         app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         return $user;
     }
 
@@ -78,6 +80,7 @@ class HandoverTest extends TestCase
             'user_id' => $tenant->id, 'full_name' => $tenant->full_name,
             'status' => 'APPROVED', 'is_primary' => true,
         ]);
+
         return $tenant;
     }
 
@@ -146,8 +149,8 @@ class HandoverTest extends TestCase
         $otherOrg = Org::create(['name' => 'Other Org']);
         $outsider = $this->makeUser($otherOrg, 'Manager');
 
-        $this->actingAs($outsider)->getJson('/api/handovers/' . $handover->id)
-             ->assertForbidden();
+        $this->actingAs($outsider)->getJson('/api/handovers/'.$handover->id)
+            ->assertForbidden();
     }
 
     public function test_index_only_returns_handovers_from_own_org()
@@ -162,13 +165,13 @@ class HandoverTest extends TestCase
 
         // Manager của org1 thấy 1 handover
         $this->actingAs($manager1)->getJson('/api/handovers')
-             ->assertStatus(200)
-             ->assertJsonCount(1, 'data');
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data');
 
         // Manager của org2 thấy 0 handover
         $this->actingAs($manager2)->getJson('/api/handovers')
-             ->assertStatus(200)
-             ->assertJsonCount(0, 'data');
+            ->assertStatus(200)
+            ->assertJsonCount(0, 'data');
     }
 
     // ─── 3. Tenant Self-Service — Yêu cầu bàn giao (PENDING) ────────────────
@@ -181,9 +184,9 @@ class HandoverTest extends TestCase
         $tenant = $this->makeApprovedTenant($org, $contract);
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'CONFIRMED');
 
-        $this->actingAs($tenant)->getJson('/api/handovers/' . $handover->id)
-             ->assertStatus(200)
-             ->assertJsonPath('data.status', 'CONFIRMED');
+        $this->actingAs($tenant)->getJson('/api/handovers/'.$handover->id)
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'CONFIRMED');
     }
 
     public function test_tenant_cannot_view_draft_handover()
@@ -193,8 +196,8 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'DRAFT');
 
         // DRAFT chưa được Tenant xem (chưa confirm)
-        $this->actingAs($tenant)->getJson('/api/handovers/' . $handover->id)
-             ->assertForbidden();
+        $this->actingAs($tenant)->getJson('/api/handovers/'.$handover->id)
+            ->assertForbidden();
     }
 
     public function test_tenant_cannot_view_confirmed_handover_of_another_contract()
@@ -206,8 +209,8 @@ class HandoverTest extends TestCase
         // Handover thuộc contract2, Tenant chỉ có contract1
         $otherHandover = $this->makeHandover($org2, $room2, $contract2, 'CHECKIN', 'CONFIRMED');
 
-        $this->actingAs($tenant)->getJson('/api/handovers/' . $otherHandover->id)
-             ->assertForbidden();
+        $this->actingAs($tenant)->getJson('/api/handovers/'.$otherHandover->id)
+            ->assertForbidden();
     }
 
     // ─── 4. DRAFT → CONFIRMED Flow ───────────────────────────────────────────
@@ -218,9 +221,9 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
         $handover = $this->makeHandover($org, $room, $contract);
 
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/confirm')
-             ->assertStatus(200)
-             ->assertJsonPath('data.status', 'CONFIRMED');
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/confirm')
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'CONFIRMED');
 
         $this->assertDatabaseHas('handovers', [
             'id' => $handover->id,
@@ -237,8 +240,8 @@ class HandoverTest extends TestCase
         $handover->update(['locked_at' => now()]);
 
         // Confirm lần 2 → 403 (policy block)
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/confirm')
-             ->assertStatus(403);
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/confirm')
+            ->assertStatus(403);
     }
 
     public function test_cannot_update_confirmed_handover()
@@ -248,8 +251,8 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'CONFIRMED');
         $handover->update(['locked_at' => now()]);
 
-        $this->actingAs($manager)->putJson('/api/handovers/' . $handover->id, ['note' => 'Cố tình sửa'])
-             ->assertStatus(403); // hoặc 403
+        $this->actingAs($manager)->putJson('/api/handovers/'.$handover->id, ['note' => 'Cố tình sửa'])
+            ->assertStatus(403); // hoặc 403
     }
 
     // ─── 5. Items CRUD ────────────────────────────────────────────────────────
@@ -260,7 +263,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
         $handover = $this->makeHandover($org, $room, $contract);
 
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/items', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/items', [
             'name' => 'Điều hòa Daikin 12000 BTU',
             'status' => 'OK',
             'note' => 'Mới 100%',
@@ -285,10 +288,10 @@ class HandoverTest extends TestCase
         ]);
 
         $this->actingAs($manager)->putJson(
-            '/api/handovers/' . $handover->id . '/items/' . $item->id,
+            '/api/handovers/'.$handover->id.'/items/'.$item->id,
             ['name' => 'Tủ lạnh', 'status' => 'DAMAGED', 'note' => 'Vỡ cánh cửa']
         )->assertStatus(200)
-         ->assertJsonPath('data.status', 'DAMAGED');
+            ->assertJsonPath('data.status', 'DAMAGED');
     }
 
     public function test_cannot_add_item_to_confirmed_handover()
@@ -298,7 +301,7 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'CONFIRMED');
         $handover->update(['locked_at' => now()]);
 
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/items', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/items', [
             'name' => 'Ghế mây', 'status' => 'OK',
         ])->assertStatus(422);
     }
@@ -314,8 +317,8 @@ class HandoverTest extends TestCase
             'name' => 'Quạt trần', 'status' => 'MISSING',
         ]);
 
-        $this->actingAs($manager)->deleteJson('/api/handovers/' . $handover->id . '/items/' . $item->id)
-             ->assertNoContent();
+        $this->actingAs($manager)->deleteJson('/api/handovers/'.$handover->id.'/items/'.$item->id)
+            ->assertNoContent();
 
         $this->assertDatabaseMissing('handover_items', ['id' => $item->id]);
     }
@@ -334,11 +337,11 @@ class HandoverTest extends TestCase
 
         $handover = $this->makeHandover($org, $room, $contract);
 
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/snapshots', [
             'meter_id' => $meter->id,
             'reading_value' => 1234,
         ])->assertStatus(201)
-          ->assertJsonPath('data.reading_value', 1234);
+            ->assertJsonPath('data.reading_value', 1234);
 
         $this->assertDatabaseHas('handover_meter_snapshots', [
             'handover_id' => $handover->id, 'meter_id' => $meter->id, 'reading_value' => 1234,
@@ -358,11 +361,11 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract);
 
         // First snapshot
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/snapshots', [
             'meter_id' => $meter->id, 'reading_value' => 100,
         ])->assertStatus(201);
         // Second call with same meter_id → updateOrCreate (still 200)
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/snapshots', [
             'meter_id' => $meter->id, 'reading_value' => 150,
         ])->assertStatus(200); // 2nd call is an update so it can be 200
 
@@ -384,7 +387,7 @@ class HandoverTest extends TestCase
         $handover = $this->makeHandover($org, $room, $contract, 'CHECKIN', 'CONFIRMED');
         $handover->update(['locked_at' => now()]);
 
-        $this->actingAs($manager)->postJson('/api/handovers/' . $handover->id . '/snapshots', [
+        $this->actingAs($manager)->postJson('/api/handovers/'.$handover->id.'/snapshots', [
             'meter_id' => $meter->id, 'reading_value' => 999,
         ])->assertStatus(422);
     }
@@ -422,12 +425,12 @@ class HandoverTest extends TestCase
 
         // 4. Confirm (khóa biên bản)
         $this->actingAs($manager)->postJson("/api/handovers/{$handoverId}/confirm")
-             ->assertStatus(200)
-             ->assertJsonPath('data.status', 'CONFIRMED');
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'CONFIRMED');
 
         // 5. Tenant có thể xem biên bản đã confirm
         $this->actingAs($tenant)->getJson("/api/handovers/{$handoverId}")
-             ->assertStatus(200)
-             ->assertJsonPath('data.status', 'CONFIRMED');
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'CONFIRMED');
     }
 }

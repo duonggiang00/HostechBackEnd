@@ -17,9 +17,10 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Handover extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -34,10 +35,13 @@ class Handover extends Model implements HasMedia
         'locked_at',
     ];
 
-    protected $casts = [
-        'confirmed_at' => 'datetime',
-        'locked_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'confirmed_at' => 'datetime',
+            'locked_at' => 'datetime',
+        ];
+    }
 
     public function org()
     {

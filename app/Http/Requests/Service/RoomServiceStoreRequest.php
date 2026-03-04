@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Service;
 
 use Illuminate\Foundation\Http\FormRequest;
-
 use Illuminate\Validation\Rule;
 
 /**
@@ -25,12 +24,12 @@ class RoomServiceStoreRequest extends FormRequest
 
         return [
             'service_id' => [
-                'required', 
-                'uuid', 
+                'required',
+                'uuid',
                 Rule::exists('services', 'id')->where('org_id', $this->user()->org_id),
                 Rule::unique('room_services')->where(function ($query) use ($roomId) {
                     return $query->where('room_id', $roomId);
-                })
+                }),
             ],
             'quantity' => ['required', 'integer', 'min:1'],
             'included_units' => ['nullable', 'integer', 'min:0'],

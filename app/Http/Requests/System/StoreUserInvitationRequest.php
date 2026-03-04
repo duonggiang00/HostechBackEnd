@@ -14,7 +14,7 @@ class StoreUserInvitationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; 
+        return true;
     }
 
     public function rules(): array
@@ -24,7 +24,7 @@ class StoreUserInvitationRequest extends FormRequest
             'role_name' => ['required', 'string', 'in:Owner,Manager,Staff,Tenant'],
             'org_id' => ['nullable', 'uuid', 'exists:orgs,id'],
             'properties_scope' => ['nullable', 'array'],
-            'properties_scope.*' => ['uuid', 'exists:properties,id']
+            'properties_scope.*' => ['uuid', 'exists:properties,id'],
         ];
     }
 }

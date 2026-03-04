@@ -35,13 +35,14 @@ class StoreAdjustmentNoteRequest extends FormRequest
         $validator->after(function ($validator) {
             $meterReading = $this->route('reading');
 
-            if (!$meterReading instanceof MeterReading) {
+            if (! $meterReading instanceof MeterReading) {
                 // If route model binding isn't set up exactly, fetch it
                 $meterReading = MeterReading::find($meterReading);
             }
 
-            if (!$meterReading) {
+            if (! $meterReading) {
                 $validator->errors()->add('reading', 'Meter reading not found.');
+
                 return;
             }
 

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->integer('tier_from');
             $table->integer('tier_to')->nullable();
             $table->decimal('price', 15, 2);
-            
+
             $table->index('org_id');
             $table->index('service_rate_id');
         });

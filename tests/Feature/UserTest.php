@@ -3,11 +3,12 @@
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use Spatie\Permission\Models\Role;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -26,25 +27,25 @@ test('admin can crud user', function () {
         'email' => 'testuser@example.com',
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
-        'role' => 'STAFF' // or Owner/Manager
-        // Role assignment might differ based on controller implementation, 
+        'role' => 'STAFF', // or Owner/Manager
+        // Role assignment might differ based on controller implementation,
         // usually passed as 'role' or 'roles' array if creating via User endpoint?
         // Let's assume basic user creation first.
     ]);
-    
-    // Check if UserStoreRequest allows password. 
+
+    // Check if UserStoreRequest allows password.
     // If not, we might need to adjust or expects factory usage in controller?
     // Usually UserController allows creating "Staff/Manager".
     // For now, let's just assume standard fields.
-    
+
     // Refine request: The controller likely uses UserStoreRequest.
     // Let's assume it accepts basic fields.
-    
+
     if ($response->status() === 422) {
-         // Debug validation errors if any
-         // dump($response->json());
+        // Debug validation errors if any
+        // dump($response->json());
     }
-    
+
     $response->assertStatus(201);
     $id = $response->json('data.id');
 
@@ -60,7 +61,7 @@ test('admin can crud user', function () {
 
     // Delete
     deleteJson("/api/users/{$id}")->assertStatus(200);
-    
+
     // Trash
     getJson('/api/users/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
 });
@@ -70,7 +71,7 @@ test('owner can view users in own org', function () {
     $owner = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
-    
+
     $user2 = User::factory()->create(['org_id' => $org->id]);
 
     actingAs($owner)

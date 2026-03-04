@@ -1,16 +1,17 @@
 <?php
 
 use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Property\Floor;
-use App\Models\Org\User;
 use Spatie\Permission\Models\Role;
+
 use function Pest\Laravel\actingAs;
+use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
-use function Pest\Laravel\deleteJson;
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -36,16 +37,16 @@ test('admin can crud room', function () {
             [
                 'name' => 'Tivi Samsung',
                 'serial' => 'SN-123456',
-                'condition' => 'Mới 100%'
-            ]
-        ]
+                'condition' => 'Mới 100%',
+            ],
+        ],
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
 
     // Assert asset created
     \App\Models\Property\RoomAsset::where('room_id', $id)->where('name', 'Tivi Samsung')->exists();
-    
+
     // Assert price history created
     \App\Models\Property\RoomPrice::where('room_id', $id)->where('price', 500000)->exists();
 
@@ -80,7 +81,6 @@ test('owner can crud room within org', function () {
     $property = Property::factory()->create(['org_id' => $org->id]);
     $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
-
     actingAs($owner);
 
     // Create
@@ -90,7 +90,7 @@ test('owner can crud room within org', function () {
         'code' => 'RM-OWNER-01',
         'name' => 'Owner Room',
         'base_price' => 100,
-        'status' => 'available'
+        'status' => 'available',
     ]);
     $response->assertStatus(201);
     $id = $response->json('data.id');
@@ -118,4 +118,3 @@ test('owner cannot access other org room', function () {
         ->getJson("/api/rooms/{$room2->id}")
         ->assertStatus(403);
 });
-

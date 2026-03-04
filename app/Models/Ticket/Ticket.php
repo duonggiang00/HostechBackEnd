@@ -12,12 +12,14 @@ use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Ticket extends Model
 {
-    use HasFactory, HasUuids, MultiTenant, SystemLoggable;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
@@ -35,10 +37,13 @@ class Ticket extends Model
         'closed_at',
     ];
 
-    protected $casts = [
-        'due_at' => 'datetime',
-        'closed_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'due_at' => 'datetime',
+            'closed_at' => 'datetime',
+        ];
+    }
 
     public function org()
     {

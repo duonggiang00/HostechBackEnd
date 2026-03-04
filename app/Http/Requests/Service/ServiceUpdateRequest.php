@@ -26,12 +26,12 @@ class ServiceUpdateRequest extends FormRequest
 
         return [
             'code' => [
-                'sometimes', 
-                'string', 
-                'max:50', 
+                'sometimes',
+                'string',
+                'max:50',
                 Rule::unique('services')->ignore($serviceId)->where(function ($query) use ($orgId) {
                     return $query->where('org_id', $orgId);
-                })
+                }),
             ],
             'name' => ['sometimes', 'string', 'max:255'],
             'calc_mode' => ['sometimes', 'string', 'in:PER_ROOM,PER_PERSON,PER_QUANTITY,PER_METER'],
@@ -42,7 +42,7 @@ class ServiceUpdateRequest extends FormRequest
             // Rate fields (Optional on update)
             'price' => ['sometimes', 'numeric', 'min:0'],
             'effective_from' => ['nullable', 'date'],
-            
+
             // Tiered rates fields
             'tiered_rates' => ['nullable', 'array'],
             'tiered_rates.*.tier_from' => ['required', 'integer', 'min:0'],

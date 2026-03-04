@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Contract;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ContractStoreRequest extends FormRequest
 {
@@ -25,7 +24,7 @@ class ContractStoreRequest extends FormRequest
             'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'rent_price' => ['required', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
-            
+
             // Member validation
             'members' => ['nullable', 'array'],
             'members.*.user_id' => ['nullable', 'uuid', 'exists:users,id'],
@@ -35,7 +34,7 @@ class ContractStoreRequest extends FormRequest
             'members.*.role' => ['nullable', 'string', 'in:TENANT,ROOMMATE,GUARANTOR'],
             'members.*.is_primary' => ['nullable', 'boolean'],
             'members.*.joined_at' => ['nullable', 'date'],
-            
+
             'meta' => ['nullable', 'array'],
         ];
     }

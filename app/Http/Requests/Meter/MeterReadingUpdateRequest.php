@@ -24,7 +24,7 @@ class MeterReadingUpdateRequest extends FormRequest
             'period_end' => ['sometimes', 'date', 'after_or_equal:period_start'],
             'reading_value' => ['sometimes', 'integer', 'min:0'],
             'status' => ['sometimes', 'string', 'in:PENDING,APPROVED,REJECTED'],
-            'meta' => ['nullable', 'array']
+            'meta' => ['nullable', 'array'],
         ];
     }
 }

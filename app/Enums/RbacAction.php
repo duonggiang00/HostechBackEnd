@@ -15,7 +15,7 @@ enum RbacAction: string
     /**
      * Map short-hand characters to actions.
      *
-     * @param string $char 'C', 'R', 'U', 'D', '*'
+     * @param  string  $char  'C', 'R', 'U', 'D', '*'
      * @return array<self>
      */
     public static function fromShortMap(string $char): array

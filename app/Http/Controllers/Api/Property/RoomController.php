@@ -35,16 +35,6 @@ class RoomController extends Controller
      * Danh sách phòng
      *
      * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
-     *
-     * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 15
-     * @queryParam page int Trang hiện tại. Example: 1
-     * @queryParam search string Từ khóa tìm kiếm. Example: P.101
-     * @queryParam filter[code] string Mã phòng. Example: R101
-     * @queryParam filter[status] string Trạng thái. Example: AVAILABLE
-     * @queryParam filter[type] string Loại phòng. Example: STANDARD
-     * @queryParam filter[property_id] string ID Bất động sản. Example: uuid
-     * @queryParam filter[floor_id] string ID Tầng. Example: uuid
-     * @queryParam sort string Sắp xếp. Example: -code
      */
     public function index(RoomIndexRequest $request)
     {

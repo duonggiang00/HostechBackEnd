@@ -3,11 +3,7 @@
 namespace App\Http\Controllers\Api\System;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-
 use App\Http\Requests\System\UploadRequest;
-use App\Models\System\TemporaryUpload;
-
 use App\Services\System\MediaService;
 use Dedoc\Scramble\Attributes\Group;
 
@@ -32,7 +28,7 @@ class MediaController extends Controller
 
         return response()->json([
             'message' => 'File uploaded successfully',
-            'data' => $result
+            'data' => $result,
         ], 201);
     }
 }

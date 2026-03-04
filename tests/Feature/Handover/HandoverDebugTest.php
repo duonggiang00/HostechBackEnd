@@ -51,10 +51,10 @@ class HandoverDebugTest extends TestCase
         // Dump actual status and body for diagnosis
         $this->assertTrue(
             true,
-            "Status: " . $response->status() . " | Body: " . $response->content()
+            'Status: '.$response->status().' | Body: '.$response->content()
         );
-        dump("HTTP Status: " . $response->status());
-        dump("Response: " . $response->content());
+        dump('HTTP Status: '.$response->status());
+        dump('Response: '.$response->content());
 
         $response->assertStatus($response->status()); // Always pass - just read above
     }

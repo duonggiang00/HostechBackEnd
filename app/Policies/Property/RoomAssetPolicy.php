@@ -34,15 +34,15 @@ class RoomAssetPolicy implements RbacModuleProvider
         ];
     }
 
-    private function checkAccess(User $user, RoomAsset $asset = null, Room $room = null): bool
+    private function checkAccess(User $user, ?RoomAsset $asset = null, ?Room $room = null): bool
     {
         // Require at least one model context
-        if (!$asset && !$room) {
+        if (! $asset && ! $room) {
             return false;
         }
 
         $targetRoom = $asset ? $asset->room : $room;
-        if (!$targetRoom) {
+        if (! $targetRoom) {
             return false;
         }
 
@@ -52,7 +52,7 @@ class RoomAssetPolicy implements RbacModuleProvider
         }
 
         // Phải cùng tổ chức (Org scope restriction)
-        if ((string)$user->org_id !== (string)$targetRoom->org_id) {
+        if ((string) $user->org_id !== (string) $targetRoom->org_id) {
             return false;
         }
 
@@ -64,13 +64,14 @@ class RoomAssetPolicy implements RbacModuleProvider
         // 3. Manager, Staff chỉ tạo/vận hành theo properties
         if ($user->hasRole('Manager') || $user->hasRole('Staff')) {
             $managedProperties = $user->meta['property_ids'] ?? [];
-            return in_array((string)$targetRoom->property_id, $managedProperties);
+
+            return in_array((string) $targetRoom->property_id, $managedProperties);
         }
 
         // 4. Tenant chỉ xem room asset theo room thông qua contract hiện tại
         if ($user->hasRole('Tenant')) {
             return \App\Models\Contract\ContractMember::where('user_id', $user->id)
-                ->whereHas('contract', function($q) use ($targetRoom) {
+                ->whereHas('contract', function ($q) use ($targetRoom) {
                     $q->where('room_id', $targetRoom->id)->where('status', 'ACTIVE');
                 })->exists();
         }
@@ -78,13 +79,13 @@ class RoomAssetPolicy implements RbacModuleProvider
         return false;
     }
 
-    public function viewAny(User $user, Room $room = null): bool
+    public function viewAny(User $user, ?Room $room = null): bool
     {
-        if (!$user->hasPermissionTo('viewAny RoomAsset')) {
+        if (! $user->hasPermissionTo('viewAny RoomAsset')) {
             return false;
         }
 
-        if (!$room) {
+        if (! $room) {
             return $user->hasRole('Admin') || $user->hasRole('Owner');
         }
 
@@ -96,13 +97,13 @@ class RoomAssetPolicy implements RbacModuleProvider
         return $user->hasPermissionTo('view RoomAsset') && $this->checkAccess($user, $asset);
     }
 
-    public function create(User $user, Room $room = null): bool
+    public function create(User $user, ?Room $room = null): bool
     {
-        if (!$user->hasPermissionTo('create RoomAsset')) {
+        if (! $user->hasPermissionTo('create RoomAsset')) {
             return false;
         }
 
-        if (!$room) {
+        if (! $room) {
             return $user->hasRole('Admin') || $user->hasRole('Owner');
         }
 

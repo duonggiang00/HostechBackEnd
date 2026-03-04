@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Service\ServiceController;
 use App\Http\Controllers\Api\Service\RoomServiceController;
+use App\Http\Controllers\Api\Service\ServiceController;
+use Illuminate\Support\Facades\Route;
 
 // Services
 Route::get('services/trash', [ServiceController::class, 'trash']);

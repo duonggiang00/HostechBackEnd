@@ -5,9 +5,15 @@ namespace App\Http\Requests\Property;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * @queryParam per_page int Số lượng bản ghi trên một trang. Mặc định 15. Example: 10
+ * @queryParam per_page int Số lượng bản ghi mỗi trang. Example: 15
  * @queryParam page int Trang hiện tại. Example: 1
- * @queryParam search string Từ khóa tìm kiếm (tên, mã). Example: P.101
+ * @queryParam search string Từ khóa tìm kiếm. Example: P.101
+ * @queryParam filter[code] string Mã phòng. Example: R101
+ * @queryParam filter[status] string Trạng thái. Example: AVAILABLE
+ * @queryParam filter[type] string Loại phòng. Example: STANDARD
+ * @queryParam filter[property_id] string ID Bất động sản. Example: uuid
+ * @queryParam filter[floor_id] string ID Tầng. Example: uuid
+ * @queryParam sort string Sắp xếp. Example: -code
  */
 class RoomIndexRequest extends FormRequest
 {

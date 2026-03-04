@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Contract\ContractController;
 use App\Http\Controllers\Api\Contract\ContractMemberController;
+use Illuminate\Support\Facades\Route;
 
 // Contracts
 Route::get('contracts/my-pending', [ContractController::class, 'myPendingContracts']);

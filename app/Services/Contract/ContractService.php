@@ -12,13 +12,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
 {
-    /**
-     * @param array $allowedFilters
-     * @param int $perPage
-     * @param string|null $search
-     * @param User|null $user
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::class)

@@ -8,14 +8,16 @@ use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TicketEvent extends Model
 {
-    use HasFactory, HasUuids, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
-    
+
     // Bảng này không có field updated_at
     public const UPDATED_AT = null;
 
@@ -28,9 +30,12 @@ class TicketEvent extends Model
         'meta',
     ];
 
-    protected $casts = [
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'meta' => 'array',
+        ];
+    }
 
     public function org()
     {

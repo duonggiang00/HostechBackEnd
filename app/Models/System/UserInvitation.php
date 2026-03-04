@@ -2,19 +2,18 @@
 
 namespace App\Models\System;
 
+use App\Models\Concerns\MultiTenant;
 use App\Models\Org\Org;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Concerns\MultiTenant;
 
 class UserInvitation extends Model
 {
-    use HasFactory, HasUuids, SoftDeletes, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     protected $fillable = [
         'email',

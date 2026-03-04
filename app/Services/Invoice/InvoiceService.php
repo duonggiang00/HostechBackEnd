@@ -6,8 +6,8 @@ use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceStatusHistory;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class InvoiceService
 {
@@ -19,19 +19,18 @@ class InvoiceService
      * Danh sách hóa đơn (pagination + filter + sort + search).
      */
     public function paginate(
-        array $allowedFilters = [],
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
     ) {
         $query = QueryBuilder::for(Invoice::class)
-            ->allowedFilters(array_merge($allowedFilters, [
+            ->allowedFilters([
                 AllowedFilter::exact('org_id'),
                 AllowedFilter::exact('property_id'),
                 AllowedFilter::exact('contract_id'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('status'),
-            ]))
+            ])
             ->allowedSorts([
                 'due_date',
                 'period_start',
@@ -43,12 +42,13 @@ class InvoiceService
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
 
-        // Lọc theo org (non-Admin users)
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
+
         if ($orgId) {
             $query->where('org_id', $orgId);
         }
 
-        $user = request()->user();
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('contract', function ($q) use ($user) {
                 $q->where('status', 'ACTIVE')
@@ -79,18 +79,18 @@ class InvoiceService
      * Danh sách hóa đơn đã xóa mềm (thùng rác).
      */
     public function paginateTrash(
-        array $allowedFilters = [],
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
     ) {
         $query = QueryBuilder::for(Invoice::onlyTrashed())
-            ->allowedFilters(array_merge($allowedFilters, [
+            ->allowedFilters([
                 AllowedFilter::exact('org_id'),
                 AllowedFilter::exact('property_id'),
                 AllowedFilter::exact('room_id'),
+                AllowedFilter::exact('contract_id'),
                 AllowedFilter::exact('status'),
-            ]))
+            ])
             ->allowedSorts([
                 'due_date',
                 'period_start',
@@ -102,6 +102,9 @@ class InvoiceService
             ->defaultSort('-created_at')
             ->with(['property', 'room']);
 
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
+
         if ($orgId) {
             $query->where('org_id', $orgId);
         }
@@ -110,8 +113,7 @@ class InvoiceService
             $query->where(function ($q) use ($search) {
                 $q->whereHas(
                     'room',
-                    fn($rq) =>
-                    $rq->where('code', 'like', "%{$search}%")
+                    fn($rq) => $rq->where('code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                 )
                     ->orWhereHas('property', function ($pq) use ($search) {
@@ -150,6 +152,9 @@ class InvoiceService
             ])
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
+
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -198,6 +203,9 @@ class InvoiceService
             ])
             ->defaultSort('-created_at')
             ->with(['property', 'room', 'contract', 'items']);
+
+        $user = request()->user();
+        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
 
         if ($orgId) {
             $query->where('org_id', $orgId);
@@ -255,7 +263,7 @@ class InvoiceService
 
     /**
      * Tạo hóa đơn mới kèm danh sách items.
-     * 
+     *
      * Sử dụng DB::transaction để đảm bảo tính toàn vẹn:
      * - Tạo Invoice
      * - Tạo các InvoiceItem
@@ -263,6 +271,20 @@ class InvoiceService
      */
     public function create(array $data, array $itemsData = []): Invoice
     {
+        $user = request()->user();
+
+        // Auto-assign org_id if not explicitly provided or by non-admin
+        if ($user && !$user->hasRole('Admin') && $user->org_id) {
+            $data['org_id'] = $user->org_id;
+        } else {
+            // Admin: lấy org_id từ room nếu không truyền
+            if (!isset($data['org_id'])) {
+                $room = \App\Models\Property\Room::find($data['room_id'] ?? null);
+                $data['org_id'] = $room?->org_id;
+            }
+        }
+        $data['created_by_user_id'] = $user?->id;
+
         return DB::transaction(function () use ($data, $itemsData) {
             // 1. Tạo hóa đơn gốc
             $invoice = Invoice::create($data);
@@ -291,91 +313,14 @@ class InvoiceService
     public function update(string $id, array $data): ?Invoice
     {
         $invoice = $this->find($id);
-        if (!$invoice)
+        if (!$invoice) {
             return null;
+        }
 
         return DB::transaction(function () use ($invoice, $data) {
             $oldStatus = $invoice->status;
 
             $invoice->update($data);
-
-            // Hook: Ghi lịch sử nếu status thay đổi
-            $newStatus = $data['status'] ?? null;
-            if ($newStatus && $oldStatus !== $newStatus) {
-                $this->recordStatusHistory(
-                    $invoice,
-                    $oldStatus,
-                    $newStatus,
-                    $data['status_note'] ?? null
-                );
-            }
-
-            return $invoice->refresh();
-        });
-    }
-
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  STATUS TRANSITION METHODS                            ║
-    // ╠═══════════════════════════════════════════════════════╣
-
-    /**
-     * Phát hành hóa đơn: DRAFT -> ISSUED/PENDING.
-     */
-    public function issueInvoice(Invoice $invoice, string $userId, ?string $note = null): Invoice
-    {
-        return DB::transaction(function () use ($invoice, $userId, $note) {
-            $oldStatus = $invoice->status;
-            $newStatus = 'ISSUED';
-
-            $invoice->update([
-                'status' => $newStatus,
-                'issued_by_user_id' => $userId,
-                'issued_at' => now(),
-                'issue_date' => now()->toDateString(),
-            ]);
-
-            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
-
-            return $invoice->refresh();
-        });
-    }
-
-    /**
-     * Thanh toán hóa đơn: ISSUED/PENDING -> PAID.
-     */
-    public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
-    {
-        return DB::transaction(function () use ($invoice, $note) {
-            $oldStatus = $invoice->status;
-            $newStatus = 'PAID';
-
-            $invoice->update([
-                'status' => $newStatus,
-                'paid_amount' => $invoice->total_amount,
-            ]);
-
-            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
-
-            return $invoice->refresh();
-        });
-    }
-
-    /**
-     * Hủy hóa đơn: Any -> CANCELLED.
-     */
-    public function cancelInvoice(Invoice $invoice, ?string $note = null): Invoice
-    {
-        return DB::transaction(function () use ($invoice, $note) {
-            $oldStatus = $invoice->status;
-            $newStatus = 'CANCELLED';
-
-            $invoice->update([
-                'status' => $newStatus,
-                'cancelled_at' => now(),
-            ]);
-
-            $this->recordStatusHistory($invoice, $oldStatus, $newStatus, $note);
-
             return $invoice->refresh();
         });
     }
@@ -386,8 +331,10 @@ class InvoiceService
     public function delete(string $id): bool
     {
         $invoice = $this->find($id);
-        if (!$invoice)
+        if (!$invoice) {
             return false;
+        }
+
         return $invoice->delete();
     }
 
@@ -397,8 +344,10 @@ class InvoiceService
     public function restore(string $id): bool
     {
         $invoice = $this->findTrashed($id);
-        if (!$invoice)
+        if (!$invoice) {
             return false;
+        }
+
         return $invoice->restore();
     }
 
@@ -408,8 +357,10 @@ class InvoiceService
     public function forceDelete(string $id): bool
     {
         $invoice = $this->findWithTrashed($id);
-        if (!$invoice)
+        if (!$invoice) {
             return false;
+        }
+
         return $invoice->forceDelete();
     }
 
@@ -448,6 +399,72 @@ class InvoiceService
             $this->recalculateTotalAmount($invoice);
 
             return true;
+        });
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
+    // ║  STATUS TRANSITIONS                                   ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Phát hành hóa đơn: DRAFT → ISSUED.
+     * Ghi nhận issue_date, issued_at, issued_by_user_id và lịch sử trạng thái.
+     */
+    public function issueInvoice(Invoice $invoice, ?string $issuedByUserId = null, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $issuedByUserId, $note) {
+            $oldStatus = $invoice->status;
+
+            $invoice->update([
+                'status' => 'ISSUED',
+                'issue_date' => now(),
+                'issued_at' => now(),
+                'issued_by_user_id' => $issuedByUserId,
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, 'ISSUED', $note);
+
+            return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Thanh toán hóa đơn: ISSUED/PENDING → PAID.
+     * Ghi nhận paid_amount = total_amount và lịch sử trạng thái.
+     */
+    public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $note) {
+            $oldStatus = $invoice->status;
+
+            $invoice->update([
+                'status' => 'PAID',
+                'paid_amount' => $invoice->total_amount,
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, 'PAID', $note);
+
+            return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Hủy hóa đơn: * → CANCELLED (trừ PAID).
+     * Ghi nhận cancelled_at và lịch sử trạng thái.
+     */
+    public function cancelInvoice(Invoice $invoice, ?string $note = null): Invoice
+    {
+        return DB::transaction(function () use ($invoice, $note) {
+            $oldStatus = $invoice->status;
+
+            $invoice->update([
+                'status' => 'CANCELLED',
+                'cancelled_at' => now(),
+            ]);
+
+            $this->recordStatusHistory($invoice, $oldStatus, 'CANCELLED', $note);
+
+            return $invoice->refresh();
         });
     }
 

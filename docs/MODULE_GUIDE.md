@@ -20,7 +20,13 @@ app/
 
 ---
 
-## Quy tắc bắt buộc
+## Quy tắc bắt buộc (Nghiêm ngặt)
+
+### 0. Tiêu chuẩn Mã Nguồn (Coding Conventions)
+- **PSR-12**: Chỉ dùng lệnh `use` ở đầu file, **nghiêm cấm** viết trực tiếp Fully Qualified Class Name (FQCN) trong định nghĩa hàm (như `public function index(): \Illuminate\Http...`).
+- **Thin Controller Mức độ cao**: Controller không được rẽ nhánh phức tạp hay tạo/merge `org_id` thủ công vào request. Mọi xử lý đổ dồn về Service.
+- **Error Handling**: Yêu cầu bắt buộc dùng `abort(4xx, 'lỗi')` ở tầng Controller, **tuyệt đối cấm** dùng `return response()->json(...)`.
+- **Scramble Docs**: Tất cả `@queryParam` phải đặt ở đầu các lớp FormRequest (VD: `IndexRequest`), cấm viết docblock ở hàm của Controller.
 
 ### 1. Model
 - Luôn dùng UUID: `HasUuids`

@@ -59,12 +59,8 @@ class ProfileController extends Controller
     /**
      * Tải lên ảnh đại diện (Avatar)
      */
-    public function uploadAvatar(Request $request)
+    public function uploadAvatar(\App\Http\Requests\Org\UploadAvatarRequest $request)
     {
-        $request->validate([
-            'avatar' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:2048'],
-        ]);
-
         $avatarUrl = $this->service->uploadAvatar($request->user(), $request->file('avatar'));
 
         return response()->json([

@@ -21,7 +21,7 @@ class UserInvitationResource extends JsonResource
             'registered_at' => $this->registered_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            
+
             // Relationships
             'org' => $this->whenLoaded('org'),
             'inviter' => $this->whenLoaded('inviter'),

@@ -3,10 +3,9 @@
 namespace App\Policies\Property;
 
 use App\Contracts\RbacModuleProvider;
-use App\Models\Property\Floor;
 use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Traits\HandlesOrgScope;
-use Illuminate\Auth\Access\Response;
 
 class FloorPolicy implements RbacModuleProvider
 {
@@ -32,6 +31,7 @@ class FloorPolicy implements RbacModuleProvider
         if ($user->hasPermissionTo('viewAny Floor')) {
             return true;
         }
+
         return false;
     }
 

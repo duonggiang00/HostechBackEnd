@@ -3,11 +3,11 @@
 namespace App\Models\Service;
 
 use App\Models\Concerns\MultiTenant;
+use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\Org\User;
 
 class ServiceRate extends Model
 {
@@ -23,10 +23,13 @@ class ServiceRate extends Model
         'created_by_user_id',
     ];
 
-    protected $casts = [
-        'effective_from' => 'date',
-        'price' => 'decimal:2',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'effective_from' => 'date',
+            'price' => 'decimal:2',
+        ];
+    }
 
     public function service(): BelongsTo
     {

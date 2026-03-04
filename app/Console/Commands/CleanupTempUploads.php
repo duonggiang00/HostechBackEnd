@@ -26,9 +26,9 @@ class CleanupTempUploads extends Command
     public function handle()
     {
         $cutoff = now()->subDay();
-        
+
         $uploads = \App\Models\System\TemporaryUpload::where('created_at', '<', $cutoff)->get();
-        
+
         $count = 0;
         foreach ($uploads as $upload) {
             // Cascade delete will delete associated Spatie Media as well due to trait setup

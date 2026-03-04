@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Meter\AdjustmentNoteController;
 use App\Http\Controllers\Api\Meter\MeterController;
 use App\Http\Controllers\Api\Meter\MeterReadingController;
-use App\Http\Controllers\Api\Meter\AdjustmentNoteController;
+use Illuminate\Support\Facades\Route;
 
 // Meters
 Route::get('properties/{property_id}/meters', [MeterController::class, 'indexByProperty']);

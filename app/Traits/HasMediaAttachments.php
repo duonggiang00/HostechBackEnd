@@ -2,21 +2,21 @@
 
 namespace App\Traits;
 
+use App\Models\System\TemporaryUpload;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use App\Models\System\TemporaryUpload;
 
 trait HasMediaAttachments
 {
     /**
      * Đồng bộ mảng $mediaIds từ bảng Media sang Model hiện tại
-     * 
-     * @param array|null $mediaIds Array UUID của Media
-     * @param string $collectionName Tên collection đích tới (ví dụ: 'gallery')
+     *
+     * @param  array|null  $mediaIds  Array UUID của Media
+     * @param  string  $collectionName  Tên collection đích tới (ví dụ: 'gallery')
      */
     public function syncMediaAttachments(?array $mediaIds, string $collectionName = 'default'): void
     {
-        if (!is_array($mediaIds)) {
+        if (! is_array($mediaIds)) {
             return;
         }
 
@@ -25,7 +25,7 @@ trait HasMediaAttachments
             $medias = Media::whereIn('uuid', $mediaIds)
                 ->where('model_type', TemporaryUpload::class)
                 ->get();
-            
+
             foreach ($medias as $media) {
                 // Di chuyển sang Model mới (Ví dụ The Room)
                 $media->model_type = get_class($this);
