@@ -1,0 +1,51 @@
+﻿
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+src/features/auth/components/Register.tsx(1,17): error TS6133: 'useState' is declared but its value is never read.
+src/features/contracts/pages/Edit.tsx(23,15): error TS6196: 'Contract' is declared but never used.
+src/features/profile/components/AvatarUpload.tsx(2,27): error TS6133: 'Button' is declared but its value is never read.
+src/features/properties/pages/Floors/create.tsx(7,11): error TS6196: 'CreateFloorForm' is declared but never used.
+src/features/properties/pages/Floors/create.tsx(18,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Floors/detail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Floors/detail.tsx(14,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Floors/detail.tsx(18,10): error TS6133: 'loading' is declared but its value is never read.
+src/features/properties/pages/Floors/detail.tsx(18,19): error TS6133: 'setLoading' is declared but its value is never read.
+src/features/properties/pages/Floors/edit.tsx(18,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Floors/Floors.tsx(2,1): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Floors/Floors.tsx(5,10): error TS6133: 'Link' is declared but its value is never read.
+src/features/properties/pages/Meters/create.tsx(10,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Meters/detail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Meters/detail.tsx(10,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Meters/edit.tsx(10,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Meters/Meters.tsx(2,1): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Meters/Meters.tsx(5,10): error TS6133: 'Link' is declared but its value is never read.
+src/features/properties/pages/Orgs/create.tsx(24,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Orgs/detail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Orgs/detail.tsx(24,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Orgs/edit.tsx(24,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Orgs/Orgs.tsx(2,1): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Orgs/Orgs.tsx(5,10): error TS6133: 'Link' is declared but its value is never read.
+src/features/properties/pages/Property/Create.tsx(2,25): error TS6133: 'Form' is declared but its value is never read.
+src/features/properties/pages/Property/Create.tsx(22,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Property/detail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Property/detail.tsx(15,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Property/detail.tsx(19,10): error TS6133: 'loading' is declared but its value is never read.
+src/features/properties/pages/Property/detail.tsx(19,19): error TS6133: 'setLoading' is declared but its value is never read.
+src/features/properties/pages/Property/edit.tsx(2,25): error TS6133: 'Form' is declared but its value is never read.
+src/features/properties/pages/Property/edit.tsx(22,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Property/Properties.tsx(4,10): error TS6133: 'Link' is declared but its value is never read.
+src/features/properties/pages/Rooms/create.tsx(21,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Rooms/detail.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/features/properties/pages/Rooms/detail.tsx(2,39): error TS6133: 'Table' is declared but its value is never read.
+src/features/properties/pages/Rooms/detail.tsx(21,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Rooms/edit.tsx(21,9): error TS6133: 'location' is declared but its value is never read.
+src/features/properties/pages/Rooms/Rooms.tsx(1,10): error TS6133: 'Select' is declared but its value is never read.
+src/features/properties/pages/Rooms/Rooms.tsx(4,10): error TS6133: 'Link' is declared but its value is never read.
+src/features/users/pages/Manager/detail.tsx(18,9): error TS6133: 'location' is declared but its value is never read.
+src/features/users/pages/Staff/detail.tsx(18,9): error TS6133: 'location' is declared but its value is never read.
+src/features/users/pages/Tenants/detail.tsx(18,9): error TS6133: 'location' is declared but its value is never read.
+src/Layouts/Client/LayoutClient.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/Pages/Admin/Dashboard.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/Pages/Admin/Statistical.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/Pages/Client/404.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
