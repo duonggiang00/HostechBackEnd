@@ -5,6 +5,7 @@
 /.fleet
 /.nova
 /.zed
+/vendor
 
 # Backend specific (moved from original root)
 backend/.env

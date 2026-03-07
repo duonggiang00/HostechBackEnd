@@ -31,18 +31,11 @@ class PropertyController extends Controller
     {
         $this->authorize('viewAny', Property::class);
 
-        $perPage = (int) $request->query('per_page', 15);
-        $search = $request->input('search');
-        $user = $request->user();
-
-        // Org ID is enforced in service or taken from request if Admin
-        $orgId = $user->org_id ?? $request->input('org_id');
-
         $paginator = $this->service->paginate(
             ['name', 'code'],
-            $perPage,
-            $search,
-            $orgId,
+            (int) $request->query('per_page', 15),
+            $request->input('search'),
+            $request->user()->org_id ?? $request->input('org_id'),
             $request->boolean('with_trashed')
         );
 
@@ -56,10 +49,11 @@ class PropertyController extends Controller
     {
         $this->authorize('viewAny', Property::class);
 
-        $perPage = (int) $request->query('per_page', 15);
-        $search = $request->input('search');
-
-        $properties = $this->service->paginateTrash(['name', 'code'], $perPage, $search);
+        $properties = $this->service->paginateTrash(
+            ['name', 'code'],
+            (int) $request->query('per_page', 15),
+            $request->input('search')
+        );
 
         return PropertyResource::collection($properties);
     }
@@ -113,7 +107,7 @@ class PropertyController extends Controller
 
         $this->service->delete($id);
 
-        return response()->json(['message' => 'Deleted successfully']);
+        return response()->noContent();
     }
 
     /**
@@ -141,6 +135,6 @@ class PropertyController extends Controller
 
         $this->service->forceDelete($id);
 
-        return response()->json(['message' => 'Permanently deleted successfully']);
+        return response()->noContent();
     }
 }

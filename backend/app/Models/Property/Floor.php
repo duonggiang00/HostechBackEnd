@@ -19,6 +19,13 @@ class Floor extends Model
 
     protected $fillable = ['id', 'org_id', 'property_id', 'code', 'name', 'sort_order'];
 
+    protected function casts(): array
+    {
+        return [
+            'sort_order' => 'integer',
+        ];
+    }
+
     public function property()
     {
         return $this->belongsTo(Property::class);

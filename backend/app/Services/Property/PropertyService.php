@@ -3,11 +3,13 @@
 namespace App\Services\Property;
 
 use App\Models\Property\Property;
+use App\Models\Org\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class PropertyService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
@@ -44,7 +46,7 @@ class PropertyService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return $this->paginate($allowedFilters, $perPage, $search, null, true);
     }
@@ -74,7 +76,7 @@ class PropertyService
         return Property::withTrashed()->find($id);
     }
 
-    public function create(array $data, \App\Models\Org\User $user): Property
+    public function create(array $data, User $user): Property
     {
         // Enforce Org ID
         if ($user->org_id) {

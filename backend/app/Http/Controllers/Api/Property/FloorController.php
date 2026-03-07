@@ -119,7 +119,7 @@ class FloorController extends Controller
 
         $this->service->delete($id);
 
-        return response()->json(['message' => 'Deleted successfully']);
+        return response()->noContent();
     }
 
     /**
@@ -147,6 +147,6 @@ class FloorController extends Controller
 
         $this->service->forceDelete($id);
 
-        return response()->json(['message' => 'Permanently deleted successfully']);
+        return response()->noContent();
     }
 }

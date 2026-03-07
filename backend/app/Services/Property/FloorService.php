@@ -2,13 +2,15 @@
 
 namespace App\Services\Property;
 
+use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class FloorService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
@@ -33,7 +35,7 @@ class FloorService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return $this->paginate($allowedFilters, $perPage, $search, null, true);
     }
@@ -53,7 +55,7 @@ class FloorService
         return Floor::withTrashed()->find($id);
     }
 
-    public function create(array $data, \App\Models\Org\User $user): Floor
+    public function create(array $data, User $user): Floor
     {
         $property = Property::find($data['property_id']) ?? abort(404, 'Property not found');
 
