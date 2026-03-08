@@ -6,7 +6,10 @@ use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
 use App\Models\Org\Org;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log; // For potential use or just clean
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -16,7 +19,7 @@ class HandoverService
     /**
      * Lấy danh sách Handover có phân trang & lọc
      */
-    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return QueryBuilder::for(Handover::class)
             ->where('org_id', auth()->user()->org_id)
@@ -34,7 +37,7 @@ class HandoverService
     /**
      * Lấy chi tiết Handover kèm các items, snapshots
      */
-    public function getDetails(Handover $handover)
+    public function getDetails(Handover $handover): Handover
     {
         $handover->load([
             'items',
@@ -120,7 +123,7 @@ class HandoverService
     // Quản lý Items
     // =========================================================================
 
-    public function getItems(Handover $handover)
+    public function getItems(Handover $handover): Collection
     {
         return $handover->items()->orderBy('sort_order')->get();
     }
@@ -156,7 +159,7 @@ class HandoverService
     // Quản lý Meter Snapshots
     // =========================================================================
 
-    public function getSnapshots(Handover $handover)
+    public function getSnapshots(Handover $handover): Collection
     {
         return $handover->meterSnapshots()->with('meter')->get();
     }

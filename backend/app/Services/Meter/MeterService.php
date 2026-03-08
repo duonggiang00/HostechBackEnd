@@ -3,6 +3,8 @@
 namespace App\Services\Meter;
 
 use App\Models\Meter\Meter;
+use App\Models\Property\Room;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -11,10 +13,8 @@ class MeterService
 {
     /**
      * Get paginated meters with optional filtering and eager loading.
-     *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Meter::class)
             ->allowedFilters(array_merge($filters, [
@@ -47,6 +47,10 @@ class MeterService
                             ->where('status', 'APPROVED');
                     });
             });
+        } elseif ($user && $user->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('room.property.managers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
         }
 
         if ($search) {
@@ -67,11 +71,11 @@ class MeterService
     public function create(array $data): Meter
     {
         $user = request()->user();
-        
+
         if ($user && ! $user->hasRole('Admin') && $user->org_id) {
             $data['org_id'] = $user->org_id;
-        } elseif (!isset($data['org_id']) && isset($data['room_id'])) {
-            $room = \App\Models\Property\Room::find($data['room_id']);
+        } elseif (! isset($data['org_id']) && isset($data['room_id'])) {
+            $room = Room::find($data['room_id']);
             $data['org_id'] = $room?->org_id;
         }
 

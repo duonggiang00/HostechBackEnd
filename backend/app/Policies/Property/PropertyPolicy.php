@@ -5,11 +5,11 @@ namespace App\Policies\Property;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Models\Property\Property;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 
 class PropertyPolicy implements RbacModuleProvider
 {
-    use HandlesOrgScope;
+    use HandlesPropertyScope;
 
     public static function getModuleName(): string
     {
@@ -51,7 +51,7 @@ class PropertyPolicy implements RbacModuleProvider
                 ->exists();
         }
 
-        return $this->checkOrgScope($user, $property);
+        return $this->checkPropertyScope($user, $property);
     }
 
     public function create(User $user): bool
@@ -65,7 +65,7 @@ class PropertyPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $property);
+        return $this->checkPropertyScope($user, $property);
     }
 
     public function delete(User $user, Property $property): bool
@@ -74,6 +74,6 @@ class PropertyPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $property);
+        return $this->checkPropertyScope($user, $property);
     }
 }

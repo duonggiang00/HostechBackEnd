@@ -19,6 +19,8 @@ return new class extends Migration
             $table->uuid('created_by_user_id')->index();
 
             $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->nullable();
+            $table->softDeletes();
 
             // Foreign keys
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');

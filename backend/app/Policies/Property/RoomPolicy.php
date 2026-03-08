@@ -5,11 +5,11 @@ namespace App\Policies\Property;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Models\Property\Room;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 
 class RoomPolicy implements RbacModuleProvider
 {
-    use HandlesOrgScope;
+    use HandlesPropertyScope;
 
     public static function getModuleName(): string
     {
@@ -37,9 +37,9 @@ class RoomPolicy implements RbacModuleProvider
 
     public function view(User $user, Room $room): bool
     {
-        // Scoping Pattern: Staff/Manager gets standard permission check + Org Scope
+        // Scoping Pattern: Staff/Manager gets standard permission check + Property Scope
         if ($user->hasPermissionTo('view Room') && ! $user->hasRole('Tenant')) {
-            return $this->checkOrgScope($user, $room);
+            return $this->checkPropertyScope($user, $room);
         }
 
         // Scoping Pattern: Tenant gets Membership check
@@ -62,7 +62,7 @@ class RoomPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $room);
+        return $this->checkPropertyScope($user, $room);
     }
 
     public function delete(User $user, Room $room): bool
@@ -71,6 +71,6 @@ class RoomPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $room);
+        return $this->checkPropertyScope($user, $room);
     }
 }

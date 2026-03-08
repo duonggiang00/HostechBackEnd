@@ -27,6 +27,7 @@ return new class extends Migration
             $table->timestamp('due_at')->nullable();
             $table->timestamp('closed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             // Foreign keys
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');

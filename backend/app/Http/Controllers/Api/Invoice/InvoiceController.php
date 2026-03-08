@@ -12,7 +12,9 @@ use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Services\Invoice\InvoiceService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Hóa đơn (Invoices)
@@ -22,9 +24,7 @@ use Illuminate\Http\Request;
 #[Group('Quản lý Hóa đơn')]
 class InvoiceController extends Controller
 {
-    public function __construct(protected InvoiceService $service)
-    {
-    }
+    public function __construct(protected InvoiceService $service) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  LIST / READ ENDPOINTS                                ║
@@ -35,7 +35,7 @@ class InvoiceController extends Controller
      *
      * Lấy danh sách hóa đơn. Hỗ trợ lọc theo Property, Room, Contract, Status.
      */
-    public function index(InvoiceIndexRequest $request)
+    public function index(InvoiceIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -52,7 +52,7 @@ class InvoiceController extends Controller
      *
      * Lấy danh sách hóa đơn thuộc 1 Tòa nhà cụ thể. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function indexByProperty(InvoiceIndexRequest $request, string $property_id)
+    public function indexByProperty(InvoiceIndexRequest $request, string $property_id): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -70,7 +70,7 @@ class InvoiceController extends Controller
      *
      * Lấy danh sách hóa đơn thuộc 1 Tầng cụ thể trong Tòa nhà. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function indexByFloor(InvoiceIndexRequest $request, string $property_id, string $floor_id)
+    public function indexByFloor(InvoiceIndexRequest $request, string $property_id, string $floor_id): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -89,7 +89,7 @@ class InvoiceController extends Controller
      *
      * Lấy danh sách hóa đơn đã xóa mềm. Hỗ trợ lọc, sắp xếp, phân trang.
      */
-    public function trash(InvoiceIndexRequest $request)
+    public function trash(InvoiceIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Invoice::class);
 
@@ -106,10 +106,10 @@ class InvoiceController extends Controller
      *
      * Xem thông tin chi tiết 1 hóa đơn, bao gồm danh sách items.
      */
-    public function show(string $id)
+    public function show(string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -127,7 +127,7 @@ class InvoiceController extends Controller
      *
      * Tạo hóa đơn kèm danh sách items chi tiết (tiền phòng, điện, nước, dịch vụ...).
      */
-    public function store(InvoiceStoreRequest $request)
+    public function store(InvoiceStoreRequest $request): JsonResponse
     {
         $this->authorize('create', Invoice::class);
 
@@ -146,10 +146,10 @@ class InvoiceController extends Controller
      *
      * Cập nhật trạng thái, hạn thanh toán, số tiền đã trả...
      */
-    public function update(InvoiceUpdateRequest $request, string $id)
+    public function update(InvoiceUpdateRequest $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -165,10 +165,10 @@ class InvoiceController extends Controller
      *
      * Chỉ xóa được khi hóa đơn ở trạng thái DRAFT.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -196,10 +196,10 @@ class InvoiceController extends Controller
      * Chuyển trạng thái hóa đơn từ DRAFT sang ISSUED.
      * Tự động ghi lịch sử thay đổi trạng thái.
      */
-    public function issue(Request $request, string $id)
+    public function issue(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -224,16 +224,16 @@ class InvoiceController extends Controller
      * Chuyển trạng thái hóa đơn sang PAID.
      * Chỉ áp dụng cho hóa đơn ISSUED hoặc PENDING.
      */
-    public function pay(Request $request, string $id)
+    public function pay(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
         $this->authorize('update', $invoice);
 
-        if (!in_array($invoice->status, ['ISSUED', 'PENDING'])) {
+        if (! in_array($invoice->status, ['ISSUED', 'PENDING'])) {
             abort(422, 'Chỉ có thể thanh toán hóa đơn ở trạng thái Đã phát hành (ISSUED) hoặc Chờ thanh toán (PENDING).');
         }
 
@@ -248,10 +248,10 @@ class InvoiceController extends Controller
      * Chuyển trạng thái hóa đơn sang CANCELLED.
      * Không áp dụng cho hóa đơn đã thanh toán (PAID).
      */
-    public function cancel(Request $request, string $id)
+    public function cancel(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -277,10 +277,10 @@ class InvoiceController extends Controller
     /**
      * Khôi phục hóa đơn đã xóa
      */
-    public function restore(string $id)
+    public function restore(string $id): InvoiceResource
     {
         $invoice = $this->service->findTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -294,10 +294,10 @@ class InvoiceController extends Controller
     /**
      * Xóa vĩnh viễn hóa đơn
      */
-    public function forceDelete(string $id)
+    public function forceDelete(string $id): JsonResponse
     {
         $invoice = $this->service->findWithTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -318,10 +318,10 @@ class InvoiceController extends Controller
      * Thêm 1 dòng chi phí (tiền phòng, tiền điện, dịch vụ...) vào hóa đơn.
      * Tự động cập nhật lại total_amount.
      */
-    public function storeItem(Request $request, string $invoice)
+    public function storeItem(Request $request, string $invoice): JsonResponse
     {
         $invoiceModel = $this->service->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -347,10 +347,10 @@ class InvoiceController extends Controller
      *
      * Tự động cập nhật lại total_amount sau khi xóa.
      */
-    public function destroyItem(string $item)
+    public function destroyItem(string $item): JsonResponse
     {
         $invoiceItem = InvoiceItem::with('invoice')->find($item);
-        if (!$invoiceItem) {
+        if (! $invoiceItem) {
             abort(404, 'Invoice Item Not Found');
         }
 

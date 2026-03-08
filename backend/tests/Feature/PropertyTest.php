@@ -42,7 +42,7 @@ test('admin can crud property', function () {
         ->assertJsonFragment(['name' => 'Updated Name']);
 
     // Delete
-    deleteJson("/api/properties/{$id}")->assertStatus(200);
+    deleteJson("/api/properties/{$id}")->assertStatus(204);
 
     // Trash
     getJson('/api/properties/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
@@ -71,7 +71,7 @@ test('owner can crud property within org', function () {
         ->assertStatus(200);
 
     // Delete
-    deleteJson("/api/properties/{$id}")->assertStatus(200);
+    deleteJson("/api/properties/{$id}")->assertStatus(204);
 });
 
 test('owner cannot access other org property', function () {

@@ -19,6 +19,15 @@ class Org extends Model
 
     protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'timezone', 'currency'];
 
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
+        ];
+    }
+
     public function properties()
     {
         return $this->hasMany(Property::class);

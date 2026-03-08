@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceStatusHistory extends Model
 {
-    use HasFactory, HasUuids, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 
@@ -39,5 +40,12 @@ class InvoiceStatusHistory extends Model
     public function changedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by_user_id');
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
     }
 }

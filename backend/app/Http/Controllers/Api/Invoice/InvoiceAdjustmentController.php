@@ -7,10 +7,11 @@ use App\Http\Requests\Invoice\InvoiceAdjustmentStoreRequest;
 use App\Http\Resources\Invoice\InvoiceAdjustmentResource;
 use App\Http\Resources\Invoice\InvoiceStatusHistoryResource;
 use App\Models\Invoice\Invoice;
-use App\Models\Invoice\InvoiceAdjustment;
 use App\Services\Invoice\InvoiceAdjustmentService;
 use App\Services\Invoice\InvoiceService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Điều chỉnh & Lịch sử Hóa đơn (Invoice Adjustments & Histories)
@@ -23,8 +24,7 @@ class InvoiceAdjustmentController extends Controller
     public function __construct(
         protected InvoiceAdjustmentService $adjustmentService,
         protected InvoiceService $invoiceService
-    ) {
-    }
+    ) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  STATUS HISTORY ENDPOINTS                             ║
@@ -35,10 +35,10 @@ class InvoiceAdjustmentController extends Controller
      *
      * Lấy danh sách lịch sử thay đổi trạng thái của 1 hóa đơn theo thời gian.
      */
-    public function histories(string $invoice)
+    public function histories(string $invoice): AnonymousResourceCollection
     {
         $invoiceModel = $this->invoiceService->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -61,18 +61,19 @@ class InvoiceAdjustmentController extends Controller
      *
      * Lấy danh sách các khoản điều chỉnh (CREDIT/DEBIT) của 1 hóa đơn.
      */
-    public function index(string $invoice)
+    public function index(string $invoice): AnonymousResourceCollection
     {
         $invoiceModel = $this->invoiceService->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
         $this->authorize('view', $invoiceModel);
 
         $perPage = (int) request()->input('per_page', 15);
-        if ($perPage < 1 || $perPage > 100)
+        if ($perPage < 1 || $perPage > 100) {
             $perPage = 15;
+        }
 
         $paginator = $this->adjustmentService->paginateByInvoice($invoiceModel, $perPage);
 
@@ -85,10 +86,10 @@ class InvoiceAdjustmentController extends Controller
      * Tạo 1 khoản điều chỉnh (CREDIT giảm trừ / DEBIT thu thêm) cho hóa đơn.
      * Chỉ áp dụng cho hóa đơn có trạng thái ISSUED hoặc PENDING.
      */
-    public function store(InvoiceAdjustmentStoreRequest $request, string $invoice)
+    public function store(InvoiceAdjustmentStoreRequest $request, string $invoice): JsonResponse
     {
         $invoiceModel = $this->invoiceService->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -110,17 +111,17 @@ class InvoiceAdjustmentController extends Controller
      *
      * Duyệt/Phê duyệt khoản điều chỉnh. Sau khi duyệt, total_amount hóa đơn sẽ được tính lại tự động.
      */
-    public function approve(string $invoice, string $adjustment)
+    public function approve(string $invoice, string $adjustment): InvoiceAdjustmentResource
     {
         $invoiceModel = $this->invoiceService->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
         $this->authorize('update', $invoiceModel);
 
         $adjustmentModel = $this->adjustmentService->find($adjustment);
-        if (!$adjustmentModel || $adjustmentModel->invoice_id !== $invoiceModel->id) {
+        if (! $adjustmentModel || $adjustmentModel->invoice_id !== $invoiceModel->id) {
             abort(404, 'Adjustment Not Found');
         }
 
@@ -137,17 +138,17 @@ class InvoiceAdjustmentController extends Controller
      *
      * Chỉ xóa được khoản điều chỉnh chưa được duyệt.
      */
-    public function destroy(string $invoice, string $adjustment)
+    public function destroy(string $invoice, string $adjustment): JsonResponse
     {
         $invoiceModel = $this->invoiceService->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
         $this->authorize('update', $invoiceModel);
 
         $adjustmentModel = $this->adjustmentService->find($adjustment);
-        if (!$adjustmentModel || $adjustmentModel->invoice_id !== $invoiceModel->id) {
+        if (! $adjustmentModel || $adjustmentModel->invoice_id !== $invoiceModel->id) {
             abort(404, 'Adjustment Not Found');
         }
 

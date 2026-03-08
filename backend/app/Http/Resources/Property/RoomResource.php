@@ -13,6 +13,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property int $capacity Sức chứa
  * @property float $base_price Giá cơ bản
  * @property string $status Trạng thái
+ * @property int $floor_number Số tầng
  * @property string $description Mô tả
  * @property array $amenities Tiện nghi
  * @property array $utilities Dịch vụ
@@ -32,6 +33,7 @@ class RoomResource extends JsonResource
             'capacity' => $this->capacity,
             'base_price' => $this->base_price,
             'status' => $this->status,
+            'floor_number' => $this->floor_number,
             'description' => $this->description,
             'amenities' => $this->amenities,
             'utilities' => $this->utilities,
@@ -39,8 +41,8 @@ class RoomResource extends JsonResource
             'updated_at' => $this->updated_at,
 
             // Relations
-            'floor' => new FloorResource($this->whenLoaded('floor')),
-            'property' => new PropertyResource($this->whenLoaded('property')),
+            'floor' => FloorResource::make($this->whenLoaded('floor')),
+            'property' => PropertyResource::make($this->whenLoaded('property')),
 
             // Relations (eager loaded via QueryBuilder allowedIncludes or via direct load)
             'assets' => $this->whenLoaded('assets'),

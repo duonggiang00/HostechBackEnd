@@ -24,7 +24,8 @@ return new class extends Migration
             $table->foreignUuid('approved_by_user_id')->nullable()->constrained('users')->nullOnDelete();
 
             $table->timestamp('approved_at')->nullable();
-            $table->timestamp('created_at')->useCurrent();
+            $table->timestamps();
+            $table->softDeletes();
 
             $table->index('org_id');
             $table->index('invoice_id');

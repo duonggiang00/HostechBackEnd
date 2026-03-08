@@ -2,20 +2,19 @@
 
 namespace App\Services\Property;
 
+use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomStatusHistory;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class RoomService
 {
-    /**
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
-     */
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?\App\Models\Org\User $performer = null)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
@@ -32,6 +31,10 @@ class RoomService
                             ->where('status', 'APPROVED');
                     });
             });
+        } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($performer) {
+                $q->where('user_id', $performer->id);
+            });
         }
 
         if ($search) {
@@ -44,11 +47,17 @@ class RoomService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Room::onlyTrashed())
             ->allowedFilters($allowedFilters)
             ->defaultSort('code');
+
+        if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($performer) {
+                $q->where('user_id', $performer->id);
+            });
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -75,7 +84,7 @@ class RoomService
         return Room::withTrashed()->find($id);
     }
 
-    public function create(array $data, \App\Models\Org\User $performer): Room
+    public function create(array $data, User $performer): Room
     {
         return DB::transaction(function () use ($data, $performer) {
             // Consolidated Property Check & Org Auto-assignment
@@ -141,7 +150,7 @@ class RoomService
         });
     }
 
-    public function update(string $id, array $data, \App\Models\Org\User $performer): ?Room
+    public function update(string $id, array $data, User $performer): ?Room
     {
         return DB::transaction(function () use ($id, $data, $performer) {
             $room = $this->find($id);

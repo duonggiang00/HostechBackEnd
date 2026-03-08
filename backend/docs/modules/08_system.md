@@ -17,7 +17,56 @@ Module hệ thống bao gồm quản lý file/media, nhật ký hoạt động (
 |--------|----------|-----------|------|
 | `POST` | `/api/media/upload` | Upload file chung (trả về media UUID) | ✅ Required |
 
-> File upload sử dụng **Spatie Media Library**. Collection name phụ thuộc vào model gắn vào (e.g., `avatar`, `contract_documents`, `adjustment_evidence`).
+---
+
+## 🎨 Hướng dẫn Frontend (Frontend Guide)
+
+### 1. Công việc cần làm (Tasks)
+- [ ] **Xử lý Upload Media**:
+    - Khi user chọn file (Ảnh CCCD, Ảnh bàn giao, Avatar), gọi endpoint `/api/media/upload`.
+    - Backend trả về `media_uuid`.
+    - Frontend lưu danh sách `media_uuid` này để gửi kèm vào request chính (VD: POST `/api/contracts` kèm `media_uuids`).
+- [ ] **Nhật ký hoạt động (Audit Logs)**:
+    - Trang hiển thị lịch sử thay đổi của hệ thống (dành cho Owner).
+    - Hiển thị: Ai đã làm gì, vào lúc nào, giá trị cũ và giá trị mới.
+- [ ] **Xác thực lời mời (Invitation Landing)**:
+    - Xây dựng route `/register?token=...`.
+    - Khi trang load, gọi `GET /api/invitations/validate/{token}`.
+    - Nếu hợp lệ: Hiện form đăng ký với email đã được fixed.
+    - Nếu không: Hiển thị lỗi "Lời mời không hợp lệ hoặc đã hết hạn".
+
+### 2. Dữ liệu gửi lên (Request Example)
+**POST `/api/media/upload`** (Multipart/Form-Data)
+```
+file: [Binary Data]
+collection: "contract_documents"
+```
+
+### 3. Dữ liệu trả về (Response Example)
+**GET `/api/audit-logs`**
+```json
+{
+  "data": [
+    {
+      "description": "updated Room R101",
+      "subject_type": "Room",
+      "causer": { "name": "Admin" },
+      "properties": {
+        "attributes": { "status": "rented" },
+        "old": { "status": "available" }
+      },
+      "created_at": "..."
+    }
+  ]
+}
+```
+
+---
+
+## 🔐 Phân quyền RBAC (Frontend Logic)
+
+- **Audit Logs**: Chỉ hiển thị menu này cho Role `Owner` hoặc `Admin`.
+- **Media**: Tất cả các role có quyền tạo dữ liệu (Owner, Manager, Staff, Tenant) đều có thể upload file liên quan đến nghiệp vụ của họ.
 
 ---
 
@@ -26,55 +75,12 @@ Module hệ thống bao gồm quản lý file/media, nhật ký hoạt động (
 | Method | Endpoint | Chức năng | Role cần thiết |
 |--------|----------|-----------|----------------|
 | `GET`  | `/api/audit-logs` | Danh sách nhật ký hoạt động | Admin, Owner |
-| `GET`  | `/api/audit-logs/{id}` | Chi tiết nhật ký | Admin, Owner |
-
-> Audit log được ghi tự động qua trait `SystemLoggable` trên các model quan trọng. Powered by **Spatie Activity Log**.
 
 ---
 
-## User Invitation Endpoints
+## Phân quyền RBAC (Backend Policy)
 
-| Method | Endpoint | Chức năng | Auth |
-|--------|----------|-----------|------|
-| `GET`  | `/api/invitations/validate/{token}` | Xác thực mã invite trước khi đăng ký | ❌ Public |
-| `POST` | `/api/invitations` | Tạo invitation mới và gửi email | ✅ Required |
-
----
-
-## Cấu trúc Invite Flow
-
-```
-Manager/Owner gửi invite
-  → POST /api/invitations (email, role, org_id, properties?)
-  → Hệ thống tạo invitation_token (UUID)
-  → Gửi email kèm link frontend: /register?token=xxx
-  → Tenant mở link → frontend gọi GET /api/invitations/validate/{token}
-  → Nếu hợp lệ → frontend hiển thị form đăng ký
-  → Tenant submit → POST /api/auth/register (kèm invitation_token)
-  → Hệ thống tự gán role, org_id, property scope
-```
-
----
-
-## Cấu trúc DB
-
-### `user_invitations`
-| Field | Mô tả |
-|-------|-------|
-| `token` | UUID token dùng 1 lần |
-| `email` | Email người được mời |
-| `role` | Role sẽ được gán sau đăng ký |
-| `org_id` | Tổ chức để gán vào |
-| `property_ids` | JSON danh sách property scope (cho Manager/Staff) |
-| `invited_by` | User ID người gửi |
-| `expires_at` | Thời hạn token (default 7 ngày) |
-| `accepted_at` | NULL = chưa dùng |
-| `status` | PENDING / ACCEPTED / EXPIRED / CANCELLED |
-
----
-
-## Lưu ý thiết kế
-- Token chỉ dùng được **1 lần** và **không thể tái sử dụng** sau khi accepted
-- Email của invitation phải **khớp** với email đăng ký → tránh người khác dùng link
-- Invitation hết hạn sau 7 ngày (có thể cấu hình trong `UserInvitationService`)
-- Media upload trả về object media với `id`, `url`, `mime_type` → sau đó có thể attach vào model bất kỳ
+| Hành động | Admin | Owner | Manager | Staff | Tenant |
+|-----------|-------|-------|---------|-------|--------|
+| View Audit Logs | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Upload Media | ✅ | ✅ | ✅ | ✅ | ✅ |

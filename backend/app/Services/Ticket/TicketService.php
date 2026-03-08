@@ -6,6 +6,7 @@ use App\Models\Contract\Contract;
 use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketCost;
 use App\Models\Ticket\TicketEvent;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -24,7 +25,7 @@ class TicketService
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
-    ) {
+    ): LengthAwarePaginator {
         $query = QueryBuilder::for(Ticket::class)
             ->allowedFilters(array_merge($allowedFilters, [
                 AllowedFilter::exact('status'),
@@ -45,9 +46,13 @@ class TicketService
             ->with(['property', 'room', 'createdBy', 'assignedTo']);
 
         $user = request()->user();
-        
+
         if ($user && $user->hasRole('Tenant')) {
             $query->where('created_by_user_id', $user->id);
+        } elseif ($user && $user->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
         } else {
             $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
             if ($orgId) {

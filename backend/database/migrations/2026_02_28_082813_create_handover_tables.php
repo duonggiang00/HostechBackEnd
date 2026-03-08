@@ -51,8 +51,8 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->integer('sort_order')->default(0);
 
-            $table->timestamp('created_at')->useCurrent();
-            $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
+            $table->timestamps();
+            $table->softDeletes();
 
             // Khóa ngoại
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');
@@ -69,6 +69,7 @@ return new class extends Migration
             $table->bigInteger('reading_value');
 
             $table->timestamps();
+            $table->softDeletes();
 
             // Khóa ngoại
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');

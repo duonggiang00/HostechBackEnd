@@ -37,6 +37,110 @@ Module Handover tuân thủ chặt chẽ mô hình **Dynamic Scope** dựa trên
 
 ---
 
+## Handover Endpoints
+
+| Method | Endpoint | Chức năng | Role cần thiết |
+|--------|----------|-----------|----------------|
+| `GET`    | `/api/handovers` | Danh sách biên bản | Owner, Manager, Staff, Tenant* |
+| `POST`   | `/api/handovers` | Tạo biên bản mới (DRAFT) | Owner, Manager, Staff |
+| `GET`    | `/api/handovers/{id}` | Chi tiết biên bản (kèm items/snapshots) | Owner, Manager, Staff, Tenant* |
+| `POST`   | `/api/handovers/{id}/confirm` | Chốt biên bản (Locked) | Owner, Manager, Staff |
+
+---
+
+## 🎨 Hướng dẫn Frontend (Frontend Guide)
+
+### 1. Công việc cần làm (Tasks)
+- [ ] **Kiểm tra bàn giao (Checklist)**:
+    - Hiển thị danh mục tài sản/vật tư cần bàn giao.
+    - Nút "Đạt" / "Không đạt" kèm ghi chú hư tổn.
+    - Upload ảnh bằng chứng tình trạng lúc bàn giao (Media).
+- [ ] **Chốt chỉ số đầu/cuối**:
+    - Nhập chỉ số Điện/Nước tại thời điểm nhận/trả phòng.
+- [ ] **Ký xác nhận (Digital Signature)**:
+    - Giao diện ký tên trực tiếp trên màn hình (Canvas).
+    - Hoặc chụp ảnh chữ ký thực tế.
+    - Xuất file Biên bản bàn giao dạng PDF.
+
+### 2. Query Parameters (Filters & Search)
+*Endpoint: `GET /api/handovers`*
+
+| Parameter | Type | Mô tả |
+|-----------|------|-------|
+| `search` | string | Tìm theo mã hợp đồng, tên khách thuê |
+| `filter[type]` | string | `CHECK_IN`, `CHECK_OUT` |
+| `filter[property_id]` | uuid | Lọc theo tòa nhà |
+| `sort` | string | `handover_date`, `created_at` |
+| `page`, `per_page` | int | Chuẩn phân trang |
+
+### 3. Dữ liệu gửi lên (Request Example)
+**POST `/api/handovers`**
+```json
+{
+  "contract_id": "...",
+  "type": "CHECK_IN",
+  "handover_date": "2024-03-01",
+  "items": [
+    { "asset_id": "...", "status": "GOOD", "note": "Mới 100%" }
+  ],
+  "meter_snapshots": [
+    { "meter_id": "...", "value": 150.5 }
+  ]
+}
+```
+
+### 4. Dữ liệu trả về (Response Example)
+**GET `/api/handovers`**
+```json
+{
+  "data": [
+    {
+      "id": "...",
+      "type": "CHECK_IN",
+      "handover_date": "2024-03-01",
+      "contract": { "contract_number": "CON-001" },
+      "status": "COMPLETED"
+    }
+  ],
+  "links": {
+    "first": "...",
+    "last": "...",
+    "prev": null,
+    "next": null
+  },
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 15,
+    "total": 1
+  }
+}
+```
+
+---
+
+## 🔐 Phân quyền RBAC (Frontend Logic)
+
+| Role | Chức năng hiển thị | Ghi chú |
+|------|--------------------|---------|
+| **Owner** | View & Confirm | Thường chỉ xem kết quả cuối cùng |
+| **Manager** | CRUD & Confirm | Quản lý trực tiếp quá trình bàn giao |
+| **Staff** | Create & Update Items | Nhân viên đi kiểm tra thực tế tại phòng |
+| **Tenant** | View Only | Xem biên bản đã được chốt (không thể sửa) |
+
+---
+
+## Phân quyền RBAC (Backend Policy)
+
+| Hành động | Owner | Manager | Staff | Tenant |
+|-----------|-------|---------|-------|--------|
+| Create Handover | ✅ | ✅ | ✅ | ❌ |
+| Update Items/Snapshots | ✅ | ✅ | ✅ | ❌ |
+| Confirm Handover | ✅ | ✅ | ✅ | ❌ |
+| View Handover | ✅ | ✅ | ✅ | 🔶 own room |
+
+---
+
 ## 3. Kiến trúc API Endpoints (`HandoverController`)
 
 API được tự động gen bởi **Scramble** từ PHPDoc annotations trong `HandoverController`.  

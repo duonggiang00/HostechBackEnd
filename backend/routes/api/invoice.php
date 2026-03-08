@@ -1,11 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\Invoice\InvoiceController;
-
 use App\Http\Controllers\Api\Invoice\InvoiceAdjustmentController;
-
+use App\Http\Controllers\Api\Invoice\InvoiceController;
 use Illuminate\Support\Facades\Route;
-
 
 // Invoices
 Route::get('properties/{property_id}/invoices', [InvoiceController::class, 'indexByProperty']);

@@ -14,6 +14,8 @@ use App\Http\Resources\Ticket\TicketResource;
 use App\Models\Ticket\Ticket;
 use App\Services\Ticket\TicketService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Phiếu Sự cố / Yêu cầu (Tickets)
@@ -68,7 +70,7 @@ class TicketController extends Controller
      * @responseField meta object Thông tin pagination.
      * @responseField links object Các link pagination.
      */
-    public function index(\App\Http\Requests\Ticket\TicketIndexRequest $request)
+    public function index(\App\Http\Requests\Ticket\TicketIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Ticket::class);
 
@@ -130,7 +132,7 @@ class TicketController extends Controller
      * @response 404 {"message": "Không tìm thấy phiếu sự cố."}
      * @response 403 {"message": "This action is unauthorized."}
      */
-    public function show(string $id)
+    public function show(string $id): TicketResource
     {
         $ticket = $this->service->find($id);
 
@@ -163,7 +165,7 @@ class TicketController extends Controller
      * @response 422 scenario="Validation thất bại" {"message": "The property_id field is required.", "errors": {}}
      * @response 403 scenario="Không có quyền" {"message": "This action is unauthorized."}
      */
-    public function store(TicketStoreRequest $request)
+    public function store(TicketStoreRequest $request): JsonResponse
     {
         $this->authorize('create', Ticket::class);
 
@@ -187,7 +189,7 @@ class TicketController extends Controller
      * @response 404 scenario="Không tìm thấy" {"message": "No query results for model [App\\Models\\Ticket\\Ticket]."}
      * @response 422 scenario="Validation thất bại" {"message": "The assigned_to_user_id field must be a valid UUID.", "errors": {}}
      */
-    public function update(TicketUpdateRequest $request, string $id)
+    public function update(TicketUpdateRequest $request, string $id): TicketResource
     {
         $ticket = Ticket::findOrFail($id);
         $this->authorize('update', $ticket);
@@ -208,7 +210,7 @@ class TicketController extends Controller
      * @response 403 scenario="Không có quyền" {"message": "This action is unauthorized."}
      * @response 404 scenario="Không tìm thấy" {"message": "No query results for model [App\\Models\\Ticket\\Ticket]."}
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
         $ticket = Ticket::findOrFail($id);
         $this->authorize('delete', $ticket);
@@ -245,7 +247,7 @@ class TicketController extends Controller
      * @response 404 scenario="Không tìm thấy" {"message": "No query results for model [App\\Models\\Ticket\\Ticket]."}
      * @response 422 scenario="Trạng thái không hợp lệ" {"message": "The status field must be one of OPEN, RECEIVED, IN_PROGRESS, WAITING_PARTS, DONE, CANCELLED.", "errors": {}}
      */
-    public function updateStatus(TicketStatusRequest $request, string $id)
+    public function updateStatus(TicketStatusRequest $request, string $id): TicketResource
     {
         $ticket = Ticket::findOrFail($id);
         $this->authorize('updateStatus', $ticket);
@@ -282,7 +284,7 @@ class TicketController extends Controller
      * @response 404 scenario="Không tìm thấy ticket" {"message": "No query results for model [App\\Models\\Ticket\\Ticket]."}
      * @response 422 scenario="Validation thất bại" {"message": "The message field is required.", "errors": {}}
      */
-    public function storeEvent(TicketEventStoreRequest $request, string $id)
+    public function storeEvent(TicketEventStoreRequest $request, string $id): JsonResponse
     {
         $ticket = Ticket::findOrFail($id);
         $this->authorize('addEvent', $ticket);
@@ -315,7 +317,7 @@ class TicketController extends Controller
      * @response 403 scenario="Không có quyền" {"message": "This action is unauthorized."}
      * @response 404 scenario="Không tìm thấy ticket" {"message": "No query results for model [App\\Models\\Ticket\\Ticket]."}
      */
-    public function storeCost(TicketCostStoreRequest $request, string $id)
+    public function storeCost(TicketCostStoreRequest $request, string $id): JsonResponse
     {
         $ticket = Ticket::findOrFail($id);
         $this->authorize('addCost', $ticket);

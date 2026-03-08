@@ -31,6 +31,8 @@ return new class extends Migration
             $table->timestamp('rejected_at')->nullable();
             $table->text('reject_reason')->nullable();
             $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->nullable();
+            $table->softDeletes();
 
             $table->index('org_id');
             $table->index('meter_reading_id');

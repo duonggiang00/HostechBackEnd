@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Org;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Org\PasswordChangeRequest;
 use App\Http\Requests\Org\ProfileUpdateRequest;
+use App\Http\Requests\Org\UploadAvatarRequest;
 use App\Http\Resources\Org\UserResource;
 use App\Services\Org\ProfileService;
 use Dedoc\Scramble\Attributes\Group;
@@ -59,7 +60,7 @@ class ProfileController extends Controller
     /**
      * Tải lên ảnh đại diện (Avatar)
      */
-    public function uploadAvatar(\App\Http\Requests\Org\UploadAvatarRequest $request)
+    public function uploadAvatar(UploadAvatarRequest $request)
     {
         $avatarUrl = $this->service->uploadAvatar($request->user(), $request->file('avatar'));
 

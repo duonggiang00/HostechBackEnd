@@ -22,15 +22,88 @@ Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăn
 | `POST` | `/api/auth/register` | Đăng ký tài khoản (hỗ trợ mã invite) | ❌ Public |
 | `POST` | `/api/auth/login` | Đăng nhập, nhận Sanctum token | ❌ Public |
 | `POST` | `/api/auth/logout` | Đăng xuất, hủy token hiện tại | ✅ Required |
-| `GET`  | `/api/auth/me` | Lấy thông tin user đang đăng nhập qua UserResource | ✅ Required |
-| `PUT`  | `/api/auth/user/profile-information` | Cập nhật profile (Fortify native) | ✅ Required |
-| `PUT`  | `/api/auth/user/password` | Đổi mật khẩu (Fortify native) | ✅ Required |
-| `POST` | `/api/auth/user/two-factor-authentication` | Bật Fortify 2FA (TOTP) | ✅ Required |
-| `DELETE` | `/api/auth/user/two-factor-authentication` | Tắt 2FA | ✅ Required |
-| `GET`  | `/api/auth/user/two-factor-qr-code` | Lấy QR code cho app TOTP | ✅ Required |
-| `GET`  | `/api/auth/user/two-factor-recovery-codes` | Lấy danh sách recovery codes | ✅ Required |
-| `POST` | `/api/auth/forgot-password` | Gửi email reset mật khẩu | ❌ Public |
-| `POST` | `/api/auth/reset-password` | Reset mật khẩu bằng token | ❌ Public |
+| `GET`  | `/api/auth/me` | Lấy thông tin user đang đăng nhập | ✅ Required |
+
+---
+
+## 🎨 Hướng dẫn Frontend (Frontend Guide)
+
+### 1. Công việc cần làm (Tasks)
+- [ ] **Luồng Xác thực (Authentication Flow)**:
+    - Lưu trữ `access_token` vào LocalStorage/Cookie an toàn.
+    - Cấu hình Axios Interceptor để đính kèm `Authorization: Bearer <token>` vào mọi request.
+    - Xử lý lỗi `401 Unauthorized` để redirect về trang Login.
+- [ ] **Quản lý Hồ sơ (Profile Management)**:
+    - Giao diện cập nhật thông tin cá nhân (Họ tên, CCCD, Ngày sinh).
+    - Upload Avatar: Gửi request `multipart/form-data` tới endpoint `/api/profile/avatar`.
+    - Đổi mật khẩu: Yêu cầu mật khẩu cũ và mật khẩu mới.
+- [ ] **Bảo mật 2 lớp (2FA)**:
+    - Hiển thị QR Code để user quét bằng Google Authenticator/Authy.
+    - Form xác nhận mã 6 số để kích hoạt 2FA.
+    - Lưu trữ Recovery Codes dự phòng.
+
+### 2. Query Parameters (Danh sách người dùng / Search)
+*Endpoint: `GET /api/orgs/{id}/users` (Dành cho Admin/Owner)*
+
+| Parameter | Type | Mô tả |
+|-----------|------|-------|
+| `search` | string | Tìm kiếm theo tên, email, số điện thoại |
+| `filter[is_active]` | boolean | Lọc theo trạng thái hoạt động |
+| `filter[role]` | string | Lọc theo chức danh (Admin, Manager, Staff, Tenant) |
+| `sort` | string | Sắp xếp: `full_name`, `created_at` (prefix `-` để giảm dần) |
+| `page` | int | Trang hiện tại |
+| `per_page` | int | Số lượng/trang (1-100) |
+
+### 3. Dữ liệu gửi lên (Request Example)
+**POST `/api/auth/login`**
+```json
+{
+  "email": "user@example.com",
+  "password": "password",
+  "device_name": "iPhone 15 Pro"
+}
+```
+
+### 4. Dữ liệu trả về (Response Example)
+**GET `/api/auth/me`**
+```json
+{
+  "data": {
+    "id": "...",
+    "full_name": "Nguyên Văn A",
+    "email": "user@example.com",
+    "roles": ["Manager"],
+    "permissions": ["viewAny Room", "create Room"],
+    "avatar_url": "http://.../avatar.jpg",
+    "two_factor_enabled": true
+  },
+  "links": {
+    "self": "http://localhost:8001/api/auth/me"
+  }
+}
+```
+
+---
+
+## 🔐 Phân quyền RBAC (Frontend UI Logic)
+
+- **Cấm truy cập**: Nếu `is_active = false`, frontend nên chặn mọi tương tác và hiển thị thông báo "Tài khoản bị khóa".
+- **Phân quyền UI**: 
+    - Sử dụng mảng `permissions` để ẩn/hiện các nút bấm (VD: nút "Thêm phòng" chỉ hiện nếu có `create Room`).
+    - Sử dụng mảng `roles` cho các điều hướng lớn (VD: Role `Tenant` không hiện menu "Cấu hình hệ thống").
+
+---
+
+## Module Feature Matrix
+
+| Feature | `auth/me` | `profile` | `users.index` |
+|---------|-----------|-----------|---------------|
+| Searching | ❌ | ❌ | ✅ |
+| Filtering | ❌ | ❌ | ✅ |
+| Sorting | ❌ | ❌ | ✅ |
+| Pagination | ❌ | ❌ | ✅ |
+
+---
 
 ---
 
@@ -38,52 +111,12 @@ Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăn
 
 | Method | Endpoint | Chức năng | Auth |
 |--------|----------|-----------|------|
-| `GET`  | `/api/profile` | Lấy đầy đủ hồ sơ cá nhân (identity, avatar URL, OTP status) | ✅ Required |
-| `PUT`  | `/api/profile` | Cập nhật hồ sơ (qua `ProfileUpdateRequest`) | ✅ Required |
-| `POST` | `/api/profile/change-password` | Đổi mật khẩu (qua `PasswordChangeRequest`) | ✅ Required |
-| `POST` | `/api/profile/avatar` | Upload ảnh đại diện (qua `ProfileService`) | ✅ Required |
-| `GET`  | `/api/profile/mfa-status` | Kiểm tra trạng thái MFA/OTP | ✅ Required |
+| `GET`  | `/api/profile` | Lấy đầy đủ hồ sơ cá nhân | ✅ Required |
+| `PUT`  | `/api/profile` | Cập nhật hồ sơ | ✅ Required |
+| `POST` | `/api/profile/avatar` | Upload ảnh đại diện | ✅ Required |
 
 ---
 
-## UserResource — Cấu trúc Response
+## Phân quyền RBAC
 
-```json
-{
-  "data": {
-    "id": "uuid",
-    "org_id": "uuid",
-    "full_name": "Nguyễn Văn A",
-    "email": "user@example.com",
-    "phone": "0901234567",
-    "identity_number": "001234567890",
-    "identity_issued_date": "2020-01-15",
-    "identity_issued_place": "Cục Cảnh sát ĐKQL cư trú",
-    "date_of_birth": "1995-06-20",
-    "address": "123 Đường ABC, Quận 1",
-    "avatar_url": "https://...",
-    "is_active": true,
-    "email_verified_at": "...",
-    "mfa_enabled": false,
-    "mfa_method": null,
-    "two_factor_enabled": false,
-    "roles": ["Tenant"],
-    "permissions": ["viewAny Room", ...],
-    "created_at": "...",
-    "updated_at": "..."
-  }
-}
-```
-
----
-
-## Lưu ý thiết kế
-- Đăng ký có hỗ trợ mã invite (`invitation_token`) do `CreateNewUser` Fortify action xử lý
-- Avatar sử dụng **Spatie Media Library**, collection name: `avatar`
-- Fortify 2FA dùng TOTP (Google Authenticator), riêng `mfa_enabled` và `mfa_secret_encrypted` là custom fields dự phòng cho luồng SMS OTP tương lai
-- `/api/auth/me` và `/api/profile` trả về **cùng UserResource**, chỉ khác cách load eager relations
-
----
-
-## Phân quyền (RBAC)
 Profile của bản thân: **tất cả roles** đều có thể đọc và cập nhật (không cần permission riêng).

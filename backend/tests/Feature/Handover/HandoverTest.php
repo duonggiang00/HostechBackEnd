@@ -48,7 +48,7 @@ class HandoverTest extends TestCase
     {
         $org = Org::create(['name' => 'Test Org '.uniqid()]);
         $property = Property::create(['org_id' => $org->id, 'name' => 'Tòa A', 'code' => 'TA'.uniqid()]);
-        $floor = Floor::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => '1', 'floor_number' => 1]);
+        $floor = Floor::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => '1', 'sort_order' => 1]);
         $room = Room::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id,
             'name' => 'Phòng 101', 'code' => 'P'.uniqid(), 'status' => 'OCCUPIED',
@@ -320,7 +320,7 @@ class HandoverTest extends TestCase
         $this->actingAs($manager)->deleteJson('/api/handovers/'.$handover->id.'/items/'.$item->id)
             ->assertNoContent();
 
-        $this->assertDatabaseMissing('handover_items', ['id' => $item->id]);
+        $this->assertSoftDeleted('handover_items', ['id' => $item->id]);
     }
 
     // ─── 6. Meter Snapshots CRUD ─────────────────────────────────────────────

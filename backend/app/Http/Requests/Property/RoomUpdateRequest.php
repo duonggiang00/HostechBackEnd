@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @bodyParam name string Tên phòng. Example: Phòng 101
  * @bodyParam type string Loại phòng (studio, apartment, house, dormitory, other).
  * @bodyParam area number Diện tích.
+ * @bodyParam floor_number integer Số tầng.
  * @bodyParam capacity integer Sức chứa.
  * @bodyParam base_price number Giá cơ bản.
  * @bodyParam status string Trạng thái.
@@ -39,6 +40,7 @@ class RoomUpdateRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
             'area' => ['nullable', 'numeric', 'min:0'],
+            'floor_number' => ['nullable', 'integer'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'base_price' => ['sometimes', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],

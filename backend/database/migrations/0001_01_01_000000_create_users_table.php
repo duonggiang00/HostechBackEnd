@@ -28,7 +28,7 @@ return new class extends Migration
             $table->text('mfa_secret_encrypted')->nullable();
             $table->timestamp('mfa_enrolled_at')->nullable();
             $table->boolean('is_active')->default(true);
-            $table->timestamp('deleted_at')->nullable();
+            $table->softDeletes();
             $table->json('meta')->nullable();
             $table->string('identity_number', 20)->nullable();
             $table->date('identity_issued_date')->nullable();

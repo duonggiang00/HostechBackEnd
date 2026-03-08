@@ -62,7 +62,8 @@ return new class extends Migration
             $table->json('meta')->nullable();
 
             // invoice_items usually don't need updated_at, just created_at is okay as per DBML
-            $table->timestamp('created_at')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
 
             $table->index('org_id');
             $table->index('invoice_id');

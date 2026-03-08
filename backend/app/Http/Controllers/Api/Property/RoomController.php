@@ -30,12 +30,6 @@ class RoomController extends Controller
      *
      * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
      */
-
-    /**
-     * Danh sách phòng
-     *
-     * Lấy danh sách phòng. Hỗ trợ lọc theo Property, Floor, Status...
-     */
     public function index(RoomIndexRequest $request)
     {
         $this->authorize('viewAny', Room::class);
@@ -60,7 +54,7 @@ class RoomController extends Controller
         $search = $request->input('search');
         $allowed = ['code', 'status', 'type', 'property_id'];
 
-        $paginator = $this->service->paginateTrash($allowed, $perPage, $search);
+        $paginator = $this->service->paginateTrash($allowed, $perPage, $search, $request->user());
 
         return RoomResource::collection($paginator);
     }

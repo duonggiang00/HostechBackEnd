@@ -5,12 +5,12 @@ namespace App\Policies\Meter;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Meter\Meter;
 use App\Models\Org\User;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MeterPolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     /**
      * Tên Module dùng làm tiền tố (prefix) cho các quyền.
@@ -45,7 +45,7 @@ class MeterPolicy implements RbacModuleProvider
         }
 
         // Kiểm tra quyền sở hữu tầng vật lý
-        return $this->checkOrgScope($user, $meter);
+        return $this->checkPropertyScope($user, $meter);
     }
 
     public function create(User $user): bool
@@ -59,7 +59,7 @@ class MeterPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meter);
+        return $this->checkPropertyScope($user, $meter);
     }
 
     public function delete(User $user, Meter $meter): bool
@@ -68,7 +68,7 @@ class MeterPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meter);
+        return $this->checkPropertyScope($user, $meter);
     }
 
     public function restore(User $user, Meter $meter): bool
@@ -77,7 +77,7 @@ class MeterPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meter);
+        return $this->checkPropertyScope($user, $meter);
     }
 
     public function forceDelete(User $user, Meter $meter): bool
@@ -86,6 +86,6 @@ class MeterPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meter);
+        return $this->checkPropertyScope($user, $meter);
     }
 }

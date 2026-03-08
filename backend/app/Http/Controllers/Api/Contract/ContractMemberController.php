@@ -11,6 +11,7 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -105,7 +106,7 @@ class ContractMemberController extends Controller
      *
      * Cập nhật ngày rời khỏi phòng (left_at = now) giúp kết thúc các biến động chỉ số liên quan đến bạn cùng phòng.
      */
-    public function destroy(string $contractId, string $memberId): \Illuminate\Http\JsonResponse
+    public function destroy(string $contractId, string $memberId): JsonResponse
     {
         $contract = $this->service->find($contractId);
         if (! $contract) {

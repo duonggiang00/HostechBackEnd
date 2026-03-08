@@ -35,13 +35,11 @@ class InvoiceResource extends JsonResource
             'contract' => new ContractResource($this->whenLoaded('contract')),
             'items' => InvoiceItemResource::collection($this->whenLoaded('items')),
 
-
             // Lịch sử thay đổi trạng thái
             'status_histories' => InvoiceStatusHistoryResource::collection($this->whenLoaded('statusHistories')),
 
             // Các khoản điều chỉnh (CREDIT/DEBIT)
             'adjustments' => InvoiceAdjustmentResource::collection($this->whenLoaded('adjustments')),
-
 
             // Người tạo / phát hành
             'created_by' => new UserResource($this->whenLoaded('createdBy')),

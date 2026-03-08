@@ -28,12 +28,6 @@ class FloorController extends Controller
      *
      * Lấy danh sách các tầng. Hỗ trợ lọc theo Property.
      */
-
-    /**
-     * Danh sách tầng
-     *
-     * Lấy danh sách các tầng. Hỗ trợ lọc theo Property.
-     */
     public function index(FloorIndexRequest $request)
     {
         $this->authorize('viewAny', Floor::class);
@@ -47,7 +41,8 @@ class FloorController extends Controller
             $perPage,
             $search,
             $propertyId,
-            $request->boolean('with_trashed')
+            $request->boolean('with_trashed'),
+            $request->user()
         );
 
         return FloorResource::collection($paginator);
@@ -63,7 +58,7 @@ class FloorController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         $search = $request->input('search');
 
-        $floors = $this->service->paginateTrash(['property_id', 'name', 'code'], $perPage, $search);
+        $floors = $this->service->paginateTrash(['property_id', 'name', 'code'], $perPage, $search, $request->user());
 
         return FloorResource::collection($floors);
     }

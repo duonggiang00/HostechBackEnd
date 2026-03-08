@@ -5,12 +5,12 @@ namespace App\Policies\Ticket;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Models\Ticket\Ticket;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TicketPolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  RBAC MODULE REGISTRATION                            ║
@@ -69,7 +69,7 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 
     /**
@@ -89,7 +89,7 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 
     /**
@@ -101,7 +101,7 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 
     /**
@@ -113,7 +113,7 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 
     /**
@@ -129,7 +129,7 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 
     /**
@@ -141,6 +141,6 @@ class TicketPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $ticket);
+        return $this->checkPropertyScope($user, $ticket);
     }
 }

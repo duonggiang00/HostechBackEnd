@@ -11,6 +11,7 @@ use App\Http\Resources\Contract\ContractResource;
 use App\Models\Contract\Contract;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -73,7 +74,7 @@ class ContractController extends Controller
     /**
      * Chi tiết hợp đồng
      */
-    public function show(string $id): ContractResource|\Illuminate\Http\JsonResponse
+    public function show(string $id): ContractResource|JsonResponse
     {
         $contract = $this->service->find($id);
         if (! $contract) {
@@ -88,7 +89,7 @@ class ContractController extends Controller
     /**
      * Cập nhật hợp đồng
      */
-    public function update(ContractUpdateRequest $request, string $id): ContractResource|\Illuminate\Http\JsonResponse
+    public function update(ContractUpdateRequest $request, string $id): ContractResource|JsonResponse
     {
         $contract = $this->service->find($id);
         if (! $contract) {
@@ -105,7 +106,7 @@ class ContractController extends Controller
     /**
      * Xóa hợp đồng (Soft Delete)
      */
-    public function destroy(string $id): \Illuminate\Http\JsonResponse
+    public function destroy(string $id): JsonResponse
     {
         $contract = $this->service->find($id);
         if (! $contract) {
@@ -122,7 +123,7 @@ class ContractController extends Controller
     /**
      * Khôi phục hợp đồng
      */
-    public function restore(string $id): ContractResource|\Illuminate\Http\JsonResponse
+    public function restore(string $id): ContractResource|JsonResponse
     {
         $contract = $this->service->findTrashed($id);
         if (! $contract) {
@@ -139,7 +140,7 @@ class ContractController extends Controller
     /**
      * Xóa vĩnh viễn hợp đồng
      */
-    public function forceDelete(string $id): \Illuminate\Http\JsonResponse
+    public function forceDelete(string $id): JsonResponse
     {
         $contract = $this->service->findWithTrashed($id);
         if (! $contract) {
@@ -171,7 +172,7 @@ class ContractController extends Controller
      * Tenant đồng ý và tiến hành tham gia hợp đồng.
      * Chỉ hoạt động khi user hiện tại là thành viên PENDING của hợp đồng này.
      */
-    public function acceptSignature(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function acceptSignature(Request $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
 
@@ -190,7 +191,7 @@ class ContractController extends Controller
      * Tenant từ chối tham gia hợp đồng.
      * Chỉ hoạt động khi user hiện tại là thành viên PENDING của hợp đồng này.
      */
-    public function rejectSignature(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function rejectSignature(Request $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
 
@@ -213,7 +214,7 @@ class ContractController extends Controller
      * Tenant có hợp đồng ACTIVE tại Tòa nhà có thể xem danh sách phòng trống (AVAILABLE)
      * trong cùng Property, phục vụ mục đích xin đổi phòng.
      */
-    public function availableRooms(Request $request, string $id): \Illuminate\Http\JsonResponse
+    public function availableRooms(Request $request, string $id): JsonResponse
     {
         $contract = Contract::with('property')->findOrFail($id);
 
@@ -234,7 +235,7 @@ class ContractController extends Controller
      * Tenant gửi yêu cầu đổi sang phòng khác trong cùng Tòa nhà.
      * Quản lý sẽ xem xét và phê duyệt hoặc từ chối yêu cầu.
      */
-    public function roomTransferRequest(RoomTransferRequest $request, string $id): \Illuminate\Http\JsonResponse
+    public function roomTransferRequest(RoomTransferRequest $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
 

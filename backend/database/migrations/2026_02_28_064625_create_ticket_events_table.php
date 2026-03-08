@@ -18,6 +18,8 @@ return new class extends Migration
             $table->text('message')->nullable();
             $table->json('meta')->nullable();
             $table->timestamp('created_at')->useCurrent()->index();
+            $table->timestamp('updated_at')->nullable();
+            $table->softDeletes();
 
             // Foreign keys
             $table->foreign('org_id')->references('id')->on('orgs')->onDelete('cascade');

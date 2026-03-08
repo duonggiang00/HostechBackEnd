@@ -8,10 +8,11 @@ use App\Models\Service\Service;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceItem extends Model
 {
-    use HasFactory, HasUuids, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 

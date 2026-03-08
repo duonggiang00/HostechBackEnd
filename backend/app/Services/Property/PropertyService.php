@@ -2,8 +2,8 @@
 
 namespace App\Services\Property;
 
-use App\Models\Property\Property;
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -18,14 +18,22 @@ class PropertyService
 
         /** @var \App\Models\Org\User $user */
         $user = auth()->user();
-        if ($user && $user->hasRole('Tenant')) {
-            $query->whereHas('contracts', function ($q) use ($user) {
-                $q->where('status', 'ACTIVE')
-                    ->whereHas('members', function ($sq) use ($user) {
-                        $sq->where('user_id', $user->id)
-                            ->where('status', 'APPROVED');
-                    });
-            });
+        if ($user) {
+            if ($user->hasRole('Tenant')) {
+                // Tenant scope: only properties where they have an active contract
+                $query->whereHas('contracts', function ($q) use ($user) {
+                    $q->where('status', 'ACTIVE')
+                        ->whereHas('members', function ($sq) use ($user) {
+                            $sq->where('user_id', $user->id)
+                                ->where('status', 'APPROVED');
+                        });
+                });
+            } elseif ($user->hasRole(['Manager', 'Staff'])) {
+                // Manager/Staff scope: only properties they are explicitly assigned to
+                $query->whereHas('managers', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            }
         }
 
         if ($orgId) {

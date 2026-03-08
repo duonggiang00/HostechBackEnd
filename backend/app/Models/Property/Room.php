@@ -22,7 +22,7 @@ class Room extends Model implements HasMedia
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'org_id', 'property_id', 'floor_id', 'code', 'name', 'type', 'area', 'capacity', 'base_price', 'status', 'description', 'amenities', 'utilities'];
+    protected $fillable = ['id', 'org_id', 'property_id', 'floor_id', 'code', 'name', 'type', 'area', 'floor_number', 'capacity', 'base_price', 'status', 'description', 'amenities', 'utilities'];
 
     protected function casts(): array
     {

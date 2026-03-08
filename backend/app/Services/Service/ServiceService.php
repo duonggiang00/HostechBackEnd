@@ -2,16 +2,19 @@
 
 namespace App\Services\Service;
 
+use App\Models\Service\RoomService as RoomServiceModel;
 use App\Models\Service\Service;
 use App\Models\Service\ServiceRate;
 use App\Models\Service\TieredRate;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class ServiceService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Service::class)
             ->allowedFilters($allowedFilters)
@@ -38,7 +41,7 @@ class ServiceService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Service::onlyTrashed())
             ->allowedFilters($allowedFilters)
@@ -226,12 +229,46 @@ class ServiceService
     {
         $service = $this->findWithTrashed($id);
         if ($service) {
-            // ServiceRates satisfy foreign key cascade?
-            // Migration defined: $table->foreignUuid('service_id')->constrained('services')->cascadeOnDelete();
-            // So DB will auto-delete rates.
             return $service->forceDelete();
         }
 
         return false;
+    }
+
+    // =========================================================================
+    // Room Service Management
+    // =========================================================================
+
+    public function getRoomServices(string $roomId, string $orgId): Collection
+    {
+        return RoomServiceModel::with(['service.currentRate.tieredRates'])
+            ->where('room_id', $roomId)
+            ->where('org_id', $orgId)
+            ->get();
+    }
+
+    public function findRoomService(string $id, string $orgId): ?RoomServiceModel
+    {
+        return RoomServiceModel::with(['service.currentRate.tieredRates'])
+            ->where('org_id', $orgId)
+            ->find($id);
+    }
+
+    public function attachToRoom(string $roomId, array $data, string $orgId): RoomServiceModel
+    {
+        $data['room_id'] = $roomId;
+        $data['org_id'] = $orgId;
+
+        return RoomServiceModel::create($data);
+    }
+
+    public function updateRoomService(RoomServiceModel $roomService, array $data): bool
+    {
+        return $roomService->update($data);
+    }
+
+    public function detachFromRoom(RoomServiceModel $roomService): bool
+    {
+        return $roomService->delete();
     }
 }

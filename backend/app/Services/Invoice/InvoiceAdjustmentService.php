@@ -6,14 +6,12 @@ use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Org\User;
 use Illuminate\Support\Facades\DB;
-use Spatie\QueryBuilder\QueryBuilder;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class InvoiceAdjustmentService
 {
-    public function __construct(protected InvoiceService $invoiceService)
-    {
-    }
+    public function __construct(protected InvoiceService $invoiceService) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  READ OPERATIONS                                      ║
@@ -62,7 +60,7 @@ class InvoiceAdjustmentService
     public function createAdjustment(Invoice $invoice, array $data, User $user): InvoiceAdjustment
     {
         // Validate: chỉ cho phép adjustment trên hóa đơn ISSUED hoặc PENDING
-        if (!in_array($invoice->status, ['ISSUED', 'PENDING'])) {
+        if (! in_array($invoice->status, ['ISSUED', 'PENDING'])) {
             abort(422, 'Chỉ có thể tạo khoản điều chỉnh cho hóa đơn ở trạng thái Đã phát hành (ISSUED) hoặc Chờ thanh toán (PENDING).');
         }
 

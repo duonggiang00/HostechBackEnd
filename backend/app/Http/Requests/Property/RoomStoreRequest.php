@@ -11,6 +11,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @bodyParam name string required Tên phòng. Example: Phòng 101
  * @bodyParam type string Loại phòng (studio, apartment, house, dormitory, other). Example: studio
  * @bodyParam area number Diện tích (m2). Example: 30.5
+ * @bodyParam floor_number integer Số tầng. Example: 1
  * @bodyParam capacity integer Sức chứa (người). Example: 2
  * @bodyParam base_price number Giá cơ bản. Example: 5000000
  * @bodyParam status string Trạng thái (available, occupied, maintenance, reserved). Example: available
@@ -42,6 +43,7 @@ class RoomStoreRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
             'area' => ['nullable', 'numeric', 'min:0'],
+            'floor_number' => ['nullable', 'integer'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'base_price' => ['required', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],

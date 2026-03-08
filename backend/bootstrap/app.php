@@ -13,7 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(append: [\App\Http\Middleware\ResolveTenant::class]);
-        
+
         $middleware->redirectTo(
             guests: fn () => response()->json(['message' => 'Unauthenticated.'], 401),
             users: '/admin'

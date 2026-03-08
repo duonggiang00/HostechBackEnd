@@ -5,11 +5,11 @@ namespace App\Policies\Property;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 
 class FloorPolicy implements RbacModuleProvider
 {
-    use HandlesOrgScope;
+    use HandlesPropertyScope;
 
     public static function getModuleName(): string
     {
@@ -41,7 +41,7 @@ class FloorPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $floor);
+        return $this->checkPropertyScope($user, $floor);
     }
 
     public function create(User $user): bool
@@ -55,7 +55,7 @@ class FloorPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $floor);
+        return $this->checkPropertyScope($user, $floor);
     }
 
     public function delete(User $user, Floor $floor): bool
@@ -64,6 +64,6 @@ class FloorPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $floor);
+        return $this->checkPropertyScope($user, $floor);
     }
 }

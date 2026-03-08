@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Policies;
+namespace App\Policies\Handover;
 
 use App\Contracts\RbacModuleProvider;
 use App\Models\Handover\Handover;

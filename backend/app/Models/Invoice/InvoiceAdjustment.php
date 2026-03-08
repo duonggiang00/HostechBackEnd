@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InvoiceAdjustment extends Model
 {
-    use HasFactory, HasUuids, MultiTenant;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 
@@ -41,7 +42,6 @@ class InvoiceAdjustment extends Model
         ];
     }
 
-
     /**
      * Kiểm tra xem adjustment đã được duyệt chưa.
      */
@@ -49,10 +49,6 @@ class InvoiceAdjustment extends Model
     {
         return $this->approved_at !== null;
     }
-
-    /**
-     * @return BelongsTo
-     */
 
     public function invoice(): BelongsTo
     {

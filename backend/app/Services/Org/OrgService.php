@@ -3,11 +3,15 @@
 namespace App\Services\Org;
 
 use App\Models\Org\Org;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class OrgService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, bool $withTrashed = false)
+    /**
+     * Paginate organizations
+     */
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, bool $withTrashed = false): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Org::class)
             ->allowedFilters($allowedFilters)
@@ -29,7 +33,7 @@ class OrgService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return $this->paginate($allowedFilters, $perPage, $search, true);
     }

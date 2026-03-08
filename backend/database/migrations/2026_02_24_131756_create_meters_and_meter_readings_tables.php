@@ -42,6 +42,7 @@ return new class extends Migration
             $table->timestamp('locked_at')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['meter_id', 'period_start', 'period_end']);
             $table->index('status');

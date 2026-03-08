@@ -297,6 +297,9 @@ test('staff can view any contract in org', function () {
 
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
 
+    // Attach staff to property to satisfy HandlesPropertyScope
+    $staff->properties()->syncWithoutDetaching([(string) $property->id]);
+
     actingAs($staff);
     getJson("/api/contracts/{$contract->id}")->assertStatus(200);
 });

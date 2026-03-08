@@ -390,7 +390,7 @@ class AuthenticationTest extends TestCase
             'data' => [
                 'id' => $user->id,
                 'email' => $user->email,
-            ]
+            ],
         ]);
     }
 }

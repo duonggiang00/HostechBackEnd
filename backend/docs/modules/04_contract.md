@@ -21,12 +21,129 @@ Module quản lý hợp đồng thuê phòng, thành viên trong hợp đồng, 
 |--------|----------|-----------|----------------|
 | `GET`    | `/api/contracts` | Danh sách hợp đồng (theo org scope) | Owner, Manager, Staff |
 | `POST`   | `/api/contracts` | Tạo hợp đồng mới | Owner, Manager |
-| `GET`    | `/api/contracts/{id}` | Chi tiết hợp đồng | Owner, Manager, Staff |
+| `GET`    | `/api/contracts/{id}` | Chi tiết hợp đồng | All roles (với membership scope) |
 | `PUT`    | `/api/contracts/{id}` | Cập nhật hợp đồng | Owner, Manager |
 | `DELETE` | `/api/contracts/{id}` | Soft delete | Owner |
 | `GET`    | `/api/contracts/trash` | Thùng rác | Owner |
 | `POST`   | `/api/contracts/{id}/restore` | Khôi phục | Owner |
 | `DELETE` | `/api/contracts/{id}/force` | Xóa vĩnh viễn | Owner |
+
+---
+
+## 🎨 Hướng dẫn Frontend (Frontend Guide)
+
+### 1. Công việc cần làm (Tasks)
+- [ ] **Trang quản lý hợp đồng (Dành cho Quản lý)**:
+    - Danh sách hợp đồng kèm trạng thái (Draft, Active, Ended).
+    - Bộ lọc theo Tòa nhà, Phòng.
+    - Tìm kiếm theo tên khách thuê (search through members).
+- [ ] **Luồng ký hợp đồng (Dành cho Tenant)**:
+    - Hiển thị danh sách `My Pending Contracts`.
+    - Trang chi tiết hợp đồng chờ ký (hiển thị thông tin cơ bản nhưng ẩn mã `join_code`).
+    - Nút "Xác nhận ký" và "Từ chối".
+- [ ] **Trang đổi phòng (Room Transfer)**:
+    - Hiển thị thông tin phòng hiện tại.
+    - Nút "Xin đổi phòng" → Hiển thị modal/list các phòng trống### 1. Công việc cần làm (Tasks)
+- [ ] **Tạo Hợp đồng (Flow)**:
+    - Bước 1: Chọn phòng (Room) -> Hiện giá & dịch vụ mặc định.
+    - Bước 2: Nhập thông tin khách thuê (Tenant) / Chọn từ danh sách có sẵn.
+    - Bước 3: Cấu hình chu kỳ thanh toán, ngày bắt đầu, tiền cọc.
+    - Bước 4: Lưu DRAFT -> Xem trước (Preview) -> Gửi khách ký.
+- [ ] **Ký hợp đồng (Tenant App)**:
+    - Nhận thông báo hợp đồng mới.
+    - Đọc nội dung & Điều khoản.
+    - Xác nhận bằng OTP hoặc chữ ký điện tử -> Chuyển trạng thái `ACTIVE`.
+- [ ] **Phụ lục & Chuyển phòng**:
+    - Giao diện tạo phụ lục thay đổi giá/dịch vụ.
+    - Form chuyển phòng: Chọn phòng mới -> Hệ thống tự tính chênh lệch cọc/tiền thuê.
+
+### 2. Query Parameters (Filters & Search)
+*Endpoint: `GET /api/contracts`*
+
+| Parameter | Type | Mô tả |
+|-----------|------|-------|
+| `search` | string | Tìm theo số hợp đồng, tên khách thuê |
+| `filter[status]` | string | `DRAFT`, `ACTIVE`, `ENDED`, `CANCELLED` |
+| `filter[property_id]` | uuid | Lọc hợp đồng theo tòa nhà |
+| `filter[room_id]` | uuid | Lọc hợp đồng theo phòng |
+| `sort` | string | `start_date`, `created_at`, `total_amount` |
+| `page`, `per_page` | int | Chuẩn phân trang |
+
+### 3. Dữ liệu gửi lên (Request Example)
+**POST `/api/contracts`**
+```json
+{
+  "room_id": "...",
+  "tenant_id": "...",
+  "start_date": "2024-03-01",
+  "billing_cycle": "MONTHLY",
+  "deposit_amount": 10000000,
+  "services": [
+    { "service_id": "...", "custom_price": 4000 }
+  ]
+}
+```
+
+### 4. Dữ liệu trả về (Response Example)
+**GET `/api/contracts/{id}`**
+```json
+{
+  "data": {
+    "id": "...",
+    "contract_number": "CON-2024-001",
+    "status": "ACTIVE",
+    "tenant": { "full_name": "Nguyễn Văn A" },
+    "room": { "room_number": "101" },
+    "total_amount": 5000000.0
+  },
+  "links": {
+    "self": "..."
+  }
+}
+```
+
+---
+
+## 🔐 Phân quyền RBAC (Frontend Logic)
+
+| Role | Chức năng hiển thị | Ghi chú |
+|------|--------------------|---------|
+| **Owner** | Full CRUD | Phê duyệt thanh lý hợp đồng |
+| **Manager** | CRUD Draft & Confirm | Quản lý vòng đời hợp đồng |
+| **Staff** | View & Create Draft | Hỗ trợ làm thủ tục ban đầu |
+| **Tenant** | View & Accept | Ký và xem lịch sử thanh toán |
+
+---
+
+## Module Feature Matrix
+
+| Feature | `contracts.index` | `contracts.show` |
+|---------|-------------------|------------------|
+| Searching | ✅ | ❌ |
+| Filtering | ✅ | ❌ |
+| Sorting | ✅ | ❌ |
+| Pagination | ✅ | ❌ |
+thấy `join_code` của chính mình. Phải dùng email/OTP để verify khi accept signature. |
+
+---
+
+## Tenant Signature Flow
+
+| Method | Endpoint | Chức năng | Auth |
+|--------|----------|-----------|------|
+| `GET`  | `/api/contracts/my-pending` | Lấy danh sách hợp đồng chờ ký | ✅ Tenant |
+| `POST` | `/api/contracts/{id}/accept-signature` | Đồng ý ký hợp đồng | ✅ Tenant |
+| `POST` | `/api/contracts/{id}/reject-signature` | Từ chối hợp đồng | ✅ Tenant |
+
+---
+
+## Tenant Self-Service
+
+| Method | Endpoint | Chức năng | Auth |
+|--------|----------|-----------|------|
+| `POST` | `/api/contracts/{id}/members` | Mời bạn cùng phòng | ✅ Tenant (APPROVED member) |
+| `GET`  | `/api/contracts/{id}/available-rooms` | Xem phòng trống cùng tòa nhà | ✅ Tenant (APPROVED member) |
+| `POST` | `/api/contracts/{id}/room-transfer-request` | Xin đổi phòng | ✅ Tenant (APPROVED member) |
 
 ---
 
@@ -42,26 +159,6 @@ Module quản lý hợp đồng thuê phòng, thành viên trong hợp đồng, 
 | `PUT`    | `/api/contracts/{id}/members/{mid}/approve` | Phê duyệt thành viên | Owner, Manager |
 
 > ⚠️ Tenant*: Chỉ Tenant đang là thành viên APPROVED của hợp đồng mới được mời thêm người (role default: ROOMMATE)
-
----
-
-## Tenant Signature Flow
-
-| Method | Endpoint | Chức năng | Auth |
-|--------|----------|-----------|------|
-| `GET`  | `/api/contracts/my-pending` | Lấy danh sách hợp đồng chờ ký (masked data, ẩn join_code) | ✅ Tenant |
-| `POST` | `/api/contracts/{id}/accept-signature` | Đồng ý ký hợp đồng → member PENDING→APPROVED, contract DRAFT→ACTIVE | ✅ Tenant |
-| `POST` | `/api/contracts/{id}/reject-signature` | Từ chối hợp đồng → member PENDING→REJECTED | ✅ Tenant |
-
----
-
-## Tenant Self-Service
-
-| Method | Endpoint | Chức năng | Auth |
-|--------|----------|-----------|------|
-| `POST` | `/api/contracts/{id}/members` | Mời bạn cùng phòng (ROOMMATE/GUARANTOR/TENANT) | ✅ Tenant (APPROVED member) |
-| `GET`  | `/api/contracts/{id}/available-rooms` | Xem phòng trống cùng tòa nhà (để xin đổi phòng) | ✅ Tenant (APPROVED member) |
-| `POST` | `/api/contracts/{id}/room-transfer-request` | Xin đổi phòng (lưu vào meta.transfer_requests) | ✅ Tenant (APPROVED member) |
 
 ---
 
@@ -108,7 +205,7 @@ PENDING → (Tenant accept) → APPROVED
 
 ---
 
-## Phân quyền RBAC
+## Phân quyền RBAC (Backend Policy)
 
 | Hành động | Admin | Owner | Manager | Staff | Tenant |
 |-----------|-------|-------|---------|-------|--------|

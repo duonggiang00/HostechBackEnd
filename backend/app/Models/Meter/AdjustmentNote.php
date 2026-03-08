@@ -8,14 +8,19 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class AdjustmentNote extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes;
 
     const UPDATED_AT = null;
+
+    public $incrementing = false;
+
+    protected $keyType = 'string';
 
     protected $fillable = [
         'org_id',
@@ -32,10 +37,13 @@ class AdjustmentNote extends Model implements HasMedia
         'status',
     ];
 
-    protected $casts = [
-        'approved_at' => 'datetime',
-        'rejected_at' => 'datetime',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'approved_at' => 'datetime',
+            'rejected_at' => 'datetime',
+        ];
+    }
 
     public function meterReading(): BelongsTo
     {

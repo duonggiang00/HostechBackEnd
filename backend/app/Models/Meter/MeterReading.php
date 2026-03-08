@@ -8,6 +8,7 @@ use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -15,7 +16,7 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class MeterReading extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 

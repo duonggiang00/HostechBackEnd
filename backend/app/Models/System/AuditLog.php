@@ -11,11 +11,18 @@ class AuditLog extends Activity
 {
     use HasUuids;
 
-    public $incrementing = false;
+    protected $keyType = 'string';
 
     // Relationship to Organization
     public function org(): BelongsTo
     {
         return $this->belongsTo(Org::class);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
     }
 }

@@ -15,6 +15,8 @@ return new class extends Migration
             $table->integer('tier_from');
             $table->integer('tier_to')->nullable();
             $table->decimal('price', 15, 2);
+            $table->timestamps();
+            $table->softDeletes();
 
             $table->index('org_id');
             $table->index('service_rate_id');
@@ -29,6 +31,7 @@ return new class extends Migration
             $table->integer('included_units')->default(0)->comment('Số đơn vị bao');
             $table->json('meta')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['room_id', 'service_id']);
             $table->index('org_id');

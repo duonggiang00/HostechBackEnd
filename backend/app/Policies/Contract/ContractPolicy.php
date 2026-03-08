@@ -5,12 +5,12 @@ namespace App\Policies\Contract;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Contract\Contract;
 use App\Models\Org\User;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ContractPolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     public static function getModuleName(): string
     {
@@ -40,9 +40,9 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function view(User $user, Contract $contract): bool
     {
-        // 1. Staff/Manager/Owner -> via Permission + OrgScope
+        // 1. Staff/Manager/Owner -> via Permission + PropertyScope
         if ($user->hasPermissionTo('view Contracts') && ! $user->hasRole('Tenant')) {
-            return $this->checkOrgScope($user, $contract);
+            return $this->checkPropertyScope($user, $contract);
         }
 
         // 2. Tenant (and others) -> via Membership
@@ -66,7 +66,7 @@ class ContractPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $contract);
+        return $this->checkPropertyScope($user, $contract);
     }
 
     /**
@@ -76,7 +76,7 @@ class ContractPolicy implements RbacModuleProvider
     {
         // Manager/Owner/Staff -> Can add to any contract in Org
         if ($user->hasPermissionTo('update Contracts')) {
-            return $this->checkOrgScope($user, $contract);
+            return $this->checkPropertyScope($user, $contract);
         }
 
         // Tenant -> Can only add to their OWN contract
@@ -95,7 +95,7 @@ class ContractPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $contract);
+        return $this->checkPropertyScope($user, $contract);
     }
 
     /**
@@ -107,7 +107,7 @@ class ContractPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $contract);
+        return $this->checkPropertyScope($user, $contract);
     }
 
     /**
@@ -121,6 +121,6 @@ class ContractPolicy implements RbacModuleProvider
         }
         // In some systems force delete is separate. Adhering to standard for now.
 
-        return $this->checkOrgScope($user, $contract);
+        return $this->checkPropertyScope($user, $contract);
     }
 }

@@ -5,6 +5,8 @@ namespace App\Services\Invoice;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceStatusHistory;
+use App\Models\Property\Room;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -22,7 +24,7 @@ class InvoiceService
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
-    ) {
+    ): LengthAwarePaginator {
         $query = QueryBuilder::for(Invoice::class)
             ->allowedFilters([
                 AllowedFilter::exact('org_id'),
@@ -57,6 +59,10 @@ class InvoiceService
                             ->where('status', 'APPROVED');
                     });
             });
+        } elseif ($user && $user->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
         }
 
         // Tìm kiếm theo mã phòng hoặc tên property
@@ -82,7 +88,7 @@ class InvoiceService
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
-    ) {
+    ): LengthAwarePaginator {
         $query = QueryBuilder::for(Invoice::onlyTrashed())
             ->allowedFilters([
                 AllowedFilter::exact('org_id'),
@@ -113,7 +119,7 @@ class InvoiceService
             $query->where(function ($q) use ($search) {
                 $q->whereHas(
                     'room',
-                    fn($rq) => $rq->where('code', 'like', "%{$search}%")
+                    fn ($rq) => $rq->where('code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                 )
                     ->orWhereHas('property', function ($pq) use ($search) {
@@ -133,7 +139,7 @@ class InvoiceService
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
-    ) {
+    ): LengthAwarePaginator {
         $query = QueryBuilder::for(
             Invoice::where('property_id', $propertyId)
         )
@@ -160,6 +166,20 @@ class InvoiceService
             $query->where('org_id', $orgId);
         }
 
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('contract', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
+            });
+        } elseif ($user && $user->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('room', function ($rq) use ($search) {
@@ -181,7 +201,7 @@ class InvoiceService
         int $perPage = 15,
         ?string $search = null,
         ?string $orgId = null
-    ) {
+    ): LengthAwarePaginator {
         $query = QueryBuilder::for(
             Invoice::where('property_id', $propertyId)
                 ->whereHas('room', function ($q) use ($floorId) {
@@ -274,12 +294,12 @@ class InvoiceService
         $user = request()->user();
 
         // Auto-assign org_id if not explicitly provided or by non-admin
-        if ($user && !$user->hasRole('Admin') && $user->org_id) {
+        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
             $data['org_id'] = $user->org_id;
         } else {
             // Admin: lấy org_id từ room nếu không truyền
-            if (!isset($data['org_id'])) {
-                $room = \App\Models\Property\Room::find($data['room_id'] ?? null);
+            if (! isset($data['org_id'])) {
+                $room = Room::find($data['room_id'] ?? null);
                 $data['org_id'] = $room?->org_id;
             }
         }
@@ -313,7 +333,7 @@ class InvoiceService
     public function update(string $id, array $data): ?Invoice
     {
         $invoice = $this->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return null;
         }
 
@@ -321,6 +341,7 @@ class InvoiceService
             $oldStatus = $invoice->status;
 
             $invoice->update($data);
+
             return $invoice->refresh();
         });
     }
@@ -331,7 +352,7 @@ class InvoiceService
     public function delete(string $id): bool
     {
         $invoice = $this->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 
@@ -344,7 +365,7 @@ class InvoiceService
     public function restore(string $id): bool
     {
         $invoice = $this->findTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 
@@ -357,7 +378,7 @@ class InvoiceService
     public function forceDelete(string $id): bool
     {
         $invoice = $this->findWithTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 

@@ -5,12 +5,12 @@ namespace App\Policies\Invoice;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class InvoicePolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  RBAC MODULE REGISTRATION                            ║
@@ -63,7 +63,7 @@ class InvoicePolicy implements RbacModuleProvider
      * Xem CHI TIẾT 1 hóa đơn?
      *
      * Tenant: chỉ xem hóa đơn thuộc hợp đồng của mình.
-     * Các role khác: check permission + org scope.
+     * Các role khác: check permission + property scope.
      */
     public function view(User $user, Invoice $invoice): bool
     {
@@ -79,7 +79,7 @@ class InvoicePolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $invoice);
+        return $this->checkPropertyScope($user, $invoice);
     }
 
     /**
@@ -99,7 +99,7 @@ class InvoicePolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $invoice);
+        return $this->checkPropertyScope($user, $invoice);
     }
 
     /**
@@ -112,7 +112,7 @@ class InvoicePolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $invoice);
+        return $this->checkPropertyScope($user, $invoice);
     }
 
     /**
@@ -124,7 +124,7 @@ class InvoicePolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $invoice);
+        return $this->checkPropertyScope($user, $invoice);
     }
 
     /**
@@ -136,6 +136,6 @@ class InvoicePolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $invoice);
+        return $this->checkPropertyScope($user, $invoice);
     }
 }

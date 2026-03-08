@@ -6,12 +6,12 @@ use App\Contracts\RbacModuleProvider;
 use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class RoomAssetPolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     /**
      * Get the module name for RBAC
@@ -46,29 +46,7 @@ class RoomAssetPolicy implements RbacModuleProvider
             return false;
         }
 
-        // 1. Admin được quyền tạo/quản lý tùy thích
-        if ($user->hasRole('Admin')) {
-            return true;
-        }
-
-        // Phải cùng tổ chức (Org scope restriction)
-        if ((string) $user->org_id !== (string) $targetRoom->org_id) {
-            return false;
-        }
-
-        // 2. Owner chỉ tạo room asset theo org
-        if ($user->hasRole('Owner')) {
-            return true;
-        }
-
-        // 3. Manager, Staff chỉ tạo/vận hành theo properties
-        if ($user->hasRole('Manager') || $user->hasRole('Staff')) {
-            $managedProperties = $user->meta['property_ids'] ?? [];
-
-            return in_array((string) $targetRoom->property_id, $managedProperties);
-        }
-
-        // 4. Tenant chỉ xem room asset theo room thông qua contract hiện tại
+        // Tenants only see assets in standard active contracts
         if ($user->hasRole('Tenant')) {
             return \App\Models\Contract\ContractMember::where('user_id', $user->id)
                 ->whereHas('contract', function ($q) use ($targetRoom) {
@@ -76,7 +54,7 @@ class RoomAssetPolicy implements RbacModuleProvider
                 })->exists();
         }
 
-        return false;
+        return $this->checkPropertyScope($user, $targetRoom);
     }
 
     public function viewAny(User $user, ?Room $room = null): bool

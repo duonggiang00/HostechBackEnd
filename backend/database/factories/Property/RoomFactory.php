@@ -25,7 +25,7 @@ class RoomFactory extends Factory
             'name' => 'Room '.fake()->numberBetween(101, 999),
             'type' => fake()->randomElement(['studio', 'apartment', 'house', 'dormitory']),
             'area' => fake()->numberBetween(20, 150),
-            'floor' => fake()->numberBetween(1, 20),
+            'floor_number' => fake()->numberBetween(1, 20),
             'capacity' => fake()->numberBetween(1, 6),
             'base_price' => fake()->numberBetween(30, 150) * 100000,
             'status' => fake()->randomElement(['available', 'occupied', 'maintenance']),

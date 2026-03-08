@@ -10,6 +10,8 @@ use App\Http\Resources\Meter\AdjustmentNoteResource;
 use App\Models\Meter\AdjustmentNote;
 use App\Models\Meter\MeterReading;
 use App\Services\Meter\AdjustmentNoteService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class AdjustmentNoteController extends Controller
 {
@@ -25,7 +27,7 @@ class AdjustmentNoteController extends Controller
      *
      * @tags Quản lý Phiếu Sửa Chỉ Số (Adjustment Notes)
      */
-    public function index(MeterReading $reading)
+    public function index(MeterReading $reading): AnonymousResourceCollection
     {
         // Require authorization? Usually Owner/Manager or specific policies
         // $this->authorize('viewAny', AdjustmentNote::class);
@@ -40,7 +42,7 @@ class AdjustmentNoteController extends Controller
      *
      * @tags Quản lý Phiếu Sửa Chỉ Số (Adjustment Notes)
      */
-    public function store(StoreAdjustmentNoteRequest $request, MeterReading $reading)
+    public function store(StoreAdjustmentNoteRequest $request, MeterReading $reading): JsonResponse
     {
         // $this->authorize('create', AdjustmentNote::class);
 
@@ -59,7 +61,7 @@ class AdjustmentNoteController extends Controller
      *
      * @tags Quản lý Phiếu Sửa Chỉ Số (Adjustment Notes)
      */
-    public function approve(ApproveAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment)
+    public function approve(ApproveAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment): JsonResponse
     {
         // $this->authorize('update', $adjustment);
 
@@ -81,7 +83,7 @@ class AdjustmentNoteController extends Controller
      *
      * @tags Quản lý Phiếu Sửa Chỉ Số (Adjustment Notes)
      */
-    public function reject(RejectAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment)
+    public function reject(RejectAdjustmentNoteRequest $request, MeterReading $reading, AdjustmentNote $adjustment): JsonResponse
     {
         // $this->authorize('update', $adjustment);
 

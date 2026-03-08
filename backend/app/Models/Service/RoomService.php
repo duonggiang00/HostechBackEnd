@@ -2,22 +2,27 @@
 
 namespace App\Models\Service;
 
+use App\Models\Concerns\MultiTenant;
 use App\Models\Property\Room;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RoomService extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes;
 
     protected $guarded = [];
 
-    protected $casts = [
-        'quantity' => 'integer',
-        'included_units' => 'integer',
-        'meta' => 'array',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'quantity' => 'integer',
+            'included_units' => 'integer',
+            'meta' => 'array',
+        ];
+    }
 
     public function room()
     {

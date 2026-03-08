@@ -26,4 +26,12 @@ class TemporaryUpload extends \Illuminate\Database\Eloquent\Model implements Has
     {
         return $this->belongsTo(User::class);
     }
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
 }

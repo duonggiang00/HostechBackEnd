@@ -12,7 +12,6 @@ use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
-use function Pest\Laravel\assertDatabaseMissing;
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
@@ -36,6 +35,11 @@ function makeOrgWithRole(string $roleName): array
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['org_id' => $org->id, 'property_id' => $property->id]);
+
+    // Manager/Staff must be attached to property_user for HandlesPropertyScope
+    if (in_array($roleName, ['Manager', 'Staff'])) {
+        $property->managers()->syncWithoutDetaching([(string) $user->id]);
+    }
 
     return compact('org', 'user', 'property', 'room');
 }

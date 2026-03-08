@@ -10,12 +10,18 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class FloorService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false): LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
             ->defaultSort('sort_order')
             ->withCount('rooms');
+
+        if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('property.managers', function ($q) use ($performer) {
+                $q->where('user_id', $performer->id);
+            });
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -35,9 +41,9 @@ class FloorService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
-        return $this->paginate($allowedFilters, $perPage, $search, null, true);
+        return $this->paginate($allowedFilters, $perPage, $search, null, true, $performer);
     }
 
     public function find(string $id): ?Floor

@@ -5,12 +5,12 @@ namespace App\Policies\Meter;
 use App\Contracts\RbacModuleProvider;
 use App\Models\Meter\MeterReading;
 use App\Models\Org\User;
-use App\Traits\HandlesOrgScope;
+use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MeterReadingPolicy implements RbacModuleProvider
 {
-    use HandlesAuthorization, HandlesOrgScope;
+    use HandlesAuthorization, HandlesPropertyScope;
 
     /**
      * Tên Module dùng làm tiền tố (prefix) cho các quyền.
@@ -44,7 +44,7 @@ class MeterReadingPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meterReading);
+        return $this->checkPropertyScope($user, $meterReading);
     }
 
     public function create(User $user): bool
@@ -58,7 +58,7 @@ class MeterReadingPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meterReading);
+        return $this->checkPropertyScope($user, $meterReading);
     }
 
     public function delete(User $user, MeterReading $meterReading): bool
@@ -67,7 +67,7 @@ class MeterReadingPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meterReading);
+        return $this->checkPropertyScope($user, $meterReading);
     }
 
     public function restore(User $user, MeterReading $meterReading): bool
@@ -76,7 +76,7 @@ class MeterReadingPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meterReading);
+        return $this->checkPropertyScope($user, $meterReading);
     }
 
     public function forceDelete(User $user, MeterReading $meterReading): bool
@@ -85,6 +85,6 @@ class MeterReadingPolicy implements RbacModuleProvider
             return false;
         }
 
-        return $this->checkOrgScope($user, $meterReading);
+        return $this->checkPropertyScope($user, $meterReading);
     }
 }

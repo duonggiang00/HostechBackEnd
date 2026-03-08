@@ -37,6 +37,12 @@ class RoleAccessTest extends TestCase
         $this->manager = $this->createUserWithRole('Manager');
         $this->staff = $this->createUserWithRole('Staff');
         $this->tenant = $this->createUserWithRole('Tenant');
+
+        // Create a default property for manager/staff tests
+        $this->property = Property::factory()->create(['org_id' => $this->org->id]);
+
+        // Attach manager and staff to the property_user pivot (required by HandlesPropertyScope)
+        $this->property->managers()->syncWithoutDetaching([(string) $this->manager->id, (string) $this->staff->id]);
     }
 
     protected function createUserWithRole(string $roleName): User
@@ -75,9 +81,8 @@ class RoleAccessTest extends TestCase
 
     public function test_staff_can_view_property()
     {
-        $property = Property::factory()->create(['org_id' => $this->org->id]);
-
-        $response = $this->actingAs($this->staff)->getJson("/api/properties/{$property->id}");
+        // Staff is already attached to $this->property
+        $response = $this->actingAs($this->staff)->getJson("/api/properties/{$this->property->id}");
 
         $response->assertOk();
     }

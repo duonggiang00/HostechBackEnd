@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Property;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Property\RoomAssetIndexRequest;
 use App\Http\Requests\Property\RoomAssetStoreRequest;
 use App\Http\Requests\Property\RoomAssetUpdateRequest;
 use App\Http\Resources\Property\RoomAssetResource;
@@ -10,7 +11,6 @@ use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Services\Property\RoomAssetService;
 use Dedoc\Scramble\Attributes\Group;
-use Illuminate\Http\Request;
 
 #[Group('Room Assets')]
 class RoomAssetController extends Controller
@@ -21,17 +21,8 @@ class RoomAssetController extends Controller
 
     /**
      * Danh sách tài sản trong phòng
-     *
-     * Lấy danh sách thiết bị, tài sản kèm theo của một phòng cụ thể.
-     *
-     * @queryParam per_page int Số lượng mục mỗi trang. Default: 15. Example: 10
-     * @queryParam page int Số trang. Example: 1
-     * @queryParam sort string Sắp xếp theo trường (prefix '-' để giảm dần). Các trường hỗ trợ: name, purchased_at, warranty_end, created_at. Default: -created_at. Example: -created_at
-     * @queryParam filter[name] string Lọc theo tên tài sản. Example: Điều hòa
-     * @queryParam filter[serial] string Lọc theo số serial. Example: SN12345
-     * @queryParam filter[condition] string Lọc theo tình trạng. Example: Mới
      */
-    public function index(Request $request, string $property, string $room)
+    public function index(RoomAssetIndexRequest $request, string $property, string $room)
     {
         $roomModel = Room::findOrFail($room);
         $this->authorize('viewAny', [RoomAsset::class, $roomModel]);

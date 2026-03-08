@@ -6,9 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Service\RoomServiceStoreRequest;
 use App\Http\Requests\Service\RoomServiceUpdateRequest;
 use App\Http\Resources\Service\RoomServiceResource;
-use App\Models\Property\Room;
-use App\Models\Service\RoomService;
+use App\Services\Service\ServiceService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Dịch vụ từng Phòng
@@ -18,19 +19,17 @@ use Dedoc\Scramble\Attributes\Group;
 #[Group('Dịch vụ Phòng')]
 class RoomServiceController extends Controller
 {
+    public function __construct(protected ServiceService $service) {}
+
     /**
      * Danh sách Dịch vụ của Phòng
      *
      * Lấy danh sách các dịch vụ đang được gán cho một phòng.
      */
-    public function index(string $roomId)
+    public function index(string $roomId): AnonymousResourceCollection
     {
-        // Require the room to be located first
-        $room = Room::where('org_id', request()->user()->org_id)->findOrFail($roomId);
-
-        $services = RoomService::with(['service.currentRate.tieredRates'])
-            ->where('room_id', $room->id)
-            ->get();
+        $orgId = request()->user()->org_id;
+        $services = $this->service->getRoomServices($roomId, $orgId);
 
         return RoomServiceResource::collection($services);
     }
@@ -40,15 +39,10 @@ class RoomServiceController extends Controller
      *
      * Thêm một dịch vụ mới vào sử dụng tại phòng này.
      */
-    public function store(RoomServiceStoreRequest $request, string $roomId)
+    public function store(RoomServiceStoreRequest $request, string $roomId): RoomServiceResource
     {
-        $room = Room::where('org_id', request()->user()->org_id)->findOrFail($roomId);
-
-        $data = $request->validated();
-        $data['org_id'] = $room->org_id;
-        $data['room_id'] = $room->id;
-
-        $roomService = RoomService::create($data);
+        $orgId = $request->user()->org_id;
+        $roomService = $this->service->attachToRoom($roomId, $request->validated(), $orgId);
         $roomService->load('service.currentRate.tieredRates');
 
         return new RoomServiceResource($roomService);
@@ -57,12 +51,14 @@ class RoomServiceController extends Controller
     /**
      * Xem thông tin cài đặt Dịch vụ
      */
-    public function show(string $roomId, string $id)
+    public function show(string $roomId, string $id): RoomServiceResource
     {
-        $roomService = RoomService::with(['service.currentRate.tieredRates'])
-            ->where('room_id', $roomId)
-            ->where('org_id', request()->user()->org_id)
-            ->findOrFail($id);
+        $orgId = request()->user()->org_id;
+        $roomService = $this->service->findRoomService($id, $orgId);
+
+        if (! $roomService || $roomService->room_id !== $roomId) {
+            abort(404);
+        }
 
         return new RoomServiceResource($roomService);
     }
@@ -72,13 +68,16 @@ class RoomServiceController extends Controller
      *
      * Chỉnh sửa số lượng, định mức bao hoặc metadata.
      */
-    public function update(RoomServiceUpdateRequest $request, string $roomId, string $id)
+    public function update(RoomServiceUpdateRequest $request, string $roomId, string $id): RoomServiceResource
     {
-        $roomService = RoomService::where('room_id', $roomId)
-            ->where('org_id', request()->user()->org_id)
-            ->findOrFail($id);
+        $orgId = $request->user()->org_id;
+        $roomService = $this->service->findRoomService($id, $orgId);
 
-        $roomService->update($request->validated());
+        if (! $roomService || $roomService->room_id !== $roomId) {
+            abort(404);
+        }
+
+        $this->service->updateRoomService($roomService, $request->validated());
         $roomService->loadMissing('service.currentRate.tieredRates');
 
         return new RoomServiceResource($roomService);
@@ -87,13 +86,16 @@ class RoomServiceController extends Controller
     /**
      * Gỡ Dịch vụ khỏi Phòng
      */
-    public function destroy(string $roomId, string $id)
+    public function destroy(string $roomId, string $id): JsonResponse
     {
-        $roomService = RoomService::where('room_id', $roomId)
-            ->where('org_id', request()->user()->org_id)
-            ->findOrFail($id);
+        $orgId = request()->user()->org_id;
+        $roomService = $this->service->findRoomService($id, $orgId);
 
-        $roomService->delete();
+        if (! $roomService || $roomService->room_id !== $roomId) {
+            abort(404);
+        }
+
+        $this->service->detachFromRoom($roomService);
 
         return response()->json(['message' => 'Service detached from room successfully.']);
     }

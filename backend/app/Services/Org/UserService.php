@@ -3,11 +3,16 @@
 namespace App\Services\Org;
 
 use App\Models\Org\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Hash;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class UserService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false)
+    /**
+     * Paginate users
+     */
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): LengthAwarePaginator
     {
         $query = QueryBuilder::for(User::class)
             ->with(['roles', 'permissions'])
@@ -32,7 +37,7 @@ class UserService
         return $query->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null)
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null): LengthAwarePaginator
     {
         return $this->paginate($allowedFilters, $perPage, $search, $orgId, true);
     }
@@ -60,7 +65,7 @@ class UserService
         }
 
         if (isset($data['password'])) {
-            $data['password_hash'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+            $data['password_hash'] = Hash::make($data['password']);
             unset($data['password'], $data['password_confirmation']);
         }
 
@@ -86,7 +91,7 @@ class UserService
         }
 
         if (isset($data['password'])) {
-            $data['password_hash'] = \Illuminate\Support\Facades\Hash::make($data['password']);
+            $data['password_hash'] = Hash::make($data['password']);
             unset($data['password'], $data['password_confirmation']);
         }
 

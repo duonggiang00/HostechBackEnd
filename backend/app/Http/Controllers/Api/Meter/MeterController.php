@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api\Meter;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Meter\MeterIndexRequest;
 use App\Http\Requests\Meter\MeterStoreRequest;
 use App\Http\Requests\Meter\MeterUpdateRequest;
 use App\Http\Resources\Meter\MeterResource;
 use App\Models\Meter\Meter;
 use App\Services\Meter\MeterService;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
 
 class MeterController extends Controller
 {
@@ -21,7 +24,7 @@ class MeterController extends Controller
      *
      * Cung cấp danh sách các đồng hồ điện/nước trong hệ thống. Hỗ trợ lọc, tìm kiếm và phân trang.
      */
-    public function index(\App\Http\Requests\Meter\MeterIndexRequest $request)
+    public function index(MeterIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Meter::class);
 
@@ -45,7 +48,7 @@ class MeterController extends Controller
      * @queryParam search string Tìm kiếm theo mã đồng hồ (code) hoặc tên phòng.
      * @queryParam per_page integer Số bản ghi trên trang.
      */
-    public function indexByProperty(Request $request, string $propertyId)
+    public function indexByProperty(Request $request, string $propertyId): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Meter::class);
 
@@ -70,7 +73,7 @@ class MeterController extends Controller
      * @queryParam sort string Sắp xếp. Mặc định: -created_at.
      * @queryParam search string Tìm theo mã.
      */
-    public function indexByFloor(Request $request, string $propertyId, string $floorId)
+    public function indexByFloor(Request $request, string $propertyId, string $floorId): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Meter::class);
 
@@ -91,7 +94,7 @@ class MeterController extends Controller
      *
      * Khởi tạo một đồng hồ mới và gắn nó vào một phòng.
      */
-    public function store(MeterStoreRequest $request)
+    public function store(MeterStoreRequest $request): MeterResource
     {
         $this->authorize('create', Meter::class);
 
@@ -105,7 +108,7 @@ class MeterController extends Controller
      *
      * Trả về thông tin chi tiết một đồng hồ.
      */
-    public function show(Meter $meter)
+    public function show(Meter $meter): MeterResource
     {
         $this->authorize('view', $meter);
 
@@ -117,7 +120,7 @@ class MeterController extends Controller
      *
      * Thay đổi thông tin đồng hồ đang có (ví dụ: gỡ bỏ, đổi mã, đổi phòng).
      */
-    public function update(MeterUpdateRequest $request, Meter $meter)
+    public function update(MeterUpdateRequest $request, Meter $meter): MeterResource
     {
         $this->authorize('update', $meter);
 
@@ -131,7 +134,7 @@ class MeterController extends Controller
      *
      * Đưa đồng hồ vào trạng thái "đã xóa tạm thời" (Soft Delete).
      */
-    public function destroy(Meter $meter)
+    public function destroy(Meter $meter): Response
     {
         $this->authorize('delete', $meter);
 

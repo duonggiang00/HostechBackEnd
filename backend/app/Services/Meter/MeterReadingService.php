@@ -4,6 +4,7 @@ namespace App\Services\Meter;
 
 use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -11,10 +12,8 @@ class MeterReadingService
 {
     /**
      * Get paginated meter readings with optional filtering.
-     *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null)
+    public function paginate(array $filters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(MeterReading::class)
             ->allowedFilters(array_merge($filters, [
@@ -26,6 +25,21 @@ class MeterReadingService
             ->allowedSorts(['period_start', 'period_end', 'reading_value', 'created_at'])
             ->defaultSort('-created_at')
             ->allowedIncludes(['meter', 'submittedBy', 'approvedBy']);
+
+        $user = request()->user();
+        if ($user && $user->hasRole('Tenant')) {
+            $query->whereHas('meter.room.contracts', function ($q) use ($user) {
+                $q->where('status', 'ACTIVE')
+                    ->whereHas('members', function ($sq) use ($user) {
+                        $sq->where('user_id', $user->id)
+                            ->where('status', 'APPROVED');
+                    });
+            });
+        } elseif ($user && $user->hasRole(['Manager', 'Staff'])) {
+            $query->whereHas('meter.room.property.managers', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
 
         if ($search) {
             // Có thể thêm logic tìm kiếm mở rộng (tìm theo user name...)

@@ -44,7 +44,7 @@ test('admin can crud floor', function () {
         ->assertJsonFragment(['name' => 'Updated Floor']);
 
     // Delete
-    deleteJson("/api/floors/{$id}")->assertStatus(200);
+    deleteJson("/api/floors/{$id}")->assertStatus(204);
 
     // Trash
     getJson('/api/floors/trash')->assertStatus(200)->assertJsonFragment(['id' => $id]);
@@ -74,7 +74,7 @@ test('owner can crud floor within org', function () {
         ->assertStatus(200);
 
     // Delete
-    deleteJson("/api/floors/{$id}")->assertStatus(200);
+    deleteJson("/api/floors/{$id}")->assertStatus(204);
 });
 
 test('owner cannot access other org floor', function () {

@@ -22,13 +22,15 @@ class HandoverDebugTest extends TestCase
         foreach (['Owner', 'Manager', 'Staff', 'Tenant', 'owner', 'manager', 'staff', 'tenant'] as $role) {
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
+
+        $this->seed(\Database\Seeders\RBACSeeder::class);
     }
 
     public function test_debug_store_response()
     {
         $org = Org::create(['name' => 'Debug Org']);
         $property = Property::create(['org_id' => $org->id, 'name' => 'Tòa A', 'code' => 'DA']);
-        $floor = Floor::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => '1', 'floor_number' => 1]);
+        $floor = Floor::create(['org_id' => $org->id, 'property_id' => $property->id, 'name' => '1', 'sort_order' => 1]);
         $room = Room::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id,
             'name' => 'Phòng 101', 'code' => 'P101', 'status' => 'OCCUPIED',

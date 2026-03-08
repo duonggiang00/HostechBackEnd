@@ -8,12 +8,13 @@ use App\Models\Org\Org;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class HandoverMeterSnapshot extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 
@@ -25,6 +26,15 @@ class HandoverMeterSnapshot extends Model implements HasMedia
         'meter_id',
         'reading_value',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'reading_value' => 'integer',
+            'confirmed_at' => 'datetime',
+            'locked_at' => 'datetime',
+        ];
+    }
 
     public function org()
     {

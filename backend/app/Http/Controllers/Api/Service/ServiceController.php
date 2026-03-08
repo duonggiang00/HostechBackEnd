@@ -10,7 +10,9 @@ use App\Http\Resources\Service\ServiceResource;
 use App\Models\Service\Service;
 use App\Services\Service\ServiceService; // Added
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Quản lý Dịch vụ (Services)
@@ -28,7 +30,7 @@ class ServiceController extends Controller
      *
      * Lấy danh sách dịch vụ của tổ chức hiện tại.
      */
-    public function index(ServiceIndexRequest $request)
+    public function index(ServiceIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Service::class);
 
@@ -46,7 +48,7 @@ class ServiceController extends Controller
      *
      * Tạo dịch vụ kèm theo đơn giá ban đầu.
      */
-    public function store(ServiceStoreRequest $request)
+    public function store(ServiceStoreRequest $request): ServiceResource
     {
         $this->authorize('create', Service::class);
 
@@ -71,7 +73,7 @@ class ServiceController extends Controller
      *
      * Xem thông tin chi tiết và lịch sử giá (nếu cần).
      */
-    public function show($id)
+    public function show($id): ServiceResource
     {
         $service = $this->service->find($id);
         if (! $service) {
@@ -92,7 +94,7 @@ class ServiceController extends Controller
      * Cập nhật thông tin dịch vụ.
      * Nếu gửi kèm `price` khác giá hiện tại, sẽ tạo ra bản ghi giá mới.
      */
-    public function update(ServiceUpdateRequest $request, string $id)
+    public function update(ServiceUpdateRequest $request, string $id): ServiceResource
     {
         // Init model to check policy
         $serviceModel = $this->service->find($id);
@@ -112,7 +114,7 @@ class ServiceController extends Controller
      *
      * Đưa dịch vụ vào thùng rác.
      */
-    public function destroy(string $id)
+    public function destroy(string $id): JsonResponse
     {
         $service = $this->service->find($id);
         if (! $service) {
@@ -131,7 +133,7 @@ class ServiceController extends Controller
      *
      * Xem danh sách dịch vụ đã xóa tạm thời.
      */
-    public function trash(Request $request)
+    public function trash(Request $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Service::class);
 
@@ -147,7 +149,7 @@ class ServiceController extends Controller
     /**
      * Khôi phục dịch vụ
      */
-    public function restore(string $id)
+    public function restore(string $id): ServiceResource
     {
         $service = $this->service->findTrashed($id);
         if (! $service) {
@@ -164,7 +166,7 @@ class ServiceController extends Controller
     /**
      * Xóa vĩnh viễn dịch vụ
      */
-    public function forceDelete(string $id)
+    public function forceDelete(string $id): JsonResponse
     {
         $service = $this->service->findWithTrashed($id);
         if (! $service) {

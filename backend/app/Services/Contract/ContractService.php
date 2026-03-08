@@ -32,8 +32,12 @@ class ContractService
                 $query->whereHas('members', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 });
+            } elseif ($user->hasRole(['Manager', 'Staff'])) {
+                $query->whereHas('property.managers', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
             } elseif (! $user->hasRole('Admin')) {
-                // Các role khác (Manager, Owner, Staff) thấy trong org của mình
+                // Các role khác (Owner) thấy trong org của mình
                 $query->where('org_id', $user->org_id);
             }
         }
@@ -67,6 +71,10 @@ class ContractService
         if ($user) {
             if ($user->hasRole('Tenant')) {
                 $query->whereHas('members', function ($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                });
+            } elseif ($user->hasRole(['Manager', 'Staff'])) {
+                $query->whereHas('property.managers', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 });
             } elseif (! $user->hasRole('Admin')) {
@@ -244,9 +252,9 @@ class ContractService
     public function getAvailableRoomsForTransfer(Contract $contract): \Illuminate\Database\Eloquent\Collection
     {
         return \App\Models\Property\Room::where('property_id', $contract->property_id)
-            ->where('status', 'AVAILABLE')
+            ->where('status', 'available')
             ->where('id', '!=', $contract->room_id)
-            ->select(['id', 'code', 'name', 'type', 'area', 'base_price', 'floor', 'capacity'])
+            ->select(['id', 'code', 'name', 'type', 'area', 'base_price', 'floor_number', 'capacity'])
             ->get();
     }
 
@@ -257,7 +265,7 @@ class ContractService
     {
         $targetRoom = \App\Models\Property\Room::where('id', $data['target_room_id'])
             ->where('property_id', $contract->property_id)
-            ->where('status', 'AVAILABLE')
+            ->where('status', 'available')
             ->first();
 
         if (! $targetRoom) {

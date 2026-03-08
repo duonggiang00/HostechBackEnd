@@ -8,12 +8,13 @@ use App\Models\Property\RoomAsset;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class HandoverItem extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes;
 
     public $incrementing = false;
 
@@ -28,6 +29,13 @@ class HandoverItem extends Model implements HasMedia
         'note',
         'sort_order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'sort_order' => 'integer',
+        ];
+    }
 
     public function org()
     {
