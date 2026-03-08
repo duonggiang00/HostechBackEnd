@@ -1,76 +1,111 @@
 # Kế hoạch Triển khai Frontend theo từng Backend Module
 > Tài liệu mapping chi tiết kế hoạch làm frontend tương ứng với từng module của backend.
 
-## 1. Module Auth & Profile (Nền tảng)
-- **Tình trạng Backend:** Đã xong (Sanctum + Fortify). Đăng nhập, Profile, Upload Avatar, 2FA.
-- **Frontend Tasks:**
-  - Hoàn thiện trang Login (`src/Pages/Client/Login.tsx`).
-  - Xử lý store Sanctum Token đúng chuẩn vào Zustand (`AuthStore.ts`).
-  - Màn hình Thông tin cá nhân (`/admin/profile`): Cập nhật thông tin (Tên, SDT, CCCD).
-  - Component Upload Avatar (tích hợp API `POST /api/profile/avatar`).
-  - Tích hợp TOTP (Giao diện setup quét mã QR 2FA).
+---
 
-## 2. Module System (Audit Log & Media)
-- **Tình trạng Backend:** Đã xong (`/api/media/upload`, `/api/audit-logs`).
-- **Frontend Tasks:**
-  - Tạo một Component dùng chung `MediaUpload.tsx` tái sử dụng toàn dự án (vd: upload ảnh hóa đơn, ảnh phòng).
-  - (Tùy chọn) Màn hình xem Audit Log cho SuperAdmin tại `/admin/audit-logs`.
+## 📂 Danh mục Tài liệu Module
+Chi tiết API, RBAC và Hướng dẫn UI cho từng module:
 
-## 3. Module Organization & User (Quản lý Quyền - RBAC)
-- **Tình trạng Backend:** Đã xong (CRUD Org, CRUD User, User Invitation, Assign Role).
-- **Frontend Tasks:**
-  - `src/features/users/`: 
-    - Giao diện Admin quản lý tổ chức (Tạo mới Org/Tenant context).
-    - Quản lý danh sách Staff/Tenant trong cùng Org.
-    - Cửa sổ Invite User bằng Email kèm chọn Role hiện tại (Manager, Staff...).
-  - Component Custom: `<HasRole role={['Manager', 'Owner']}> ... </HasRole>` để bọc/ẩn các nút nhạy cảm.
+| Thứ tự | Module | Tài liệu chi tiết | Trạng thái |
+|--------|--------|-------------------|-----------|
+| 01 | Auth & Profile | [01_AUTH_PROFILE.md](modules/01_AUTH_PROFILE.md) | ✅ Backend Done |
+| 02 | Organization & User | [02_ORG_USER.md](modules/02_ORG_USER.md) | ✅ Backend Done |
+| 03 | Property, Floor, Room | [03_PROPERTY_FLOOR_ROOM.md](modules/03_PROPERTY_FLOOR_ROOM.md) | ✅ Backend Done |
+| 04 | Contract (Hợp đồng) | [04_CONTRACT.md](modules/04_CONTRACT.md) | ✅ Backend Done |
+| 05 | Service (Dịch vụ) | [05_SERVICE.md](modules/05_SERVICE.md) | ✅ Backend Done |
+| 06 | Meter & Reading | [06_METER_READING.md](modules/06_METER_READING.md) | ✅ Backend Done |
+| 07 | Invoice (Hóa đơn) | [07_INVOICE.md](modules/07_INVOICE.md) | ✅ Backend Done |
+| 08 | System (Media, Audit, Invite) | [08_SYSTEM.md](modules/08_SYSTEM.md) | ✅ Backend Done |
+| 09 | Ticket (Sự cố) | [09_TICKET.md](modules/09_TICKET.md) | ✅ Backend Done |
+| 10 | Handover (Bàn giao) | [10_HANDOVER.md](modules/10_HANDOVER.md) | ✅ Backend Done |
 
-## 4. Module Property (Tòa nhà, Tầng, Phòng, Trạng thái tài sản)
-- **Tình trạng Backend:** Đã xong. Tenant scoping được áp dụng khi có hợp đồng thuê. RoomAsset CRUD ok.
-- **Frontend Tasks:**
-  - `src/features/properties/`:
-    - Giao diện `Property List` (Card view / Table view). Tích hợp search.
-    - `Property Detail`: Chứa sơ đồ Tầng (Floor) (Dạng Accordion hoặc Tab). Mỗi tầng hiển thị Grid các Phòng.
-    - Form Tạo/Sửa Phòng (Trạng thái phòng trống/có khách).
-    - Component Bảng/Form quản lý tài sản (`Room Asset`).
+---
 
-## 5. Module Service (Dịch vụ)
-- **Tình trạng Backend:** Đã xong (Truy vấn Base Services và Room Services).
-- **Frontend Tasks:**
-  - `src/features/services/`:
-    - Danh mục dịch vụ gốc của Org (Tên, Đơn giá mặc định).
-    - Component `RoomServiceAssigner`: Gắn dịch vụ (ví dụ Điện, Nước, Wifi) vào phòng kèm ghi đè giá bán riêng cho từng phòng.
+## 🛠️ Trình tự Triển khai (Roadmap)
 
-## 6. Module Contract (Hợp đồng) - Core Logic!
-- **Tình trạng Backend:** Đã xong API xử lý Member, Tenant Signature Flow, Xin đổi phòng.
-- **Frontend Tasks:**
-  - `src/features/contracts/`:
-    - **Portal Manager:** Danh sách hợp đồng (Table), Xem hợp đồng và xuất File In. Form tạo Contract mới gán người dùng vào Phòng. Form hủy hợp đồng.
-    - **Portal Tenant (Tenant Self-service):** Trang `My Contracts`. Chỗ duyệt chấp thuận (Accept) cấu trúc hợp đồng. Form Mời Roommate chung phòng. Giao diện xin đổi phòng.
+### Phase 1: Foundation & Security
+- **Module Auth & Profile:** Hoàn thiện Login, Register (Invite), Profile, 2FA.
+- **Module System:** Media Upload component dùng chung toàn dự án.
 
-## 7. Module Meter & Invoice (Chỉ số Môi trường & Hóa đơn)
-- **Tình trạng Backend:** Đã xong Invoice (Kèm hierarchical view tòa/tầng), MeterReading. (Chỉ còn thiếu flow tự tạo hóa đơn liên kết với số meter, dự tính Backend bổ sung Cronjob).
-- **Frontend Tasks:**
-  - `src/features/invoices/`:
-    - Bảng Ghi số: (Rất quan trọng về UX) Grid view cho phép nhập nhanh số cũ, số mới cho các dịch vụ đo đếm từng phòng. (Có thể dùng thư viện kiểu Excel-like hoặc React-Data-Grid kết hợp Antd Table).
-    - Quản lý Ticket Điều chỉnh (`Adjustment Notes`): Giao diện duyệt yêu cầu giảm trừ.
-    - Danh sách Invoice: View lọc Trạng thái (Draft/Sent/Paid), Nút Đánh dấu Đã thanh toán (Log payment). Trả về thiết kế Hóa đơn (Printable Layout Component).
+### Phase 2: Property & RBAC
+- **Module Organization & User:** Quản lý Staff, Tenant, Gán Role, Invite User.
+- **Module Property:** Quản lý Tòa nhà, Tầng, Phòng, Tài sản phòng.
 
-## 8. Module Ticket (Yêu cầu/Khiếu nại)
-- **Tình trạng Backend:** Đã xong CRUD, Status flow, Tenant Scope. Đi kèm MediaLibrary.
-- **Frontend Tasks:**
-  - `src/features/tickets/`:
-    - Kanban Board: Hiển thị ticket cho admin kéo thả (`OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED`). Tích hợp `@hello-pangea/dnd`.
-    - Tenant view: Giao diện form tạo yêu cầu đơn giản có drag & drop ảnh lỗi phòng. Box chat/comment cho `TicketComment` (Giao diện giống tin nhắn Zalo/FB).
+### Phase 3: Operations (Core Logic)
+- **Module Service:** Danh mục dịch vụ và gán dịch vụ cho phòng.
+- **Module Contract:** Quy trình tạo hợp đồng, ký hợp đồng điện tử (Tenant Portal).
+- **Module Meter & Reading:** Ghi chỉ số, điều chỉnh chỉ số.
 
-## 9. Module Handover (Bàn giao Nhận/Trả)
-- **Tình trạng Backend:** Đã xong (HandoverRecord, HandoverItem, Approval flow).
-- **Frontend Tasks:**
-  - `src/features/handover/`:
-    - Checklist xác nhận tình trạng trang thiết bị khi vào/ra phòng.
-    - Checkbox list + Form Upload ảnh minh họa tình trạng.
+### Phase 4: Financial & Support
+- **Module Invoice:** Xuất hóa đơn, quản lý chi phí phát sinh, theo dõi thanh toán.
+- **Module Ticket:** Hệ thống quản lý sự cố (Kanban cho Manager, Form cho Tenant).
+- **Module Handover:** Biên bản bàn giao khi nhận/trả phòng.
 
-## 10. Module Dashboard / Statistics
-- **Tình trạng Backend:** Chưa làm. Có thể query thủ công gom dữ liệu.
-- **Frontend Tasks:**
-  - Component `Recharts` hoặc `Antd Charts`: Vẽ biểu đồ cột doanh thu, biểu đồ tròn (Pie chart) tình trạng lấp đầy phòng trống/có khách.
+### Phase 5: Dashboard & UX
+- **Statistics:** Biểu đồ doanh thu, tỷ lệ lấp đầy.
+- **Optimizations:** Nâng cao trải nghiệm người dùng, performance.
+
+---
+
+## 📚 Tài liệu Hướng dẫn Chung
+- [Kiến trúc Frontend](ARCHITECTURE.md)
+- [Tiêu chuẩn API](API_STANDARDS.md)
+- [Checklist Tiến độ](IMPLEMENTATION_CHECKLIST.md)
+- [Hướng dẫn Workflow](FRONTEND_WORKFLOW_GUIDE.md)
+
+---
+
+---
+
+## 📝 Chi tiết Công việc Frontend (Tasks)
+
+### 1. Module Auth & Profile
+- **Auth Flow:** Hoàn thiện trang Login (`src/Pages/Client/Login.tsx`) và xử lý Sanctum Token vào Zustand (`AuthStore.ts`).
+- **Profile:** Màn hình Thông tin cá nhân (`/admin/profile`) cập nhật Tên, SĐT, CCCD.
+- **Security:** Tích hợp Component Upload Avatar (`POST /api/profile/avatar`) và giao diện setup 2FA (TOTP QR).
+
+### 2. Module System (Audit Log & Media)
+- **Shared Components:** Tạo `MediaUpload.tsx` tái sử dụng toàn dự án (ảnh hóa đơn, ảnh phòng, ticket).
+- **Audit Logs:** Giao diện xem lịch sử hoạt động cho SuperAdmin tại `/admin/audit-logs`.
+- **Invitations:** Xử lý xác thực Token mời tại trang `/register?token=...`.
+
+### 3. Module Organization & User (RBAC)
+- **Features (`src/features/users/`):**
+  - Quản lý Org: Tạo mới Org/Tenant context.
+  - Quản lý Member: Danh sách Staff/Tenant, phân quyền Role, Invite qua Email.
+- **RBAC UI:** Triển khai Component `<HasRole role={['Manager', 'Owner']}>` để kiểm soát hiển thị thao tác nhạy cảm.
+
+### 4. Module Property (Building, Floor, Room)
+- **Features (`src/features/properties/`):**
+  - Property List: Card/Table view với search & filter.
+  - Property Detail: View phân cấp Tòa nhà -> Tầng (Accordion/Tab) -> Phòng (Grid).
+  - Room Management: Form tạo/sửa phòng, quản lý tài sản (`Room Asset`).
+
+### 5. Module Service (Dịch vụ)
+- **Features (`src/features/services/`):**
+  - Catalog: Quản lý danh mục dịch vụ gốc của Org (Tên, Đơn giá mặc định).
+  - Assign: Component `RoomServiceAssigner` để gắn dịch vụ cho phòng và ghi đè giá (`custom_price`).
+
+### 6. Module Contract (Hợp đồng) - Core Logic
+- **Features (`src/features/contracts/`):**
+  - **Portal Manager:** Quản lý danh sách, xem/in hợp đồng, tạo mới, thanh lý hợp đồng.
+  - **Portal Tenant:** View `My Contracts`, luồng ký điện tử (Accept Signature), mời roommate, yêu cầu đổi phòng.
+
+### 7. Module Meter & Invoice (Chỉ số & Hóa đơn)
+- **Features (`src/features/invoices/`):**
+  - **Ghi số (UX focused):** Grid view nhập nhanh số cũ/mới (Excel-like / React-Data-Grid).
+  - **Invoice Management:** View lọc trạng thái (Draft/Sent/Paid), ghi nhận thanh toán (`Log payment`), xuất Printable Layout.
+  - **Adjustments:** Duyệt phiếu điều chỉnh (`Adjustment Notes`).
+
+### 8. Module Ticket (Yêu cầu/Khiếu nại)
+- **Features (`src/features/tickets/`):**
+  - **Manager:** Kanban Board cho Staff kéo thả (`OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED`).
+  - **Tenant:** Form tạo yêu cầu với Drag & Drop media, box chat/comment (`TicketComment`).
+
+### 9. Module Handover (Bàn giao)
+- **Features (`src/features/handover/`):**
+  - Checklist: Xác nhận tình trạng thiết bị khi nhận/trả phòng.
+  - Verification: Form upload ảnh minh họa và checklist checkbox.
+
+### 10. Module Dashboard / Statistics
+- **Visualization:** Dùng `Recharts` hoặc `Antd Charts` vẽ biểu đồ doanh thu, tỷ lệ lấp đầy.
