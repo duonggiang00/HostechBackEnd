@@ -24,12 +24,10 @@ export const propertyRoutes: RouteConfig[] = [
   {
     path: "properties",
     Component: Properties,
-    children: [
-      { path: "createProperty", Component: CreateProperty },
-      { path: "editProperty/:id", Component: EditProperty },
-      { path: "detailProperty/:id", Component: DetailProperty },
-    ],
   },
+  { path: "properties/createProperty", Component: CreateProperty },
+  { path: "properties/editProperty/:id", Component: EditProperty },
+  { path: "properties/detailProperty/:id", Component: DetailProperty },
   {
     path: "orgs",
     Component: Orgs,
@@ -39,24 +37,14 @@ export const propertyRoutes: RouteConfig[] = [
       { path: "detailOrg/:id", Component: DetailOrg },
     ],
   },
-  {
-    path: "floors",
-    Component: Floors,
-    children: [
-      { path: "createFloor", Component: CreateFloor },
-      { path: "editFloor/:id", Component: EditFloor },
-      { path: "detailFloor/:id", Component: DetailFloor },
-    ],
-  },
-  {
-    path: "rooms",
-    Component: Rooms,
-    children: [
-      { path: "createRoom", Component: CreateRoom },
-      { path: "editRoom/:id", Component: EditRoom },
-      { path: "detailRoom/:id", Component: DetailRoom },
-    ],
-  },
+  { path: "floors", Component: Floors },
+  { path: "floors/createFloor", Component: CreateFloor },
+  { path: "floors/editFloor/:id", Component: EditFloor },
+  { path: "floors/detailFloor/:id", Component: DetailFloor },
+  { path: "rooms", Component: Rooms },
+  { path: "rooms/createRoom", Component: CreateRoom },
+  { path: "rooms/editRoom/:id", Component: EditRoom },
+  { path: "rooms/detailRoom/:id", Component: DetailRoom },
   {
     path: "meters",
     Component: Meters,

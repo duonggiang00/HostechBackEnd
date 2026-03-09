@@ -1,216 +1,218 @@
-import { useState, useEffect } from "react";
-import { Button, Input, Select, message } from "antd";
+import { useEffect } from "react";
+import { Button, Input, Form, Select, InputNumber, Skeleton } from "antd";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { useOpenStore } from "../../../../Stores/OpenStore";
-
-interface EditRoomForm {
-  name: string;
-  floor_id?: string;
-  zone_id?: string;
-}
-
-interface FormErrors {
-  name?: string;
-  floor_id?: string;
-  general?: string;
-}
+import { useRoom, useUpdateRoom, useProperties, useFloorsByProperty } from "../../hooks/useProperties";
+import { DoorOpen, Home, Layers, Hash, Coins, Maximize, Users, X as XIcon, Pencil } from "lucide-react";
 
 const EditRoom = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const closeForm = useOpenStore((state) => state.setOpenForm);
-  const [formData, setFormData] = useState<EditRoomForm>({
-    name: "",
-    floor_id: "",
-    zone_id: "",
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [loading, setLoading] = useState(false);
+  const { id } = useParams<{ id: string }>();
+  const [form] = Form.useForm();
+
+  const { data: room, isLoading: roomLoading } = useRoom(id || "");
+  const updateMutation = useUpdateRoom(id || "");
+
+  const selectedPropertyId = Form.useWatch("property_id", form);
+
+  const { data: propertiesData, isLoading: propertiesLoading } = useProperties();
+  const properties = propertiesData?.data || [];
+
+  const { data: floors, isLoading: floorsLoading } = useFloorsByProperty(selectedPropertyId || "");
 
   useEffect(() => {
-    return () => {
-      closeForm(false);
-    };
-  }, [closeForm]);
-
-  const floors = [
-    { id: "1", label: "Tầng 1", value: "1" },
-    { id: "2", label: "Tầng 2", value: "2" },
-    { id: "3", label: "Tầng 3", value: "3" },
-  ];
-
-  const zones = [
-    { id: "1", label: "Khu 1", value: "1" },
-    { id: "2", label: "Khu 2", value: "2" },
-    { id: "3", label: "Khu 3", value: "3" },
-  ];
-
-  useEffect(() => {
-    // Lấy dữ liệu từ API
-    // TODO: gọi API để lấy thông tin phòng theo id
-    const mockData = { name: "Phòng 101", floor_id: "1", zone_id: "1" };
-    setFormData(mockData);
-  }, [id]);
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Tên phòng không được để trống";
+    if (room) {
+      form.setFieldsValue({
+        property_id: (room as any)?.property?.id || (room as any).property_id,
+        floor_id: (room as any)?.floor?.id || (room as any).floor_id,
+        name: room.name,
+        code: room.code,
+        base_price: room.base_price,
+        area: room.area,
+        capacity: room.capacity,
+        description: room.description,
+      });
     }
+  }, [room, form]);
 
-    if (!formData.floor_id) {
-      newErrors.floor_id = "Tầng không được để trống";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleClose = () => {
+    navigate(-1);
   };
 
-  const handleInputChange = (e: any) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: undefined,
-      }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-    try {
-      console.log("data: ", formData);
-
-      message.success("Cập nhật phòng thành công!");
-      closeForm(false);
-      navigate(-1);
-    } catch (err: any) {
-      const errorMessage =
-        err?.response?.data?.message || "Lỗi khi cập nhật phòng";
-      setErrors((prev) => ({
-        ...prev,
-        general: errorMessage,
-      }));
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
+  const handlePropertyChange = () => {
+    form.setFieldValue("floor_id", undefined); // Reset floor when property changes
   };
 
   return (
-    <div className="flex flex-col gap-5 p-5">
-      <div className="flex items-center gap-2 mb-5">
-        <button
-          onClick={() => {
-            navigate(-1);
-            closeForm(false);
-          }}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-2xl font-bold">Chỉnh sửa phòng</h1>
-      </div>
+    <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
+      <div className="w-full max-w-4xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-      <form
-        onSubmit={handleSubmit}
-        className="border border-gray-300 rounded-lg p-6 max-w-full"
-      >
-        {errors.general && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 rounded text-red-700">
-            {errors.general}
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b border-gray-100 bg-slate-50/50 flex justify-between items-center shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Pencil size={20} className="text-amber-500" />
+              Chỉnh sửa phòng
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">Cập nhật thông tin phòng</p>
           </div>
-        )}
-
-        <div className="mb-4">
-          <label className="block text-sm font-semibold mb-2">
-            Tên phòng <span className="text-red-500">*</span>
-          </label>
-          <Input
-            name="name"
-            placeholder="Nhập tên phòng"
-            value={formData.name}
-            onChange={handleInputChange}
-            status={errors.name ? "error" : ""}
-            className="rounded"
+          <Button
+            type="text"
+            icon={<XIcon size={20} className="text-slate-500" />}
+            onClick={handleClose}
+            className="hover:bg-slate-200 rounded-full w-10 h-10 flex items-center justify-center p-0"
           />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+        </div>
+
+        {/* FORM BODY */}
+        <div className="p-6">
+          {roomLoading ? (
+            <Skeleton active paragraph={{ rows: 8 }} />
+          ) : (
+            <Form form={form} layout="vertical" onFinish={(v) => updateMutation.mutate(v)} requiredMark={false}>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 flex flex-col justify-center">
+                  <Form.Item
+                    name="property_id"
+                    label={<span className="text-slate-600 font-medium flex items-center gap-2"><Home size={16} className="text-indigo-500" /> Chọn nhà trọ <span className="text-red-500">*</span></span>}
+                    rules={[{ required: true, message: "Vui lòng chọn nhà trọ!" }]}
+                    className="mb-0"
+                  >
+                    <Select
+                      placeholder="Chọn nhà trọ..."
+                      loading={propertiesLoading}
+                      options={properties.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` }))}
+                      showSearch
+                      filterOption={(input, option) => String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())}
+                      size="large"
+                      onChange={handlePropertyChange}
+                    />
+                  </Form.Item>
+                </div>
+
+                <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 flex flex-col justify-center">
+                  <Form.Item
+                    name="floor_id"
+                    label={<span className="text-slate-600 font-medium flex items-center gap-2"><Layers size={16} className="text-indigo-500" /> Chọn tầng <span className="text-red-500">*</span></span>}
+                    rules={[{ required: true, message: "Vui lòng chọn tầng!" }]}
+                    className="mb-0"
+                  >
+                    <Select
+                      placeholder="Chọn tầng..."
+                      loading={floorsLoading}
+                      disabled={!selectedPropertyId}
+                      options={floors?.map((f) => ({ value: f.id, label: f.name })) || []}
+                      size="large"
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                <h3 className="text-base font-semibold text-slate-700 mb-2 px-1 border-b border-gray-50 pb-3">Thông tin chi tiết phỏng</h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    name="name"
+                    label={<span className="text-slate-600 font-medium">Tên phòng <span className="text-red-500">*</span></span>}
+                    rules={[{ required: true, message: "Vui lòng nhập tên phòng!" }]}
+                  >
+                    <Input
+                      prefix={<DoorOpen size={16} className="text-slate-400 mr-2" />}
+                      placeholder="Ví dụ: P.101, Phòng VIP..."
+                      className="rounded-xl h-11"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="code"
+                    label={<span className="text-slate-600 font-medium">Mã phòng</span>}
+                  >
+                    <Input
+                      prefix={<Hash size={16} className="text-slate-400 mr-2" />}
+                      placeholder="R101"
+                      className="rounded-xl h-11 uppercase"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Form.Item
+                    name="base_price"
+                    label={<span className="text-slate-600 font-medium">Giá thuê (VNĐ) <span className="text-red-500">*</span></span>}
+                    rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      step={100000}
+                      prefix={<Coins size={16} className="text-slate-400 mr-2" />}
+                      placeholder="3,500,000"
+                      formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                      parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, '')) as any}
+                      className="w-full rounded-xl h-11"
+                      controls={false}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="area"
+                    label={<span className="text-slate-600 font-medium">Diện tích (m²)</span>}
+                  >
+                    <InputNumber
+                      min={0}
+                      prefix={<Maximize size={16} className="text-slate-400 mr-2" />}
+                      placeholder="25"
+                      className="w-full rounded-xl h-11"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="capacity"
+                    label={<span className="text-slate-600 font-medium">Sức chứa tối đa (người)</span>}
+                  >
+                    <InputNumber
+                      min={1}
+                      prefix={<Users size={16} className="text-slate-400 mr-2" />}
+                      placeholder="2"
+                      className="w-full rounded-xl h-11"
+                    />
+                  </Form.Item>
+                </div>
+
+                <Form.Item
+                  name="description"
+                  label={<span className="text-slate-600 font-medium">Mô tả thêm</span>}
+                >
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Tiện ích nội thất, view phòng..."
+                    className="rounded-xl p-3"
+                  />
+                </Form.Item>
+              </div>
+            </Form>
           )}
         </div>
 
-        <div className="mb-4">
-          <label className="block text-sm font-semibold mb-2">
-            Tầng <span className="text-red-500">*</span>
-          </label>
-          <Select
-            placeholder="Chọn tầng"
-            value={formData.floor_id || undefined}
-            onChange={(value) => handleSelectChange("floor_id", value)}
-            options={floors}
-            status={errors.floor_id ? "error" : ""}
-          />
-          {errors.floor_id && (
-            <p className="text-red-500 text-sm mt-1">{errors.floor_id}</p>
-          )}
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-semibold mb-2">Khu</label>
-          <Select
-            placeholder="Chọn khu"
-            value={formData.zone_id || undefined}
-            onChange={(value) => handleSelectChange("zone_id", value)}
-            options={zones}
-          />
-        </div>
-
-        <div className="flex gap-3">
+        {/* FOOTER */}
+        <div className="p-5 bg-slate-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
           <Button
-            type="primary"
-            htmlType="submit"
-            loading={loading}
-            className="bg-blue-500"
-          >
-            Cập nhật
-          </Button>
-          <Button
-            onClick={() => {
-              navigate(-1);
-              closeForm(false);
-            }}
+            onClick={handleClose}
+            className="rounded-xl h-10 px-6 border-slate-200 text-slate-600 hover:text-slate-800"
           >
             Hủy
           </Button>
+          <Button
+            type="primary"
+            onClick={() => form.submit()}
+            loading={updateMutation.isPending}
+            disabled={roomLoading}
+            className="rounded-xl h-10 px-8 bg-amber-500 hover:bg-amber-600 border-none shadow-md shadow-amber-500/20 font-medium"
+          >
+            Cập nhật
+          </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

@@ -1,23 +1,28 @@
 import Api from "../../../Api/Api";
+import type { OrgDTO, PaginatedResponse } from "../types";
 
 // ───── Organizations ─────
 
-export const getOrgs = async (): Promise<any[]> => {
-    const res = await Api.get("orgs");
-    return res.data?.data ?? res.data;
+export const getOrgs = async (search?: string, page: number = 1, per_page: number = 100): Promise<PaginatedResponse<OrgDTO>> => {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    params.set("page", page.toString());
+    params.set("per_page", per_page.toString());
+    const res = await Api.get(`orgs?${params}`);
+    return res.data;
 };
 
-export const getOrgById = async (id: string): Promise<any> => {
+export const getOrgById = async (id: string): Promise<OrgDTO> => {
     const res = await Api.get(`orgs/${id}`);
     return res.data?.data ?? res.data;
 };
 
-export const createOrg = async (data: any): Promise<any> => {
+export const createOrg = async (data: any): Promise<OrgDTO> => {
     const res = await Api.post("orgs", data);
     return res.data?.data ?? res.data;
 };
 
-export const updateOrg = async (id: string, data: any): Promise<any> => {
+export const updateOrg = async (id: string, data: any): Promise<OrgDTO> => {
     const res = await Api.put(`orgs/${id}`, data);
     return res.data?.data ?? res.data;
 };
@@ -26,7 +31,7 @@ export const deleteOrg = async (id: string): Promise<void> => {
     await Api.delete(`orgs/${id}`);
 };
 
-export const getDeletedOrgs = async (): Promise<any[]> => {
+export const getDeletedOrgs = async (): Promise<OrgDTO[]> => {
     const res = await Api.get("orgs/trash");
     return res.data?.data ?? res.data;
 };

@@ -1,339 +1,194 @@
-import { useState, useEffect } from "react";
-import { Button, message, Modal, Tag } from "antd";
+import { Button, Tag, Skeleton, Popconfirm } from "antd";
 import { useNavigate, useParams } from "react-router";
-import {
-  ArrowLeft,
-  Edit,
-  Trash2,
-  Building2,
-  Image,
-  DollarSign,
-} from "lucide-react";
-import { useOpenStore } from "../../../../Stores/OpenStore";
-import type {
-  RoomDetail,
-  RoomPhoto,
-  RoomPrice,
-} from "../../../../Types/Room.type";
+import { useRoom, useDeleteRoom } from "../../hooks/useProperties";
+import { usePermission } from "../../../../shared/hooks/usePermission";
+import { DoorOpen, Home, Layers, Pencil, Trash2, X as XIcon, Hash, Maximize, Users, DollarSign, AlignLeft } from "lucide-react";
+import { formatStatusRoom } from "../../../../Constants/Helper";
 
 const DetailRoom = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const closeForm = useOpenStore((state) => state.setOpenForm);
-  const [data, setData] = useState<RoomDetail | null>(null);
-  const [photos, setPhotos] = useState<RoomPhoto[]>([]);
-  const [prices, setPrices] = useState<RoomPrice[]>([]);
+  const { can } = usePermission();
+  const { data: room, isLoading } = useRoom(id || "");
+  const deleteMutation = useDeleteRoom();
 
-  useEffect(() => {
-    return () => {
-      closeForm(false);
-    };
-  }, [closeForm]);
-
-  useEffect(() => {
-    // TODO: gọi API để lấy chi tiết phòng theo id
-    const mockData: RoomDetail = {
-      name: "Phòng 101",
-      floor_id: { id: 1, name: "Tầng 1" },
-      zone_id: { id: 1, name: "Khu A" },
-      status: 1,
-    };
-    setData(mockData);
-
-    // TODO: gọi API để lấy hình ảnh phòng
-    const mockPhotos: RoomPhoto[] = [
-      {
-        id: 1,
-        room_id: 1,
-        photo_url: "https://via.placeholder.com/300x200?text=Phòng+1",
-        photo_name: "Phòng chính",
-        description: "Hình ảnh toàn cảnh phòng",
-        created_at: "2026-02-28",
-      },
-      {
-        id: 2,
-        room_id: 1,
-        photo_url: "https://via.placeholder.com/300x200?text=Phòng+2",
-        photo_name: "Phòng tắm",
-        description: "Hình ảnh phòng tắm",
-        created_at: "2026-02-28",
-      },
-      {
-        id: 3,
-        room_id: 1,
-        photo_url: "https://via.placeholder.com/300x200?text=Phòng+3",
-        photo_name: "Bếp",
-        description: "Hình ảnh khu bếp",
-        created_at: "2026-02-28",
-      },
-    ];
-    setPhotos(mockPhotos);
-
-    // TODO: gọi API để lấy bảng giá phòng
-    const mockPrices: RoomPrice[] = [
-      {
-        id: 1,
-        room_id: 1,
-        price: 5000000,
-        currency: "VND",
-        price_type: "monthly",
-        effective_date: "2026-01-01",
-        is_active: true,
-      },
-      {
-        id: 2,
-        room_id: 1,
-        price: 14000000,
-        currency: "VND",
-        price_type: "quarterly",
-        effective_date: "2026-01-01",
-        is_active: true,
-      },
-      {
-        id: 3,
-        room_id: 1,
-        price: 54000000,
-        currency: "VND",
-        price_type: "yearly",
-        effective_date: "2026-01-01",
-        is_active: true,
-      },
-    ];
-    setPrices(mockPrices);
-  }, [id]);
-
-  const handleEdit = () => {
-    closeForm(true);
-    navigate(`/manage/properties/editRoom/${id}`);
-
-  };
+  const handleClose = () => navigate(-1); // Back up to Room list or Floor details
 
   const handleDelete = () => {
-    Modal.confirm({
-      title: "Xóa phòng",
-      content: "Bạn có chắc chắn muốn xóa phòng này?",
-      okText: "Xóa",
-      cancelText: "Hủy",
-      okType: "danger",
-      onOk() {
-        message.success("Xóa phòng thành công!");
-        closeForm(false);
-        navigate(-1);
-      },
+    deleteMutation.mutate(id as any, {
+      onSuccess: () => navigate("/manage/rooms", { replace: true }),
     });
   };
 
-  if (!data) return <div className="p-5">Đang tải...</div>;
-
-  const statusConfig = {
-    1: { label: "Trống", color: "green" },
-    2: { label: "Đã cho thuê", color: "blue" },
-    3: { label: "Bảo trì", color: "orange" },
+  const statusConfig: any = {
+    AVAILABLE: { label: "Phòng trống", color: "green" },
+    OCCUPIED: { label: "Đã cho thuê", color: "blue" },
+    MAINTENANCE: { label: "Bảo trì", color: "orange" },
+    VACANT: { label: "Phòng trống", color: "green" },
+    RENTED: { label: "Đã cho thuê", color: "blue" },
   };
 
-  const currentStatus = statusConfig[
-    data.status as keyof typeof statusConfig
-  ] || { label: "Không xác định", color: "default" };
+  const currentStatus = room?.status ? (statusConfig[room.status.toUpperCase()] || { label: formatStatusRoom(room.status as any), color: "default" }) : { label: "Không xác định", color: "default" };
 
   return (
-    <div className="flex flex-col gap-6 p-5 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              navigate(-1);
-              closeForm(false);
-            }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-3xl font-bold text-gray-800">Chi tiết phòng</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            type="primary"
-            icon={<Edit className="w-4 h-4" />}
-            onClick={handleEdit}
-            className="bg-blue-500 hover:bg-blue-600"
-          >
-            Sửa
-          </Button>
-          <Button
-            danger
-            icon={<Trash2 className="w-4 h-4" />}
-            onClick={handleDelete}
-          >
-            Xóa
-          </Button>
-        </div>
-      </div>
+    <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
+      <div className="w-full max-w-4xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
-      <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Thông tin phòng
-        </h2>
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <Building2 className="w-6 h-6 text-blue-500" />
-            <div>
-              <p className="text-sm text-gray-600">Tên phòng</p>
-              <p className="text-2xl font-bold text-gray-800">{data.name}</p>
-            </div>
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b border-gray-100 bg-slate-50/50 flex justify-between items-center shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <DoorOpen size={20} className="text-emerald-500" />
+              Chi tiết phòng
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {isLoading ? "Đang tải..." : (room?.name || "—")}
+            </p>
           </div>
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-600 font-medium mb-2">Trạng thái</p>
-            <Tag color={currentStatus.color} className="text-base px-3 py-1">
-              {currentStatus.label}
-            </Tag>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
-          <p className="text-sm text-gray-600 font-medium">Tầng</p>
-          <p className="text-lg font-bold text-purple-800 mt-2">
-            {data.floor_id.name}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow-md p-4 border-l-4 border-pink-500">
-          <p className="text-sm text-gray-600 font-medium">Khu vực</p>
-          <p className="text-lg font-bold text-pink-800 mt-2">
-            {data.zone_id.name}
-          </p>
-        </div>
-      </div>
-
-      {/* Hình ảnh phòng */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Image className="w-6 h-6 text-blue-500" />
-          <h2 className="text-lg font-semibold text-gray-700">
-            Hình ảnh phòng
-          </h2>
-        </div>
-        {photos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="flex flex-col rounded-lg overflow-hidden shadow-md hover:shadow-lg transition"
+          <div className="flex items-center gap-2">
+            {can("update", "rooms") && !isLoading && (
+              <Button
+                icon={<Pencil size={14} />}
+                onClick={() => navigate(`/manage/rooms/editRoom/${id}`)}
+                className="rounded-xl h-9 border-amber-300 text-amber-600 hover:bg-amber-50"
               >
-                <img
-                  src={photo.photo_url}
-                  alt={photo.photo_name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-3 bg-gray-50">
-                  <p className="font-semibold text-sm text-gray-800">
-                    {photo.photo_name}
-                  </p>
-                  {photo.description && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      {photo.description}
-                    </p>
-                  )}
-                  {photo.created_at && (
-                    <p className="text-xs text-gray-500 mt-2">
-                      {photo.created_at}
-                    </p>
-                  )}
+                Sửa
+              </Button>
+            )}
+            {can("delete", "rooms") && !isLoading && (
+              <Popconfirm
+                title="Xóa phòng"
+                description="Bạn có chắc chắn muốn xóa phòng này?"
+                onConfirm={handleDelete}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  loading={deleteMutation.isPending}
+                  className="rounded-xl h-9"
+                >
+                  Xóa
+                </Button>
+              </Popconfirm>
+            )}
+            <Button
+              type="text"
+              icon={<XIcon size={20} className="text-slate-500" />}
+              onClick={handleClose}
+              className="hover:bg-slate-200 rounded-full w-9 h-9 flex items-center justify-center p-0 ml-2"
+            />
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div className="p-6 flex flex-col gap-6">
+          {isLoading ? (
+            <Skeleton active paragraph={{ rows: 8 }} />
+          ) : !room ? (
+            <div className="text-center py-10 text-slate-500">Phòng không tồn tại</div>
+          ) : (
+            <>
+              {/* PRIMARY INFO */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="h-2 w-full bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+                <div className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="h-16 w-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                        <DoorOpen size={32} strokeWidth={2} />
+                      </div>
+                      <div className="pt-1">
+                        <h1 className="text-2xl font-bold text-slate-800 leading-tight">{room.name}</h1>
+                        <div className="flex items-center gap-4 mt-3 flex-wrap">
+                          <Tag color={currentStatus.color} className="rounded-md px-2 py-0.5 text-xs m-0 font-medium uppercase border-none">
+                            {currentStatus.label}
+                          </Tag>
+                          <div className="flex items-center gap-1.5 text-sm font-medium text-slate-500">
+                            <Hash size={14} />
+                            <span className="uppercase">{room.code || "—"}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Không có hình ảnh</p>
-        )}
-      </div>
 
-      {/* Bảng giá phòng */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <DollarSign className="w-6 h-6 text-green-500" />
-          <h2 className="text-lg font-semibold text-gray-700">Bảng giá</h2>
-        </div>
-        {prices.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-100 border-b border-gray-300">
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">
-                    Loại giá
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">
-                    Giá tiền
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">
-                    Loại tiền
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-gray-700">
-                    Ngày hiệu lực
-                  </th>
-                  <th className="px-4 py-2 text-center font-semibold text-gray-700">
-                    Trạng thái
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {prices.map((price, index) => (
-                  <tr
-                    key={price.id}
-                    className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
-                  >
-                    <td className="px-4 py-3 text-gray-800 font-medium">
-                      {price.price_type === "monthly"
-                        ? "Hàng tháng"
-                        : price.price_type === "quarterly"
-                          ? "Hàng quý"
-                          : "Hàng năm"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-800 font-semibold text-green-600">
-                      {price.price.toLocaleString("vi-VN")}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {price.currency}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {price.effective_date}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <Tag color={price.is_active ? "green" : "red"}>
-                        {price.is_active ? "Hoạt động" : "Không hoạt động"}
-                      </Tag>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">Không có bảng giá</p>
-        )}
-      </div>
+              {/* DETAILS GRID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Thông tin bổ sung
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <span className="text-sm text-gray-600">Mã phòng:</span>
-            <p className="text-gray-800 font-medium">#RM{id}</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-600">Lần cập nhật:</span>
-            <p className="text-gray-800 font-medium">24/02/2026</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-600">Ngày tạo:</span>
-            <p className="text-gray-800 font-medium">24/02/2026</p>
-          </div>
-          <div>
-            <span className="text-sm text-gray-600">Người tạo:</span>
-            <p className="text-gray-800 font-medium">Admin</p>
-          </div>
+                {/* LOCATION */}
+                <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-2">Vị trí phòng</h3>
+
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                        <Layers size={14} />
+                      </div>
+                      <span className="text-sm font-medium text-slate-600">Thuộc tầng</span>
+                    </div>
+                    <span className="font-semibold text-slate-800">{(room as any)?.floor?.name || (room as any).floor_id || "—"}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500">
+                        <Home size={14} />
+                      </div>
+                      <span className="text-sm font-medium text-slate-600">Thuộc nhà trọ</span>
+                    </div>
+                    <span className="font-semibold text-slate-800">{(room as any)?.property?.name || (room as any).property_id || "—"}</span>
+                  </div>
+                </div>
+
+                {/* SPECS */}
+                <div className="bg-slate-50/50 p-5 rounded-2xl border border-slate-100 space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-2">Thông số phòng</h3>
+
+                  <div className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500">
+                        <DollarSign size={14} />
+                      </div>
+                      <span className="text-sm font-medium text-slate-600">Giá thuê (VNĐ/tháng)</span>
+                    </div>
+                    <span className="font-bold text-emerald-600 text-lg">{room.base_price ? Number(room.base_price).toLocaleString('vi-VN') : "—"}</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center gap-1 text-center">
+                      <Maximize size={16} className="text-slate-400" />
+                      <span className="text-xs text-slate-500">Diện tích</span>
+                      <span className="font-semibold text-slate-800">{room.area ? `${room.area} m²` : "—"}</span>
+                    </div>
+                    <div className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center gap-1 text-center">
+                      <Users size={16} className="text-slate-400" />
+                      <span className="text-xs text-slate-500">Sức chứa</span>
+                      <span className="font-semibold text-slate-800">{room.capacity ? `${room.capacity} người` : "—"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DESCRIPTION */}
+              {room.description && (
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <AlignLeft size={16} className="text-slate-400" />
+                    Mô tả phòng
+                  </h3>
+                  <div className="text-slate-600 leading-relaxed text-sm bg-slate-50 p-4 rounded-xl border border-slate-100 whitespace-pre-wrap">
+                    {room.description}
+                  </div>
+                </div>
+              )}
+
+            </>
+          )}
         </div>
       </div>
     </div>
