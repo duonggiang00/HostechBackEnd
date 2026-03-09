@@ -4,7 +4,7 @@ import type { TGlobalProp } from "../../../Types/ReactType";
 import { LogOut, User, UserCheck } from "lucide-react";
 import { useUserInfo } from "../../../Hooks/useUserInfo";
 import { useTokenStore } from "../stores/authStore";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { message } from "antd";
 import { Logout } from "../../../Services/Auth.service";
 
@@ -68,13 +68,15 @@ const ModalSetting = ({ children }: TGlobalProp<{ open: boolean }>) => {
 
             <div>
               <ul className="flex flex-col">
-                <li
-                  onClick={() => setOpenModalSetting(false)}
-                  className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2 transition border-b border-gray-100"
-                >
-                  <User size={16} className="text-gray-600" />
-                  <span className="text-[15px]">Thông tin cá nhân</span>
-                </li>
+                <Link to="profile">
+                  <li
+                    onClick={() => setOpenModalSetting(false)}
+                    className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2 transition border-b border-gray-100"
+                  >
+                    <User size={16} className="text-gray-600" />
+                    <span className="text-[15px]">Thông tin cá nhân</span>
+                  </li>
+                </Link>
                 <li
                   onClick={handleLogout}
                   className="p-3 hover:bg-red-50 cursor-pointer flex items-center gap-2 transition text-red-600 hover:text-red-700 font-medium"
