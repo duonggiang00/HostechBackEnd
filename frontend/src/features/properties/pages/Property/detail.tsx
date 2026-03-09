@@ -13,6 +13,8 @@ const DetailProperty = () => {
   const { can } = usePermission();
 
   const { data: property, isLoading } = useProperty(id || "");
+  console.log("[DEBUG] DetailProperty - property data:", property);
+
   const deleteMutation = useDeleteProperty();
 
   const [activeTab, setActiveTab] = useState("overview");

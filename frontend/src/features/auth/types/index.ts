@@ -27,7 +27,8 @@ export interface IDecodeJWT {
     phone: string;
     name: string;
     is_active: boolean;
-    role: string; // Role cấp org
+    roles: string[];
+    permissions: string[];
   };
   property_roles: Array<{
     property_id: string;

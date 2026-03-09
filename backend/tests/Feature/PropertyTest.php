@@ -85,5 +85,5 @@ test('owner cannot access other org property', function () {
 
     actingAs($owner)
         ->getJson("/api/properties/{$prop2->id}")
-        ->assertStatus(403);
+        ->assertStatus(404); // Not Found due to MultiTenant global scope
 });

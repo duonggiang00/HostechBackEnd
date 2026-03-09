@@ -85,15 +85,6 @@ Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăn
 
 ---
 
-## 🔐 Phân quyền RBAC (Frontend UI Logic)
-
-- **Cấm truy cập**: Nếu `is_active = false`, frontend nên chặn mọi tương tác và hiển thị thông báo "Tài khoản bị khóa".
-- **Phân quyền UI**: 
-    - Sử dụng mảng `permissions` để ẩn/hiện các nút bấm (VD: nút "Thêm phòng" chỉ hiện nếu có `create Room`).
-    - Sử dụng mảng `roles` cho các điều hướng lớn (VD: Role `Tenant` không hiện menu "Cấu hình hệ thống").
-
----
-
 ## Profile Endpoints
 
 | Method | Endpoint | Chức năng | Auth |
@@ -101,3 +92,64 @@ Module xử lý toàn bộ luồng xác thực người dùng (đăng ký, đăn
 | `GET`  | `/api/profile` | Lấy đầy đủ hồ sơ cá nhân | ✅ Required |
 | `PUT`  | `/api/profile` | Cập nhật hồ sơ | ✅ Required |
 | `POST` | `/api/profile/avatar` | Upload ảnh đại diện | ✅ Required |
+| `GET`  | `/api/profile/mfa-status` | Kiểm tra trạng thái MFA | ✅ Required |
+| `POST` | `/api/profile/change-password` | Đổi mật khẩu | ✅ Required |
+
+---
+
+## 🔐 Phân quyền RBAC Backend & Yêu cầu Frontend
+
+Hệ thống sử dụng cơ chế kiểm tra `roles` cho cấu trúc điều hướng lớn và `permissions` cho từng hành động cụ thể.
+
+### 1. Logic chung (Backend Enforcements)
+- **Account Status**: Nếu `is_active = false`, mọi request sẽ trả về `401/403`. Frontend cần tự phát hiện trạng thái này (thường qua `GET /api/auth/me`) để chặn UI và redirect ra trang đăng nhập với thông báo "Tài khoản bị khóa".
+- **Own Profile**: Mọi người dùng đã đăng nhập (bất kể Role) đều có quyền xem và cập nhật hồ sơ cá nhân của chính mình. (Policy bypass/Profile API no policy require).
+
+### 2. Ma trận phân quyền Quản lý Người dùng (Users Module)
+
+Dựa trên `UserPolicy`, module **Users** có cấu hình quyền như sau dựa vào Role:
+
+| Quyền hạn Backend | Owner | Manager | Staff | Tenant |
+|-------------------|:---:|:---:|:---:|:---:|
+| `viewAny Users` (Xem danh sách) | ✅ | ✅ | ✅ | ❌ |
+| `view Users` (Xem chi tiết) | ✅ | ✅ | ❌ | ❌ |
+| `create Users` (Tạo mới) | ✅ | ❌ | ❌ | ❌ |
+| `update Users` (Cập nhật) | ✅ | ❌ | ❌ | ❌ |
+| `delete Users` (Xóa) | ✅ | ❌ | ❌ | ❌ |
+
+### 3. Yêu cầu thiết kế UI/UX Frontend theo từng Role
+
+Dựa vào ma trận quyền, Frontend cần thiết kế luồng trải nghiệm (UI/UX) tương ứng cho từng nhóm người dùng:
+
+#### 🧑‍💼 Dành cho Role `Tenant` (Khách thuê)
+- **Menu Navigation**: **Ẩn hoàn toàn** menu hoặc mục "Quản lý Người dùng" (User Management).
+- **Profile Area**: Cho phép truy cập trang "Hồ sơ cá nhân" từ trên thanh Header. Tại đây có đầy đủ form cập nhật thông tin (Họ tên, ngày sinh, CCCD, ...), tải ảnh đại diện và form đổi mật khẩu. Đảm bảo UI thân thiện, thiết kế dạng Card trực quan.
+
+#### 👔 Dành cho Role `Manager` và `Staff` (Quản lý & Nhân viên)
+- **Menu Navigation**: Hiển thị menu "Quản lý Người dùng".
+- **List View (Bảng danh sách)**: 
+  - Khả dụng các tính năng: Tìm kiếm (Search), Lấy danh sách phân trang, Lọc theo Role/Trạng thái (Filter), Sắp xếp (Sort). Dữ liệu mặc định được hệ thống tự lọc theo Property.
+  - Yêu cầu UI: **Ẩn các nút "Thêm mới"**, **Dòng hành động (Actions column)** chỉ nên hiện nút "Xem chi tiết" (thường là biểu tượng con mắt). Tuyệt đối **không hiển thị nút "Sửa" hay "Xóa"**.
+- **Detail View (Trang chi tiết)**: 
+  - `Manager` có thể xem read-only thông tin của User khác. Các trường input phải ở trạng thái `disabled`. `Staff` không có quyền xem chi tiết.
+
+#### 👑 Dành cho Role `Owner` / `Admin` (Chủ nhà/Quản trị viên)
+- **Menu Navigation**: Hiển thị menu "Quản lý Người dùng".
+- **List View (Bảng danh sách)**:
+  - Hiển thị đầy đủ nút "Thêm mới".
+  - Trong Data Table, cột Actions hiển thị đủ bộ nút thao tác: "Xem", "Sửa", "Xóa".
+  - Bổ sung nút "Thùng rác" hoặc Filter để chuyển qua giao diện xem danh sách User đã xóa (Soft Delete) từ API `trash`.
+- **Detail / Form View**:
+  - Giao diện Form "Thêm mới" và "Sửa" hoạt động đầy đủ.
+  - Hỗ trợ khôi phục (`restore`) và Xóa vĩnh viễn (`forceDelete`) trên UI khi đang ở chế độ xem Thùng rác.
+
+---
+
+## Module Feature Matrix (Users)
+
+| Feature | `auth/me` | `profile` | `users.index` | `users.trash` |
+|---------|-----------|-----------|---------------|---------------|
+| Searching | ❌ | ❌ | ✅ | ✅ |
+| Filtering | ❌ | ❌ | ✅ | ✅ |
+| Sorting | ❌ | ❌ | ✅ | ✅ |
+| Pagination | ❌ | ❌ | ✅ | ✅ |

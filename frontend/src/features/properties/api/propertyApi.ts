@@ -13,7 +13,6 @@ export const getProperties = async (search?: string, page: number = 1, per_page:
     return res.data;
 };
 
-
 export const getPropertyById = async (id: string): Promise<PropertyDTO> => {
     const res = await Api.get(`properties/${id}`);
     return res.data?.data ?? res.data;
@@ -54,9 +53,10 @@ export const getFloors = async (params: Record<string, any> = {}): Promise<Floor
 };
 
 export const getFloorsByProperty = async (propertyId: string): Promise<FloorDTO[]> => {
-    const res = await Api.get(`properties/${propertyId}/floors`);
+    const res = await Api.get("floors", { params: { "filter[property_id]": propertyId } });
     return res.data?.data ?? res.data;
 };
+
 
 export const getFloorById = async (id: string): Promise<FloorDTO> => {
     const res = await Api.get(`floors/${id}`);
@@ -64,7 +64,7 @@ export const getFloorById = async (id: string): Promise<FloorDTO> => {
 };
 
 export const createFloor = async (propertyId: string, data: any): Promise<FloorDTO> => {
-    const res = await Api.post(`properties/${propertyId}/floors`, data);
+    const res = await Api.post("floors", { ...data, property_id: propertyId });
     return res.data?.data ?? res.data;
 };
 
@@ -98,7 +98,7 @@ export const getRooms = async (params: Record<string, any> = {}): Promise<RoomDT
 };
 
 export const getRoomsByProperty = async (propertyId: string): Promise<RoomDTO[]> => {
-    const res = await Api.get(`properties/${propertyId}/rooms?include=floor`);
+    const res = await Api.get("rooms", { params: { "filter[property_id]": propertyId, include: "floor" } });
     return res.data?.data ?? res.data;
 };
 
@@ -108,7 +108,7 @@ export const getRoomById = async (id: string): Promise<RoomDTO> => {
 };
 
 export const createRoom = async (propertyId: string, data: any): Promise<RoomDTO> => {
-    const res = await Api.post(`properties/${propertyId}/rooms`, data);
+    const res = await Api.post("rooms", { ...data, property_id: propertyId });
     return res.data?.data ?? res.data;
 };
 
@@ -133,4 +133,3 @@ export const restoreRoom = async (id: string): Promise<void> => {
 export const forceDeleteRoom = async (id: string): Promise<void> => {
     await Api.delete(`rooms/${id}/force`);
 };
-

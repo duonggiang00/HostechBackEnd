@@ -12,6 +12,7 @@ const ModalSetting = ({ children }: TGlobalProp<{ open: boolean }>) => {
   const { openModalSetting, setOpenModalSetting } = useOpenStore();
   const { user, isLoading } = useUserInfo();
   const clearToken = useTokenStore((state) => state.clearToken);
+  const roles = useTokenStore((state) => state.roles);
   const navigate = useNavigate();
 
   console.log("user", user);
@@ -25,6 +26,15 @@ const ModalSetting = ({ children }: TGlobalProp<{ open: boolean }>) => {
       clearToken();
       setOpenModalSetting(false);
       navigate("/auth");
+    }
+  };
+
+  const handleGoToProfile = () => {
+    setOpenModalSetting(false);
+    if (roles.some((r) => r.toLowerCase() === "tenant")) {
+      navigate("/me/profile");
+    } else {
+      navigate("/manage/profile");
     }
   };
 
@@ -69,7 +79,7 @@ const ModalSetting = ({ children }: TGlobalProp<{ open: boolean }>) => {
             <div>
               <ul className="flex flex-col">
                 <li
-                  onClick={() => setOpenModalSetting(false)}
+                  onClick={handleGoToProfile}
                   className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2 transition border-b border-gray-100"
                 >
                   <User size={16} className="text-gray-600" />

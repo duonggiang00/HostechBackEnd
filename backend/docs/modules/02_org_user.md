@@ -99,66 +99,68 @@ Module quản lý đơn vị tổ chức (Org) là Công ty/Ban quản lý, và 
 
 ---
 
-## 🔐 Phân quyền RBAC (Frontend Logic)
+## 🔐 Phân quyền RBAC Backend & Yêu cầu Frontend
 
-- **Owner**: Có quyền cao nhất trong Org, thấy menu "Cài đặt tổ chức" và quản lý toàn bộ User.
-- **Manager**: Chỉ quản lý được Staff và Tenant thuộc Tòa nhà mình được phân công. Không thấy menu "Cài đặt tổ chức".
-- **Staff**: Không có quyền quản lý User khác.
+Hệ thống module **Tổ chức & Người dùng** (Org & User) chịu sự kiểm soát nghiêm ngặt bởi `OrgPolicy`, `UserPolicy`, `UserInvitationPolicy` kết hợp với Scope Hierarchy ở tầng `UserService`.
 
----
+### 1. Ma trận phân quyền Backend (Backend Policies)
 
-## User Endpoints
+| Đối tượng (Module) | Quyền hạn | Owner | Manager | Staff | Tenant |
+|--------------------|-----------|:---:|:---:|:---:|:---:|
+| **Orgs** (Tổ chức) | Xem (view) | ✅ (Only Own) | ❌ | ❌ | ❌ |
+| | Sửa (update) | ✅ (Only Own) | ❌ | ❌ | ❌ |
+| **Users** (Nhân sự) | Xem danh sách | ✅ (All in Org) | ✅ (Filtered) | ✅ (Filtered)| ❌ |
+| | Tạo mới (create) | ✅ | ❌ | ❌ | ❌ |
+| | Cập nhật (update)| ✅ | ❌ | ❌ | ❌ |
+| | Xóa (delete) | ✅ | ❌ | ❌ | ❌ |
+| **Invitations** (Lời mời)| Tạo (create) | ✅ | ✅ | ❌ | ❌ |
+| | Thu hồi (delete) | ✅ | ✅ | ❌ | ❌ |
 
-| Method | Endpoint | Chức năng | Role cần thiết |
-|--------|----------|-----------|----------------|
-| `GET`    | `/api/users` | Danh sách user (theo org scope) | Admin, Owner, Manager |
-| `PUT`    | `/api/users/{id}` | Cập nhật trạng thái/thông tin user | Admin, Owner |
-| `DELETE` | `/api/users/{id}` | Gỡ user ra khỏi Org | Admin, Owner |
+### 2. Logic Bảo mật ngầm định (Backend Enforcements)
 
----
+- **Org Isolation**: API tự động filter dữ liệu theo `org_id` của người gọi ngay từ Middleware `ResolveTenant`. Người dùng ở Org A (ngay cả Owner) không thể thấy hay can thiệp người dùng ở Org B.
+- **Admin System Bypass**: Role `Admin` (không có `org_id`) có quyền CRUD trên toàn bộ hệ thống ở mức System level.
+- **Property-based Scoping**: Role `Manager` và `Staff` chỉ có thể xem danh sách User thuộc về các Property (Tòa nhà) mà họ được phân công quản lý.
+- **Role Hierarchy Shield**: 
+  - `Owner` có thể tạo user với các role thấp hơn (`Manager`, `Staff`, `Tenant`).
+  - `Manager` không thể tạo User trực tiếp, nhưng **ĐƯỢC PHÉP** tạo Invitation (Thư mời) để mời người khác vào hệ thống.
 
-## User Invitation Endpoints
+### 3. Yêu cầu thiết kế UI/UX Frontend theo từng Role
 
-| Method | Endpoint | Chức năng | Role cần thiết |
-|--------|----------|-----------|----------------|
-| `GET`    | `/api/invitations/validate/{token}` | Xác thực mã invite (Public) | ❌ Public |
-| `POST`   | `/api/invitations` | Tạo invitation và gửi email | Admin, Owner, Manager |
+Dựa vào quy tắc bảo mật trên, giao diện (React/Vue) cần được cấu trúc theo các nhóm quyền sau:
 
-### Phân quyền Invite theo Role
-| Người gửi | Có thể mời Role |
-|-----------|-----------------|
-| Admin | Owner (+ tạo org mới) |
-| Owner | Manager, Staff, Tenant (trong org của mình) |
-| Manager | Staff, Tenant (trong phạm vi property được quản) |
+#### 🧑‍💻 Dành cho `Tenant` (Khách thuê)
+- **Menu Navigation**: **Ẩn hoàn toàn** các menu liên quan đến "Cài đặt tổ chức" hay "Quản lý nhân sự".
 
----
+#### 👔 Dành cho `Manager` và `Staff` (Quản lý cấp trung & Nhân viên)
+- **Menu Navigation**: 
+  - Ẩn menu "Cài đặt tổ chức" (Không có quyền đọc chức năng Org).
+  - Hiển thị menu "Quản lý thành viên".
+- **Giao diện Quản lý Thành viên (Member Management)**:
+  - Chỉ được cấp quyền **Xem danh sách (Read-Only)**. Dữ liệu trả về mặc định đã được lọc theo Property của người dùng hiện tại.
+  - Các nút hành động "Thêm mới User", "Sửa", "Xóa" phải bị **vô hiệu hóa (disabled)** hoặc **ẩn (hidden)** hoàn toàn do không có quyền (`create Users`, `update Users`).
+- **Giao diện Lời mời (Invitations)** (Chỉ dành cho Manager):
+  - Cho phép nút "Mời thành viên" (Create Invitation). Manager được phép gửi thư mời. (`Staff` không có quyền này).
 
-## Role Hierarchy
-```
-Admin (System Level - no org_id)
-  └── Owner (org_id required - tạo và sở hữu Org)
-        └── Manager (org_id + property_ids)
-              └── Staff (org_id + property_ids)
-                    └── Tenant (org_id - qua invite, gắn contract)
-```
-
----
-
-## Phân quyền RBAC (Backend Policy)
-
-| Hành động | Admin | Owner | Manager | Staff | Tenant |
-|-----------|-------|-------|---------|-------|--------|
-| CRUD Org | ✅ | 🔶 own | ❌ | ❌ | ❌ |
-| CRUD Users | ✅ | 🔶 org | 🔶 lower | ❌ | ❌ |
-| View Users | ✅ | ✅ | 🔶 scope | ❌ | ❌ |
-
-> 🔶 = Có nhưng giới hạn theo scope
+#### 👑 Dành cho `Owner` (Chủ sở hữu Tổ chức)
+- **Menu Navigation**: Hiển thị toàn bộ nhóm tính năng "Cài đặt hệ thống" và "Cơ cấu tổ chức".
+- **Giao diện Cài đặt Tổ chức (Org Settings)**:
+  - Trang Profile công ty với thiết kế dạng Form Setting. Cho phép cập nhật Tên, Email liên hệ, Số điện thoại, Address, Múi giờ, Loại tiền tệ mặc định. (Chỉ lấy/sửa duy nhất Org của chính họ).
+- **Giao diện Quản lý Thành viên (Member Management)**:
+  - Hiển thị bảng dữ liệu (Data Table) đầy đủ sức mạnh: Searching, Filtering theo Role, Pagination.
+  - Form tạo mới và Cập nhật hoạt động đầy đủ tính năng. Hành động "Xóa" (Soft delete) và xem danh sách "Thùng rác" (Trash) được hỗ trợ.
+- **Giao diện Lời mời (Invitations)**:
+  - Quyền quản trị toàn diện: Thêm mới thư mời, Xem danh sách trạng thái thư mời, Thu hồi/Xóa thư mời.
 
 ---
 
-## Lưu ý thiết kế
-- `org_id` là `null` cho Admin (system level)
-- Owner tạo Org thông qua luồng invite với role `Owner` → auto tạo Org mới
-- User được scoped theo `org_id` qua `MultiTenant` trait và `HandlesOrgScope` trait trong Policy
-- **Security Logic**: Được đóng gói hoàn toàn trong `UserService` (kiểm tra role hierarchy, org scope khi tạo/cập nhật user).
-- **Laravel 12 Standard**: `User` model sử dụng phương thức `casts()` cho attribute casting.
+## 🛠 Flow tạo tài khoản (Account Provisioning Design)
+
+Việc tạo mới thành viên tham gia hệ thống **nên ưu tiên sử dụng luồng User Invitation** thay vì tự tạo User trực tiếp và đặt mật khẩu giùm:
+
+1. **Owner/Manager** vào giao diện Invitations -> Nhấn "Mời thành viên".
+2. Hệ thống gọi `POST /api/invitations` với Payload: `{ email, role_name }`.
+3. Backend sinh ra `token` chứa link định tuyến (VD: `https://frontend.domain/invite/{token}`).
+4. Dùng tool (cronjob/queue) gửi mail chứa link cho user.
+5. User click vào link dẫu đến frontend. Frontend gọi `GET /api/invitations/validate/{token}` để kiểm tra hợp lệ.
+6. Nếu hợp lệ, chuyển sang UI nhập **Họ tên, Mật khẩu mới** -> Submit tạo tài khoản hoàn thiện (Đăng ký qua Invite token).

@@ -4,8 +4,7 @@ import SidebarAdmin from "./Sidebar";
 import Authorization from "../../features/auth/components/verifyLogin";
 import { useTokenStore } from "../../features/auth/stores/authStore";
 
-const LayoutAdmin = () => {
-  const role = useTokenStore((state) => state.role);
+const LayoutManage = () => {
   const isLoading = useTokenStore((state) => state.isLoading);
 
   // Chờ auth state hydrate trước khi check quyền
@@ -19,7 +18,7 @@ const LayoutAdmin = () => {
 
   return (
     <>
-      <Authorization role={role || ""} allowRole={["Admin", "Owner", "Manager", "Staff"]}>
+      <Authorization allowRole={["Admin", "Owner", "Manager", "Staff"]}>
         <div className="flex bg-[#f5f7fb] h-screen overflow-hidden">
           <SidebarAdmin />
           <main className="flex-1 flex flex-col overflow-hidden">
@@ -34,4 +33,4 @@ const LayoutAdmin = () => {
   );
 };
 
-export default LayoutAdmin;
+export default LayoutManage;

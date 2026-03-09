@@ -18,7 +18,7 @@ export const ProfilePage: React.FC = () => {
   const { control: controlProfile, handleSubmit: handleSubmitProfile, reset: resetProfile } = useForm<ProfileType>();
   const { control: controlPwd, handleSubmit: handleSubmitPwd, reset: resetPwd } = useForm<PasswordDataType>();
   
-  const role = useTokenStore(state => state.role);
+  const roles = useTokenStore(state => state.roles);
 
   useEffect(() => {
     if (profile) {
@@ -56,7 +56,7 @@ export const ProfilePage: React.FC = () => {
           <Col xs={24} md={8} className="flex flex-col items-center justify-start border-r border-gray-100">
              <AvatarUpload currentAvatarUrl={profile?.avatar_url} />
              <Title level={4} className="mt-4 mb-0">{profile?.full_name}</Title>
-             <Text type="secondary">{role}</Text>
+             <Text type="secondary">{roles?.join(", ")}</Text>
           </Col>
           <Col xs={24} md={16}>
             <Form layout="vertical" onFinish={handleSubmitProfile(onUpdateProfile)}>

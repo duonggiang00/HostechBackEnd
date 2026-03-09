@@ -2,6 +2,7 @@ import { Bell, Search, UserRoundCheck } from "lucide-react";
 import ModalSetting from "../../features/auth/components/ModalSetting";
 import { useOpenStore } from "../../shared/stores/openStore";
 import { useUserInfo } from "../../Hooks/useUserInfo";
+import { OrgSwitcher } from "../../features/organizations/components/OrgSwitcher";
 
 const Header = () => {
   const { openModalSetting } = useOpenStore();
@@ -28,6 +29,7 @@ const Header = () => {
           </form>
         </div>
         <div className="relative flex items-center gap-3 mr-5">
+          <OrgSwitcher />
           <p className="w-12 h-12 border border-gray-300 rounded-full p-3 cursor-pointer hover:bg-gray-100">
             <Bell />
           </p>

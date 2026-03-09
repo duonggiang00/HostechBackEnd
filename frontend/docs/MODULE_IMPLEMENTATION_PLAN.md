@@ -78,8 +78,8 @@ Chi tiết API, RBAC và Hướng dẫn UI cho từng module:
 ### 4. Module Property (Building, Floor, Room)
 - **Features (`src/features/properties/`):**
   - Property List: Card/Table view với search & filter.
-  - Property Detail: View phân cấp Tòa nhà -> Tầng (Accordion/Tab) -> Phòng (Grid).
-  - Room Management: Form tạo/sửa phòng, quản lý tài sản (`Room Asset`).
+  - Property Detail: View phân cấp Tòa nhà -> Tầng (Accordion/Tab) -> Phòng (Grid). Thêm chức năng tải ảnh Tòa nhà (`MediaUploader`).
+  - Room Management: Form tạo/sửa phòng (có tải ảnh phòng qua `MediaUploader`), quản lý tài sản (`Room Asset`).
 
 ### 5. Module Service (Dịch vụ)
 - **Features (`src/features/services/`):**
@@ -88,24 +88,24 @@ Chi tiết API, RBAC và Hướng dẫn UI cho từng module:
 
 ### 6. Module Contract (Hợp đồng) - Core Logic
 - **Features (`src/features/contracts/`):**
-  - **Portal Manager:** Quản lý danh sách, xem/in hợp đồng, tạo mới, thanh lý hợp đồng.
+  - **Portal Manager:** Quản lý danh sách, xem/in hợp đồng, tạo mới (đính kèm file scan hợp đồng qua `MediaUploader`), thanh lý hợp đồng.
   - **Portal Tenant:** View `My Contracts`, luồng ký điện tử (Accept Signature), mời roommate, yêu cầu đổi phòng.
 
 ### 7. Module Meter & Invoice (Chỉ số & Hóa đơn)
 - **Features (`src/features/invoices/`):**
-  - **Ghi số (UX focused):** Grid view nhập nhanh số cũ/mới (Excel-like / React-Data-Grid).
+  - **Ghi số (UX focused):** Grid view nhập nhanh số cũ/mới (Excel-like / React-Data-Grid). Hỗ trợ upload ảnh chụp đồng hồ điện/nước (`MediaUploader`) để làm bằng chứng.
   - **Invoice Management:** View lọc trạng thái (Draft/Sent/Paid), ghi nhận thanh toán (`Log payment`), xuất Printable Layout.
   - **Adjustments:** Duyệt phiếu điều chỉnh (`Adjustment Notes`).
 
 ### 8. Module Ticket (Yêu cầu/Khiếu nại)
 - **Features (`src/features/tickets/`):**
   - **Manager:** Kanban Board cho Staff kéo thả (`OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED`).
-  - **Tenant:** Form tạo yêu cầu với Drag & Drop media, box chat/comment (`TicketComment`).
+  - **Tenant:** Form tạo yêu cầu với Drag & Drop media (sử dụng `MediaUploader` uuid trả về), box chat/comment (`TicketComment`).
 
 ### 9. Module Handover (Bàn giao)
 - **Features (`src/features/handover/`):**
   - Checklist: Xác nhận tình trạng thiết bị khi nhận/trả phòng.
-  - Verification: Form upload ảnh minh họa và checklist checkbox.
+  - Verification: Form upload ảnh minh họa (sử dụng `MediaUploader` uuid trả về) và checklist checkbox.
 
 ### 10. Module Dashboard / Statistics
 - **Visualization:** Dùng `Recharts` hoặc `Antd Charts` vẽ biểu đồ doanh thu, tỷ lệ lấp đầy.

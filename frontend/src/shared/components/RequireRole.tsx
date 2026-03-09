@@ -6,6 +6,7 @@ interface RequireRoleProps {
   children: React.ReactNode;
   allowedRoles: string[];
   redirectTo?: string;
+  fallback?: React.ReactNode;
 }
 
 /**
@@ -17,12 +18,19 @@ interface RequireRoleProps {
 export const RequireRole: React.FC<RequireRoleProps> = ({ 
   children, 
   allowedRoles, 
-  redirectTo = "/" 
+  redirectTo,
+  fallback = null
 }) => {
-  const role = useTokenStore((state) => state.role);
+  const roles = useTokenStore((state) => state.roles);
 
-  if (!role || !allowedRoles.includes(role)) {
-    return <Navigate to={redirectTo} replace />;
+  // Check if user has ANY of the allowed roles
+  const hasAccess = roles?.some(userRole => allowedRoles.includes(userRole));
+
+  if (!hasAccess) {
+    if (redirectTo) {
+        return <Navigate to={redirectTo} replace />;
+    }
+    return <>{fallback}</>;
   }
 
   return <>{children}</>;

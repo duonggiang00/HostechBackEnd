@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router";
 import { message } from "antd";
-import type { IDecodeJWT, IOtpVerify } from "../../features/auth/types";
-import { resendOTP, verifyOTP } from "../../features/auth/api/authApi";
+import type { IDecodeJWT, IOtpVerify } from "../types";
+import { resendOTP, verifyOTP } from "../api/authApi";
 import { jwtDecode } from "jwt-decode";
-import { useTokenStore } from "../../features/auth/stores/authStore";
+import { useTokenStore } from "../stores/authStore";
 
 const VerifyOTP = () => {
   const setToken = useTokenStore((state) => state.setToken);
@@ -33,14 +33,20 @@ const VerifyOTP = () => {
         otp: data.otp,
       });
 
-      setToken(res.data.access_token);
-
       // Giải mã token để lấy role
       const decoded = jwtDecode<IDecodeJWT>(res.data.access_token);
-      console.log("role", decoded.user.role);
+      const roles = decoded.user?.roles || [];
+      const permissions = decoded.user?.permissions || [];
+      
+      setToken(res.data.access_token, roles, permissions);
 
       message.success("Xác thực OTP thành công");
-      navigate("/manage");
+      
+      if (roles.some((r: string) => r.toLowerCase() === "tenant")) {
+        navigate("/me");
+      } else {
+        navigate("/manage");
+      }
 
     } catch (err: any) {
       console.error(err);

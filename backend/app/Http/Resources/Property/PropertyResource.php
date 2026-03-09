@@ -19,6 +19,8 @@ class PropertyResource extends JsonResource
             'default_due_day' => $this->default_due_day,
             'default_cutoff_day' => $this->default_cutoff_day,
             'bank_accounts' => $this->bank_accounts,
+            'floors_count' => $this->floors_count ?? $this->whenCounted('floors'),
+            'rooms_count' => $this->rooms_count ?? $this->whenCounted('rooms'),
             'floors' => FloorResource::collection($this->whenLoaded('floors')),
             'rooms' => RoomResource::collection($this->whenLoaded('rooms')),
             'created_at' => $this->created_at,

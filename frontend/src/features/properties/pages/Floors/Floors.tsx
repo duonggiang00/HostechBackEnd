@@ -205,7 +205,7 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
               pagination={false}
               className="modern-table"
               rowClassName="hover:bg-slate-50 cursor-pointer transition-colors"
-              onRow={(record) => ({
+              onRow={(record: any) => ({
                 onDoubleClick: () => navigate(`/manage/floors/detailFloor/${record.id}`)
               })}
             />

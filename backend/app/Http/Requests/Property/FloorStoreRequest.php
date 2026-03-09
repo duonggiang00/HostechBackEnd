@@ -23,6 +23,7 @@ class FloorStoreRequest extends FormRequest
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
             'code' => ['required', 'string', 'max:50'],
             'name' => ['required', 'string', 'max:255'],
+            'floor_number' => ['required', 'integer'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }

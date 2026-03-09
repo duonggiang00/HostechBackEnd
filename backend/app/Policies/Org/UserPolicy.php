@@ -20,7 +20,7 @@ class UserPolicy implements RbacModuleProvider
         return [
             'Owner' => 'CRUD',
             'Manager' => 'R',
-            'Staff' => '-',
+            'Staff' => 'R',
             'Tenant' => '-',
         ];
     }

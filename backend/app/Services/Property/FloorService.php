@@ -12,8 +12,11 @@ class FloorService
 {
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
     {
+        $allowedFilters = array_merge($allowedFilters, [\Spatie\QueryBuilder\AllowedFilter::exact('property_id')]);
+
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
+            ->allowedIncludes(['property', 'rooms'])
             ->defaultSort('sort_order')
             ->withCount('rooms');
 
@@ -48,7 +51,7 @@ class FloorService
 
     public function find(string $id): ?Floor
     {
-        return Floor::find($id);
+        return Floor::withCount('rooms')->find($id);
     }
 
     public function findTrashed(string $id): ?Floor

@@ -36,7 +36,8 @@ class PropertyController extends Controller
             (int) $request->query('per_page', 15),
             $request->input('search'),
             $request->user()->org_id ?? $request->input('org_id'),
-            $request->boolean('with_trashed')
+            $request->boolean('with_trashed'),
+            $request->user()
         );
 
         return PropertyResource::collection($paginator);

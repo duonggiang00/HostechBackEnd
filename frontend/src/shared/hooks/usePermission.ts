@@ -7,7 +7,9 @@ import { useTokenStore } from "../../features/auth/stores/authStore";
  * Dùng để ẩn/hiện UI elements hoặc chặn truy cập logic.
  */
 export const usePermission = () => {
-  const rawRole = useTokenStore((state) => state.role);
+  const roles = useTokenStore((state) => state.roles);
+  // Derive primary role from roles array (first role wins)
+  const rawRole = roles?.[0] ?? null;
   const role = rawRole?.toLowerCase();
 
   /**

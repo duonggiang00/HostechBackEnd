@@ -18,13 +18,10 @@ import {
   FileText,
   Receipt,
   House,
-  MapPinCheck,
-  StretchHorizontal,
-  Warehouse,
   Gauge,
   Users,
   UserRoundCog,
-  Shield,
+  ShieldAlert,
 } from "lucide-react";
 
 // ── Categories & Groups ───────────────────────
@@ -46,9 +43,6 @@ export const sidebarFlatItems: SidebarItem[] = [
 
 export const infrasItems: SidebarItem[] = [
   { key: "property-list", label: "Quản lý nhà", path: "/manage/properties", icon: <House /> },
-  { key: "orgs", label: "Quản lý tổ chức", path: "/manage/orgs", icon: <MapPinCheck /> },
-  { key: "floors", label: "Quản lý tầng", path: "/manage/floors", icon: <StretchHorizontal /> },
-  { key: "rooms", label: "Quản lý phòng", path: "/manage/rooms", icon: <Warehouse /> },
   { key: "meters", label: "Quản lý đồng hồ", path: "/manage/meters", icon: <Gauge /> },
 ];
 
@@ -79,9 +73,15 @@ export const userGroups: SidebarGroup[] = [
     label: "Quản lý người dùng",
     icon: <UserRoundCog />,
     items: [
-      { key: "tenant", label: "Người thuê", path: "/manage/tenant", icon: <Users /> },
-      { key: "manager", label: "Quản lý", path: "/manage/manager", icon: <UserRoundCog /> },
-      { key: "staff", label: "Nhân viên", path: "/manage/staff", icon: <Shield /> },
+      { key: "all-users", label: "Danh sách người dùng", path: "/manage/users", icon: <Users /> },
+    ],
+  },
+  {
+    key: "system",
+    label: "Hệ thống",
+    icon: <ShieldAlert />,
+    items: [
+      { key: "audit-logs", label: "Nhật ký hoạt động", path: "/manage/audit-logs", icon: <FileText /> },
     ],
   },
 ];

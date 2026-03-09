@@ -30,11 +30,12 @@ export interface IOpenMenu {
 
 export interface ITokenStore {
   token: string;
-  role: string | null;
+  roles: string[];
+  permissions: string[];
   isLoading: boolean;
-  setToken: (token: string, role?: string) => void;
+  setToken: (token: string, roles: string[], permissions: string[]) => void;
   restoreToken: () => void;
-  getRole: () => string | null;
+  getRoles: () => string[];
   getToken: () => string | null;
   clearToken: () => void;
 }

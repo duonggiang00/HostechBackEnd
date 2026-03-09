@@ -3,38 +3,50 @@ import type { ITokenStore } from "../../../shared/types/store";
 
 export const useTokenStore = create<ITokenStore>((set, get) => ({
   token: "",
-  role: null,
+  roles: [],
+  permissions: [],
   isLoading: true,
 
-  setToken: (token: string, role?: string) => {
+  setToken: (token: string, roles: string[], permissions: string[]) => {
     localStorage.setItem("token", token);
-    if (role) localStorage.setItem("role", role);
+    localStorage.setItem("roles", JSON.stringify(roles));
+    localStorage.setItem("permissions", JSON.stringify(permissions));
 
     set({
       token,
-      role: role ?? null,
+      roles,
+      permissions,
       isLoading: false,
     });
   },
 
   restoreToken: () => {
     const token = localStorage.getItem("token");
-    const role = localStorage.getItem("role");
+    const rolesStr = localStorage.getItem("roles");
+    const permissionsStr = localStorage.getItem("permissions");
 
     if (token) {
+      let roles = [];
+      let permissions = [];
+      try {
+        roles = rolesStr ? JSON.parse(rolesStr) : [];
+        permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
+      } catch (e) {}
+
       set({
         token,
-        role: role ?? null,
+        roles,
+        permissions,
         isLoading: false,
       });
       return;
     }
 
-    set({ token: "", role: null, isLoading: false });
+    set({ token: "", roles: [], permissions: [], isLoading: false });
   },
 
-  getRole: () => {
-    return get().role;
+  getRoles: () => {
+    return get().roles;
   },
 
   getToken: () => {
@@ -43,7 +55,8 @@ export const useTokenStore = create<ITokenStore>((set, get) => ({
 
   clearToken: () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    set({ token: "", role: null });
+    localStorage.removeItem("roles");
+    localStorage.removeItem("permissions");
+    set({ token: "", roles: [], permissions: [] });
   },
 }));

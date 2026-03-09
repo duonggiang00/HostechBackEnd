@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Table, Button, Tooltip, Popconfirm, Modal, Input, Tag, Empty, Skeleton, Pagination } from "antd";
 import { formatStatusRoom } from "../../../../Constants/Helper";
-import { Plus, Eye, Trash2, RotateCcw, Search, DoorOpen, Home, Layers, Settings2 } from "lucide-react";
+import { Plus, Eye, Trash2, RotateCcw, Search, DoorOpen, Settings2 } from "lucide-react";
+
 import { useNavigate } from "react-router";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -35,6 +36,8 @@ const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string 
   queryParams.per_page = pageSize;
 
   const { data: paginatedData, isLoading } = useRooms(queryParams);
+  console.log("[DEBUG] Rooms - queryParams:", queryParams);
+  console.log("[DEBUG] Rooms - paginatedData:", paginatedData);
   // Support both paginated format and raw array format depending on API config
   const paginatedAny = paginatedData as any;
   const rooms = paginatedAny?.data || (Array.isArray(paginatedData) ? paginatedData : []);

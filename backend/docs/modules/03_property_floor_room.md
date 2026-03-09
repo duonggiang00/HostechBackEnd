@@ -163,30 +163,50 @@ Module quản lý tài sản cho thuê bao gồm Tòa nhà (Property), Tầng (F
 
 ---
 
-## 🔐 Phân quyền RBAC (Frontend Logic)
+## 🔐 Phân quyền RBAC Backend & Yêu cầu Frontend
 
-| Role | Chức năng hiển thị | Ghi chú |
-|------|--------------------|---------|
-GET /api/rooms?filter[property_id]=uuid&filter[status]=available&filter[type]=apartment&search=101&per_page=20
-```
+Hệ thống Quản lý Bất động sản (Property, Floor, Room) tuân thủ mô hình bảo mật Scope-based nghiêm ngặt nhằm tránh thất thoát dữ liệu giữa các Tòa nhà và giữa các Khách thuê.
 
-| Param | Mô tả |
-|-------|-------|
-| `filter[property_id]` | Lọc theo tòa nhà |
-| `filter[floor_id]` | Lọc theo tầng |
-| `filter[status]` | `available`, `occupied`, `maintenance` (Dùng lowercase) |
-| `filter[type]` | Loại phòng (`apartment`, `studio`, ...) |
-| `search` | Tìm theo tên/mã phòng |
-| `include` | `assets`, `prices`, `statusHistories`, `media` |
+### 1. Ma trận phân quyền Backend (Policies)
 
----
+| Hành động | Owner | Manager | Staff | Tenant |
+|-----------|:---:|:---:|:---:|:---:|
+| **Properties** (Tòa nhà) |
+| Xem danh sách | ✅ (All in Org) | ✅ (Assigned only) | ✅ (Assigned only) | ✅ (Rented only) |
+| Cập nhật | ✅ | ✅ (Assigned only) | ❌ | ❌ |
+| **Floors** (Tầng) |
+| Xem danh sách | ✅ (All in Org) | ✅ (Assigned only) | ✅ (Assigned only) | ❌ |
+| Tạo / Cập nhật | ✅ | ✅ (Assigned only) | ❌ | ❌ |
+| **Rooms** (Phòng) |
+| Xem danh sách | ✅ (All in Org) | ✅ (Assigned only) | ✅ (Assigned only) | ✅ (Rented only) |
+| Cập nhật | ✅ | ✅ (Assigned only) | ✅ (Assigned only) | ❌ |
 
-## Phân quyền RBAC (Backend Policy)
+### 2. Logic Bảo mật Scope (Backend Enforcements)
 
-| Hành động | Admin | Owner | Manager | Staff | Tenant |
-|-----------|-------|-------|---------|-------|--------|
-| viewAny | ✅ | ✅ | ✅ | ✅ | 🔶 scoped |
-| view | ✅ | ✅ | ✅ | ✅ | 🔶 own room |
-| create | ✅ | ✅ | ✅ | ❌ | ❌ |
-| update | ✅ | ✅ | ✅ | 🔶 limited | ❌ |
-| delete | ✅ | ✅ | ❌ | ❌ | ❌ |
+- **Manager / Staff Scope (`HandlesPropertyScope`)**: Backend tự động filter danh sách (qua `whereHas('managers')` trong Service) và chặn thao tác (qua Policy). `Manager` và `Staff` **tuyệt đối không thể nhìn thấy Property, Floor, hay Room nào nằm ngoài danh sách Tòa nhà mà họ được phân công quản lý.**
+- **Tenant Scope**: Tenant (Khách thuê) bị giới hạn cực kỳ chặt chẽ. Họ chỉ nhìn thấy `Property` và `Room` nếu như đang có một Hợp đồng (`Contract`) ở trạng thái `ACTIVE` tại đó. Khách thuê **không thể xem danh sách các phòng khác** trong cùng Tòa nhà. `Floor` bị ẩn hoàn toàn với Tenant.
+
+### 3. Yêu cầu thiết kế UI/UX Frontend theo từng Role
+
+Dựa vào quy tắc bảo mật trên, giao diện (React/Vue) cần được cấu trúc theo các nhóm quyền sau:
+
+#### 🧑‍💻 Dành cho `Tenant` (Khách thuê)
+- **Menu Navigation**: Chuyển menu "Quản lý tòa nhà" thành "Thông tin Phòng của tôi". 
+- **View**: Tenant chỉ nhìn thấy duy nhất Phòng mà họ đang thuê, các thông tin liên quan tới phòng đó (tài sản bàn giao, giá thuê hiện tại). Không hiển thị sơ đồ tòa nhà dạng cây.
+
+#### 👷 Dành cho `Staff` (Nhân viên kỹ thuật/CSKH)
+- **Menu Navigation**: Hiển thị menu "Quản lý tòa nhà/phòng".
+- **View**: Hiển thị danh sách Tòa nhà, Tầng, Phòng. Danh sách này mặc định đã được Backend tự động lọc (chỉ hiện các tòa nhà mà nhân viên đó làm việc).
+- **Actions**:
+  - Không có quyền Tạo mới Tòa nhà/Tầng/Phòng hay Xóa dòng dữ liệu.
+  - Được phép Cập nhật (`U`) dữ liệu Phòng (Ví dụ: Cập nhật trạng thái phòng từ `maintenance` sang `available` sau khi dọn dẹp xong).
+
+#### 👔 Dành cho `Manager` (Quản lý cấp trung)
+- **Menu Navigation**: Hiển thị toàn bộ nhóm tính năng "Quản lý Tòa nhà".
+- **View**: Tự động lọc ra các Tòa nhà mà quản lý đó phụ trách.
+- **Actions**: Full quyền xem, tạo, sửa trên các Tòa nhà được phân công. (Tuy nhiên thao tác Xóa/Restore/Force Delete thường sẽ bị khóa hoặc chờ config cụ thể tùy hệ thống, hiện tại Manager không có quyền Xóa).
+
+#### 👑 Dành cho `Owner` (Chủ nhà / Admin)
+- **Menu Navigation**: Full quyền truy cập.
+- **View**: Nhìn thấy toàn bộ tài sản của toàn bộ Tòa nhà trong tổ chức. Chế độ xem cây (Tree view) từ Tòa nhà -> Tầng -> Phòng hoạt động hoàn chỉnh.
+- **Actions**: Có đầy đủ các nút Thêm mới, Sửa, Xóa (Soft Delete), và Khôi phục đối với bất kỳ Node nào. Mở rộng thêm tab "Thùng rác" cho các module này.

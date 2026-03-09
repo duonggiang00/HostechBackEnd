@@ -16,7 +16,7 @@ import { SidebarCategory } from "../../shared/components/SidebarCategory";
 const SidebarAdmin = () => {
   const { open, openRegister, setOpen, setOpenRegister } = useOpenStore();
   const location = useLocation();
-  const role = useTokenStore((state) => state.role);
+  const role = useTokenStore((state) => state.roles)?.[0] ?? null;
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     infras: true,
@@ -153,7 +153,7 @@ const SidebarAdmin = () => {
       {/* Bottom Action & Toggle */}
       <div className={`p-4 border-t border-[#1e293b]/50 shrink-0 space-y-3 bg-[#0f172a]`}>
         {role && (
-          <Authorization role={role} allowRole={["Admin", "Owner", "Manager"]}>
+          <Authorization allowRole={["Admin", "Owner", "Manager"]}>
             <Register open={openRegister}>
               <button
                 className={`flex items-center w-full py-3 rounded-xl bg-[#1e293b] hover:bg-[#2d3a4f] transition-all text-[#94a3b8] hover:text-white font-medium text-[13.5px] overflow-hidden group shadow-sm ${open ? "px-0" : "px-4"}`}

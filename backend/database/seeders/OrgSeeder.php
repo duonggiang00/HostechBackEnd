@@ -38,8 +38,8 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgCount = 3;
-        $usersPerOrg = 5;
-        $propertiesPerOrg = 2;
+        $usersPerOrg = 15;
+        $propertiesPerOrg = 5;
         $floorsPerProperty = 4;
         $roomsPerFloor = 5;
         $roomsWithoutFloor = 3;
@@ -60,24 +60,23 @@ class OrgSeeder extends Seeder
                 ->create()
                 ->each(function (User $user, $index) use ($org) {
                     $orgSlug = Str::slug($org->name);
-                    // Assign roles based on user index
-                    if ($index === 0) {
+                    // 2 Owners, 3 Managers, 5 Staff, 5 Tenants
+                    if ($index < 2) {
                         $user->assignRole('Owner');
-                        $user->update(['email' => "{$orgSlug}_owner@example.com"]);
+                        $user->update(['email' => "{$orgSlug}_owner_" . ($index + 1) . "@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=magenta>Owner</>");
-                    } elseif ($index === 1) {
+                    } elseif ($index < 5) {
                         $user->assignRole('Manager');
-                        $user->update(['email' => "{$orgSlug}_manager@example.com"]);
+                        $user->update(['email' => "{$orgSlug}_manager_" . ($index - 1) . "@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=blue>Manager</>");
-                    } elseif ($index === 2) {
+                    } elseif ($index < 10) {
                         $user->assignRole('Staff');
-                        $user->update(['email' => "{$orgSlug}_staff@example.com"]);
+                        $user->update(['email' => "{$orgSlug}_staff_" . ($index - 4) . "@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=green>Staff</>");
                     } else {
                         $user->assignRole('Tenant');
-                        // Use unique string for tenants since there are multiple
                         $uniqueStr = Str::random(4);
-                        $user->update(['email' => "{$orgSlug}_tenant_{$uniqueStr}@example.com"]);
+                        $user->update(['email' => "{$orgSlug}_tenant_" . ($index - 9) . "_{$uniqueStr}@example.com"]);
                         $this->command->line("  • {$user->full_name} ({$user->email}) - <fg=cyan>Tenant</>");
                     }
                 });
@@ -148,7 +147,21 @@ class OrgSeeder extends Seeder
             Property::factory($propertiesPerOrg)
                 ->state(['org_id' => $org->id])
                 ->create()
-                ->each(function (Property $property) use ($org, $floorsPerProperty, $roomsPerFloor, $roomsWithoutFloor) {
+                ->each(function (Property $property, $index) use ($org, $floorsPerProperty, $roomsPerFloor, $roomsWithoutFloor) {
+                    // Get all managers and staff for this org
+                    $managers = User::where('org_id', $org->id)->role('Manager')->get();
+                    $staffs = User::where('org_id', $org->id)->role('Staff')->get();
+
+                    // Assign 1 Manager and 2 Staff per property (round-robin if needed)
+                    // If we have 3 managers and 5 properties, some managers will have 2 buildings.
+                    $manager = $managers[$index % $managers->count()];
+                    $staff1 = $staffs[($index * 2) % $staffs->count()];
+                    $staff2 = $staffs[($index * 2 + 1) % $staffs->count()];
+                    
+                    if ($manager) $property->managers()->attach($manager->id);
+                    if ($staff1) $property->managers()->attach($staff1->id);
+                    if ($staff2) $property->managers()->attach($staff2->id);
+
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
                     // Create floors
@@ -327,7 +340,7 @@ class OrgSeeder extends Seeder
                         'id' => $meterId,
                         'org_id' => $org->id,
                         'room_id' => $room->id,
-                        'code' => 'METER_E_'.rand(1000, 9999),
+                        'code' => 'METER_E_' . $room->code . '_' . rand(10, 99),
                         'type' => 'ELECTRIC',
                         'installed_at' => now()->subYear()->toDateString(),
                         'is_active' => true,

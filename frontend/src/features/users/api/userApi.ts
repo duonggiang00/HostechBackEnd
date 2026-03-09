@@ -1,52 +1,22 @@
-import Api from "../../../Api/Api";
+import axiosClient from "../../../shared/api/axiosClient";
+import type { UserType, UserFilters, InvitationPayload, PaginatedResponse } from "../types";
 
-// ───── Users ─────
+export const getUsers = async (params?: UserFilters): Promise<PaginatedResponse<UserType>> => {
+    // clean up undefined params
+    const cleanParams = Object.fromEntries(Object.entries(params || {}).filter(([_, v]) => v !== undefined));
+    const res = await axiosClient.get("users", { params: cleanParams });
+    return res.data;
+};
 
-export const getUsers = async (params?: Record<string, any>): Promise<any[]> => {
-    const res = await Api.get("users", { params });
+export const updateUserStatus = async (id: string | number, data: { is_active: boolean }): Promise<UserType> => {
+    const res = await axiosClient.put(`users/${id}`, data);
     return res.data?.data ?? res.data;
 };
 
-export const getUserById = async (id: string): Promise<any> => {
-    const res = await Api.get(`users/${id}`);
-    return res.data?.data ?? res.data;
+export const removeUserFromOrg = async (id: string | number): Promise<void> => {
+    await axiosClient.delete(`users/${id}`);
 };
 
-export const createUser = async (data: any): Promise<any> => {
-    const res = await Api.post("users", data);
-    return res.data?.data ?? res.data;
-};
-
-export const updateUser = async (id: string, data: any): Promise<any> => {
-    const res = await Api.put(`users/${id}`, data);
-    return res.data?.data ?? res.data;
-};
-
-export const deleteUser = async (id: string): Promise<void> => {
-    await Api.delete(`users/${id}`);
-};
-
-export const getDeletedUsers = async (): Promise<any[]> => {
-    const res = await Api.get("users/trash");
-    return res.data?.data ?? res.data;
-};
-
-export const restoreUser = async (id: string): Promise<void> => {
-    await Api.post(`users/${id}/restore`);
-};
-
-export const forceDeleteUser = async (id: string): Promise<void> => {
-    await Api.delete(`users/${id}/force`);
-};
-
-// ───── User Invitations ─────
-
-export const sendInvitation = async (data: { email: string; role: string; org_id?: string }): Promise<any> => {
-    const res = await Api.post("invitations", data);
-    return res.data?.data ?? res.data;
-};
-
-export const validateInvitation = async (token: string): Promise<any> => {
-    const res = await Api.get(`invitations/validate/${token}`);
-    return res.data?.data ?? res.data;
+export const sendInvitation = async (data: InvitationPayload): Promise<void> => {
+    await axiosClient.post("invitations", data);
 };

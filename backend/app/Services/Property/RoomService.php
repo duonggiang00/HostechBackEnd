@@ -16,10 +16,15 @@ class RoomService
 {
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
+        $allowedFilters = array_merge($allowedFilters, [
+            \Spatie\QueryBuilder\AllowedFilter::exact('property_id'),
+            \Spatie\QueryBuilder\AllowedFilter::exact('floor_id'),
+        ]);
+
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
-            ->allowedIncludes(['assets', 'prices', 'statusHistories', 'media'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media'])
             ->defaultSort('code');
 
         // Scoping Pattern: Membership-based for Tenant
@@ -27,8 +32,8 @@ class RoomService
             $query->whereHas('contracts', function ($q) use ($performer) {
                 $q->where('status', 'ACTIVE')
                     ->whereHas('members', function ($sq) use ($performer) {
-                        $sq->where('user_id', $performer->id)
-                            ->where('status', 'APPROVED');
+                        $sq->where('user_id', $performer->id);
+                        //  ->where('status', 'APPROVED'); // Removed status check because ContractMember table doesn't have a status column in this schema
                     });
             });
         } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {

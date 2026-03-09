@@ -63,24 +63,35 @@ collection: "contract_documents"
 
 ---
 
-## 🔐 Phân quyền RBAC (Frontend Logic)
+## 🔐 Phân quyền RBAC Backend & Yêu cầu Frontend
 
-- **Audit Logs**: Chỉ hiển thị menu này cho Role `Owner` hoặc `Admin`.
-- **Media**: Tất cả các role có quyền tạo dữ liệu (Owner, Manager, Staff, Tenant) đều có thể upload file liên quan đến nghiệp vụ của họ.
+Hệ thống module **System** có hai nhánh dữ liệu chính: `Audit Logs` (nhật ký hệ thống) bị kiểm soát gắt gao bởi policy, và `Media` (File upload) là tiện ích mở cho mọi người dùng đã đăng nhập.
 
----
+### 1. Ma trận phân quyền Backend (Backend Policies)
 
-## Audit Log Endpoints
+Dựa trên cấu hình `AuditLogPolicy` và logic `Media`:
 
-| Method | Endpoint | Chức năng | Role cần thiết |
-|--------|----------|-----------|----------------|
-| `GET`  | `/api/audit-logs` | Danh sách nhật ký hoạt động | Admin, Owner |
+| Đối tượng (Module) | Quyền hạn | Owner | Manager | Staff | Tenant |
+|--------------------|-----------|:---:|:---:|:---:|:---:|
+| **Audit Logs** | Xem danh sách | ✅ (Only Own Org) | ❌ | ❌ | ❌ |
+| | Xem chi tiết | ✅ (Only Own Org) | ❌ | ❌ | ❌ |
+| **Media** | Tải lên file | ✅ | ✅ | ✅ | ✅ |
 
----
+### 2. Logic Bảo mật ngầm định (Backend Enforcements)
 
-## Phân quyền RBAC (Backend Policy)
+- **Audit Log Isolation**: Quá trình lấy danh sách Logs (`AuditLogService@paginate`) tự động filter theo `org_id` của `User`, do đó Owner ở Org A sẽ không bao giờ xem được log của Org B. Role `Admin` được bypass và xem toàn bộ log hệ thống.
+- **Media Open Access**: Controller upload file (Media) không áp đặt rào cản Policy (bypass). Mọi người dùng đã xác thực thông qua Sanctum Token đều có thể upload file. File sẽ được gắn `causer_id` để track người upload nếu cần sau này.
 
-| Hành động | Admin | Owner | Manager | Staff | Tenant |
-|-----------|-------|-------|---------|-------|--------|
-| View Audit Logs | ✅ | ✅ | ❌ | ❌ | ❌ |
-| Upload Media | ✅ | ✅ | ✅ | ✅ | ✅ |
+### 3. Yêu cầu thiết kế UI/UX Frontend theo từng Role
+
+#### 🧑‍💻 Dành cho `Manager`, `Staff` & `Tenant`
+- **Menu Navigation**: **Ẩn hoàn toàn** menu "Nhật ký hoạt động" (Audit Logs). Họ không có quyền đọc (`R`) đối với phân hệ này và sẽ nhận lỗi `403` nếu cố truy cập.
+- **Uploading UI**: Trên các form tài liệu hoặc xử lý biên bản, họ có thể sử dụng bình thường các tính năng upload file đính kèm.
+
+#### 👑 Dành cho `Owner` (Chủ sở hữu Tổ chức)
+- **Menu Navigation**: Hiển thị menu "Nhật ký hoạt động" hoặc "Lịch sử hệ thống".
+- **Giao diện Audit Logs (Lịch sử HĐ)**:
+  - Bản chất là một hệ thống tracking (ai làm gì, vào lúc nào).
+  - Cần hiển thị ở dạng Bảng dữ liệu (Data Table) hoặc Data Timeline.
+  - Hỗ trợ các bộ lọc (Filters): Tìm theo Tên sự kiện (`event`), Loại dữ liệu (`subject_type` - Vd: `Room`, `User`, `Contract`), Người thực hiện (`causer_id`).
+  - Nút Mở rộng (Expand) hoặc Xem chi tiết: Hiển thị một khung chứa dữ liệu trước và sau khi thay đổi (Old vs New attributes) dưới định dạng JSON JSON-Viewer dễ nhìn, hoặc bảng so sánh (diff). Tỉnh lược các trường không thay đổi.

@@ -1,3 +1,4 @@
+// ─── Organization ───────────────────────────────────────────────
 export interface OrgDTO {
   id: string;
   name: string;
@@ -12,9 +13,25 @@ export interface OrgDTO {
   updated_at: string;
 }
 
-// Alias for backward compatibility
+/** Alias for backward compatibility */
 export type Org = OrgDTO;
 
+// ─── Room Assets (from Stash — needed for Room edit page) ────────
+export interface RoomAssetType {
+  id?: string | number;
+  room_id?: string | number;
+  name: string;
+  quantity?: number;
+  status?: 'good' | 'damaged' | 'lost' | string;
+  serial?: string;
+  condition?: string;
+  notes?: string;
+  note?: string;
+  purchased_at?: string;
+  warranty_end?: string;
+}
+
+// ─── Room ────────────────────────────────────────────────────────
 export interface RoomDTO {
   id: string;
   code: string;
@@ -34,12 +51,13 @@ export interface RoomDTO {
   // Relations
   floor?: FloorDTO;
   property?: PropertyDTO;
-  assets?: string; // TBD if needed
-  price_histories?: string;
-  status_histories?: string;
-  images?: string;
+  assets?: RoomAssetType[];
+  price_histories?: any[];
+  status_histories?: any[];
+  images?: Array<{ id: string; url: string; thumb?: string }>;
 }
 
+// ─── Floor ───────────────────────────────────────────────────────
 export interface FloorDTO {
   id: string;
   property_id: string;
@@ -53,6 +71,7 @@ export interface FloorDTO {
   rooms?: RoomDTO[];
 }
 
+// ─── Property ────────────────────────────────────────────────────
 export interface PropertyDTO {
   id: string;
   code: string;
@@ -77,6 +96,7 @@ export interface PropertyDTO {
   rooms_count?: number;
 }
 
+// ─── Pagination ──────────────────────────────────────────────────
 export interface PaginationLinks {
   first: string;
   last: string;
@@ -104,3 +124,8 @@ export interface PaginatedResponse<T> {
   links: PaginationLinks;
   meta: PaginationMeta;
 }
+
+// ─── Type aliases for backward compatibility with Stash code ─────
+export type PropertyType = PropertyDTO;
+export type FloorType = FloorDTO;
+export type RoomType = RoomDTO;

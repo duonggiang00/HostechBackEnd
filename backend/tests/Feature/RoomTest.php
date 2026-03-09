@@ -116,5 +116,5 @@ test('owner cannot access other org room', function () {
 
     actingAs($owner)
         ->getJson("/api/rooms/{$room2->id}")
-        ->assertStatus(403);
+        ->assertStatus(404); // Not Found due to MultiTenant global scope
 });

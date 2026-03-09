@@ -89,5 +89,5 @@ test('owner cannot access other org floor', function () {
 
     actingAs($owner)
         ->getJson("/api/floors/{$floor2->id}")
-        ->assertStatus(403);
+        ->assertStatus(404); // Not Found due to MultiTenant global scope
 });

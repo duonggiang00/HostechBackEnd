@@ -21,6 +21,7 @@ class FloorUpdateRequest extends FormRequest
         return [
             'code' => ['sometimes', 'string', 'max:50'],
             'name' => ['sometimes', 'string', 'max:255'],
+            'floor_number' => ['sometimes', 'integer'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }

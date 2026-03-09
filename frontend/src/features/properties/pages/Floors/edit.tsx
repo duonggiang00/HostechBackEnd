@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { Button, Input, Form, Select, InputNumber, Skeleton, notification } from "antd";
-import { useNavigate, useParams, useLocation } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { QUERY_KEYS } from "../../../../shared/constants/queryKeys";
+import { Button, Input, Form, Select, InputNumber, Skeleton } from "antd";
+import { useNavigate, useParams } from "react-router";
+
+
 import { useFloor, useUpdateFloor, useProperties } from "../../hooks/useProperties";
 import { Layers, Hash, Home, X as XIcon, Pencil } from "lucide-react";
 
@@ -10,7 +10,7 @@ const EditFloor = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
-  const qc = useQueryClient();
+
 
   const { data: floor, isLoading: floorLoading } = useFloor(id || "");
   const updateMutation = useUpdateFloor(id || "", form.getFieldValue("property_id"));

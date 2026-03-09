@@ -1,25 +1,25 @@
-import type { TGlobalProp } from "../../../Types/ReactType";
 import { Navigate } from "react-router";
 import { message } from "antd";
 import { useTokenStore } from "../stores/authStore";
 import { useEffect } from "react";
 
+import type { PropsWithChildren } from "react";
+
 const Authorization = ({
   children,
   allowRole,
-  role,
-}: TGlobalProp<{ role: string; allowRole: string[] }>) => {
+}: PropsWithChildren<{ allowRole: string[] }>) => {
   const token = useTokenStore((state) => state.token);
+  const roles = useTokenStore((state) => state.roles);
 
-  const normalizedRole = role?.toLowerCase() ?? "";
   const normalizedAllowRole = allowRole.map((r) => r.toLowerCase());
-  const hasAccess = normalizedAllowRole.includes(normalizedRole);
+  const hasAccess = roles.some((r) => normalizedAllowRole.includes(r.toLowerCase()));
 
   useEffect(() => {
-    if (token && !hasAccess && role) {
+    if (token && !hasAccess && roles.length > 0) {
       message.error("Bạn ko có quyền vào chức năng này!");
     }
-  }, [token, hasAccess, role]);
+  }, [token, hasAccess, roles.length]);
 
   if (!token) {
     return <Navigate to="/auth" replace />;

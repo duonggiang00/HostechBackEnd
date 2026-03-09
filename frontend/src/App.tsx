@@ -1,16 +1,18 @@
 import { useRoutes, Navigate } from "react-router";
 import { useEffect } from "react";
 import { useTokenStore } from "./features/auth/stores/authStore";
-import LayoutAdmin from "./Layouts/Admin/LayoutAdmin";
+import LayoutManage from "./Layouts/Manage/LayoutManage";
 import Dashboard from "./Pages/Admin/Dashboard";
 import Statistical from "./Pages/Admin/Statistical";
-import AuthPage from "./Pages/Client/Login";
-import VerifyOTP from "./Pages/Client/VerifyOTP";
+import AuthPage from "./features/auth/pages/Login";
+import VerifyOTP from "./features/auth/pages/VerifyOTP";
+import { AcceptInvite } from "./features/auth/pages/AcceptInvite";
 import Notfound from "./Pages/Client/404";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
+import LayoutAuth from "./Layouts/Auth/LayoutAuth";
 
 // Route registry — tất cả admin feature routes gộp tại đây
-import { adminRoutes } from "./app/routes/registry";
+import { adminRoutes, portalRoutes } from "./app/routes/registry";
 import LayoutPortal from "./Layouts/Portal/LayoutPortal";
 
 /**
@@ -32,18 +34,27 @@ function App() {
     restoreToken();
   }, [restoreToken]);
 
-  const role = useTokenStore((state) => state.role);
+  const roles = useTokenStore((state) => state.roles);
 
   // useRoutes PHẢI luôn được gọi — không được đặt sau early return
   const router = useRoutes([
     { 
       path: "/", 
-      element: role?.toLowerCase() === "tenant"
+      element: roles?.some(r => r.toLowerCase() === "tenant")
         ? <Navigate to="/me" replace />
         : <Navigate to="/manage" replace />
 
     },
-    { path: "/auth", Component: AuthPage },
+    { 
+      path: "/auth", 
+      Component: LayoutAuth,
+      children: [
+        { path: "", Component: AuthPage },
+        { path: "login", Component: AuthPage },
+        // { path: "register", Component: RegisterPage }, // Thêm sau khi hoàn thiện Register mới
+      ]
+    },
+    { path: "/invite/:token", Component: AcceptInvite },
     { path: "/otp/verify", Component: VerifyOTP },
     {
       path: "manage",
@@ -51,7 +62,7 @@ function App() {
       children: [
         {
           path: "",
-          Component: LayoutAdmin,
+          Component: LayoutManage,
           children: [
             { path: "", Component: Dashboard },
             { path: "statistical", Component: Statistical },
@@ -71,7 +82,7 @@ function App() {
       ),
       children: [
         { path: "", element: <div>Tenant Dashboard (Coming Soon)</div> },
-        // ... Thêm portal routes ở đây sau
+        ...portalRoutes,
       ]
     },
     { path: "*", Component: Notfound },

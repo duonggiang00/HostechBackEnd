@@ -9,15 +9,18 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class PropertyService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
     {
+        $allowedFilters = array_merge($allowedFilters, [\Spatie\QueryBuilder\AllowedFilter::exact('org_id')]);
+        
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
+            ->allowedIncludes(['floors', 'rooms'])
             ->defaultSort('name')
             ->withCount(['floors', 'rooms']);
 
         /** @var \App\Models\Org\User $user */
-        $user = auth()->user();
+        $user = $performer ?: auth()->user();
         if ($user) {
             if ($user->hasRole('Tenant')) {
                 // Tenant scope: only properties where they have an active contract
@@ -31,7 +34,7 @@ class PropertyService
             } elseif ($user->hasRole(['Manager', 'Staff'])) {
                 // Manager/Staff scope: only properties they are explicitly assigned to
                 $query->whereHas('managers', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
+                    $q->where('users.id', $user->id);
                 });
             }
         }
@@ -61,7 +64,7 @@ class PropertyService
 
     public function find(string $id, bool $loadRelations = false): ?Property
     {
-        $property = Property::find($id);
+        $property = Property::withCount(['floors', 'rooms'])->find($id);
 
         if ($property && $loadRelations) {
             if ($property->floors()->exists()) {

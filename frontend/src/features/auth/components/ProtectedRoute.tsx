@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
   const token = useTokenStore(state => state.getToken());
-  const role = useTokenStore(state => state.role);
+  const roles = useTokenStore(state => state.roles);
   const location = useLocation();
 
   if (!token) {
@@ -18,10 +18,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, ch
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
-     if (!role || !allowedRoles.includes(role)) {
+     if (!roles || !roles.some(r => allowedRoles.includes(r))) {
        // Đăng nhập rồi nhưng không đủ quyền
        // Nếu là Tenant thì về /me, ngược lại về /manage
-       const homePath = role?.toLowerCase() === "tenant" ? "/me" : "/manage";
+       const homePath = roles?.some(r => r.toLowerCase() === "tenant") ? "/me" : "/manage";
 
        return <Navigate to={homePath} replace />;
      }

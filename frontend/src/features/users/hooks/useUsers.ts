@@ -1,95 +1,53 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { notification } from "antd";
-import { QUERY_KEYS } from "../../../shared/constants/queryKeys";
-import {
-  getUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  restoreUser,
-  forceDeleteUser,
-} from "../api/userApi";
-import type { PaginationParams } from "../../../shared/types/Shared";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getUsers, updateUserStatus, removeUserFromOrg, sendInvitation } from '../api/userApi';
+import type { UserFilters, InvitationPayload } from '../types';
+import { message } from 'antd';
 
-// ───── Queries ─────
-
-export const useUsers = (params?: PaginationParams) =>
-  useQuery({
-    queryKey: QUERY_KEYS.users.list(params),
-    queryFn: () => getUsers(params),
-  });
-
-export const useUser = (id: string) =>
-  useQuery({
-    queryKey: QUERY_KEYS.users.detail(id),
-    queryFn: () => getUserById(id),
-    enabled: !!id,
-  });
-
-// ───── Mutations ─────
-
-export const useCreateUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => createUser(data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.all });
-      notification.success({ message: "Tạo người dùng thành công" });
-    },
-    onError: (err: any) => {
-      notification.error({
-        message: err?.response?.data?.message ?? "Không thể tạo người dùng",
-      });
-    },
-  });
+export const useUsers = (filters: UserFilters) => {
+    return useQuery({
+        queryKey: ['users', filters],
+        queryFn: () => getUsers(filters),
+        placeholderData: (previousData) => previousData, // keep old data while refreshing
+    });
 };
 
-export const useUpdateUser = (id: string) => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => updateUser(id, data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.all });
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.detail(id) });
-      notification.success({ message: "Cập nhật người dùng thành công" });
-    },
-  });
+export const useUpdateUserStatus = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, is_active }: { id: string | number, is_active: boolean }) => updateUserStatus(id, { is_active }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            message.success('Đã cập nhật trạng thái người dùng');
+        },
+        onError: () => {
+            message.error('Lỗi khi cập nhật trạng thái');
+        }
+    });
 };
 
-export const useDeleteUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => deleteUser(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.all });
-      notification.success({ message: "Đã xóa người dùng" });
-    },
-    onError: (err: any) => {
-      notification.error({
-        message: err?.response?.data?.message ?? "Không thể xóa người dùng",
-      });
-    },
-  });
+export const useRemoveUser = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (id: string | number) => removeUserFromOrg(id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            message.success('Đã gỡ quyền người dùng khỏi Tổ chức');
+        },
+        onError: () => {
+            message.error('Lỗi khi thao tác xóa người dùng');
+        }
+    });
 };
 
-export const useRestoreUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => restoreUser(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.all });
-      notification.success({ message: "Khôi phục người dùng thành công" });
-    },
-  });
-};
-
-export const useForceDeleteUser = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => forceDeleteUser(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.users.trash });
-    },
-  });
+export const useSendInvitation = () => {
+    return useMutation({
+        mutationFn: (data: InvitationPayload) => sendInvitation(data),
+        onSuccess: () => {
+            message.success('Đã gửi lời mời thành công');
+        },
+        onError: (err: any) => {
+            const msg = err.response?.data?.message || 'Có lỗi xảy ra khi gửi lời mời';
+            message.error(msg);
+        }
+    });
 };

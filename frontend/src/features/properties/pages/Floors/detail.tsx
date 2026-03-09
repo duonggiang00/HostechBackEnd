@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Button, Tag, Skeleton, Popconfirm, Tabs } from "antd";
+import { Button, Skeleton, Popconfirm, Tabs } from "antd";
+
 import type { TabsProps } from "antd";
 import { useNavigate, useParams } from "react-router";
 import { useFloor, useDeleteFloor } from "../../hooks/useProperties";
