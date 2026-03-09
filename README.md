@@ -1,6 +1,6 @@
 # Hostech - Hệ thống Quản lý Lưu trú
 
-Dự án này được chia thành hai phần chính: Backend và Frontend.
+Dự án này được chia thành hai phần chính: BE và FE
 
 ## Cấu trúc Dự án
 
