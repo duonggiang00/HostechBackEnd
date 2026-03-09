@@ -7,33 +7,35 @@ import {
   createProperty,
   updateProperty,
   deleteProperty,
+  getDeletedProperties,
   restoreProperty,
   forceDeleteProperty,
-  getDeletedProperties,
   getFloors,
   getFloorsByProperty,
   getFloorById,
   createFloor,
   updateFloor,
   deleteFloor,
-  restoreFloor,
   getDeletedFloors,
+  restoreFloor,
+  forceDeleteFloor,
   getRooms,
   getRoomsByProperty,
   getRoomById,
   createRoom,
   updateRoom,
   deleteRoom,
-  restoreRoom,
   getDeletedRooms,
+  restoreRoom,
+  forceDeleteRoom,
 } from "../api/propertyApi";
 
 // ───── Properties ─────
 
-export const useProperties = (search?: string) =>
+export const useProperties = (search?: string, page: number = 1, per_page: number = 10) =>
   useQuery({
-    queryKey: QUERY_KEYS.properties.list({ search } as any),
-    queryFn: () => getProperties(search),
+    queryKey: QUERY_KEYS.properties.list({ search, page, per_page } as any),
+    queryFn: () => getProperties(search, page, per_page),
     staleTime: 1000 * 30,
   });
 
@@ -99,10 +101,10 @@ export const useDeletedProperties = () =>
 
 // ───── Floors ─────
 
-export const useFloors = (search?: string) =>
+export const useFloors = (params: Record<string, any> = {}) =>
   useQuery({
-    queryKey: QUERY_KEYS.floors.list({ search } as any),
-    queryFn: () => getFloors(search),
+    queryKey: QUERY_KEYS.floors.list(params),
+    queryFn: () => getFloors(params),
     staleTime: 1000 * 30,
   });
 
@@ -172,10 +174,10 @@ export const useDeletedFloors = () =>
 
 // ───── Rooms ─────
 
-export const useRooms = (search?: string) =>
+export const useRooms = (params: Record<string, any> = {}) =>
   useQuery({
-    queryKey: QUERY_KEYS.rooms.list({ search } as any),
-    queryFn: () => getRooms(search),
+    queryKey: QUERY_KEYS.rooms.list(params),
+    queryFn: () => getRooms(params),
     staleTime: 1000 * 30,
   });
 
@@ -246,5 +248,21 @@ export const useForceDeleteProperty = () => {
   return useMutation({
     mutationFn: (id: string) => forceDeleteProperty(id),
     onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.properties.trash }); },
+  });
+};
+
+export const useForceDeleteFloor = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => forceDeleteFloor(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.trash }); },
+  });
+};
+
+export const useForceDeleteRoom = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => forceDeleteRoom(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.trash }); },
   });
 };

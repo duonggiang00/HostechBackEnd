@@ -1,140 +1,186 @@
-import { useState, useEffect } from "react";
-import { Button, message, Modal } from "antd";
+import { useState } from "react";
+import { Button, Tag, Skeleton, Popconfirm, Tabs } from "antd";
+import type { TabsProps } from "antd";
 import { useNavigate, useParams } from "react-router";
-import { ArrowLeft, Edit, Trash2, Home } from "lucide-react";
-import { useOpenStore } from "../../../../Stores/OpenStore";
-
-interface FloorDetail {
-  name: string;
-  rooms_count?: number;
-}
+import { useFloor, useDeleteFloor } from "../../hooks/useProperties";
+import { usePermission } from "../../../../shared/hooks/usePermission";
+import { Layers, Home, Pencil, Trash2, X as XIcon, Hash, SortAsc, DoorOpen, Calendar } from "lucide-react";
+import Rooms from "../Rooms/Rooms";
 
 const DetailFloor = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { id } = useParams();
-  const closeForm = useOpenStore((state) => state.setOpenForm);
-  const [data, setData] = useState<FloorDetail | null>(null);
+  const { can } = usePermission();
+  const { data: floor, isLoading } = useFloor(id || "");
+  const deleteMutation = useDeleteFloor();
 
-  useEffect(() => {
-    return () => {
-      closeForm(false);
-    };
-  }, [closeForm]);
+  const [activeTab, setActiveTab] = useState("overview");
 
-  useEffect(() => {
-    const mockData: FloorDetail = {
-      name: "Tầng 1",
-      rooms_count: 6,
-    };
-    setData(mockData);
-  }, [id]);
-
-  const handleEdit = () => {
-    closeForm(true);
-    navigate(`/manage/properties/editFloor/${id}`);
-
-  };
+  const handleClose = () => navigate(-1); // Back up to Property or Floor list
 
   const handleDelete = () => {
-    Modal.confirm({
-      title: "Xóa tầng",
-      content: "Bạn có chắc chắn muốn xóa tầng này?",
-      okText: "Xóa",
-      cancelText: "Hủy",
-      okType: "danger",
-      onOk() {
-        message.success("Xóa tầng thành công!");
-        closeForm(false);
-        navigate(-1);
-      },
+    deleteMutation.mutate(id || "", {
+      onSuccess: () => navigate("/manage/floors", { replace: true }),
     });
   };
 
-  if (!data) return <div className="p-5">Đang tải...</div>;
+  const rooms = floor?.rooms || [];
+  const vacant = rooms.filter((r) => r.status === "available" || r.status === "vacant").length;
+  const occupied = rooms.filter((r) => r.status === "occupied" || r.status === "rented").length;
 
-  return (
-    <div className="flex flex-col gap-6 p-5 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              navigate(-1);
-              closeForm(false);
-            }}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-3xl font-bold text-gray-800">Chi tiết tầng</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            type="primary"
-            icon={<Edit className="w-4 h-4" />}
-            onClick={handleEdit}
-            className="bg-blue-500 hover:bg-blue-600"
-          >
-            Sửa
-          </Button>
-          <Button
-            danger
-            icon={<Trash2 className="w-4 h-4" />}
-            onClick={handleDelete}
-          >
-            Xóa
-          </Button>
+  const propertyId = (floor as any)?.property?.id || floor?.property_id;
+
+  const overviewContent = (
+    <div className="p-6 flex flex-col gap-5 animate-in fade-in duration-500">
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <h3 className="text-base font-semibold text-slate-700 mb-4">Thông tin tầng</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Tên tầng</span>
+            <span className="text-slate-800 font-semibold text-lg flex items-center gap-2">
+              <Layers size={16} className="text-indigo-500" />
+              {floor?.name || "—"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Mã tầng</span>
+            <span className="text-slate-700 font-mono flex items-center gap-2">
+              <Hash size={14} className="text-slate-400" />
+              {floor?.code || "—"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Thứ tự</span>
+            <span className="text-slate-700 flex items-center gap-2">
+              <SortAsc size={14} className="text-slate-400" />
+              {floor?.sort_order || "—"}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide">Nhà trọ</span>
+            <span className="text-slate-700 flex items-center gap-2">
+              <Home size={14} className="text-slate-400" />
+              {(floor as any)?.property?.name || "—"}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Thông tin tầng
-        </h2>
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-600">
-              Tên tầng
-            </label>
-            <p className="text-2xl text-gray-800 font-bold mt-1">{data.name}</p>
-          </div>
-          <div className="flex items-center gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
-            <Home className="w-6 h-6 text-orange-500" />
-            <div>
-              <p className="text-sm text-orange-600 font-medium">
-                Tổng phòng trên tầng
-              </p>
-              <p className="text-xl font-bold text-orange-800">
-                {data.rooms_count} phòng
-              </p>
-            </div>
-          </div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex flex-col items-center gap-1">
+          <DoorOpen size={22} className="text-indigo-500" />
+          <span className="text-2xl font-bold text-indigo-800">{rooms.length}</span>
+          <span className="text-xs text-indigo-500 font-medium">Tổng phòng</span>
+        </div>
+        <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100 flex flex-col items-center gap-1">
+          <DoorOpen size={22} className="text-emerald-500" />
+          <span className="text-2xl font-bold text-emerald-800">{vacant}</span>
+          <span className="text-xs text-emerald-500 font-medium">Phòng trống</span>
+        </div>
+        <div className="bg-rose-50 rounded-2xl p-4 border border-rose-100 flex flex-col items-center gap-1">
+          <DoorOpen size={22} className="text-rose-500" />
+          <span className="text-2xl font-bold text-rose-800">{occupied}</span>
+          <span className="text-xs text-rose-500 font-medium">Đã cho thuê</span>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-          <p className="text-sm text-green-600 font-medium">Phòng trống</p>
-          <p className="text-2xl font-bold text-green-900 mt-2">2</p>
+        <div className="flex flex-col gap-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={11} /> Ngày tạo</span>
+          <span className="text-sm text-slate-600 font-medium">
+            {floor?.created_at ? new Date(floor.created_at).toLocaleDateString("vi-VN") : "—"}
+          </span>
         </div>
-        <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200">
-          <p className="text-sm text-red-600 font-medium">Phòng đã cho thuê</p>
-          <p className="text-2xl font-bold text-red-900 mt-2">4</p>
+        <div className="flex flex-col gap-1 p-3 bg-slate-50 rounded-xl border border-slate-100">
+          <span className="text-xs text-slate-400 flex items-center gap-1"><Calendar size={11} /> Cập nhật</span>
+          <span className="text-sm text-slate-600 font-medium">
+            {floor?.updated_at ? new Date(floor.updated_at).toLocaleDateString("vi-VN") : "—"}
+          </span>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">
-          Thông tin bổ sung
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
+  const tabItems: TabsProps['items'] = [
+    {
+      key: 'overview',
+      label: <span className="px-2 font-medium">TỔNG QUAN TẦNG</span>,
+      children: overviewContent,
+    },
+    {
+      key: 'rooms',
+      label: <span className="px-2 font-medium">QUẢN LÝ PHÒNG</span>,
+      children: <div className="animate-in fade-in duration-500 pt-2"><Rooms propertyId={propertyId} floorId={id} /></div>,
+    },
+  ];
+
+  return (
+    <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
+      <div className="w-full max-w-5xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[80vh]">
+
+        {/* HEADER */}
+        <div className="px-6 py-5 bg-white flex justify-between items-center relative z-10 transition-shadow">
           <div>
-            <span className="text-sm text-gray-600">Ngày tạo:</span>
-            <p className="text-gray-800 font-medium">24/02/2026</p>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Layers size={20} className="text-indigo-500" />
+              Chi tiết tầng
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {isLoading ? "Đang tải..." : (floor?.name || "—")}
+            </p>
           </div>
-          <div>
-            <span className="text-sm text-gray-600">Lần cập nhật:</span>
-            <p className="text-gray-800 font-medium">24/02/2026</p>
+          <div className="flex items-center gap-2">
+            {can("update", "floors") && !isLoading && (
+              <Button
+                icon={<Pencil size={14} />}
+                onClick={() => navigate(`/manage/floors/editFloor/${id}`)}
+                className="rounded-xl h-9 border-amber-300 text-amber-600 hover:bg-amber-50"
+              >
+                Sửa
+              </Button>
+            )}
+            {can("delete", "floors") && !isLoading && (
+              <Popconfirm
+                title="Xóa tầng"
+                description="Bạn có chắc chắn muốn xóa tầng này?"
+                onConfirm={handleDelete}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  danger
+                  icon={<Trash2 size={14} />}
+                  loading={deleteMutation.isPending}
+                  className="rounded-xl h-9"
+                >
+                  Xóa
+                </Button>
+              </Popconfirm>
+            )}
+            <Button
+              type="text"
+              icon={<XIcon size={20} className="text-slate-500" />}
+              onClick={handleClose}
+              className="hover:bg-slate-200 rounded-full w-9 h-9 flex items-center justify-center p-0 ml-2"
+            />
           </div>
+        </div>
+
+        {/* BODY TABS */}
+        <div className="flex-1 bg-slate-50/30">
+          {isLoading ? (
+            <div className="p-6"><Skeleton active paragraph={{ rows: 6 }} /></div>
+          ) : (
+            <Tabs
+              activeKey={activeTab}
+              onChange={setActiveTab}
+              items={tabItems}
+              className="custom-tabs px-6"
+              size="large"
+              tabBarStyle={{ marginBottom: 0, paddingLeft: "16px", paddingRight: "16px", borderBottom: "1px solid #f1f5f9" }}
+            />
+          )}
         </div>
       </div>
     </div>
