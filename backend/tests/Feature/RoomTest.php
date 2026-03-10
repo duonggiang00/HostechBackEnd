@@ -118,3 +118,92 @@ test('owner cannot access other org room', function () {
         ->getJson("/api/rooms/{$room2->id}")
         ->assertStatus(404); // Not Found due to MultiTenant global scope
 });
+
+test('quick create creates a draft room with minimal data', function () {
+    $admin = User::factory()->admin()->create();
+    $org = Org::factory()->create();
+    $property = Property::factory()->create(['org_id' => $org->id]);
+
+    actingAs($admin);
+
+    $response = postJson('/api/rooms/quick', [
+        'property_id' => $property->id,
+        'name'        => 'Phòng Nhanh Test',
+    ]);
+
+    $response->assertStatus(201)
+        ->assertJsonFragment(['status' => 'draft'])
+        ->assertJsonFragment(['is_draft' => true])
+        ->assertJsonFragment(['name' => 'Phòng Nhanh Test']);
+
+    // Không ghi RoomPrice hay RoomStatusHistory khi draft
+    $id = $response->json('data.id');
+    expect(\App\Models\Property\RoomPrice::where('room_id', $id)->count())->toBe(0);
+    expect(\App\Models\Property\RoomStatusHistory::where('room_id', $id)->count())->toBe(0);
+});
+
+test('publish transitions draft room to available', function () {
+    $admin = User::factory()->admin()->create();
+    $org = Org::factory()->create();
+    $property = Property::factory()->create(['org_id' => $org->id]);
+
+    actingAs($admin);
+
+    // Tạo room draft trước
+    $draftResponse = postJson('/api/rooms/quick', [
+        'property_id' => $property->id,
+        'name'        => 'Draft Room',
+    ]);
+    $id = $draftResponse->json('data.id');
+
+    // Publish với code và giá
+    $publishResponse = postJson("/api/rooms/{$id}/publish", [
+        'code'       => 'P.PUBLISH-01',
+        'base_price' => 3000000,
+    ]);
+
+    $publishResponse->assertStatus(200)
+        ->assertJsonFragment(['status' => 'available'])
+        ->assertJsonFragment(['is_draft' => false]);
+
+    // Sau publish phải có RoomPrice và RoomStatusHistory
+    expect(\App\Models\Property\RoomPrice::where('room_id', $id)->count())->toBe(1);
+    expect(\App\Models\Property\RoomStatusHistory::where('room_id', $id)->count())->toBe(1);
+
+    // Không thể publish lần 2
+    postJson("/api/rooms/{$id}/publish", ['base_price' => 1000])
+        ->assertStatus(422);
+});
+
+test('floor plan node can be set and removed', function () {
+    $admin = User::factory()->admin()->create();
+    $org = Org::factory()->create();
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $room = Room::factory()->create([
+        'property_id' => $property->id,
+        'org_id'      => $org->id,
+        'floor_id'    => $floor->id,
+    ]);
+
+    actingAs($admin);
+
+    // Gán vị trí
+    putJson("/api/rooms/{$room->id}/floor-plan", [
+        'floor_id' => $floor->id,
+        'x'        => 10.5,
+        'y'        => 20.0,
+        'width'    => 120,
+        'height'   => 80,
+        'label'    => 'P.101',
+    ])->assertStatus(200)
+      ->assertJsonFragment(['message' => 'Floor plan node updated successfully.']);
+
+    // Xác nhận bản ghi tồn tại trong DB
+    expect(\App\Models\Property\RoomFloorPlanNode::where('room_id', $room->id)->count())->toBe(1);
+
+    // Xóa vị trí
+    deleteJson("/api/rooms/{$room->id}/floor-plan")
+        ->assertStatus(200)
+        ->assertJsonFragment(['message' => 'Floor plan node removed successfully.']);
+});

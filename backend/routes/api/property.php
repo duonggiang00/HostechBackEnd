@@ -20,6 +20,11 @@ Route::delete('floors/{id}/force', [FloorController::class, 'forceDelete']);
 
 // Rooms
 Route::get('rooms/trash', [RoomController::class, 'trash']);
+Route::post('rooms/quick', [RoomController::class, 'quickCreate']);    // Tạo nhanh draft
+Route::get('rooms/drafts', [RoomController::class, 'drafts']);          // Danh sách draft
+Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publish draft
+Route::put('rooms/{id}/floor-plan', [RoomController::class, 'setFloorPlan']);       // Gán floor plan
+Route::delete('rooms/{id}/floor-plan', [RoomController::class, 'removeFloorPlan']); // Xóa floor plan
 Route::apiResource('rooms', RoomController::class);
 Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
 Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);
