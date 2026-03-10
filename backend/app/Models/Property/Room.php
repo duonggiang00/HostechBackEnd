@@ -24,6 +24,23 @@ class Room extends Model implements HasMedia
 
     protected $fillable = ['id', 'org_id', 'property_id', 'floor_id', 'code', 'name', 'type', 'area', 'floor_number', 'capacity', 'base_price', 'status', 'description', 'amenities', 'utilities'];
 
+    // ─── Scopes ──────────────────────────────────────────────────────────
+
+    public function scopeDraft($query)
+    {
+        return $query->where('status', 'draft');
+    }
+
+    public function scopePublished($query)
+    {
+        return $query->where('status', '!=', 'draft');
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === 'draft';
+    }
+
     protected function casts(): array
     {
         return [
@@ -73,5 +90,10 @@ class Room extends Model implements HasMedia
     public function contracts()
     {
         return $this->hasMany(\App\Models\Contract\Contract::class);
+    }
+
+    public function floorPlanNode()
+    {
+        return $this->hasOne(RoomFloorPlanNode::class);
     }
 }

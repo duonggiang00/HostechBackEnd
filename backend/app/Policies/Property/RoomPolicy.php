@@ -73,4 +73,14 @@ class RoomPolicy implements RbacModuleProvider
 
         return $this->checkPropertyScope($user, $room);
     }
+
+    public function publish(User $user, Room $room): bool
+    {
+        // Chỉ Owner, Manager và Admin mới được publish phòng
+        if (! $user->hasPermissionTo('update Room')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $room);
+    }
 }

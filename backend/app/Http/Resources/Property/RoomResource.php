@@ -39,6 +39,7 @@ class RoomResource extends JsonResource
             'description' => $this->description,
             'amenities' => $this->amenities,
             'utilities' => $this->utilities,
+            'is_draft'  => $this->status === 'draft',
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
@@ -50,6 +51,7 @@ class RoomResource extends JsonResource
             'assets' => $this->whenLoaded('assets'),
             'price_histories' => $this->whenLoaded('prices'),
             'status_histories' => $this->whenLoaded('statusHistories'),
+            'floor_plan_node' => $this->whenLoaded('floorPlanNode'),
 
             // Media (Spatie MediaLibrary)
             'images' => $this->whenLoaded('media', function () {

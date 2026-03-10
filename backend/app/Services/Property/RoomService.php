@@ -5,6 +5,7 @@ namespace App\Services\Property;
 use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
+use App\Models\Property\RoomFloorPlanNode;
 use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomStatusHistory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -24,7 +25,7 @@ class RoomService
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
-            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode'])
             ->defaultSort('code');
 
         // Scoping Pattern: Membership-based for Tenant
@@ -128,8 +129,8 @@ class RoomService
                 RoomAsset::insert($assetsToInsert);
             }
 
-            // Sync Price History
-            if (isset($data['base_price'])) {
+            // Sync Price History (bỏ qua nếu là draft)
+            if (isset($data['base_price']) && ($data['status'] ?? null) !== 'draft') {
                 RoomPrice::create([
                     'org_id' => $room->org_id,
                     'room_id' => $room->id,
@@ -139,8 +140,8 @@ class RoomService
                 ]);
             }
 
-            // Sync Status History
-            if (isset($data['status'])) {
+            // Sync Status History (bỏ qua nếu là draft)
+            if (isset($data['status']) && $data['status'] !== 'draft') {
                 RoomStatusHistory::create([
                     'org_id' => $room->org_id,
                     'room_id' => $room->id,
@@ -257,5 +258,105 @@ class RoomService
         $room = $this->findWithTrashed($id);
 
         return $room ? $room->forceDelete() : false;
+    }
+
+    // ─── Quick Create (Draft) ────────────────────────────────────────────
+
+    public function quickCreate(array $data, User $performer): Room
+    {
+        return DB::transaction(function () use ($data, $performer) {
+            $property = \App\Models\Property\Property::findOrFail($data['property_id']);
+
+            if (! $performer->hasRole('Admin') && $performer->org_id && (string) $property->org_id !== (string) $performer->org_id) {
+                abort(403, 'Unauthorized: You cannot add rooms to a property in another organization.');
+            }
+
+            // Tự sinh code unique trong property
+            do {
+                $code = 'DRAFT-' . strtoupper(Str::random(6));
+            } while (Room::where('property_id', $property->id)->where('code', $code)->exists());
+
+            return Room::create([
+                'org_id'      => $property->org_id,
+                'property_id' => $property->id,
+                'floor_id'    => $data['floor_id'] ?? null,
+                'code'        => $code,
+                'name'        => $data['name'],
+                'status'      => 'draft',
+                'base_price'  => 0,
+            ]);
+        });
+    }
+
+    // ─── Publish ──────────────────────────────────────────────────────────
+
+    public function publish(Room $room, ?array $overrides, User $performer): Room
+    {
+        return DB::transaction(function () use ($room, $overrides, $performer) {
+            if (! $room->isDraft()) {
+                abort(422, 'Room is already published.');
+            }
+
+            $data = array_filter($overrides ?? [], fn ($v) => ! is_null($v));
+
+            // Nếu override code, kiểm tra unique
+            if (! empty($data['code']) && $data['code'] !== $room->code) {
+                $exists = Room::where('property_id', $room->property_id)
+                    ->where('code', $data['code'])
+                    ->where('id', '!=', $room->id)
+                    ->exists();
+                if ($exists) {
+                    abort(422, 'Room code already exists in this property.');
+                }
+            }
+
+            $newPrice = $data['base_price'] ?? (float) $room->base_price;
+            if ($newPrice <= 0) {
+                abort(422, 'base_price must be greater than 0 to publish a room.');
+            }
+
+            $oldStatus = $room->status;
+            $room->update(array_merge($data, ['status' => 'available']));
+
+            // Ghi Price History
+            RoomPrice::create([
+                'org_id'             => $room->org_id,
+                'room_id'            => $room->id,
+                'effective_from'     => now()->toDateString(),
+                'price'              => $room->base_price,
+                'created_by_user_id' => $performer->id,
+            ]);
+
+            // Ghi Status History
+            RoomStatusHistory::create([
+                'org_id'              => $room->org_id,
+                'room_id'             => $room->id,
+                'from_status'         => $oldStatus,
+                'to_status'           => 'available',
+                'reason'              => 'Published',
+                'changed_by_user_id'  => $performer->id,
+            ]);
+
+            return $room->fresh();
+        });
+    }
+
+    // ─── Floor Plan Node ─────────────────────────────────────────────────
+
+    public function setFloorPlanNode(Room $room, array $data, User $performer): RoomFloorPlanNode
+    {
+        return RoomFloorPlanNode::updateOrCreate(
+            ['room_id' => $room->id],
+            array_merge($data, [
+                'org_id' => $room->org_id,
+            ])
+        );
+    }
+
+    public function removeFloorPlanNode(Room $room): bool
+    {
+        $node = RoomFloorPlanNode::where('room_id', $room->id)->first();
+
+        return $node ? (bool) $node->delete() : false;
     }
 }
