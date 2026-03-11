@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Policies\Property;
+
+use App\Contracts\RbacModuleProvider;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
+use App\Traits\HandlesPropertyScope;
+
+class FloorPolicy implements RbacModuleProvider
+{
+    use HandlesPropertyScope;
+
+    public static function getModuleName(): string
+    {
+        return 'Floor';
+    }
+
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'CRUD',
+            'Manager' => 'CRUD',
+            'Staff' => 'R',
+            'Tenant' => '-',
+        ];
+    }
+
+    public function viewAny(User $user): bool
+    {
+        if ($user->hasPermissionTo('viewAny Floor')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function view(User $user, Floor $floor): bool
+    {
+        if (! $user->hasPermissionTo('view Floor')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $floor);
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->hasPermissionTo('create Floor');
+    }
+
+    public function update(User $user, Floor $floor): bool
+    {
+        if (! $user->hasPermissionTo('update Floor')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $floor);
+    }
+
+    public function delete(User $user, Floor $floor): bool
+    {
+        if (! $user->hasPermissionTo('delete Floor')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $floor);
+    }
+}
