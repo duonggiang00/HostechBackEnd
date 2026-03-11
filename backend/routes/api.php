@@ -19,9 +19,7 @@ Route::get('invitations/validate/{token}', [UserInvitationController::class, 'va
 // --- Protected API Routes (Modularized) ---
 Route::middleware('auth:sanctum')->group(function () {
     // Automatically load all .php files in the api/ directory
-    $routeFiles = glob(__DIR__ . '/api/*.php');
-
-    $routeFiles = glob(__DIR__ . '/api/*.php');
+    $routeFiles = glob(__DIR__.'/api/*.php');
 
     foreach ($routeFiles as $file) {
         require $file;
