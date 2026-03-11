@@ -2,6 +2,7 @@
 
 namespace App\Services\Invoice;
 
+use App\Enums\ContractStatus;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceStatusHistory;
@@ -452,6 +453,8 @@ class InvoiceService
     /**
      * Thanh toán hóa đơn: ISSUED/PENDING → PAID.
      * Ghi nhận paid_amount = total_amount và lịch sử trạng thái.
+     *
+     * Nếu là Initial Invoice (hóa đơn ký hợp đồng) → tự động kích hoạt hợp đồng.
      */
     public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
     {
@@ -464,6 +467,9 @@ class InvoiceService
             ]);
 
             $this->recordStatusHistory($invoice, $oldStatus, 'PAID', $note);
+
+            // Hook: Kích hoạt hợp đồng nếu là hóa đơn ban đầu
+            $this->activateContractIfInitialInvoice($invoice);
 
             return $invoice->refresh();
         });
@@ -535,5 +541,75 @@ class InvoiceService
         $finalAmount = $itemsTotal + $approvedDebits - $approvedCredits;
 
         $invoice->update(['total_amount' => max(0, $finalAmount)]);
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
+    // ║  INITIAL INVOICE (Hóa đơn ký hợp đồng)              ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Tạo hóa đơn ban đầu khi Tenant ký hợp đồng.
+     *
+     * Tạo Invoice + Items trong transaction, tự động phát hành (ISSUED),
+     * ghi lịch sử trạng thái.
+     */
+    public function createInitialInvoice(array $invoiceData, array $itemsData): Invoice
+    {
+        return DB::transaction(function () use ($invoiceData, $itemsData) {
+            // 1. Tạo invoice với status DRAFT tạm thời
+            $invoiceData['status'] = 'DRAFT';
+            $invoice = Invoice::create($invoiceData);
+
+            // 2. Tạo các dòng chi tiết (items)
+            $totalAmount = 0;
+            foreach ($itemsData as $item) {
+                $item['org_id'] = $invoiceData['org_id'];
+                $created = $invoice->items()->create($item);
+                $totalAmount += $created->amount;
+            }
+
+            // 3. Cập nhật tổng tiền
+            $invoice->update(['total_amount' => $totalAmount]);
+
+            // 4. Tự động phát hành (DRAFT → ISSUED)
+            $invoice->update([
+                'status' => 'ISSUED',
+                'issue_date' => now(),
+                'issued_at' => now(),
+                'issued_by_user_id' => $invoiceData['created_by_user_id'],
+            ]);
+
+            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn ban đầu – tự động phát hành khi Tenant ký hợp đồng.');
+
+            return $invoice->load('items');
+        });
+    }
+
+    /**
+     * Hook: Kích hoạt hợp đồng khi Initial Invoice được thanh toán.
+     *
+     * Kiểm tra `snapshot.is_initial` để xác định hóa đơn ban đầu.
+     * Chỉ kích hoạt nếu contract đang ở trạng thái PENDING_PAYMENT.
+     */
+    private function activateContractIfInitialInvoice(Invoice $invoice): void
+    {
+        $snapshot = $invoice->snapshot;
+
+        $isInitial = is_array($snapshot) && ($snapshot['is_initial'] ?? false) === true;
+
+        if (! $isInitial) {
+            return;
+        }
+
+        $contract = $invoice->contract;
+
+        if (! $contract || $contract->status !== ContractStatus::PENDING_PAYMENT->value) {
+            return;
+        }
+
+        $contract->update([
+            'status' => ContractStatus::ACTIVE->value,
+            'signed_at' => now(),
+        ]);
     }
 }

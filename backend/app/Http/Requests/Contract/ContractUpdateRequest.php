@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Contract;
 
+use App\Enums\ContractStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ContractUpdateRequest extends FormRequest
 {
@@ -14,7 +16,7 @@ class ContractUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['nullable', 'string', 'in:DRAFT,ACTIVE,ENDED,CANCELLED'],
+            'status' => ['nullable', 'string', Rule::in(ContractStatus::values())],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'billing_cycle' => ['nullable', 'string', 'in:MONTHLY,QUARTERLY'],

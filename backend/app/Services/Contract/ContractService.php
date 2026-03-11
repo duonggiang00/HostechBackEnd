@@ -2,9 +2,13 @@
 
 namespace App\Services\Contract;
 
+use App\Enums\ContractStatus;
+use App\Enums\InvoiceItemType;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
+use App\Services\Invoice\InvoiceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -12,6 +16,9 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
 {
+    public function __construct(
+        protected InvoiceService $invoiceService,
+    ) {}
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::class)
@@ -107,7 +114,10 @@ class ContractService
     }
 
     /**
-     * Create Contract and potentially Members
+     * Create Contract and potentially Members.
+     *
+     * Nếu có member với user_id (Tenant chờ ký) → contract tự chuyển PENDING_SIGNATURE.
+     * Member có user_id sẽ nhận status PENDING (chờ Tenant accept).
      */
     public function create(array $data, ?User $user = null): Contract
     {
@@ -127,16 +137,31 @@ class ContractService
 
             $contract = Contract::create($contractData);
 
+            $hasPendingTenant = false;
+
             if (isset($data['members']) && is_array($data['members'])) {
                 foreach ($data['members'] as $memberData) {
-                    // Members created during contract setup are approved by default
+                    // Member có user_id → Tenant cần ký → status PENDING
+                    // Member không có user_id → khai báo thủ công → status APPROVED
+                    $memberStatus = ! empty($memberData['user_id']) ? 'PENDING' : 'APPROVED';
+
+                    if ($memberStatus === 'PENDING') {
+                        $hasPendingTenant = true;
+                    }
+
                     $this->addMember($contract, array_merge($memberData, [
-                        'status' => 'APPROVED',
+                        'status' => $memberData['status'] ?? $memberStatus,
                     ]), $user);
                 }
             }
 
-            return $contract;
+            // Nếu có Tenant chờ ký → chuyển contract sang PENDING_SIGNATURE
+            $currentStatus = $contract->status ?? ContractStatus::DRAFT->value;
+            if ($hasPendingTenant && $currentStatus === ContractStatus::DRAFT->value) {
+                $contract->update(['status' => ContractStatus::PENDING_SIGNATURE->value]);
+            }
+
+            return $contract->refresh();
         });
     }
 
@@ -157,14 +182,26 @@ class ContractService
         });
     }
 
+    /**
+     * Xóa mềm hợp đồng.
+     *
+     * Nếu contract đang ở PENDING_PAYMENT → auto-cancel Initial Invoice.
+     */
     public function delete(string $id): bool
     {
         $contract = $this->find($id);
-        if ($contract) {
-            return $contract->delete();
+        if (! $contract) {
+            return false;
         }
 
-        return false;
+        return DB::transaction(function () use ($contract) {
+            // Auto-cancel initial invoice nếu contract đang chờ thanh toán
+            if ($contract->status === ContractStatus::PENDING_PAYMENT->value) {
+                $this->cancelInitialInvoice($contract);
+            }
+
+            return $contract->delete();
+        });
     }
 
     public function restore(string $id): bool
@@ -188,7 +225,12 @@ class ContractService
     }
 
     /**
-     * Accept Contract Signature (Tenant)
+     * Accept Contract Signature (Tenant).
+     *
+     * Luồng mới:
+     * 1. Approve member
+     * 2. Tạo Initial Invoice (tiền phòng tháng đầu + tiền cọc)
+     * 3. Contract → PENDING_PAYMENT (chờ Admin xác nhận thanh toán)
      */
     public function acceptSignature(Contract $contract, User $user): bool
     {
@@ -201,16 +243,22 @@ class ContractService
             return false;
         }
 
-        return DB::transaction(function () use ($contract, $member) {
+        return DB::transaction(function () use ($contract, $member, $user) {
+            // 1. Approve member
             $member->update([
                 'status' => 'APPROVED',
                 'joined_at' => now(),
             ]);
 
-            if (in_array($contract->status, ['DRAFT', 'PENDING_SIGNATURE'])) {
+            // 2. Tạo Initial Invoice (tiền phòng + cọc)
+            $allowedStatuses = array_map(fn($enum) => $enum->value, ContractStatus::allowAcceptSignature());
+            
+            if (in_array($contract->status, $allowedStatuses)) {
+                $this->createInitialInvoice($contract, $user);
+
+                // 3. Contract → PENDING_PAYMENT
                 $contract->update([
-                    'status' => 'ACTIVE',
-                    'signed_at' => now(),
+                    'status' => ContractStatus::PENDING_PAYMENT->value,
                 ]);
             }
 
@@ -219,7 +267,10 @@ class ContractService
     }
 
     /**
-     * Reject Contract Signature (Tenant)
+     * Reject Contract Signature (Tenant).
+     *
+     * Member → REJECTED, Contract quay lại DRAFT
+     * (cho phép Admin gán Tenant khác).
      */
     public function rejectSignature(Contract $contract, User $user): bool
     {
@@ -232,7 +283,16 @@ class ContractService
             return false;
         }
 
-        return $member->update(['status' => 'REJECTED']);
+        return DB::transaction(function () use ($contract, $member) {
+            $member->update(['status' => 'REJECTED']);
+
+            // Quay contract về DRAFT để Admin có thể gán Tenant khác
+            if ($contract->status === ContractStatus::PENDING_SIGNATURE->value) {
+                $contract->update(['status' => ContractStatus::DRAFT->value]);
+            }
+
+            return true;
+        });
     }
 
     /**
@@ -360,6 +420,85 @@ class ContractService
         ]);
 
         return $member->refresh();
+    }
+
+    // ───────────────────────────────────────────────────────────────────────────
+    //  INITIAL INVOICE (Hóa đơn ban đầu khi ký hợp đồng)
+    // ───────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Tạo hóa đơn ban đầu khi Tenant xác nhận hợp đồng.
+     *
+     * Bao gồm:
+     * - Tiền phòng tháng đầu tiên (RENT)
+     * - Tiền đặt cọc (DEPOSIT) – nếu > 0
+     *
+     * Invoice được tạo và tự động phát hành (ISSUED).
+     */
+    private function createInitialInvoice(Contract $contract, User $tenant): Invoice
+    {
+        $periodStart = $contract->start_date;
+        $periodEnd = $contract->start_date->copy()->addMonth()->subDay();
+        $dueDate = now()->addDays(3);
+
+        $rentPrice = (float) $contract->rent_price;
+        $depositAmount = (float) $contract->deposit_amount;
+
+        // Xây dựng danh sách items
+        $items = [
+            [
+                'type' => InvoiceItemType::RENT->value,
+                'description' => 'Tiền phòng tháng đầu tiên',
+                'quantity' => 1,
+                'unit_price' => $rentPrice,
+                'amount' => $rentPrice,
+            ],
+        ];
+
+        if ($depositAmount > 0) {
+            $items[] = [
+                'type' => InvoiceItemType::DEPOSIT->value,
+                'description' => 'Tiền đặt cọc',
+                'quantity' => 1,
+                'unit_price' => $depositAmount,
+                'amount' => $depositAmount,
+            ];
+        }
+
+        return $this->invoiceService->createInitialInvoice(
+            invoiceData: [
+                'org_id' => $contract->org_id,
+                'property_id' => $contract->property_id,
+                'contract_id' => $contract->id,
+                'room_id' => $contract->room_id,
+                'period_start' => $periodStart->format('Y-m-d'),
+                'period_end' => $periodEnd->format('Y-m-d'),
+                'due_date' => $dueDate->format('Y-m-d'),
+                'snapshot' => ['is_initial' => true],
+                'created_by_user_id' => $tenant->id,
+            ],
+            itemsData: $items,
+        );
+    }
+
+    /**
+     * Huỷ Initial Invoice khi contract bị cancel/delete ở PENDING_PAYMENT.
+     *
+     * Tìm invoice ban đầu (snapshot.is_initial = true) chưa PAID và cancel nó.
+     */
+    private function cancelInitialInvoice(Contract $contract): void
+    {
+        $initialInvoice = Invoice::where('contract_id', $contract->id)
+            ->where('snapshot->is_initial', true)
+            ->whereNot('status', 'PAID')
+            ->first();
+
+        if ($initialInvoice) {
+            $this->invoiceService->cancelInvoice(
+                $initialInvoice,
+                'Tự động huỷ do hợp đồng bị huỷ/xóa.'
+            );
+        }
     }
 
     private function generateJoinCode(): string

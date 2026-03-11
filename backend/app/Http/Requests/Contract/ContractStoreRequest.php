@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Contract;
 
+use App\Enums\ContractStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ContractStoreRequest extends FormRequest
 {
@@ -16,7 +18,7 @@ class ContractStoreRequest extends FormRequest
         return [
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
             'room_id' => ['required', 'uuid', 'exists:rooms,id'],
-            'status' => ['nullable', 'string', 'in:DRAFT,ACTIVE,ENDED,CANCELLED'],
+            'status' => ['nullable', 'string', Rule::in(ContractStatus::values())],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'billing_cycle' => ['nullable', 'string', 'in:MONTHLY,QUARTERLY'],
