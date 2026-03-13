@@ -3,6 +3,7 @@
 namespace App\Models\Contract;
 
 use App\Models\Concerns\MultiTenant;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
@@ -83,5 +84,10 @@ class Contract extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
     }
 }
