@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Invoice;
 
+use App\Enums\InvoiceItemType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class InvoiceStoreRequest extends FormRequest
 {
@@ -29,7 +31,7 @@ class InvoiceStoreRequest extends FormRequest
 
             // Danh sách chi tiết (items) - bắt buộc ít nhất 1
             'items' => ['required', 'array', 'min:1'],
-            'items.*.type' => ['required', 'string', 'in:RENT,SERVICE,PENALTY,DISCOUNT,ADJUSTMENT'],
+            'items.*.type' => ['required', 'string', Rule::in(InvoiceItemType::values())],
             'items.*.service_id' => ['nullable', 'uuid', 'exists:services,id'],
             'items.*.description' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'numeric', 'min:0'],

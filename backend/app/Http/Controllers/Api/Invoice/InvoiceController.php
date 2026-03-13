@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Invoice;
 
+use App\Enums\InvoiceItemType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Invoice\InvoiceIndexRequest;
 use App\Http\Requests\Invoice\InvoiceStoreRequest;
@@ -15,6 +16,7 @@ use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Validation\Rule;
 
 /**
  * Quản lý Hóa đơn (Invoices)
@@ -328,7 +330,7 @@ class InvoiceController extends Controller
         $this->authorize('update', $invoiceModel);
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'in:RENT,SERVICE,PENALTY,DISCOUNT,ADJUSTMENT'],
+            'type' => ['required', 'string', Rule::in(InvoiceItemType::values())],
             'service_id' => ['nullable', 'uuid', 'exists:services,id'],
             'description' => ['required', 'string', 'max:255'],
             'quantity' => ['required', 'numeric', 'min:0'],
