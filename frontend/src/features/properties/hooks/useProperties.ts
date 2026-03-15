@@ -11,31 +11,33 @@ import {
   restoreProperty,
   forceDeleteProperty,
   getFloors,
-  getFloorsByProperty,
   getFloorById,
   createFloor,
   updateFloor,
   deleteFloor,
-  getDeletedFloors,
   restoreFloor,
   forceDeleteFloor,
   getRooms,
-  getRoomsByProperty,
   getRoomById,
   createRoom,
   updateRoom,
   deleteRoom,
-  getDeletedRooms,
   restoreRoom,
   forceDeleteRoom,
 } from "../api/propertyApi";
+import {
+  getMeters,
+  getMetersByProperty,
+  getMetersByFloor,
+} from "../../meters/api/meterApi";
+import axiosClient from "../../../shared/api/axiosClient";
 
 // ───── Properties ─────
 
-export const useProperties = (search?: string, page: number = 1, per_page: number = 10) =>
+export const useProperties = (params: any = {}) =>
   useQuery({
-    queryKey: QUERY_KEYS.properties.list({ search, page, per_page } as any),
-    queryFn: () => getProperties(search, page, per_page),
+    queryKey: QUERY_KEYS.properties.list(params),
+    queryFn: () => getProperties(params),
     staleTime: 1000 * 30,
   });
 
@@ -101,18 +103,10 @@ export const useDeletedProperties = () =>
 
 // ───── Floors ─────
 
-export const useFloors = (params: Record<string, any> = {}) =>
+export const useFloors = (params: any = {}) =>
   useQuery({
     queryKey: QUERY_KEYS.floors.list(params),
     queryFn: () => getFloors(params),
-    staleTime: 1000 * 30,
-  });
-
-export const useFloorsByProperty = (propertyId: string) =>
-  useQuery({
-    queryKey: QUERY_KEYS.floors.byProperty(propertyId),
-    queryFn: () => getFloorsByProperty(propertyId),
-    enabled: !!propertyId,
     staleTime: 1000 * 30,
   });
 
@@ -123,12 +117,13 @@ export const useFloor = (id: string) =>
     enabled: !!id,
   });
 
-export const useCreateFloor = (propertyId: string) => {
+export const useCreateFloor = (propertyId?: string) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => createFloor(propertyId, data),
+    mutationFn: (data: any) => createFloor(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.byProperty(propertyId) });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.all });
+      if (propertyId) qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.byProperty(propertyId) });
       notification.success({ message: "Tạo tầng thành công" });
     },
   });
@@ -168,24 +163,24 @@ export const useRestoreFloor = () => {
 export const useDeletedFloors = () =>
   useQuery({
     queryKey: QUERY_KEYS.floors.trash,
-    queryFn: getDeletedFloors,
+    queryFn: () => axiosClient.get("floors/trash").then(res => res.data?.data ?? res.data),
     staleTime: 1000 * 30,
+  });
+
+export const useFloorsByProperty = (propertyId: string) =>
+  useQuery({
+    queryKey: QUERY_KEYS.floors.byProperty(propertyId),
+    queryFn: () => getFloors({ filter: { property_id: propertyId } }),
+    enabled: !!propertyId,
   });
 
 // ───── Rooms ─────
 
-export const useRooms = (params: Record<string, any> = {}) =>
+export const useRooms = (params: any = {}) =>
   useQuery({
     queryKey: QUERY_KEYS.rooms.list(params),
     queryFn: () => getRooms(params),
     staleTime: 1000 * 30,
-  });
-
-export const useRoomsByProperty = (propertyId: string) =>
-  useQuery({
-    queryKey: QUERY_KEYS.rooms.byProperty(propertyId),
-    queryFn: () => getRoomsByProperty(propertyId),
-    enabled: !!propertyId,
   });
 
 export const useRoom = (id: string) =>
@@ -195,10 +190,10 @@ export const useRoom = (id: string) =>
     enabled: !!id,
   });
 
-export const useCreateRoom = (propertyId: string) => {
+export const useCreateRoom = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => createRoom(propertyId, data),
+    mutationFn: (data: any) => createRoom(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.all });
       notification.success({ message: "Tạo phòng thành công" });
@@ -239,8 +234,15 @@ export const useRestoreRoom = () => {
 export const useDeletedRooms = () =>
   useQuery({
     queryKey: QUERY_KEYS.rooms.trash,
-    queryFn: getDeletedRooms,
+    queryFn: () => axiosClient.get("rooms/trash").then(res => res.data?.data ?? res.data),
     staleTime: 1000 * 30,
+  });
+
+export const useRoomsByProperty = (propertyId: string) =>
+  useQuery({
+    queryKey: QUERY_KEYS.rooms.byProperty(propertyId),
+    queryFn: () => getRooms({ filter: { property_id: propertyId } }),
+    enabled: !!propertyId,
   });
 
 export const useForceDeleteProperty = () => {
@@ -266,3 +268,26 @@ export const useForceDeleteRoom = () => {
     onSuccess: () => { qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.trash }); },
   });
 };
+
+// ───── Meters ─────
+
+export const useMeters = () =>
+  useQuery({
+    queryKey: QUERY_KEYS.meters.all,
+    queryFn: getMeters,
+    staleTime: 1000 * 30,
+  });
+
+export const useMetersByProperty = (propertyId: string) =>
+  useQuery({
+    queryKey: QUERY_KEYS.meters.byProperty(propertyId),
+    queryFn: () => getMetersByProperty(propertyId),
+    enabled: !!propertyId,
+  });
+
+export const useMetersByFloor = (propertyId: string, floorId: string) =>
+  useQuery({
+    queryKey: QUERY_KEYS.meters.byFloor(propertyId, floorId),
+    queryFn: () => getMetersByFloor(propertyId, floorId),
+    enabled: !!propertyId && !!floorId,
+  });

@@ -32,10 +32,13 @@ export interface ITokenStore {
   token: string;
   roles: string[];
   permissions: string[];
+  role: string | null;
+  org_id: string | null;
   isLoading: boolean;
-  setToken: (token: string, roles: string[], permissions: string[]) => void;
+  setToken: (token: string, roles: string[], permissions: string[], org_id: string | null) => void;
   restoreToken: () => void;
   getRoles: () => string[];
   getToken: () => string | null;
+  getOrgId: () => string | null;
   clearToken: () => void;
 }

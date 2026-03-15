@@ -69,6 +69,9 @@ export interface FloorDTO {
 
   // Relations
   rooms?: RoomDTO[];
+  rooms_count?: number;
+  vacant_rooms_count?: number;
+  occupied_rooms_count?: number;
 }
 
 // ─── Property ────────────────────────────────────────────────────

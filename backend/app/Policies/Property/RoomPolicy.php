@@ -42,8 +42,8 @@ class RoomPolicy implements RbacModuleProvider
             return $this->checkPropertyScope($user, $room);
         }
 
-        // Scoping Pattern: Tenant gets Membership check
-        return \App\Models\Contract\Contract::where('room_id', $room->id)
+        // Scoping Pattern: Tenant gets Membership check OR room is available
+        return $room->status === 'available' || \App\Models\Contract\Contract::where('room_id', $room->id)
             ->where('status', 'ACTIVE')
             ->whereHas('members', function ($q) use ($user) {
                 $q->where('user_id', $user->id)->where('status', 'APPROVED');

@@ -25,17 +25,20 @@ class RoomService
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
+            ->allowedSorts(['name', 'code', 'status', 'created_at', 'floor_number', 'base_price'])
             ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode'])
             ->defaultSort('code');
 
-        // Scoping Pattern: Membership-based for Tenant
+        // Scoping Pattern: Membership-based for Tenant (Renters) OR they can see 'available' rooms
         if ($performer && $performer->hasRole('Tenant')) {
-            $query->whereHas('contracts', function ($q) use ($performer) {
-                $q->where('status', 'ACTIVE')
-                    ->whereHas('members', function ($sq) use ($performer) {
-                        $sq->where('user_id', $performer->id);
-                        //  ->where('status', 'APPROVED'); // Removed status check because ContractMember table doesn't have a status column in this schema
-                    });
+            $query->where(function ($q) use ($performer) {
+                $q->whereHas('contracts', function ($sq) use ($performer) {
+                    $sq->where('status', 'ACTIVE')
+                        ->whereHas('members', function ($ssq) use ($performer) {
+                            $ssq->where('user_id', $performer->id);
+                            //  ->where('status', 'APPROVED');
+                        });
+                })->orWhere('status', 'available');
             });
         } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
             $query->whereHas('property.managers', function ($q) use ($performer) {
@@ -50,7 +53,7 @@ class RoomService
             });
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
@@ -72,7 +75,7 @@ class RoomService
             });
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
     public function find(string $id): ?Room

@@ -37,6 +37,11 @@ class OrgPolicy implements RbacModuleProvider
 
     public function view(User $user, Org $org): bool
     {
+        // Users can always view their own organization
+        if ((string) $user->org_id === (string) $org->id) {
+            return true;
+        }
+
         if (! $user->hasPermissionTo('view Orgs')) {
             return false;
         }

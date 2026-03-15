@@ -23,13 +23,19 @@ class PropertyService
         $user = $performer ?: auth()->user();
         if ($user) {
             if ($user->hasRole('Tenant')) {
-                // Tenant scope: only properties where they have an active contract
-                $query->whereHas('contracts', function ($q) use ($user) {
-                    $q->where('status', 'ACTIVE')
-                        ->whereHas('members', function ($sq) use ($user) {
-                            $sq->where('user_id', $user->id)
-                                ->where('status', 'APPROVED');
-                        });
+                // Tenant scope: only properties where they have an active contract, OR there are available rooms they could potentially rent.
+                // However, based on the prompt, "tenant cần có khả năng xem được tòa nhà và tầng mình đang thuê, các phòng đang còn trống"
+                // Let's modify so Tenant sees: Properties they currently rent, OR Properties that have AT LEAST ONE 'available' room.
+                $query->where(function ($q) use ($user) {
+                    $q->whereHas('contracts', function ($sq) use ($user) {
+                        $sq->where('status', 'ACTIVE')
+                            ->whereHas('members', function ($ssq) use ($user) {
+                                $ssq->where('user_id', $user->id)
+                                    ->where('status', 'APPROVED');
+                            });
+                    })->orWhereHas('rooms', function ($sq) {
+                        $sq->where('status', 'available');
+                    });
                 });
             } elseif ($user->hasRole(['Manager', 'Staff'])) {
                 // Manager/Staff scope: only properties they are explicitly assigned to
@@ -54,7 +60,7 @@ class PropertyService
             $query->withTrashed();
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator

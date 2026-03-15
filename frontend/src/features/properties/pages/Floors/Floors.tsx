@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Table, Button, Tooltip, Popconfirm, Modal, Input, Empty, Skeleton, Pagination } from "antd";
-import { Plus, Eye, Trash2, RotateCcw, Search, Layers, Settings2 } from "lucide-react";
+import { Button, Tooltip, Popconfirm, Modal, Empty, Skeleton, Table, Tag, Pagination } from "antd";
+import { Plus, Eye, Trash2, RotateCcw, Layers, Settings2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import {
   useFloors,
@@ -8,9 +8,15 @@ import {
   useDeletedFloors,
   useRestoreFloor,
   useForceDeleteFloor,
+  useProperties,
 } from "../../hooks/useProperties";
+import FilterBar from "../../../../shared/components/FilterBar";
+
 import { usePermission } from "../../../../shared/hooks/usePermission";
 import { useDebounce } from "../../../../shared/hooks/useDebounce";
+import { useTokenStore } from "../../../auth/stores/authStore";
+
+
 
 const Floors = ({ propertyId }: { propertyId?: string }) => {
   const navigate = useNavigate();
@@ -18,20 +24,32 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
 
   // States
   const [searchText, setSearchText] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState<string | undefined>(propertyId);
   const [trashOpen, setTrashOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+
   const debouncedSearch = useDebounce(searchText, 400);
 
   // Queries
-  const queryParams: Record<string, any> = {};
-  if (debouncedSearch) queryParams.search = debouncedSearch;
-  if (propertyId) queryParams["filter[property_id]"] = propertyId;
-  queryParams.page = currentPage;
-  queryParams.per_page = pageSize;
+  const { org_id, role } = useTokenStore();
+
+  const queryParams: Record<string, any> = {
+    page: currentPage,
+    per_page: pageSize,
+    search: debouncedSearch || undefined,
+    filter: {
+      ...(role === 'Admin' ? {} : { org_id: org_id }),
+      property_id: selectedProperty || propertyId,
+    }
+  };
+
+  const { data: propertiesData } = useProperties({ per_page: 100 });
+  const propertyOptions = (propertiesData as any)?.data?.map((p: any) => ({ label: p.name, value: p.id })) || [];
 
   const { data: paginatedData, isLoading } = useFloors(queryParams);
+
   // Support both paginated format and raw array format depending on API config
   const paginatedAny = paginatedData as any;
   const floors = paginatedAny?.data || (Array.isArray(paginatedData) ? paginatedData : []);
@@ -65,8 +83,20 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
         render: (text: string) => <span className="text-slate-600 font-medium">{text || "—"}</span>,
       }
     ]),
-    {
-      title: "Thao tác",
+      {
+        title: "Quy mô",
+        key: "summary",
+        width: 200,
+        render: (_: any, record: any) => (
+          <div className="flex flex-wrap gap-1">
+            <Tag color="blue" className="m-0 text-[10px]">{record.rooms_count || 0} P</Tag>
+            <Tag color="green" className="m-0 text-[10px]">{record.vacant_rooms_count || 0} Trống</Tag>
+            <Tag color="orange" className="m-0 text-[10px]">{record.occupied_rooms_count || 0} Thuê</Tag>
+          </div>
+        ),
+      },
+      {
+        title: "Thao tác",
       key: "action",
       align: 'right' as const,
       render: (_: any, record: any) => (
@@ -112,32 +142,28 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
     },
   ];
 
-  return (
-    <div className="relative w-full h-full animate-fade-in flex flex-col gap-6">
+  const handleClearFilters = () => {
+    setSearchText("");
+    setSelectedProperty(propertyId);
+    setCurrentPage(1);
+  };
 
+  return (
+    <div className="relative w-full h-full animate-fade-in flex flex-col">
       {/* HEADER SECTION */}
       {!propertyId && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-xl border border-gray-200/50 p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <Layers className="text-indigo-500" size={26} />
               Quản Lý Tầng
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Tổng số: <span className="font-semibold text-slate-700">{meta.total}</span> tầng
+              Quản lý danh sách các tầng trong tòa nhà của bạn.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              prefix={<Search size={16} className="text-slate-400" />}
-              placeholder="Tìm kiếm tầng..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="w-64 rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 py-2 shadow-sm"
-              allowClear
-            />
-
+          <div className="flex items-center gap-3">
             {can("delete", "floors") && (
               <Button
                 icon={<Trash2 size={16} />}
@@ -152,7 +178,7 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
                 type="primary"
                 icon={<Plus size={18} />}
                 onClick={() => navigate("/manage/floors/createFloor")}
-                className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-[40px] px-5 shadow-md shadow-indigo-500/20 font-medium flex items-center gap-2"
+                className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-[40px] px-5 shadow-md shadow-indigo-500/20 font-medium flex items-center gap-2 border-none"
               >
                 Thêm tầng
               </Button>
@@ -161,29 +187,33 @@ const Floors = ({ propertyId }: { propertyId?: string }) => {
         </div>
       )}
 
-      {/* EMBEDDED HEADER HEADER (Khi truyền propertyId - Không làm thẻ header to) */}
-      {propertyId && (
-        <div className="flex items-center justify-between bg-white border border-gray-100 p-4 rounded-xl shadow-sm">
-          <Input
-            prefix={<Search size={16} className="text-slate-400" />}
-            placeholder="Tìm kiếm tầng..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-64 rounded-xl border-slate-200 hover:border-indigo-400 focus:border-indigo-500 py-2 shadow-sm"
-            allowClear
-          />
-          {can("create", "floors") && (
-            <Button
-              type="primary"
-              icon={<Plus size={16} />}
-              onClick={() => navigate("/manage/floors/createFloor", { state: { propertyId } })}
-              className="bg-indigo-600 hover:bg-indigo-700 rounded-xl h-[38px] px-5 shadow-md shadow-indigo-500/20 font-medium flex items-center gap-2"
-            >
-              Thêm tầng
-            </Button>
-          )}
-        </div>
-      )}
+      {/* FILTER BAR */}
+      <FilterBar
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder="Tìm kiếm tên tầng..."
+        filters={!propertyId ? [
+          {
+            key: 'property_id',
+            placeholder: 'Chọn nhà trọ',
+            type: 'select',
+            options: propertyOptions,
+            width: 220
+          }
+        ] : []}
+        filterValues={{ property_id: selectedProperty }}
+        onFilterChange={(_, val) => {
+          setSelectedProperty(val);
+          setCurrentPage(1);
+        }}
+        onClearAll={handleClearFilters}
+        extra={
+          <div className="text-sm text-slate-500 px-2 border-l border-slate-200 ml-2">
+            Tổng cộng: <span className="font-semibold text-slate-700">{meta.total}</span>
+          </div>
+        }
+      />
+
 
       {/* CONTENT AREA */}
       <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex-1 flex flex-col ${propertyId ? 'min-h-[400px]' : ''}`}>

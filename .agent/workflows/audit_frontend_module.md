@@ -14,3 +14,4 @@ description: Rà soát module frontend so với tiêu chuẩn kiến trúc dự 
 4. **Sidebar Navigation Audit**: 
    - Kiểm tra `frontend/src/app/sidebar-config.tsx`.
    - Đảm bảo Sidebar Route phải hoàn toàn phản chiếu chính xác State và Feature hiện tại, hợp nhất logic và tuyệt đối không để 404 error page.
+5. **API Route Audit**: Rà soát các API calls đảm bảo tuân thủ **Flat Routes**. Kiểm định không có bất kỳ endpoint nào sử dụng Resource Nesting sâu hơn 1 cấp (vd: `/a/b` là OK, `/a/b/c` là SAI).

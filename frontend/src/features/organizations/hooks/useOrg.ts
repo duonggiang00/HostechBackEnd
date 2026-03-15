@@ -3,10 +3,10 @@ import { getOrgs, getOrgDetail, createOrg, updateOrg } from '../api/orgApi';
 import type { OrgCreatePayload, OrgUpdatePayload } from '../types';
 import { message } from 'antd';
 
-export const useOrgs = () => {
+export const useOrgs = (orgId?: string | null) => {
     return useQuery({
-        queryKey: ['organizations'],
-        queryFn: getOrgs,
+        queryKey: ['organizations', orgId],
+        queryFn: () => getOrgs(orgId ? { filter: { id: orgId } } : {}),
     });
 };
 

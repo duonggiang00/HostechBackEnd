@@ -12,6 +12,7 @@ import {
   X as XIcon, Plus, Trash2, ClipboardList, Wrench, 
   ImagePlus, Info, CheckCircle2, ChevronRight
 } from "lucide-react";
+import type { FloorDTO } from "../../types";
 
 const CreateRoom = () => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const CreateRoom = () => {
   };
 
   const createMutation = useMutation({
-    mutationFn: ({ property_id, ...data }: any) => createRoom(property_id, data),
+    mutationFn: (data: any) => createRoom(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.all });
       notification.success({ message: "Tạo phòng thành công" });
@@ -143,7 +144,7 @@ const CreateRoom = () => {
                     placeholder="Chọn tầng..."
                     loading={floorsLoading}
                     disabled={!selectedPropertyId && !statePropertyId}
-                    options={floors?.map((f) => ({ value: f.id, label: f.name })) || []}
+                    options={floors?.data?.map((f: FloorDTO) => ({ value: f.id, label: f.name })) || []}
                     size="large"
                     className="rounded-xl"
                   />

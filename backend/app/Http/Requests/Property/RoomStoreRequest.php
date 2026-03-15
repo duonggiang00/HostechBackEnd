@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Property;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * @bodyParam property_id string required ID của tòa nhà.
@@ -39,7 +40,12 @@ class RoomStoreRequest extends FormRequest
         return [
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
             'floor_id' => ['nullable', 'uuid', 'exists:floors,id'],
-            'code' => ['required', 'string', 'max:50'],
+            'code' => [
+                'required', 
+                'string', 
+                'max:50',
+                Rule::unique('rooms')->where('property_id', $this->property_id)
+            ],
             'name' => ['required', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
             'area' => ['nullable', 'numeric', 'min:0'],

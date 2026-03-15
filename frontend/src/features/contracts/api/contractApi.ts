@@ -1,10 +1,26 @@
 import Api from "../../../Api/Api";
 import type { Contract, ContractFormValues } from "../../../Types/ContractTypes";
 
-// Lấy danh sách hợp đồng (active)
-export const getContracts = async (): Promise<Contract[]> => {
-    const res = await Api.get("contracts");
-    return res.data?.data ?? res.data;
+export interface ContractFilters {
+    status?: string;
+    property_id?: string;
+    sort?: string;
+    include?: string;
+    per_page?: number;
+    page?: number;
+}
+
+// Lấy danh sách hợp đồng với filter & sort
+export const getContracts = async (filters?: ContractFilters): Promise<{ data: Contract[]; meta?: any }> => {
+    const params: Record<string, any> = {};
+    if (filters?.status) params["filter[status]"] = filters.status;
+    if (filters?.property_id) params["filter[property_id]"] = filters.property_id;
+    if (filters?.sort) params["sort"] = filters.sort;
+    if (filters?.include) params["include"] = filters.include;
+    if (filters?.per_page) params["per_page"] = filters.per_page;
+    if (filters?.page) params["page"] = filters.page;
+    const res = await Api.get("contracts", { params });
+    return res.data;
 };
 
 // Lấy danh sách hợp đồng đã xóa mềm (trash)

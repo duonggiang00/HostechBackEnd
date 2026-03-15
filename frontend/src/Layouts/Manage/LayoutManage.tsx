@@ -18,7 +18,7 @@ const LayoutManage = () => {
 
   return (
     <>
-      <Authorization allowRole={["Admin", "Owner", "Manager", "Staff"]}>
+      <Authorization allowRole={["Admin", "Owner", "Manager", "Staff", "Tenant"]}>
         <div className="flex bg-[#f5f7fb] h-screen overflow-hidden">
           <SidebarAdmin />
           <main className="flex-1 flex flex-col overflow-hidden">

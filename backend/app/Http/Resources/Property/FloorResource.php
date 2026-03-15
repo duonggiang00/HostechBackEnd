@@ -26,6 +26,8 @@ class FloorResource extends JsonResource
             'floor_number' => $this->floor_number,
             'sort_order' => $this->sort_order,
             'rooms_count' => $this->rooms_count ?? $this->whenCounted('rooms'),
+            'vacant_rooms_count' => $this->vacant_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['AVAILABLE', 'VACANT'])->count() : null),
+            'occupied_rooms_count' => $this->occupied_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['OCCUPIED', 'RENTED'])->count() : null),
             'rooms' => RoomResource::collection($this->whenLoaded('rooms')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

@@ -33,12 +33,13 @@ const VerifyOTP = () => {
         otp: data.otp,
       });
 
-      // Giải mã token để lấy role
+      // Giải mã token để lấy role và org_id
       const decoded = jwtDecode<IDecodeJWT>(res.data.access_token);
       const roles = decoded.user?.roles || [];
       const permissions = decoded.user?.permissions || [];
+      const orgId = decoded.user?.org_id || null;
       
-      setToken(res.data.access_token, roles, permissions);
+      setToken(res.data.access_token, roles, permissions, orgId);
 
       message.success("Xác thực OTP thành công");
       

@@ -79,7 +79,7 @@ Module quản lý tài sản cho thuê bao gồm Tòa nhà (Property), Tầng (F
 - [ ] **Trang chi tiết phòng**:
     - Hiển thị thông tin cơ bản: Diện tích, Sức chứa, Giá thuê.
     - Hiển thị danh sách Tài sản (Assets) đính kèm.
-    - Hiển thị Lịch sử giá (Price History) và Lịch sử trạng thái (Status History).
+    - Hiển thị Lịch sử giá (Price History) và Lịch sử trạng thái (Status History - Đã hỗ trợ ở tầng API `status_histories` trong `RoomResource`).
     - Tab hiển thị Media (Hình ảnh phòng).
 - [ ] **Form Tạo/Cập nhật**:
     - Validate các trường bắt buộc: Tòa nhà, Mã phòng, Tên phòng, Giá cơ bản.

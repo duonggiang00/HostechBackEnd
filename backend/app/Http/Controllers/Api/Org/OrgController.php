@@ -43,13 +43,16 @@ class OrgController extends Controller
      */
     public function index(OrgIndexRequest $request)
     {
-        $this->authorize('viewAny', Org::class);
+        $user = auth()->user();
+        if (! $user->hasRole('Admin') && ! $user->org_id) {
+            $this->authorize('viewAny', Org::class);
+        }
 
         $perPage = (int) $request->input('per_page', 15);
         $search = $request->input('search');
         $allowed = ['name', 'email', 'phone'];
 
-        $paginator = $this->service->paginate($allowed, $perPage, $search, $request->boolean('with_trashed'));
+        $paginator = $this->service->paginate($allowed, $perPage, $search, $request->boolean('with_trashed'), $user);
 
         return OrgResource::collection($paginator);
     }

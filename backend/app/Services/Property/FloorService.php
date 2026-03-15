@@ -16,11 +16,34 @@ class FloorService
 
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
+            ->allowedSorts(['name', 'code', 'sort_order', 'created_at'])
             ->allowedIncludes(['property', 'rooms'])
             ->defaultSort('sort_order')
-            ->withCount('rooms');
+            ->withCount([
+                'rooms',
+                'rooms as vacant_rooms_count' => function ($query) {
+                    $query->whereIn('status', ['AVAILABLE', 'VACANT']);
+                },
+                'rooms as occupied_rooms_count' => function ($query) {
+                    $query->whereIn('status', ['OCCUPIED', 'RENTED']);
+                },
+            ]);
 
-        if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
+        if ($performer && $performer->hasRole('Tenant')) {
+            $query->where(function ($q) use ($performer) {
+                // Floor belongs to a room they rent
+                $q->whereHas('rooms.contracts', function ($sq) use ($performer) {
+                    $sq->where('status', 'ACTIVE')
+                        ->whereHas('members', function ($ssq) use ($performer) {
+                            $ssq->where('user_id', $performer->id)
+                                ->where('status', 'APPROVED');
+                        });
+                })->orWhereHas('rooms', function ($sq) {
+                    // Or the floor has an available room
+                    $sq->where('status', 'available');
+                });
+            });
+        } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
             $query->whereHas('property.managers', function ($q) use ($performer) {
                 $q->where('user_id', $performer->id);
             });
@@ -41,7 +64,7 @@ class FloorService
             $query->withTrashed();
         }
 
-        return $query->paginate($perPage)->withQueryString();
+        return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator

@@ -6,11 +6,13 @@ import { Edit, Trash2, MapPin, Home, Hash, Calendar, Layers, DoorOpen, Info, Ban
 import { useProperty, useDeleteProperty } from "../../hooks/useProperties";
 import { usePermission } from "../../../../shared/hooks/usePermission";
 import Floors from "../Floors/Floors";
+import { useTokenStore } from "../../../auth/stores/authStore";
 
 const DetailProperty = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { can } = usePermission();
+  const { role } = useTokenStore();
 
   const { data: property, isLoading } = useProperty(id || "");
   console.log("[DEBUG] DetailProperty - property data:", property);
@@ -24,7 +26,11 @@ const DetailProperty = () => {
   };
 
   const handleClose = () => {
-    navigate("/manage/properties", { replace: true });
+    if (role === "Manager" || role === "Staff") {
+      navigate("/manage", { replace: true });
+    } else {
+      navigate("/manage/properties", { replace: true });
+    }
   };
 
   const handleDelete = () => {

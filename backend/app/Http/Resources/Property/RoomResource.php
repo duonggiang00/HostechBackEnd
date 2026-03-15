@@ -40,6 +40,8 @@ class RoomResource extends JsonResource
             'amenities' => $this->amenities,
             'utilities' => $this->utilities,
             'is_draft'  => $this->status === 'draft',
+            'floor_name' => $this->floor_name ?? $this->floor?->name,
+            'property_name' => $this->property_name ?? $this->property?->name,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 

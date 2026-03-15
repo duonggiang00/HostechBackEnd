@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Property;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * @bodyParam code string Mã phòng. Example: P.101
@@ -36,7 +37,16 @@ class RoomUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['sometimes', 'string', 'max:50'],
+            'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
+            'floor_id' => ['nullable', 'uuid', 'exists:floors,id'],
+            'code' => [
+                'sometimes', 
+                'string', 
+                'max:50',
+                Rule::unique('rooms')
+                    ->where('property_id', $this->property_id ?? $this->route('room'))
+                    ->ignore($this->route('room'))
+            ],
             'name' => ['sometimes', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
             'area' => ['nullable', 'numeric', 'min:0'],

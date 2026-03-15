@@ -4,18 +4,24 @@ import type { ITokenStore } from "../../../shared/types/store";
 export const useTokenStore = create<ITokenStore>((set, get) => ({
   token: "",
   roles: [],
+  role: null,
   permissions: [],
+  org_id: null,
   isLoading: true,
 
-  setToken: (token: string, roles: string[], permissions: string[]) => {
+  setToken: (token: string, roles: string[], permissions: string[], org_id: string | null) => {
     localStorage.setItem("token", token);
     localStorage.setItem("roles", JSON.stringify(roles));
     localStorage.setItem("permissions", JSON.stringify(permissions));
+    if (org_id) localStorage.setItem("org_id", org_id);
+    else localStorage.removeItem("org_id");
 
     set({
       token,
       roles,
+      role: roles[0] || null,
       permissions,
+      org_id,
       isLoading: false,
     });
   },
@@ -24,6 +30,7 @@ export const useTokenStore = create<ITokenStore>((set, get) => ({
     const token = localStorage.getItem("token");
     const rolesStr = localStorage.getItem("roles");
     const permissionsStr = localStorage.getItem("permissions");
+    const org_id = localStorage.getItem("org_id");
 
     if (token) {
       let roles = [];
@@ -36,13 +43,15 @@ export const useTokenStore = create<ITokenStore>((set, get) => ({
       set({
         token,
         roles,
+        role: roles[0] || null,
         permissions,
+        org_id,
         isLoading: false,
       });
       return;
     }
 
-    set({ token: "", roles: [], permissions: [], isLoading: false });
+    set({ token: "", roles: [], permissions: [], org_id: null, isLoading: false });
   },
 
   getRoles: () => {
@@ -53,10 +62,15 @@ export const useTokenStore = create<ITokenStore>((set, get) => ({
     return get().token;
   },
 
+  getOrgId: () => {
+    return get().org_id;
+  },
+
   clearToken: () => {
     localStorage.removeItem("token");
     localStorage.removeItem("roles");
     localStorage.removeItem("permissions");
-    set({ token: "", roles: [], permissions: [] });
+    localStorage.removeItem("org_id");
+    set({ token: "", roles: [], role: null, permissions: [], org_id: null });
   },
 }));

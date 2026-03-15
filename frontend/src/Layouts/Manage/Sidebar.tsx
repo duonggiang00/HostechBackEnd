@@ -43,21 +43,34 @@ const SidebarAdmin = () => {
     open ? "opacity-0 max-w-0 ml-0 pointer-events-none" : "opacity-100 max-w-[200px] ml-1"
   }`;
 
-  const renderItem = (item: SidebarItem) => (
-    <li key={item.key} className="sidebar-item list-none">
-      <Link to={item.path ?? "#"} className={linkClass(item.path)}>
+  const hasAccess = (itemRoles?: string[]) => {
+    if (!itemRoles || itemRoles.length === 0) return true;
+    if (!roles) return false;
+    return roles.some((r) => itemRoles.includes(r));
+  };
+
+  const renderItem = (item: SidebarItem) => {
+    if (!hasAccess(item.roles)) return null;
+    return (
+      <li key={item.key} className="sidebar-item list-none">
+        <Link to={item.path ?? "#"} className={linkClass(item.path)}>
         <div className="shrink-0 flex items-center justify-center w-[52px]">
             <span className={`transition-colors duration-300 ${isActive(item.path) ? "text-white" : "text-[#94a3b8] group-hover:text-white"}`}>
                 {item.icon}
             </span>
         </div>
-        <span className={textTransitionClass + " text-[14px]"}>{item.label}</span>
+        <span className={textTransitionClass + " text-[14px]"}>{role === "Tenant" && item.key === "room-list" ? "Phòng của tôi" : item.label}</span>
       </Link>
     </li>
-  );
+    );
+  };
 
-  const renderStaticGroup = (label: string, items: SidebarItem[], key: string) => (
-    <div key={key} className="sidebar-group">
+  const renderStaticGroup = (label: string, items: SidebarItem[], key: string) => {
+    const visibleItems = items.filter((item) => hasAccess(item.roles));
+    if (visibleItems.length === 0) return null;
+
+    return (
+      <div key={key} className="sidebar-group">
       <div 
         onClick={() => toggleGroup(key)}
         className={`flex items-center py-3 px-6 cursor-pointer text-[#64748b] hover:text-[#94a3b8] transition-all`}
@@ -76,13 +89,19 @@ const SidebarAdmin = () => {
       <div className={`transition-all duration-300 overflow-hidden ${
         openGroups[key] ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
       }`}>
-        {items.map(renderItem)}
+        {visibleItems.map(renderItem)}
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderCollapsibleGroup = (group: any) => (
-    <div key={group.key} className="sidebar-group">
+  const renderCollapsibleGroup = (group: any) => {
+    if (!hasAccess(group.roles)) return null;
+    const visibleItems = group.items.filter((item: any) => hasAccess(item.roles));
+    if (visibleItems.length === 0) return null;
+
+    return (
+      <div key={group.key} className="sidebar-group">
        <div 
         onClick={() => toggleGroup(group.key)}
         className={`flex items-center my-1 py-3 rounded-xl cursor-pointer transition-all duration-300 group ${
@@ -106,7 +125,7 @@ const SidebarAdmin = () => {
       <ul className={`sidebar-dropdown list-none p-0 m-0 transition-all duration-300 overflow-hidden ${
         open || !openGroups[group.key] ? 'max-h-0 opacity-0 invisible' : 'max-h-[500px] opacity-100 pb-2'
       }`}>
-        {group.items.map((subItem: any) => (
+        {visibleItems.map((subItem: any) => (
            <li key={subItem.key}>
            <Link 
              to={subItem.path} 
@@ -120,7 +139,8 @@ const SidebarAdmin = () => {
         ))}
       </ul>
     </div>
-  );
+    );
+  };
 
   return (
     <div className={`h-screen bg-[#0f172a] flex flex-col transition-all duration-300 shadow-2xl overflow-hidden shrink-0 ${open ? "w-[76px]" : "w-[260px]"}`}>
@@ -139,14 +159,18 @@ const SidebarAdmin = () => {
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto sidebar-nav custom-scrollbar hide-scrollbar overflow-x-hidden pt-2">
         <ul className="list-none p-0 m-0 pb-6">
-          <SidebarCategory label={open ? "..." : "TỔNG QUAN"} />
+          {sidebarFlatItems.some((item) => hasAccess(item.roles)) && (
+            <SidebarCategory label={open ? "..." : "TỔNG QUAN"} />
+          )}
           {sidebarFlatItems.map(renderItem)}
 
           {renderStaticGroup("QUẢN LÝ HẠ TẦNG", infrasItems, "infras")}
           
           {renderStaticGroup("DỊCH VỤ & TÀI CHÍNH", financeItems, "finance")}
 
-          <SidebarCategory label={open ? "..." : "CÀI ĐẶT"} />
+          {userGroups.some((group) => hasAccess(group.roles)) && (
+            <SidebarCategory label={open ? "..." : "CÀI ĐẶT"} />
+          )}
           {userGroups.map(renderCollapsibleGroup)}
         </ul>
       </div>

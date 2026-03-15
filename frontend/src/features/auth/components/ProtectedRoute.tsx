@@ -20,8 +20,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, ch
   if (allowedRoles && allowedRoles.length > 0) {
      if (!roles || !roles.some(r => allowedRoles.includes(r))) {
        // Đăng nhập rồi nhưng không đủ quyền
-       // Nếu là Tenant thì về /me, ngược lại về /manage
-       const homePath = roles?.some(r => r.toLowerCase() === "tenant") ? "/me" : "/manage";
+       // Nếu là Tenant thì về /manage/rooms, ngược lại về /manage
+       const homePath = roles?.some(r => r.toLowerCase() === "tenant") ? "/manage/rooms" : "/manage";
 
        return <Navigate to={homePath} replace />;
      }

@@ -7,7 +7,8 @@ description: Mở rộng chức năng cho một module Frontend đã tồn tại
 **Mục tiêu**: Triển khai logic, kết nối API và xây dựng UI chi tiết cho module sau khi đã qua bước scaffold.
 
 **Các bước thực hiện**:
-1. **API Integration**: Viết các client calls bằng thư viện Axios trong thư mục `api/` dựa vào API docs tài liệu Backend.
+1. **API Integration**: Viết các client calls bằng thư viện Axios trong thư mục `api/` dựa vào API docs tài liệu Backend. 
+    - **LƯU Ý QUAN TRỌNG**: Backend sử dụng **Flat Routes**. Ví dụ: Để lấy phòng của một tầng, KHÔNG dùng `/floors/{floorId}/rooms` mà dùng `/rooms?filter[floor_id]={floorId}`.
 2. **State Management**: Viết custom hooks kết hợp React Query (`useQuery`, `useMutation`) trong thư mục `hooks/`.
 3. **UI Components**: Xây dựng UI trong thư mục `components/` dùng Ant Design. 
 4. **RBAC Logic**: Bọc tất cả các Component/nút bấm tạo, cập nhật, xóa (Create/Update/Delete) bằng Component bảo mật `<RequireRole allowedRoles={[...]}>`. Không được quên bước này ở bất kỳ form nào.

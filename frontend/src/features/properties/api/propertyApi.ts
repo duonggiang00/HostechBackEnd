@@ -1,15 +1,34 @@
 import Api from "../../../Api/Api";
 import type { PropertyDTO, FloorDTO, RoomDTO, PaginatedResponse } from "../types";
 
+/**
+ * Helper to build URLSearchParams for Spatie Query Builder
+ */
+const buildParams = (params: Record<string, any> = {}) => {
+  const urlParams = new URLSearchParams();
+  
+  if (params.page) urlParams.set("page", params.page.toString());
+  if (params.per_page) urlParams.set("per_page", params.per_page.toString());
+  if (params.search) urlParams.set("search", params.search);
+  if (params.include) urlParams.set("include", params.include);
+  if (params.sort) urlParams.set("sort", params.sort);
+
+  // Handle filters: filter[key]=value
+  if (params.filter) {
+    Object.entries(params.filter).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        urlParams.set(`filter[${key}]`, value as string);
+      }
+    });
+  }
+
+  return urlParams.toString();
+};
+
 // ───── Properties ─────
 
-export const getProperties = async (search?: string, page: number = 1, per_page: number = 10): Promise<PaginatedResponse<PropertyDTO>> => {
-    const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    params.set("page", page.toString());
-    params.set("per_page", per_page.toString());
-    params.set("include", "floors,rooms"); // Include nested data to display correct scale (floors/rooms count)
-    const res = await Api.get(`properties?${params}`);
+export const getProperties = async (params: any = {}): Promise<PaginatedResponse<PropertyDTO>> => {
+    const res = await Api.get(`properties?${buildParams({ include: "floors,rooms", ...params })}`);
     return res.data;
 };
 
@@ -45,26 +64,20 @@ export const forceDeleteProperty = async (id: string): Promise<void> => {
     await Api.delete(`properties/${id}/force`);
 };
 
-// ───── Floors (nested trong property) ─────
+// ───── Floors ─────
 
-export const getFloors = async (params: Record<string, any> = {}): Promise<FloorDTO[]> => {
-    const res = await Api.get("floors", { params });
-    return res.data?.data ?? res.data;
+export const getFloors = async (params: any = {}): Promise<PaginatedResponse<FloorDTO>> => {
+    const res = await Api.get(`floors?${buildParams(params)}`);
+    return res.data;
 };
-
-export const getFloorsByProperty = async (propertyId: string): Promise<FloorDTO[]> => {
-    const res = await Api.get("floors", { params: { "filter[property_id]": propertyId } });
-    return res.data?.data ?? res.data;
-};
-
 
 export const getFloorById = async (id: string): Promise<FloorDTO> => {
     const res = await Api.get(`floors/${id}`);
     return res.data?.data ?? res.data;
 };
 
-export const createFloor = async (propertyId: string, data: any): Promise<FloorDTO> => {
-    const res = await Api.post("floors", { ...data, property_id: propertyId });
+export const createFloor = async (data: any): Promise<FloorDTO> => {
+    const res = await Api.post("floors", data);
     return res.data?.data ?? res.data;
 };
 
@@ -77,11 +90,6 @@ export const deleteFloor = async (id: string): Promise<void> => {
     await Api.delete(`floors/${id}`);
 };
 
-export const getDeletedFloors = async (): Promise<FloorDTO[]> => {
-    const res = await Api.get("floors/trash");
-    return res.data?.data ?? res.data;
-};
-
 export const restoreFloor = async (id: string): Promise<void> => {
     await Api.post(`floors/${id}/restore`);
 };
@@ -90,25 +98,20 @@ export const forceDeleteFloor = async (id: string): Promise<void> => {
     await Api.delete(`floors/${id}/force`);
 };
 
-// ───── Rooms (nested trong property) ─────
+// ───── Rooms ─────
 
-export const getRooms = async (params: Record<string, any> = {}): Promise<RoomDTO[]> => {
-    const res = await Api.get("rooms", { params: { include: "floor,property", ...params } });
-    return res.data?.data ?? res.data;
-};
-
-export const getRoomsByProperty = async (propertyId: string): Promise<RoomDTO[]> => {
-    const res = await Api.get("rooms", { params: { "filter[property_id]": propertyId, include: "floor" } });
-    return res.data?.data ?? res.data;
+export const getRooms = async (params: any = {}): Promise<PaginatedResponse<RoomDTO>> => {
+    const res = await Api.get(`rooms?${buildParams({ include: "floor,property,media", ...params })}`);
+    return res.data;
 };
 
 export const getRoomById = async (id: string): Promise<RoomDTO> => {
-    const res = await Api.get(`rooms/${id}`);
+    const res = await Api.get(`rooms/${id}?include=floor,property,media,assets`);
     return res.data?.data ?? res.data;
 };
 
-export const createRoom = async (propertyId: string, data: any): Promise<RoomDTO> => {
-    const res = await Api.post("rooms", { ...data, property_id: propertyId });
+export const createRoom = async (data: any): Promise<RoomDTO> => {
+    const res = await Api.post("rooms", data);
     return res.data?.data ?? res.data;
 };
 
@@ -119,11 +122,6 @@ export const updateRoom = async (id: string, data: any): Promise<RoomDTO> => {
 
 export const deleteRoom = async (id: string): Promise<void> => {
     await Api.delete(`rooms/${id}`);
-};
-
-export const getDeletedRooms = async (): Promise<RoomDTO[]> => {
-    const res = await Api.get("rooms/trash");
-    return res.data?.data ?? res.data;
 };
 
 export const restoreRoom = async (id: string): Promise<void> => {

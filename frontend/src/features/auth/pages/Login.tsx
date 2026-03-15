@@ -26,12 +26,13 @@ const AuthPage = () => {
       const { token, user } = res.data;
       const roles = user.roles || [];
       const permissions = user.permissions || [];
+      const orgId = user.org_id || null;
 
-      setToken(token, roles, permissions);
+      setToken(token, roles, permissions, orgId);
       message.success("Đăng nhập thành công");
       
       if (roles.some((r: string) => r.toLowerCase() === "tenant")) {
-        nav("/me");
+        nav("/manage/rooms");
       } else {
         nav("/manage");
       }

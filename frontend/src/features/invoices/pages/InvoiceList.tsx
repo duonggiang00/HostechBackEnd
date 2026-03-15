@@ -1,23 +1,47 @@
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Button, Tag, Popconfirm, Tooltip, notification } from "antd";
-import { Plus, Eye, Edit, Trash2, FileX } from "lucide-react";
+import {
+  Table,
+  Button,
+  Tag,
+  Popconfirm,
+  Tooltip,
+  notification,
+  Select,
+  Space,
+  Badge,
+} from "antd";
+import { Plus, Eye, Edit, Trash2, FileX, Filter, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getInvoices, deleteInvoice } from "../api/invoiceApi";
+import type { InvoiceFilters } from "../api/invoiceApi";
 import {
   InvoiceStatusLabels,
   InvoiceStatusColors,
 } from "../../../Types/InvoiceTypes";
 import type { Invoice, InvoiceStatus } from "../../../Types/InvoiceTypes";
+import { useTokenStore } from "../../auth/stores/authStore";
+import { RequireRole } from "../../../shared/components/RequireRole";
 
 const InvoiceList = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: invoices, isLoading } = useQuery({
-    queryKey: ["invoices"],
-    queryFn: getInvoices,
+  const roles = useTokenStore((state) => state.roles);
+  const canManage = roles?.some((r) => ["Owner", "Manager"].includes(r));
+
+  const [filters, setFilters] = useState<InvoiceFilters>({
+    include: "room,property,contract",
+    per_page: 15,
+    sort: "-created_at",
   });
 
-  const canEdit = true;
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["invoices", filters],
+    queryFn: () => getInvoices(filters),
+  });
+
+  const invoices: Invoice[] = data?.data ?? [];
+  const meta = data?.meta;
 
   const deleteMutation = useMutation({
     mutationFn: deleteInvoice,
@@ -28,46 +52,60 @@ const InvoiceList = () => {
     onError: () => notification.error({ message: "Xóa hóa đơn thất bại" }),
   });
 
+  const handleFilterChange = useCallback((key: keyof InvoiceFilters, value: any) => {
+    setFilters((prev) => ({ ...prev, [key]: value || undefined, page: 1 }));
+  }, []);
+
   const columns = [
     {
-      title: "Phòng",
+      title: "Phòng / Tòa nhà",
       key: "room",
       render: (_: any, r: Invoice) => (
-        <span className="font-medium">
-          {r.room?.name} – {r.property?.name}
-        </span>
+        <div>
+          <div className="font-semibold text-slate-800">{r.room?.name || "—"}</div>
+          <div className="text-xs text-slate-400">{r.property?.name || "—"}</div>
+        </div>
       ),
     },
     {
-      title: "Kỳ",
+      title: "Kỳ hóa đơn",
       key: "period",
-      render: (_: any, r: Invoice) => `${r.period_start} → ${r.period_end}`,
+      render: (_: any, r: Invoice) => (
+        <div className="text-sm text-slate-600">
+          <div>{r.period_start}</div>
+          <div className="text-slate-400">→ {r.period_end}</div>
+        </div>
+      ),
     },
     {
-      title: "Phát hành",
+      title: "Ngày phát hành",
       dataIndex: "issue_date",
       key: "issue_date",
+      render: (v: string) => <span className="text-sm text-slate-600">{v || "—"}</span>,
     },
     {
-      title: "Hạn TT",
+      title: "Hạn thanh toán",
       dataIndex: "due_date",
       key: "due_date",
+      render: (v: string) => <span className="text-sm text-slate-600">{v || "—"}</span>,
     },
     {
       title: "Tổng tiền",
       dataIndex: "total_amount",
       key: "total_amount",
-      render: (v: number) => `${v.toLocaleString()} VNĐ`,
+      render: (v: number) => (
+        <span className="font-semibold text-slate-700">
+          {v?.toLocaleString("vi-VN")} ₫
+        </span>
+      ),
     },
     {
       title: "Còn nợ",
       dataIndex: "debt",
       key: "debt",
       render: (v: number) => (
-        <span
-          className={v > 0 ? "text-red-500 font-semibold" : "text-green-600"}
-        >
-          {v.toLocaleString()} VNĐ
+        <span className={`font-semibold ${v > 0 ? "text-red-500" : "text-emerald-600"}`}>
+          {v?.toLocaleString("vi-VN")} ₫
         </span>
       ),
     },
@@ -76,85 +114,134 @@ const InvoiceList = () => {
       dataIndex: "status",
       key: "status",
       render: (s: InvoiceStatus) => (
-        <Tag color={InvoiceStatusColors[s]}>{InvoiceStatusLabels[s]}</Tag>
+        <Tag color={InvoiceStatusColors[s]}>{InvoiceStatusLabels[s] ?? s}</Tag>
       ),
     },
     {
       title: "Hành động",
       key: "action",
+      width: 120,
       render: (_: any, r: Invoice) => (
-        <div className="flex gap-2">
+        <Space size={4}>
           <Tooltip title="Xem chi tiết">
             <Button
-              icon={<Eye size={15} />}
+              size="small"
+              icon={<Eye size={14} />}
               onClick={() => navigate(`/manage/invoices/detail/${r.id}`)}
-
-              style={{
-                backgroundColor: "#22c55e",
-                borderColor: "#22c55e",
-                color: "white",
-              }}
+              className="border-emerald-400 text-emerald-600"
             />
           </Tooltip>
-          <Tooltip title={!canEdit ? "Không có quyền sửa" : "Sửa"}>
-            <Button
-              disabled={!canEdit}
-              icon={<Edit size={15} />}
-              onClick={() => navigate(`/manage/invoices/edit/${r.id}`)}
-
-              style={{
-                backgroundColor: !canEdit ? "#d1d5db" : "#0ea5e9",
-                borderColor: !canEdit ? "#d1d5db" : "#0ea5e9",
-                color: "white",
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Hóa đơn sẽ được chuyển vào thùng rác. Tiếp tục?"
-            onConfirm={() => deleteMutation.mutate(r.id)}
-            disabled={!canEdit}
-          >
-            <Tooltip title={!canEdit ? "Không có quyền xóa" : "Xóa"}>
-              <Button disabled={!canEdit} danger icon={<Trash2 size={15} />} />
+          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+            <Tooltip title="Chỉnh sửa">
+              <Button
+                size="small"
+                icon={<Edit size={14} />}
+                onClick={() => navigate(`/manage/invoices/edit/${r.id}`)}
+                className="border-sky-400 text-sky-600"
+              />
             </Tooltip>
-          </Popconfirm>
-        </div>
+            <Popconfirm
+              title="Xóa hóa đơn này?"
+              description="Hóa đơn sẽ được chuyển vào thùng rác."
+              onConfirm={() => deleteMutation.mutate(r.id)}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Tooltip title="Xóa">
+                <Button size="small" danger icon={<Trash2 size={14} />} />
+              </Tooltip>
+            </Popconfirm>
+          </RequireRole>
+        </Space>
       ),
     },
   ];
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold">Danh sách hóa đơn</h2>
-        <div className="flex gap-2">
-          <Button
-            icon={<FileX size={15} />}
-            onClick={() => navigate("/manage/invoices/deleted")}
-
-          >
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Quản lý hóa đơn</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {meta?.total != null ? `${meta.total} hóa đơn` : "Danh sách hóa đơn thuê phòng"}
+          </p>
+        </div>
+        <Space>
+          <Button icon={<FileX size={14} />} onClick={() => navigate("/manage/invoices/deleted")}>
             Đã xóa
           </Button>
-          {canEdit && (
+          <Tooltip title="Tải lại">
+            <Button icon={<RefreshCw size={14} />} onClick={() => refetch()} />
+          </Tooltip>
+          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Button
               type="primary"
-              icon={<Plus size={15} />}
+              icon={<Plus size={16} />}
               onClick={() => navigate("/manage/invoices/create")}
-
-              className="bg-blue-600"
+              className="bg-emerald-600 hover:bg-emerald-700 border-emerald-600"
             >
               Tạo hóa đơn
             </Button>
-          )}
-        </div>
+          </RequireRole>
+        </Space>
       </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+        <div className="flex items-center gap-2 text-sm text-slate-500">
+          <Filter size={14} />
+          <span>Lọc:</span>
+        </div>
+        <Select
+          value={filters.status ?? "all"}
+          onChange={(v) => handleFilterChange("status", v === "all" ? undefined : v)}
+          className="w-52"
+          options={[
+            { value: "all", label: "Tất cả trạng thái" },
+            ...Object.entries(InvoiceStatusLabels).map(([k, v]) => ({
+              value: k,
+              label: v,
+            })),
+          ]}
+        />
+        <Select
+          value={filters.sort ?? "-created_at"}
+          onChange={(v) => handleFilterChange("sort", v)}
+          className="w-48"
+          options={[
+            { value: "-created_at", label: "Mới nhất" },
+            { value: "created_at", label: "Cũ nhất" },
+            { value: "-issue_date", label: "Phát hành mới" },
+            { value: "due_date", label: "Hạn sớm nhất" },
+            { value: "-total_amount", label: "Tổng tiền cao" },
+          ]}
+        />
+        {!canManage && (
+          <Badge
+            status="processing"
+            text={<span className="text-xs text-slate-500">Chế độ xem</span>}
+          />
+        )}
+      </div>
+
       <Table
         dataSource={invoices}
         columns={columns}
         rowKey="id"
         loading={isLoading}
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          pageSize: filters.per_page ?? 15,
+          total: meta?.total,
+          current: filters.page ?? 1,
+          onChange: (page, pageSize) =>
+            setFilters((prev) => ({ ...prev, page, per_page: pageSize })),
+          showTotal: (total) => `Tổng ${total} hóa đơn`,
+          showSizeChanger: true,
+        }}
         scroll={{ x: 900 }}
+        size="middle"
+        rowClassName="hover:bg-slate-50 transition-colors"
       />
     </div>
   );

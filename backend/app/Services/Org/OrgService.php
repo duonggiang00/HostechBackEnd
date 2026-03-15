@@ -11,10 +11,15 @@ class OrgService
     /**
      * Paginate organizations
      */
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, bool $withTrashed = false): LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, bool $withTrashed = false, $performer = null): LengthAwarePaginator
     {
-        $query = QueryBuilder::for(Org::class)
-            ->allowedFilters($allowedFilters)
+        $query = QueryBuilder::for(Org::class);
+
+        if ($performer && ! $performer->hasRole('Admin') && $performer->org_id) {
+            $query->where('id', $performer->org_id);
+        }
+
+        $query->allowedFilters($allowedFilters)
             ->defaultSort('name')
             ->withCount(['properties', 'users']);
 

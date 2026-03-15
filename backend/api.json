@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://localhost/api"
+            "url": "http://127.0.0.1:8000/api"
         }
     ],
     "tags": [
@@ -16,6 +16,9 @@
         },
         {
             "name": "Qu\u1ea3n l\u00fd H\u1ee3p \u0111\u1ed3ng"
+        },
+        {
+            "name": "Dashboard"
         },
         {
             "name": "Qu\u1ea3n l\u00fd H\u00f3a \u0111\u01a1n"
@@ -54,6 +57,202 @@
         }
     ],
     "paths": {
+        "/dashboard": {
+            "get": {
+                "operationId": "dashboard.index",
+                "description": "Tr\u1ea3 v\u1ec1 d\u1eef li\u1ec7u dashboard t\u01b0\u01a1ng \u1ee9ng v\u1edbi role \u0111ang \u0111\u0103ng nh\u1eadp:\n- Admin: th\u1ed1ng k\u00ea to\u00e0n h\u1ec7 th\u1ed1ng\n- Owner: th\u1ed1ng k\u00ea trong t\u1ed5 ch\u1ee9c\n- Manager/Staff: th\u1ed1ng k\u00ea theo property \u0111\u01b0\u1ee3c ph\u00e2n c\u00f4ng",
+                "summary": "Dashboard t\u1ed5ng quan theo vai tr\u00f2",
+                "tags": [
+                    "Dashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "integer",
+                                    "const": 403
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "B\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n truy c\u1eadp dashboard."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/dashboard/admin": {
+            "get": {
+                "operationId": "dashboard.admin",
+                "description": "Ch\u1ec9 d\u00e0nh cho role Admin. Tr\u1ea3 v\u1ec1 s\u1ed1 li\u1ec7u t\u1ed5ng quan to\u00e0n h\u1ec7 th\u1ed1ng\ng\u1ed3m t\u1ed5 ch\u1ee9c, ng\u01b0\u1eddi d\u00f9ng v\u00e0 b\u1ea5t \u0111\u1ed9ng s\u1ea3n.",
+                "summary": "Dashboard h\u1ec7 th\u1ed1ng cho Admin",
+                "tags": [
+                    "Dashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "integer",
+                                    "const": 403
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "Ch\u1ec9 Admin m\u1edbi c\u00f3 quy\u1ec1n truy c\u1eadp."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/dashboard/owner": {
+            "get": {
+                "operationId": "dashboard.owner",
+                "description": "D\u00e0nh cho Admin v\u00e0 Owner. Tr\u1ea3 v\u1ec1 doanh thu, t\u00ecnh tr\u1ea1ng property,\nnh\u00e2n s\u1ef1 v\u1eadn h\u00e0nh v\u00e0 h\u1ee3p \u0111\u1ed3ng trong t\u1ed5 ch\u1ee9c hi\u1ec7n t\u1ea1i.",
+                "summary": "Dashboard t\u1ed5 ch\u1ee9c cho Owner",
+                "tags": [
+                    "Dashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "integer",
+                                    "const": 403
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "Ch\u1ec9 Owner m\u1edbi c\u00f3 quy\u1ec1n truy c\u1eadp."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/dashboard/manager": {
+            "get": {
+                "operationId": "dashboard.manager",
+                "description": "D\u00e0nh cho Admin, Owner, Manager, Staff. Tr\u1ea3 v\u1ec1 th\u1ed1ng k\u00ea tenant,\ndoanh thu, h\u1ee3p \u0111\u1ed3ng v\u00e0 ticket tr\u00ean c\u00e1c property \u0111\u01b0\u1ee3c ph\u00e2n c\u00f4ng.",
+                "summary": "Dashboard v\u1eadn h\u00e0nh cho Manager/Staff",
+                "tags": [
+                    "Dashboard"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "integer",
+                                    "const": 403
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": "B\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n truy c\u1eadp."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
         "/services/trash": {
             "get": {
                 "operationId": "service.trash",
@@ -3936,7 +4135,8 @@
                                             "SERVICE",
                                             "PENALTY",
                                             "DISCOUNT",
-                                            "ADJUSTMENT"
+                                            "ADJUSTMENT",
+                                            "DEPOSIT"
                                         ]
                                     },
                                     "service_id": {
@@ -6346,6 +6546,387 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/rooms/quick": {
+            "post": {
+                "operationId": "room.quickCreate",
+                "description": "T\u1ea1o ph\u00f2ng v\u1edbi th\u00f4ng tin t\u1ed1i thi\u1ec3u. Ph\u00f2ng s\u1ebd \u1edf tr\u1ea1ng th\u00e1i `draft`\nv\u00e0 kh\u00f4ng xu\u1ea5t hi\u1ec7n trong danh s\u00e1ch ch\u00ednh th\u1ee9c cho \u0111\u1ebfn khi \u0111\u01b0\u1ee3c publish.",
+                "summary": "T\u1ea1o ph\u00f2ng nhanh (Draft)",
+                "tags": [
+                    "Qu\u1ea3n l\u00fd Ph\u00f2ng"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomQuickCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "`RoomResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/RoomResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/rooms/drafts": {
+            "get": {
+                "operationId": "room.drafts",
+                "description": "L\u1ea5y danh s\u00e1ch c\u00e1c ph\u00f2ng \u0111ang \u1edf tr\u1ea1ng th\u00e1i `draft`.",
+                "summary": "Danh s\u00e1ch ph\u00f2ng Draft",
+                "tags": [
+                    "Qu\u1ea3n l\u00fd Ph\u00f2ng"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `RoomResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/RoomResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/rooms/{id}/publish": {
+            "post": {
+                "operationId": "room.publish",
+                "description": "K\u00edch ho\u1ea1t ph\u00f2ng t\u1eeb tr\u1ea1ng th\u00e1i `draft` sang `available`.\nC\u00f3 th\u1ec3 truy\u1ec1n `code` v\u00e0 `base_price` \u0111\u1ec3 override tr\u01b0\u1edbc khi publish.",
+                "summary": "Publish ph\u00f2ng",
+                "tags": [
+                    "Qu\u1ea3n l\u00fd Ph\u00f2ng"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomPublishRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`RoomResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/RoomResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/rooms/{id}/floor-plan": {
+            "put": {
+                "operationId": "room.setFloorPlan",
+                "description": "T\u1ea1o ho\u1eb7c c\u1eadp nh\u1eadt v\u1ecb tr\u00ed (x, y, width, height) c\u1ee7a ph\u00f2ng tr\u00ean floor plan.",
+                "summary": "G\u00e1n v\u1ecb tr\u00ed ph\u00f2ng tr\u00ean s\u01a1 \u0111\u1ed3 t\u1ea7ng",
+                "tags": [
+                    "Qu\u1ea3n l\u00fd Ph\u00f2ng"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RoomFloorPlanRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Floor plan node updated successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/RoomFloorPlanNode"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "room.removeFloorPlan",
+                "summary": "X\u00f3a v\u1ecb tr\u00ed ph\u00f2ng tr\u00ean s\u01a1 \u0111\u1ed3 t\u1ea7ng",
+                "tags": [
+                    "Qu\u1ea3n l\u00fd Ph\u00f2ng"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "const": "Floor plan node removed successfully."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
@@ -12546,8 +13127,7 @@
                             "type": [
                                 "string",
                                 "null"
-                            ],
-                            "format": "uuid"
+                            ]
                         }
                     },
                     {
@@ -13081,8 +13661,7 @@
                             "type": [
                                 "string",
                                 "null"
-                            ],
-                            "format": "uuid"
+                            ]
                         }
                     },
                     {
@@ -14756,6 +15335,8 @@
                         ],
                         "enum": [
                             "DRAFT",
+                            "PENDING_SIGNATURE",
+                            "PENDING_PAYMENT",
                             "ACTIVE",
                             "ENDED",
                             "CANCELLED"
@@ -14898,6 +15479,8 @@
                         ],
                         "enum": [
                             "DRAFT",
+                            "PENDING_SIGNATURE",
+                            "PENDING_PAYMENT",
                             "ACTIVE",
                             "ENDED",
                             "CANCELLED"
@@ -14984,8 +15567,41 @@
                     "name": {
                         "type": "string"
                     },
+                    "floor_number": {
+                        "type": "string"
+                    },
                     "sort_order": {
                         "type": "string"
+                    },
+                    "rooms_count": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
+                    "available_rooms_count": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
+                    "occupied_rooms_count": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
                     },
                     "rooms": {
                         "type": "array",
@@ -15005,6 +15621,7 @@
                     "property_id",
                     "code",
                     "name",
+                    "floor_number",
                     "sort_order",
                     "created_at",
                     "updated_at"
@@ -15026,6 +15643,9 @@
                         "type": "string",
                         "maxLength": 255
                     },
+                    "floor_number": {
+                        "type": "integer"
+                    },
                     "sort_order": {
                         "type": [
                             "integer",
@@ -15037,7 +15657,8 @@
                 "required": [
                     "property_id",
                     "code",
-                    "name"
+                    "name",
+                    "floor_number"
                 ],
                 "title": "FloorStoreRequest"
             },
@@ -15051,6 +15672,9 @@
                     "name": {
                         "type": "string",
                         "maxLength": 255
+                    },
+                    "floor_number": {
+                        "type": "integer"
                     },
                     "sort_order": {
                         "type": [
@@ -15691,7 +16315,8 @@
                                         "SERVICE",
                                         "PENALTY",
                                         "DISCOUNT",
-                                        "ADJUSTMENT"
+                                        "ADJUSTMENT",
+                                        "DEPOSIT"
                                     ]
                                 },
                                 "service_id": {
@@ -16426,6 +17051,26 @@
                     "bank_accounts": {
                         "type": "string"
                     },
+                    "floors_count": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
+                    "rooms_count": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "integer"
+                            }
+                        ]
+                    },
                     "floors": {
                         "type": "array",
                         "items": {
@@ -16848,10 +17493,198 @@
                 },
                 "title": "RoomAssetUpdateRequest"
             },
+            "RoomFloorPlanNode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "org_id": {
+                        "type": "string"
+                    },
+                    "floor_id": {
+                        "type": "string"
+                    },
+                    "room_id": {
+                        "type": "string"
+                    },
+                    "x": {
+                        "type": "string"
+                    },
+                    "y": {
+                        "type": "string"
+                    },
+                    "width": {
+                        "type": "string"
+                    },
+                    "height": {
+                        "type": "string"
+                    },
+                    "rotation": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meta": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {}
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "org_id",
+                    "floor_id",
+                    "room_id",
+                    "x",
+                    "y",
+                    "width",
+                    "height",
+                    "rotation",
+                    "label",
+                    "meta",
+                    "created_at",
+                    "updated_at",
+                    "deleted_at"
+                ],
+                "title": "RoomFloorPlanNode"
+            },
+            "RoomFloorPlanRequest": {
+                "type": "object",
+                "properties": {
+                    "floor_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "x": {
+                        "type": "number"
+                    },
+                    "y": {
+                        "type": "number"
+                    },
+                    "width": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 1
+                    },
+                    "height": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 1
+                    },
+                    "rotation": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 50
+                    },
+                    "meta": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "floor_id",
+                    "x",
+                    "y"
+                ],
+                "title": "RoomFloorPlanRequest"
+            },
+            "RoomPublishRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 50
+                    },
+                    "base_price": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0.01
+                    }
+                },
+                "title": "RoomPublishRequest"
+            },
+            "RoomQuickCreateRequest": {
+                "type": "object",
+                "properties": {
+                    "property_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "floor_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    }
+                },
+                "required": [
+                    "property_id",
+                    "name"
+                ],
+                "title": "RoomQuickCreateRequest"
+            },
             "RoomResource": {
                 "type": "object",
                 "properties": {
                     "id": {
+                        "type": "string"
+                    },
+                    "property_id": {
+                        "type": "string"
+                    },
+                    "floor_id": {
                         "type": "string"
                     },
                     "code": {
@@ -16887,6 +17720,9 @@
                     "utilities": {
                         "type": "string"
                     },
+                    "is_draft": {
+                        "type": "boolean"
+                    },
                     "created_at": {
                         "type": "string"
                     },
@@ -16910,6 +17746,9 @@
                     "status_histories": {
                         "type": "string"
                     },
+                    "floor_plan_node": {
+                        "type": "string"
+                    },
                     "images": {
                         "type": "string",
                         "description": "Media (Spatie MediaLibrary)"
@@ -16917,6 +17756,8 @@
                 },
                 "required": [
                     "id",
+                    "property_id",
+                    "floor_id",
                     "code",
                     "name",
                     "type",
@@ -16928,6 +17769,7 @@
                     "description",
                     "amenities",
                     "utilities",
+                    "is_draft",
                     "created_at",
                     "updated_at"
                 ],

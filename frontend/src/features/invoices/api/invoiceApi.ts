@@ -1,10 +1,28 @@
 import Api from "../../../Api/Api";
 import type { Invoice, InvoiceFormValues, InvoiceItem, InvoiceItemFormValues } from "../../../Types/InvoiceTypes";
 
-// Lấy danh sách hóa đơn (active)
-export const getInvoices = async (): Promise<Invoice[]> => {
-    const res = await Api.get("invoices");
-    return res.data?.data ?? res.data;
+export interface InvoiceFilters {
+    status?: string;
+    property_id?: string;
+    contract_id?: string;
+    sort?: string;
+    include?: string;
+    per_page?: number;
+    page?: number;
+}
+
+// Lấy danh sách hóa đơn với filter & sort
+export const getInvoices = async (filters?: InvoiceFilters): Promise<{ data: Invoice[]; meta?: any }> => {
+    const params: Record<string, any> = {};
+    if (filters?.status) params["filter[status]"] = filters.status;
+    if (filters?.property_id) params["filter[property_id]"] = filters.property_id;
+    if (filters?.contract_id) params["filter[contract_id]"] = filters.contract_id;
+    if (filters?.sort) params["sort"] = filters.sort;
+    if (filters?.include) params["include"] = filters.include;
+    if (filters?.per_page) params["per_page"] = filters.per_page;
+    if (filters?.page) params["page"] = filters.page;
+    const res = await Api.get("invoices", { params });
+    return res.data;
 };
 
 // Lấy danh sách hóa đơn đã xóa mềm (trash)

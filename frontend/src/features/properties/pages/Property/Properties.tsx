@@ -1,6 +1,8 @@
-import { useState } from "react";
-import { Button, Tooltip, Popconfirm, Modal, Input, Empty, Skeleton, Table, Tag, Pagination } from "antd";
-import { Plus, Eye, Trash2, RotateCcw, Search, Home, Settings2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Button, Tooltip, Popconfirm, Modal, Empty, Skeleton, Table, Tag, Pagination } from "antd";
+import { Plus, Eye, Trash2, RotateCcw, Home, Settings2 } from "lucide-react";
+import FilterBar from "../../../../shared/components/FilterBar";
+
 import { useNavigate } from "react-router";
 import {
   useProperties,
@@ -12,10 +14,15 @@ import {
 import { usePermission } from "../../../../shared/hooks/usePermission";
 import { useDebounce } from "../../../../shared/hooks/useDebounce";
 import type { PropertyDTO } from "../../types";
+import FloorListInline from "../../components/FloorListInline";
+
+import { useTokenStore } from "../../../auth/stores/authStore";
 
 const Properties = () => {
   const navigate = useNavigate();
   const { can } = usePermission();
+
+  const { org_id, role } = useTokenStore();
 
   const [searchText, setSearchText] = useState("");
   const [trashOpen, setTrashOpen] = useState(false);
@@ -25,7 +32,14 @@ const Properties = () => {
   const debouncedSearch = useDebounce(searchText, 400);
 
   // Queries
-  const { data: paginatedData, isLoading } = useProperties(debouncedSearch || undefined, currentPage, pageSize);
+  const queryParams = {
+    search: debouncedSearch || undefined,
+    page: currentPage,
+    per_page: pageSize,
+    filter: (role === 'Admin' ? {} : { org_id: org_id })
+  };
+
+  const { data: paginatedData, isLoading } = useProperties(queryParams);
   const properties = paginatedData?.data || [];
   const meta = paginatedData?.meta || { current_page: 1, last_page: 1, total: 0, per_page: 10 };
 
@@ -41,6 +55,14 @@ const Properties = () => {
       setPageSize(size);
     }
   };
+  
+  // Redirect Manager/Staff if they have at least one property
+  useEffect(() => {
+    if ((role === "Manager" || role === "Staff") && !isLoading && properties.length > 0) {
+      navigate(`detailProperty/${properties[0].id}`, { replace: true });
+    }
+  }, [role, isLoading, properties, navigate]);
+
 
   // Table Columns
   const tableColumns = [
@@ -67,8 +89,8 @@ const Properties = () => {
       key: 'scale',
       render: (_: any, record: PropertyDTO) => (
         <div className="flex gap-2">
-          <Tag color="indigo">{record.floors?.length || 0} tầng</Tag>
-          <Tag color="emerald">{record.rooms?.length || 0} phòng</Tag>
+          <Tag color="indigo">{record.floors_count || 0} tầng</Tag>
+          <Tag color="emerald">{record.rooms_count || 0} phòng</Tag>
         </div>
       ),
     },
@@ -119,32 +141,26 @@ const Properties = () => {
     },
   ];
 
+  const handleClearFilters = () => {
+    setSearchText("");
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="relative w-full h-full animate-fade-in flex flex-col gap-6">
+    <div className="relative w-full h-full animate-fade-in flex flex-col">
       {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-xl border border-gray-200/50 p-5 rounded-2xl shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
             <Home className="text-blue-500" size={26} />
             Quản Lý Nhà Trọ
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Tổng số: <span className="font-semibold text-slate-700">{meta.total}</span> nhà
+            Quản lý danh sách các tòa nhà, khu trọ của bạn.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <Input
-            prefix={<Search size={16} className="text-slate-400" />}
-            placeholder="Tìm kiếm nhà trọ..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-64 rounded-xl border-slate-200 hover:border-blue-400 focus:border-blue-500 py-2 shadow-sm"
-            allowClear
-          />
-
-
-
+        <div className="flex items-center gap-3">
           {can("delete", "properties") && (
             <Button
               icon={<Trash2 size={16} />}
@@ -159,13 +175,27 @@ const Properties = () => {
               type="primary"
               icon={<Plus size={18} />}
               onClick={() => navigate("createProperty")}
-              className="bg-blue-600 hover:bg-blue-700 rounded-xl h-[40px] px-5 shadow-md shadow-blue-500/20 font-medium flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 rounded-xl h-[40px] px-5 shadow-md shadow-blue-500/20 font-medium flex items-center gap-2 border-none"
             >
               Thêm nhà
             </Button>
           )}
         </div>
       </div>
+
+      {/* FILTER BAR */}
+      <FilterBar
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder="Tìm kiếm tên, mã nhà..."
+        onClearAll={handleClearFilters}
+        extra={
+          <div className="text-sm text-slate-500 px-2 border-l border-slate-200 ml-2">
+            Tổng cộng: <span className="font-semibold text-slate-700">{meta.total}</span>
+          </div>
+        }
+      />
+
 
       {/* CONTENT AREA */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex-1 flex flex-col">
@@ -192,6 +222,10 @@ const Properties = () => {
               pagination={false}
               className="modern-table"
               rowClassName="hover:bg-slate-50 cursor-pointer transition-colors"
+              expandable={{
+                expandedRowRender: (record) => <FloorListInline propertyId={record.id} />,
+                rowExpandable: () => true,
+              }}
               onRow={(record) => ({
                 onDoubleClick: () => navigate(`detailProperty/${record.id}`)
               })}

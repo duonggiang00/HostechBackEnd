@@ -1,39 +1,71 @@
 import { useState } from "react";
-import { Table, Button, Tooltip, Popconfirm, Modal, Input, Tag, Empty, Skeleton, Pagination } from "antd";
+import { Table, Button, Tooltip, Popconfirm, Modal, Tag, Empty, Skeleton, Pagination } from "antd";
 import { formatStatusRoom } from "../../../../Constants/Helper";
-import { Plus, Eye, Trash2, RotateCcw, Search, DoorOpen, Settings2 } from "lucide-react";
+import { Plus, Eye, Trash2, RotateCcw, DoorOpen, Settings2 } from "lucide-react";
 
 import { useNavigate } from "react-router";
 import type { ColumnsType } from "antd/es/table";
 import {
-  useRooms,
-  useDeleteRoom,
   useDeletedRooms,
   useRestoreRoom,
   useForceDeleteRoom,
+  useRooms,
+  useDeleteRoom,
+  useProperties,
+  useFloors,
 } from "../../hooks/useProperties";
+import FilterBar from "../../../../shared/components/FilterBar";
+
 import { usePermission } from "../../../../shared/hooks/usePermission";
 import { useDebounce } from "../../../../shared/hooks/useDebounce";
+import { useTokenStore } from "../../../auth/stores/authStore";
 
 const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string }) => {
   const navigate = useNavigate();
   const { can } = usePermission();
-
   // States
   const [searchText, setSearchText] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState<string | undefined>(propertyId);
+  const [selectedFloor, setSelectedFloor] = useState<string | undefined>(floorId);
+  const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
   const [trashOpen, setTrashOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+
   const debouncedSearch = useDebounce(searchText, 400);
 
   // Queries
-  const queryParams: Record<string, any> = {};
-  if (debouncedSearch) queryParams.search = debouncedSearch;
-  if (propertyId) queryParams["filter[property_id]"] = propertyId;
-  if (floorId) queryParams["filter[floor_id]"] = floorId;
-  queryParams.page = currentPage;
-  queryParams.per_page = pageSize;
+  const { org_id, role: rawRole } = useTokenStore();
+  const role = rawRole || "";
+
+  const queryParams: Record<string, any> = {
+    page: currentPage,
+    per_page: pageSize,
+    search: debouncedSearch || undefined,
+    filter: {
+      ...(role === 'Admin' ? {} : { org_id: org_id }),
+      property_id: selectedProperty || propertyId,
+      floor_id: selectedFloor || floorId,
+      status: selectedStatus,
+    }
+  };
+
+  const { data: propertiesData } = useProperties({ per_page: 100 });
+  const { data: floorsData } = useFloors({
+    filter: { property_id: selectedProperty || propertyId },
+    per_page: 100
+  });
+
+  const propertyOptions = (propertiesData as any)?.data?.map((p: any) => ({ label: p.name, value: p.id })) || [];
+  const floorOptions = (floorsData as any)?.data?.map((f: any) => ({ label: f.name, value: f.id })) || [];
+  const statusOptions = [
+    { label: "Phòng trống", value: 1 },
+    { label: "Phòng đang ở", value: 2 },
+    { label: "Phòng đang sửa", value: 3 },
+    { label: "Phòng đặt chỗ", value: 4 },
+  ];
+
 
   const { data: paginatedData, isLoading } = useRooms(queryParams);
   console.log("[DEBUG] Rooms - queryParams:", queryParams);
@@ -58,12 +90,24 @@ const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string 
 
   const columns: ColumnsType<any> = [
     {
+      title: "Ảnh",
+      dataIndex: "images",
+      key: "images",
+      width: 60,
+      render: (images: any[]) => {
+        if (images && images.length > 0) {
+          return <img src={images[0].thumb} className="w-10 h-10 object-cover rounded shadow-sm border border-slate-200" alt="room" />;
+        }
+        return <div className="w-10 h-10 bg-slate-100 rounded border border-slate-200 flex items-center justify-center text-slate-400 text-[9px]">NO IMG</div>;
+      }
+    },
+    {
       title: "Tên phòng",
       dataIndex: "name",
       key: "name",
       render: (text: string) => <span className="font-bold text-slate-800">{text}</span>
     },
-    ...(floorId ? [] : [
+    ...(floorId || role === "Tenant" ? [] : [
       {
         title: "Tầng",
         dataIndex: ["floor", "name"],
@@ -71,7 +115,7 @@ const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string 
         render: (text: string) => <span className="text-slate-600 font-medium">{text || "—"}</span>,
       }
     ]),
-    ...(propertyId ? [] : [
+    ...(propertyId || role === "Tenant" ? [] : [
       {
         title: "Nhà trọ",
         dataIndex: ["property", "name"],
@@ -138,32 +182,30 @@ const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string 
 
   const isEmbedded = propertyId || floorId;
 
-  return (
-    <div className="relative w-full h-full animate-fade-in flex flex-col gap-6">
+  const handleClearFilters = () => {
+    setSearchText("");
+    setSelectedProperty(propertyId);
+    setSelectedFloor(floorId);
+    setSelectedStatus(undefined);
+    setCurrentPage(1);
+  };
 
+  return (
+    <div className="relative w-full h-full animate-fade-in flex flex-col">
       {/* HEADER SECTION */}
       {!isEmbedded && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-xl border border-gray-200/50 p-5 rounded-2xl shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
               <DoorOpen className="text-emerald-500" size={26} />
               Quản Lý Phòng
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Tổng số: <span className="font-semibold text-slate-700">{meta.total}</span> phòng
+              Quản lý danh sách các phòng trọ của bạn.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Input
-              prefix={<Search size={16} className="text-slate-400" />}
-              placeholder="Tìm kiếm phòng..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="w-64 rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 py-2 shadow-sm"
-              allowClear
-            />
-
+          <div className="flex items-center gap-3">
             {can("delete", "rooms") && (
               <Button
                 icon={<Trash2 size={16} />}
@@ -187,40 +229,59 @@ const Rooms = ({ propertyId, floorId }: { propertyId?: string; floorId?: string 
         </div>
       )}
 
-      {/* EMBEDDED HEADER HEADER (Khi truyền propertyId/floorId) */}
-      {isEmbedded && (
-        <div className="flex items-center justify-between bg-white border border-gray-100 p-4 rounded-xl shadow-sm">
-          <Input
-            prefix={<Search size={16} className="text-slate-400" />}
-            placeholder="Tìm kiếm phòng..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className="w-64 rounded-xl border-slate-200 hover:border-emerald-400 focus:border-emerald-500 py-2 shadow-sm"
-            allowClear
-          />
-          <div className="flex gap-2">
-            {can("delete", "rooms") && !propertyId && !floorId && (
-              <Button
-                icon={<Trash2 size={16} />}
-                onClick={() => setTrashOpen(true)}
-                className="rounded-xl border-slate-200 text-slate-600 hover:text-red-500 hover:border-red-500 transition-colors h-[38px]"
-              >
-                Thùng rác
-              </Button>
-            )}
-            {can("create", "rooms") && (
-              <Button
-                type="primary"
-                icon={<Plus size={16} />}
-                onClick={() => navigate("/manage/rooms/createRoom", { state: { propertyId, floorId } })}
-                className="bg-emerald-600 hover:bg-emerald-700 rounded-xl h-[38px] px-5 shadow-md shadow-emerald-500/20 font-medium flex items-center gap-2 border-none"
-              >
-                Thêm phòng
-              </Button>
-            )}
+      {/* FILTER BAR */}
+      <FilterBar
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        searchPlaceholder="Tìm kiếm tên, mã phòng..."
+        filters={[
+          ...(!propertyId ? [{
+            key: 'property_id',
+            placeholder: 'Chọn nhà trọ',
+            type: 'select' as const,
+            options: propertyOptions,
+            width: 200
+          }] : []),
+          ...(!floorId ? [{
+            key: 'floor_id',
+            placeholder: 'Chọn tầng',
+            type: 'select' as const,
+            options: floorOptions,
+            width: 160,
+            loading: isLoading && !!(selectedProperty || propertyId)
+          }] : []),
+          {
+            key: 'status',
+            placeholder: 'Trạng thái',
+            type: 'select' as const,
+            options: statusOptions,
+            width: 150
+          }
+        ]}
+        filterValues={{
+          property_id: selectedProperty,
+          floor_id: selectedFloor,
+          status: selectedStatus
+        }}
+        onFilterChange={(key, val) => {
+          if (key === 'property_id') {
+            setSelectedProperty(val);
+            setSelectedFloor(undefined);
+          } else if (key === 'floor_id') {
+            setSelectedFloor(val);
+          } else if (key === 'status') {
+            setSelectedStatus(val);
+          }
+          setCurrentPage(1);
+        }}
+        onClearAll={handleClearFilters}
+        extra={
+          <div className="text-sm text-slate-500 px-2 border-l border-slate-200 ml-2">
+            Tổng cộng: <span className="font-semibold text-slate-700">{meta.total}</span>
           </div>
-        </div>
-      )}
+        }
+      />
+
 
       {/* CONTENT AREA */}
       <div className={`bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex-1 flex flex-col ${isEmbedded ? 'min-h-[400px]' : ''}`}>

@@ -2,7 +2,6 @@ import { useRoutes, Navigate } from "react-router";
 import { useEffect } from "react";
 import { useTokenStore } from "./features/auth/stores/authStore";
 import LayoutManage from "./Layouts/Manage/LayoutManage";
-import Dashboard from "./Pages/Admin/Dashboard";
 import Statistical from "./Pages/Admin/Statistical";
 import AuthPage from "./features/auth/pages/Login";
 import VerifyOTP from "./features/auth/pages/VerifyOTP";
@@ -41,9 +40,8 @@ function App() {
     { 
       path: "/", 
       element: roles?.some(r => r.toLowerCase() === "tenant")
-        ? <Navigate to="/me" replace />
+        ? <Navigate to="/manage/rooms" replace />
         : <Navigate to="/manage" replace />
-
     },
     { 
       path: "/auth", 
@@ -64,7 +62,6 @@ function App() {
           path: "",
           Component: LayoutManage,
           children: [
-            { path: "", Component: Dashboard },
             { path: "statistical", Component: Statistical },
             ...adminRoutes,
           ],

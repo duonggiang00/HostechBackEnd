@@ -6,8 +6,11 @@ import { useOrgStore } from '../stores/orgStore';
 
 const { Text } = Typography;
 
+import { useTokenStore } from '../../auth/stores/authStore';
+
 export const OrgSwitcher: React.FC = () => {
-    const { data: orgs, isLoading } = useOrgs();
+    const orgId = useTokenStore((state) => state.org_id);
+    const { data: orgs, isLoading } = useOrgs(orgId);
     const activeOrg = useOrgStore((state) => state.activeOrg);
     const setActiveOrg = useOrgStore((state) => state.setActiveOrg);
 
