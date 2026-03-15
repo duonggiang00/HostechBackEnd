@@ -21,7 +21,7 @@ import { propertyRoutes } from "../../features/properties/routes";
 import { userRoutes } from "../../features/users/routes.tsx";
 // ── Thêm feature mới → import ở đây ────────────────────────────
 // import { handoverRoutes } from "../../features/handovers/routes";
-import { profileRoutes } from "../../features/profile/routes";
+// import { profileRoutes } from "../../features/profile/routes";
 import { orgRoutes } from "../../features/organizations/routes.tsx";
 import { systemRoutes } from "../../features/system/routes.tsx";
 
@@ -39,7 +39,7 @@ export const manageRoutes: RouteConfig[] = [
   serviceRoutes,
   ...propertyRoutes,
   ...userRoutes,
-  profileRoutes,
+  // profileRoutes,
   ...orgRoutes,
   systemRoutes,
 ];
@@ -47,9 +47,9 @@ export const manageRoutes: RouteConfig[] = [
 /**
  * Các route dành cho Khách thuê (Tenant Portal)
  */
-export const portalRoutes: RouteConfig[] = [
-  profileRoutes, // Cho phép Khách thuê truy cập /me/profile
-];
+// export const portalRoutes: RouteConfig[] = [
+//   profileRoutes, // Cho phép Khách thuê truy cập /me/profile
+// ];
 
 // Giữ lại adminRoutes để tương thích ngược (Backward Compatibility)
 export const adminRoutes = manageRoutes;
