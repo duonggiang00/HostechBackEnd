@@ -23,6 +23,8 @@ class FloorUpdateRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'floor_number' => ['sometimes', 'integer'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'area' => ['nullable', 'numeric', 'min:0'],
+            'shared_area' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
