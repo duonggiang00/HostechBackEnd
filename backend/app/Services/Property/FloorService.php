@@ -17,7 +17,7 @@ class FloorService
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'sort_order', 'created_at'])
-            ->allowedIncludes(['property', 'rooms'])
+            ->allowedIncludes(['property', 'rooms', 'rooms.floorPlanNode'])
             ->defaultSort('sort_order')
             ->withCount([
                 'rooms',
@@ -74,7 +74,7 @@ class FloorService
 
     public function find(string $id): ?Floor
     {
-        return Floor::withCount('rooms')->find($id);
+        return Floor::withCount('rooms')->with('media')->find($id);
     }
 
     public function findTrashed(string $id): ?Floor
@@ -129,5 +129,62 @@ class FloorService
         $floor = $this->findWithTrashed($id) ?? abort(404, 'Floor not found');
 
         return $floor->forceDelete();
+    }
+
+    /**
+     * Đồng bộ hóa (xóa/thêm/sửa) hàng loạt vị trí phòng trên bản vẽ mặt bằng
+     *
+     * @param string $id Floor ID
+     * @param array $nodes Array of room floor plan nodes
+     */
+    public function syncFloorPlanNodes(string $id, array $nodes): void
+    {
+        $floor = $this->find($id) ?? abort(404, 'Floor not found');
+
+        // Verify that all rooms in the request belong to the Org (Security check)
+        $roomIds = array_column($nodes, 'room_id');
+        $validRoomsCount = \App\Models\Property\Room::whereIn('id', $roomIds)
+            ->where('org_id', $floor->org_id)
+            ->count();
+
+        if ($validRoomsCount !== count(array_unique($roomIds))) {
+            abort(400, 'One or more rooms are invalid or do not belong to this organization.');
+        }
+
+        // Use transaction to ensure data integrity
+        \Illuminate\Support\Facades\DB::transaction(function () use ($floor, $nodes, $roomIds) {
+            // Delete any existing nodes for rooms that are no longer in the payload OR are strictly associated passing by the floor
+            // Note: If a room shifts to a different floor, we just overwrite its node.
+            \App\Models\Property\RoomFloorPlanNode::whereIn('room_id', function ($query) use ($floor) {
+                // Find all rooms currently belonging to this floor
+                $query->select('id')->from('rooms')->where('floor_id', $floor->id);
+            })->whereNotIn('room_id', $roomIds)->delete();
+
+            // Insert or Update new nodes
+            foreach ($nodes as $nodeData) {
+                \App\Models\Property\RoomFloorPlanNode::updateOrCreate(
+                    ['room_id' => $nodeData['room_id']],
+                    [
+                        'x' => $nodeData['x'],
+                        'y' => $nodeData['y'],
+                        'width' => $nodeData['width'],
+                        'height' => $nodeData['height'],
+                        'rotation' => $nodeData['rotation'] ?? 0,
+                        'label' => $nodeData['label'] ?? null,
+                    ]
+                );
+            }
+        });
+    }
+
+    /**
+     * Upload ảnh mặt bằng của tầng
+     */
+    public function uploadFloorPlanImage(string $id, \Illuminate\Http\UploadedFile $image): \Spatie\MediaLibrary\MediaCollections\Models\Media
+    {
+        $floor = $this->find($id) ?? abort(404, 'Floor not found');
+
+        return $floor->addMedia($image)
+            ->toMediaCollection('floor_plan');
     }
 }
