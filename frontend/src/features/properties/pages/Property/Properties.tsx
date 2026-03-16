@@ -85,6 +85,12 @@ const Properties = () => {
       render: (text: string) => <span className="text-slate-600 truncate max-w-[200px] block">{text || '-'}</span>,
     },
     {
+      title: 'Diện tích',
+      dataIndex: 'area',
+      key: 'area',
+      render: (text: number) => <span className="text-slate-600 block">{text ? `${text} m²` : '-'}</span>,
+    },
+    {
       title: 'Quy mô',
       key: 'scale',
       render: (_: any, record: PropertyDTO) => (

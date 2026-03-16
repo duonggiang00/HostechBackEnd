@@ -80,6 +80,7 @@ export interface PropertyDTO {
   code: string;
   name: string;
   address: string;
+  area: number;
   note: string;
   use_floors: boolean;
   default_billing_cycle: string;
