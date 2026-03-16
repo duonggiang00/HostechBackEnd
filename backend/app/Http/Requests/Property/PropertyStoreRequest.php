@@ -19,6 +19,7 @@ class PropertyStoreRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
             'area' => ['nullable', 'numeric', 'min:0'],
+            'shared_area' => ['nullable', 'numeric', 'min:0'],
             'note' => ['nullable', 'string'],
             'use_floors' => ['nullable', 'boolean'],
             'default_billing_cycle' => ['nullable', 'string', 'max:20'],

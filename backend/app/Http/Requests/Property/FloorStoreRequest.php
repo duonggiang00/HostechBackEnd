@@ -25,6 +25,8 @@ class FloorStoreRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'floor_number' => ['required', 'integer'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'area' => ['nullable', 'numeric', 'min:0'],
+            'shared_area' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
