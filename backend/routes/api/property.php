@@ -17,6 +17,8 @@ Route::get('floors/trash', [FloorController::class, 'trash']);
 Route::apiResource('floors', FloorController::class);
 Route::post('floors/{id}/restore', [FloorController::class, 'restore']);
 Route::delete('floors/{id}/force', [FloorController::class, 'forceDelete']);
+Route::post('floors/{id}/sync-floor-plan', [FloorController::class, 'syncFloorPlan']);
+Route::post('floors/{id}/upload-floor-plan', [FloorController::class, 'uploadImage']);
 
 // Rooms
 Route::get('rooms/trash', [RoomController::class, 'trash']);
