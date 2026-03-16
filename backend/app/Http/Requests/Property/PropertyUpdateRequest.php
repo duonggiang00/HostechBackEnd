@@ -19,6 +19,7 @@ class PropertyUpdateRequest extends FormRequest
             'code' => ['sometimes', 'string', 'max:50', 'unique:properties,code,'.$propertyId.',id'],
             'name' => ['sometimes', 'string', 'max:255'],
             'address' => ['nullable', 'string'],
+            'area' => ['nullable', 'numeric', 'min:0'],
             'note' => ['nullable', 'string'],
             'use_floors' => ['nullable', 'boolean'],
             'default_billing_cycle' => ['nullable', 'string', 'max:20'],

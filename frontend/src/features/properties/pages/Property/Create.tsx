@@ -116,6 +116,20 @@ const CreateProperty = () => {
                     className="rounded-xl h-11 border-slate-200 uppercase"
                   />
                 </Form.Item>
+
+                <Form.Item
+                  name="area"
+                  label={<span className="text-slate-600 font-medium">Tổng diện tích (m²)</span>}
+                  rules={[{ pattern: /^\d+(\.\d{1,2})?$/, message: "Vui lòng nhập số hợp lệ!" }]}
+                >
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="Ví dụ: 200.5"
+                    className="rounded-xl h-11 border-slate-200"
+                  />
+                </Form.Item>
               </div>
 
               <Form.Item
