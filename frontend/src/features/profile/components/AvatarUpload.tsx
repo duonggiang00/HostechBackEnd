@@ -4,7 +4,6 @@ import { LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import type { UploadChangeParam } from 'antd/es/upload';
 import type { RcFile, UploadFile, UploadProps } from 'antd/es/upload/interface';
 import { useUploadAvatar } from '../hooks/useProfile';
-import ImgCrop from 'antd-img-crop';
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null;
@@ -67,18 +66,16 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({ currentAvatarUrl }) 
   );
 
   return (
-    <ImgCrop rotationSlider aspect={1} cropShape="round" showGrid modalTitle="Chỉnh sửa ảnh đại diện" modalOk="Xong" modalCancel="Hủy">
-      <Upload
-        name="avatar"
-        listType="picture-circle"
-        className="avatar-uploader"
-        showUploadList={false}
-        beforeUpload={beforeUpload}
-        onChange={handleChange}
-        customRequest={customRequest}
-      >
-        {imageUrl ? <img src={imageUrl} alt="avatar" style={{ width: '100%', borderRadius: '50%', objectFit: 'cover', height: '100%' }} /> : uploadButton}
-      </Upload>
-    </ImgCrop>
+    <Upload
+      name="avatar"
+      listType="picture-circle"
+      className="avatar-uploader"
+      showUploadList={false}
+      beforeUpload={beforeUpload}
+      onChange={handleChange}
+      customRequest={customRequest}
+    >
+      {imageUrl ? <img src={imageUrl} alt="avatar" style={{ width: '100%', borderRadius: '50%', objectFit: 'cover', height: '100%' }} /> : uploadButton}
+    </Upload>
   );
 };
