@@ -2,7 +2,7 @@ import { useRoutes, Navigate } from "react-router";
 import { useEffect } from "react";
 import { useTokenStore } from "./features/auth/stores/authStore";
 import LayoutManage from "./Layouts/Manage/LayoutManage";
-import Dashboard from "./Pages/Admin/Dashboard";
+import Dashboard from "./Pages/Admin/Dashboards/Pages/Dashboard";
 import Statistical from "./Pages/Admin/Statistical";
 import AuthPage from "./features/auth/pages/Login";
 import VerifyOTP from "./features/auth/pages/VerifyOTP";
@@ -13,7 +13,6 @@ import LayoutAuth from "./Layouts/Auth/LayoutAuth";
 // portalRoutes
 // Route registry — tất cả admin feature routes gộp tại đây
 import { adminRoutes } from "./app/routes/registry";
-import LayoutPortal from "./Layouts/Portal/LayoutPortal";
 
 /**
  * App.tsx — KHÔNG cần sửa khi thêm feature mới.
@@ -65,6 +64,21 @@ function App() {
           path: "",
           Component: LayoutManage,
           children: [
+            { path: "", element: <Navigate to="dashboard" replace /> },
+            { path: "statistical", Component: Statistical },
+            ...adminRoutes,
+          ],
+        },
+      ],
+    },
+    {
+      path: "manage",
+      Component: ProtectedRoute,
+      children: [
+        {
+          path: "",
+          Component: LayoutManage,
+          children: [
             { path: "", Component: Dashboard },
             { path: "statistical", Component: Statistical },
             ...adminRoutes,
@@ -72,6 +86,7 @@ function App() {
         },
       ],
     },
+
     // Backward compatibility: /admin → /manage
     { path: "admin/*", element: <Navigate to="/manage" replace /> },
     // {
