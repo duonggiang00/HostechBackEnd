@@ -28,7 +28,7 @@ export const AcceptInvite: React.FC = () => {
             if (res?.data?.token || res?.token) {
                 const authToken = res.data?.token || res.token;
                 const user = res.data?.user || res.user;
-                setToken(authToken, user?.roles || ['Tenant'], user?.permissions || []);
+                setToken(authToken, user?.roles || ['Tenant'], user?.permissions || [], user?.org_id || null);
             }
             navigate('/manage');
         }

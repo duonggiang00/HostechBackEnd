@@ -7,7 +7,7 @@ import { getServices, deleteService } from "../api/serviceApi";
 import { ServiceCalcModeLabels } from "../types";
 import type { Service } from "../types";
 import { useTokenStore } from "../../../features/auth/stores/authStore";
-import { RequireRole } from "../../../shared/components/RequireRole";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
 
 const { Option } = Select;
 
@@ -135,7 +135,7 @@ const ServiceList = () => {
       width: 100,
       render: (_: unknown, record: Service) => (
         <div className="flex gap-1">
-          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+          <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Tooltip title="Chỉnh sửa">
               <Button
                 size="small"
@@ -160,7 +160,7 @@ const ServiceList = () => {
                 />
               </Tooltip>
             </Popconfirm>
-          </RequireRole>
+          </RoleGuard>
           {!canEdit && <span className="text-xs text-slate-400 italic">Chỉ xem</span>}
         </div>
       ),
@@ -177,7 +177,7 @@ const ServiceList = () => {
             Quản lý các dịch vụ áp dụng cho phòng trong tổ chức
           </p>
         </div>
-        <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+        <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
           <Button
             type="primary"
             icon={<Plus size={16} />}
@@ -186,7 +186,7 @@ const ServiceList = () => {
           >
             Thêm dịch vụ
           </Button>
-        </RequireRole>
+        </RoleGuard>
       </div>
 
       {/* Filters */}

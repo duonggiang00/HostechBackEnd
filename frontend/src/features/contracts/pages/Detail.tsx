@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
-import { Descriptions, Tag, Button, Spin, Alert } from "antd";
+import { Descriptions, Tag, Button, Spin, Alert, Typography } from "antd";
 import { ArrowLeft, Edit } from "lucide-react";
+
+const { Title } = Typography;
 import { getContractById } from "../api/contractApi";
-import { ContractStatusLabels, ContractStatusColors } from "../../../Types/ContractTypes";
-import type { ContractStatus } from "../../../Types/ContractTypes";
+import { ContractStatusLabels, ContractStatusColors, ContractStatus } from "../../../Types/ContractTypes";
+import type { ContractStatus as ContractStatusType } from "../../../Types/ContractTypes";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
 
 const ContractDetail = () => {
     const { id } = useParams<{ id: string }>();
@@ -46,15 +49,18 @@ const ContractDetail = () => {
                     <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <h1 className="text-2xl font-bold">Chi tiết hợp đồng</h1>
+                    <Title level={4} className="!mb-0">Chi tiết hợp đồng</Title>
                 </div>
-                <Button
-                    icon={<Edit size={15} />}
-                    onClick={() => navigate(`/manage/contracts/edit/${id}`)}
-
-                >
-                    Chỉnh sửa
-                </Button>
+                <RoleGuard allowedRoles={["Owner", "Manager"]}>
+                    <Button
+                        icon={<Edit size={15} />}
+                        onClick={() => navigate(`/manage/contracts/edit/${id}`)}
+                        disabled={contract?.status !== ContractStatus.DRAFT}
+                        title={contract?.status !== ContractStatus.DRAFT ? "Chỉ có thể chỉnh sửa hợp đồng ở trạng thái Nháp" : ""}
+                    >
+                        Chỉnh sửa
+                    </Button>
+                </RoleGuard>
             </div>
 
             <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
@@ -63,8 +69,8 @@ const ContractDetail = () => {
                     <Descriptions.Item label="Nhà">{contract?.property?.name}</Descriptions.Item>
                     <Descriptions.Item label="Địa chỉ">{contract?.property?.address}</Descriptions.Item>
                     <Descriptions.Item label="Trạng thái">
-                        <Tag color={ContractStatusColors[contract?.status as ContractStatus]}>
-                            {ContractStatusLabels[contract?.status as ContractStatus]}
+                        <Tag color={ContractStatusColors[contract?.status as ContractStatusType]}>
+                            {ContractStatusLabels[contract?.status as ContractStatusType]}
                         </Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label="Ngày bắt đầu">{contract?.start_date}</Descriptions.Item>
@@ -74,7 +80,9 @@ const ContractDetail = () => {
                     <Descriptions.Item label="Kỳ thanh toán">{contract?.billing_cycle}</Descriptions.Item>
                     <Descriptions.Item label="Ngày đến hạn">{contract?.due_day}</Descriptions.Item>
                     <Descriptions.Item label="Ngày chốt">{contract?.cutoff_day}</Descriptions.Item>
-                    <Descriptions.Item label="Mã tham gia">{contract?.join_code}</Descriptions.Item>
+                    <RoleGuard allowedRoles={["Owner", "Manager"]}>
+                        <Descriptions.Item label="Mã tham gia">{contract?.join_code}</Descriptions.Item>
+                    </RoleGuard>
                 </Descriptions>
             </div>
 

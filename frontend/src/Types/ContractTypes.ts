@@ -1,27 +1,40 @@
 import { z } from "zod";
 
-// ───── Enums ─────
 export const ContractStatus = {
     DRAFT: "DRAFT",
+    PENDING_SIGNATURE: "PENDING_SIGNATURE",
+    PENDING_PAYMENT: "PENDING_PAYMENT",
     ACTIVE: "ACTIVE",
-    EXPIRED: "EXPIRED",
-    TERMINATED: "TERMINATED",
+    ENDED: "ENDED",
+    CANCELLED: "CANCELLED",
 } as const;
 export type ContractStatus = (typeof ContractStatus)[keyof typeof ContractStatus];
 
 export const ContractStatusLabels: Record<ContractStatus, string> = {
-    DRAFT: "Nháp",
+    DRAFT: "Bản nháp",
+    PENDING_SIGNATURE: "Chờ khách ký",
+    PENDING_PAYMENT: "Chờ thanh toán",
     ACTIVE: "Đang hiệu lực",
-    EXPIRED: "Hết hạn",
-    TERMINATED: "Đã chấm dứt",
+    ENDED: "Đã kết thúc",
+    CANCELLED: "Đã hủy",
 };
 
 export const ContractStatusColors: Record<ContractStatus, string> = {
     DRAFT: "default",
-    ACTIVE: "green",
-    EXPIRED: "orange",
-    TERMINATED: "red",
+    PENDING_SIGNATURE: "processing",
+    PENDING_PAYMENT: "warning",
+    ACTIVE: "success",
+    ENDED: "error",
+    CANCELLED: "error",
 };
+
+export const ContractMemberStatus = {
+    PENDING: "PENDING",
+    APPROVED: "APPROVED",
+    REJECTED: "REJECTED",
+} as const;
+export type ContractMemberStatus = (typeof ContractMemberStatus)[keyof typeof ContractMemberStatus];
+
 
 // ───── Sub-types ─────
 export interface Room {
@@ -121,17 +134,34 @@ export interface Contract {
 }
 
 // ───── Zod Schema ─────
+export const ContractMemberSchema = z.object({
+    user_id: z.string().optional().nullable(),
+    full_name: z.string().min(1, "Vui lòng nhập họ tên"),
+    phone: z.string().min(10, "Số điện thoại không hợp lệ"),
+    email: z.string().email("Email không hợp lệ").optional().or(z.literal('')),
+    citizen_id: z.string().optional(),
+    role: z.string().default("ROOMMATE"),
+    is_primary: z.boolean().default(false),
+});
+
+export const ContractServiceSchema = z.object({
+    service_id: z.string().min(1, "Vui lòng chọn dịch vụ"),
+    custom_price: z.number().optional().nullable(),
+});
+
 export const ContractFormSchema = z.object({
+    property_id: z.string().min(1, "Vui lòng chọn toà nhà"),
     room_id: z.string().min(1, "Vui lòng chọn phòng"),
-    primary_user_id: z.string().min(1, "Vui lòng chọn người thuê chính"),
     start_date: z.string().min(1, "Vui lòng chọn ngày bắt đầu"),
     end_date: z.string().min(1, "Vui lòng chọn ngày kết thúc"),
     rent_price: z.number().min(0, "Giá thuê không được âm"),
     deposit_amount: z.number().min(0, "Tiền đặt cọc không được âm"),
-    billing_cycle: z.string().min(1, "Vui lòng chọn kỳ thanh toán"),
-    due_day: z.string().min(1, "Vui lòng nhập ngày đến hạn"),
-    cutoff_day: z.string().min(1, "Vui lòng nhập ngày chốt"),
+    billing_cycle: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]).default("MONTHLY"),
+    due_day: z.number().min(1).max(31).or(z.string().transform(Number)),
+    cutoff_day: z.number().min(1).max(31).or(z.string().transform(Number)),
     status: z.nativeEnum(ContractStatus).default(ContractStatus.DRAFT),
+    members: z.array(ContractMemberSchema).optional(),
+    services: z.array(ContractServiceSchema).optional(),
 });
 
 export type ContractFormValues = z.infer<typeof ContractFormSchema>;

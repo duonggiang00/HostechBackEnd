@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Table, Button, Tag, Popconfirm, Tooltip, notification, Select, Space, Badge } from "antd";
+import { Table, Button, Tag, Popconfirm, Tooltip, notification, Select, Space, Badge, Typography } from "antd";
 import { Plus, Eye, Edit, Trash2, FileX, Filter, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router";
 import { getContracts, deleteContract } from "../api/contractApi";
@@ -11,7 +11,9 @@ import {
 } from "../../../Types/ContractTypes";
 import type { Contract, ContractStatus as ContractStatusType } from "../../../Types/ContractTypes";
 import { useTokenStore } from "../../auth/stores/authStore";
-import { RequireRole } from "../../../shared/components/RequireRole";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
+
+const { Title, Text } = Typography;
 
 const ContractList = () => {
   const navigate = useNavigate();
@@ -120,38 +122,45 @@ const ContractList = () => {
       key: "action",
       width: 120,
       render: (_: any, record: Contract) => (
-        <Space size={4}>
+        <div className="flex justify-end gap-2">
           <Tooltip title="Xem chi tiết">
             <Button
-              size="small"
-              icon={<Eye size={14} />}
+              type="text"
+              icon={<Eye size={16} />}
               onClick={() => navigate(`/manage/contracts/detail/${record.id}`)}
-              className="border-emerald-400 text-emerald-600"
+              className="text-slate-500 hover:text-green-600 bg-slate-50 hover:bg-green-50"
             />
           </Tooltip>
-          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
-            <Tooltip title="Chỉnh sửa">
+          <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
+            <Tooltip title={record.status !== ContractStatus.DRAFT ? "Chỉ có thể sửa bản nháp" : "Chỉnh sửa"}>
               <Button
-                size="small"
-                icon={<Edit size={14} />}
+                type="text"
+                icon={<Edit size={16} />}
                 onClick={() => navigate(`/manage/contracts/edit/${record.id}`)}
-                className="border-sky-400 text-sky-600"
                 disabled={record.status !== ContractStatus.DRAFT}
+                className="text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50"
               />
             </Tooltip>
             <Popconfirm
-              title="Xóa hợp đồng này?"
-              description="Hợp đồng sẽ được chuyển vào thùng rác. Tiếp tục?"
+              title="Xóa hợp đồng?"
+              description="Hợp đồng sẽ được chuyển vào thùng rác."
               onConfirm={() => deleteMutation.mutate(record.id)}
               okText="Xóa"
               cancelText="Hủy"
+              okButtonProps={{ danger: true }}
             >
               <Tooltip title="Xóa">
-                <Button size="small" danger icon={<Trash2 size={14} />} />
+                <Button 
+                  type="text" 
+                  danger 
+                  icon={<Trash2 size={16} />} 
+                  className="text-slate-500 hover:text-red-600 bg-slate-50 hover:bg-red-50"
+                  loading={deleteMutation.isPending && deleteMutation.variables === record.id}
+                />
               </Tooltip>
             </Popconfirm>
-          </RequireRole>
-        </Space>
+          </RoleGuard>
+        </div>
       ),
     },
   ];
@@ -161,10 +170,12 @@ const ContractList = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Quản lý hợp đồng</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <Title level={4} className="!mb-0">
+            Quản lý hợp đồng
+          </Title>
+          <Text type="secondary" className="text-sm mt-0.5">
             {meta?.total != null ? `${meta.total} hợp đồng` : "Danh sách hợp đồng thuê phòng"}
-          </p>
+          </Text>
         </div>
         <Space>
           <Button
@@ -176,16 +187,16 @@ const ContractList = () => {
           <Tooltip title="Tải lại">
             <Button icon={<RefreshCw size={14} />} onClick={() => refetch()} />
           </Tooltip>
-          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+          <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Button
               type="primary"
-              icon={<Plus size={16} />}
+              icon={<Plus size={18} />}
               onClick={() => navigate("/manage/contracts/create")}
-              className="bg-emerald-600 hover:bg-emerald-700 border-emerald-600"
+              className="bg-blue-600 hover:bg-blue-700 rounded-xl h-[40px] px-5 shadow-md shadow-blue-500/20 font-medium flex items-center gap-2 border-none"
             >
               Tạo hợp đồng
             </Button>
-          </RequireRole>
+          </RoleGuard>
         </Space>
       </div>
 

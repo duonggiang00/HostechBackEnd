@@ -18,7 +18,7 @@ import { Plus, Gauge, Trash2, ClipboardList, RefreshCw, Filter } from "lucide-re
 import { getMeters as _getMeters, deleteMeter, createMeter, getMeterReadings, createMeterReading } from "../api/meterApi";
 import { MeterTypeLabels, MeterStatusLabels } from "../types";
 import type { Meter, MeterReading } from "../types";
-import { RequireRole } from "../../../shared/components/RequireRole";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
 
 const typeColors: Record<string, string> = {
   electricity: "gold",
@@ -148,7 +148,7 @@ const MeterList = () => {
               className="border-emerald-400 text-emerald-600"
             />
           </Tooltip>
-          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+          <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Popconfirm
               title="Xóa đồng hồ này?"
               onConfirm={() => deleteMutation.mutate(meter.id)}
@@ -159,7 +159,7 @@ const MeterList = () => {
                 <Button size="small" danger icon={<Trash2 size={14} />} />
               </Tooltip>
             </Popconfirm>
-          </RequireRole>
+          </RoleGuard>
         </Space>
       ),
     },
@@ -208,7 +208,7 @@ const MeterList = () => {
           <Tooltip title="Tải lại">
             <Button icon={<RefreshCw size={14} />} onClick={() => refetch()} />
           </Tooltip>
-          <RequireRole allowedRoles={["Owner", "Manager"]} fallback={null}>
+          <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Button
               type="primary"
               icon={<Plus size={16} />}
@@ -217,7 +217,7 @@ const MeterList = () => {
             >
               Thêm đồng hồ
             </Button>
-          </RequireRole>
+          </RoleGuard>
         </Space>
       </div>
 
@@ -310,7 +310,7 @@ const MeterList = () => {
         footer={null}
         width={700}
       >
-        <RequireRole allowedRoles={["Owner", "Manager", "Staff"]} fallback={null}>
+        <RoleGuard allowedRoles={["Owner", "Manager", "Staff"]} fallback={null}>
           <Form
             form={readingForm}
             layout="inline"
@@ -341,7 +341,7 @@ const MeterList = () => {
               </Button>
             </Form.Item>
           </Form>
-        </RequireRole>
+        </RoleGuard>
         <Table
           dataSource={(readings as MeterReading[]) ?? []}
           columns={readingColumns}

@@ -8,7 +8,10 @@ import {
   notification,
   Spin,
   Alert,
+  Typography,
 } from "antd";
+
+const { Title } = Typography;
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
@@ -130,7 +133,7 @@ const EditContract = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold">Chỉnh sửa hợp đồng</h1>
+        <Title level={4} className="!mb-0">Chỉnh sửa hợp đồng</Title>
       </div>
 
       <Form
@@ -155,15 +158,11 @@ const EditContract = () => {
             <Form.Item name="status" label="Trạng thái">
               <Select>
                 <Select.Option value={ContractStatus.DRAFT}>Nháp</Select.Option>
-                <Select.Option value={ContractStatus.ACTIVE}>
-                  Đang hiệu lực
-                </Select.Option>
-                <Select.Option value={ContractStatus.EXPIRED}>
-                  Hết hạn
-                </Select.Option>
-                <Select.Option value={ContractStatus.TERMINATED}>
-                  Đã chấm dứt
-                </Select.Option>
+                <Select.Option value={ContractStatus.PENDING_SIGNATURE}>Chờ ký</Select.Option>
+                <Select.Option value={ContractStatus.PENDING_PAYMENT}>Chờ thanh toán</Select.Option>
+                <Select.Option value={ContractStatus.ACTIVE}>Đang hiệu lực</Select.Option>
+                <Select.Option value={ContractStatus.ENDED}>Hết hạn</Select.Option>
+                <Select.Option value={ContractStatus.CANCELLED}>Đã hủy</Select.Option>
               </Select>
             </Form.Item>
           </div>
@@ -254,7 +253,6 @@ const EditContract = () => {
               type="primary"
               htmlType="submit"
               loading={mutation.isPending}
-              className="bg-blue-500"
             >
               Lưu thay đổi
             </Button>

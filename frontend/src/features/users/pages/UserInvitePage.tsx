@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, Form, Input, Select, Button, Typography, Space, message } from 'antd';
 import { useNavigate } from 'react-router';
 import { useSendInvitation } from '../hooks/useUsers';
-import { RequireRole } from '../../../shared/components/RequireRole';
+import { RoleGuard } from '../../../shared/components/RoleGuard';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -49,9 +49,9 @@ export const UserInvitePage: React.FC = () => {
                             <Select.Option value="Manager">Quản lý cơ sở (Manager)</Select.Option>
                             <Select.Option value="Staff">Nhân viên (Staff)</Select.Option>
                             <Select.Option value="Tenant">Khách thuê (Tenant)</Select.Option>
-                            <RequireRole allowedRoles={['Admin']}>
+                            <RoleGuard allowedRoles={['Admin']}>
                                 <Select.Option value="Owner">Chủ sở hữu (Owner)</Select.Option>
-                            </RequireRole>
+                            </RoleGuard>
                         </Select>
                     </Form.Item>
                     <Form.Item label="Ghi chú thêm" name="note">
