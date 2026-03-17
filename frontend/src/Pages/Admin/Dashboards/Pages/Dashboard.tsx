@@ -1,17 +1,20 @@
+import React from "react";
+import { useTokenStore } from "@/features/auth/stores/authStore";
+
 import OwnerDashboard from "./OwnerDashboard";
 import StaffDashboard from "./StaffDashboard";
 import TenantDashboard from "./TenantDashboard";
 
-type Role = "owner" | "manager" | "staff" | "tenant";
+const Dashboard: React.FC = () => {
+  const roles = useTokenStore((state) => state.roles);
 
-const role: Role = "owner";
+  const role = roles?.[0]?.toLowerCase();
 
-const Dashboard = () => {
-  if (role === "owner") return <OwnerDashboard />;
-
+  if (role === "admin") return <OwnerDashboard />;
   if (role === "manager" || role === "staff") return <StaffDashboard />;
+  if (role === "tenant") return <TenantDashboard />;
 
-  return <TenantDashboard />;
+  return <div className="p-6">Không xác định role</div>;
 };
 
 export default Dashboard;

@@ -71,21 +71,21 @@ function App() {
         },
       ],
     },
-    {
-      path: "manage",
-      Component: ProtectedRoute,
-      children: [
-        {
-          path: "",
-          Component: LayoutManage,
-          children: [
-            { path: "", Component: Dashboard },
-            { path: "statistical", Component: Statistical },
-            ...adminRoutes,
-          ],
-        },
-      ],
-    },
+    // {
+    //   path: "manage",
+    //   Component: ProtectedRoute,
+    //   children: [
+    //     {
+    //       path: "",
+    //       Component: LayoutManage,
+    //       children: [
+    //         { path: "", Component: Dashboard },
+    //         { path: "statistical", Component: Statistical },
+    //         ...adminRoutes,
+    //       ],
+    //     },
+    //   ],
+    // },
 
     // Backward compatibility: /admin → /manage
     { path: "admin/*", element: <Navigate to="/manage" replace /> },

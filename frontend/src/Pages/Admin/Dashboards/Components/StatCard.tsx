@@ -1,21 +1,38 @@
-import React from "react";
+// import React from "react";
 
-interface Props {
+type Props = {
   title: string;
-  value: string | number;
-  change?: string;
-}
+  value: string;
+  growth?: string;
+  text?: string;
+  type?: "up" | "down" | "neutral";
+};
 
-const StatCard: React.FC<Props> = ({ title, value, change }) => {
+const StatCard: React.FC<Props> = ({ title, value, growth, type = "up" }) => {
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-5">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all">
+      {/* Title */}
       <p className="text-sm text-gray-500">{title}</p>
 
-      <h2 className="text-2xl font-bold mt-2 text-gray-800 dark:text-white">
-        {value}
-      </h2>
+      {/* Value */}
+      <h2 className="text-2xl font-semibold text-gray-800 mt-2">{value}</h2>
 
-      {change && <p className="text-green-500 text-sm mt-1">{change}</p>}
+      {/* Growth */}
+      {growth && (
+        <p
+          className={`text-sm mt-2 flex items-center gap-1 ${
+            type === "up"
+              ? "text-green-500"
+              : type === "down"
+                ? "text-red-500"
+                : "text-gray-400"
+          }`}
+        >
+          {type === "up" && "▲"}
+          {type === "down" && "▼"}
+          {growth}
+        </p>
+      )}
     </div>
   );
 };

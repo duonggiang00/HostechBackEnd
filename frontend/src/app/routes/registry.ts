@@ -22,6 +22,7 @@ import { userRoutes } from "../../features/users/routes";
 // ── Thêm feature mới → import ở đây ────────────────────────────
 // import { handoverRoutes } from "../../features/handovers/routes";
 import { profileRoutes } from "../../features/profile/routes";
+import { dashboardRoutes } from "@/Pages/Admin/Dashboards/router";
 
 /**
  * Tất cả routes bên trong /manage layout.
@@ -32,6 +33,7 @@ import { profileRoutes } from "../../features/profile/routes";
  * Các route dành cho Quản lý (Owner/Manager/Staff)
  */
 export const manageRoutes: RouteConfig[] = [
+  dashboardRoutes,
   contractRoutes,
   invoiceRoutes,
   serviceRoutes,
