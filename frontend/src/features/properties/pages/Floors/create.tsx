@@ -30,7 +30,7 @@ const CreateFloor = () => {
   }, [statePropertyId, properties, form]);
 
   const createMutation = useMutation({
-    mutationFn: ({ property_id, ...data }: any) => createFloor(property_id, data),
+    mutationFn: (data: any) => createFloor(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.all });
       notification.success({ message: "Tạo tầng thành công" });

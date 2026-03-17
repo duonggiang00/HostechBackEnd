@@ -39,7 +39,7 @@ import {
 } from "../types";
 import type { Ticket, TicketStatus, TicketFilters } from "../types";
 import { useTokenStore } from "../../auth/stores/authStore";
-import { RequireRole } from "../../../shared/components/RequireRole";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -501,7 +501,7 @@ const TicketList = () => {
       </Drawer>
 
       {/* Status Update Modal */}
-      <RequireRole allowedRoles={["Owner", "Manager", "Staff"]}>
+      <RoleGuard allowedRoles={["Owner", "Manager", "Staff"]}>
         <Modal
           title={`Đổi trạng thái: "${statusTarget?.title}"`}
           open={statusModalOpen}
@@ -536,7 +536,7 @@ const TicketList = () => {
             </Form.Item>
           </Form>
         </Modal>
-      </RequireRole>
+      </RoleGuard>
     </div>
   );
 };

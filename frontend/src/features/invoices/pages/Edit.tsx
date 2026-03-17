@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { Form, Input, Select, Button, notification, Spin, Alert } from "antd";
+import { Form, Input, Select, Button, notification, Spin, Alert, Typography } from "antd";
+
+const { Title } = Typography;
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import { ArrowLeft } from "lucide-react";
@@ -104,7 +106,7 @@ const EditInvoice = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold">Chỉnh sửa hóa đơn</h1>
+        <Title level={4} className="!mb-0">Chỉnh sửa hóa đơn</Title>
       </div>
 
       <Form
@@ -182,7 +184,6 @@ const EditInvoice = () => {
               type="primary"
               htmlType="submit"
               loading={mutation.isPending}
-              className="bg-blue-500"
             >
               Lưu thay đổi
             </Button>

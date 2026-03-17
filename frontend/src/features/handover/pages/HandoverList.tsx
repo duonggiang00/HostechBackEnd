@@ -23,8 +23,8 @@ import {
   confirmHandover,
   deleteHandover,
 } from "../api/handoverApi";
-import { RequireRole } from "../../../shared/components/RequireRole";
-import type { Handover, HandoverType, HandoverStatus } from "../types";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
+import type { HandoverType, HandoverStatus } from "../types";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -197,13 +197,13 @@ const HandoverList = () => {
       key: "actions",
       width: 48,
       render: (_: any, record: any) => (
-        <RequireRole allowedRoles={["Owner", "Manager", "Staff"]}>
+        <RoleGuard allowedRoles={["Owner", "Manager", "Staff"]}>
           <Dropdown menu={{ items: getActions(record) }} trigger={["click"]}>
             <Tooltip title="Hành động">
               <Button type="text" size="small" icon={<MoreVertical size={16} />} />
             </Tooltip>
           </Dropdown>
-        </RequireRole>
+        </RoleGuard>
       ),
     },
   ];
@@ -220,7 +220,7 @@ const HandoverList = () => {
             Quản lý biên bản nhận/trả phòng
           </Text>
         </div>
-        <RequireRole allowedRoles={["Owner", "Manager", "Staff"]}>
+        <RoleGuard allowedRoles={["Owner", "Manager", "Staff"]}>
           <Button
             type="primary"
             icon={<Plus size={16} />}
@@ -228,7 +228,7 @@ const HandoverList = () => {
           >
             Tạo biên bản
           </Button>
-        </RequireRole>
+        </RoleGuard>
       </div>
 
       {/* Filters */}

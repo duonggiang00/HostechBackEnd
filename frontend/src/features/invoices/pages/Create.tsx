@@ -1,4 +1,6 @@
-import { Form, Input, Select, Button, notification } from "antd";
+import { Form, Input, Select, Button, notification, Typography } from "antd";
+
+const { Title } = Typography;
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { ArrowLeft } from "lucide-react";
@@ -45,7 +47,7 @@ const CreateInvoice = () => {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-2xl font-bold">Tạo hóa đơn mới</h1>
+        <Title level={4} className="!mb-0">Tạo hóa đơn mới</Title>
       </div>
 
       <Form
@@ -128,7 +130,6 @@ const CreateInvoice = () => {
               type="primary"
               htmlType="submit"
               loading={mutation.isPending}
-              className="bg-blue-500"
             >
               Tạo hóa đơn
             </Button>

@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getServices } from '../api/serviceApi';
 import { useRoomServices, useAssignRoomService, useUpdateRoomService, useRemoveRoomService } from '../hooks/useRoomServices';
 import type { RoomService, AssignServicePayload, UpdateRoomServicePayload } from '../hooks/useRoomServices';
-import { RequireRole } from '../../../shared/components/RequireRole';
+import { RoleGuard } from '../../../shared/components/RoleGuard';
 import { ServiceCalcModeLabels } from '../types';
 
 const { Text } = Typography;
@@ -129,14 +129,14 @@ export const RoomServiceAssigner: React.FC<Props> = ({ roomId }) => {
       title: 'Thao tác',
       key: 'action',
       render: (_: any, record: RoomService) => (
-        <RequireRole allowedRoles={['Owner', 'Manager', 'Staff']}>
+        <RoleGuard allowedRoles={['Owner', 'Manager', 'Staff']}>
           <Space>
             <Button size="small" type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
             <Popconfirm title="Gỡ dịch vụ này?" onConfirm={() => handleDelete(record.id)}>
               <Button size="small" type="text" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           </Space>
-        </RequireRole>
+        </RoleGuard>
       ),
     },
   ];
@@ -147,11 +147,11 @@ export const RoomServiceAssigner: React.FC<Props> = ({ roomId }) => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <Text strong>Các dịch vụ đang sử dụng ({roomServices?.length || 0})</Text>
-        <RequireRole allowedRoles={['Owner', 'Manager']}>
+        <RoleGuard allowedRoles={['Owner', 'Manager']}>
           {!isFormOpen && (
               <Button type="dashed" icon={<PlusOutlined />} onClick={openAssignModal}>Gán dịch vụ</Button>
           )}
-        </RequireRole>
+        </RoleGuard>
       </div>
 
       <Table 

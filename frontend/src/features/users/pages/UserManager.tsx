@@ -4,7 +4,7 @@ import { SearchOutlined, UserAddOutlined, DeleteOutlined } from '@ant-design/ico
 import { useNavigate } from 'react-router';
 import { useUsers, useUpdateUserStatus, useRemoveUser } from '../hooks/useUsers';
 import type { UserFilters, UserType } from '../types';
-import { RequireRole } from '../../../shared/components/RequireRole';
+import { RoleGuard } from '../../../shared/components/RoleGuard';
 
 const { Title, Text } = Typography;
 
@@ -84,20 +84,20 @@ export const UserManager: React.FC = () => {
             title: 'Trạng thái',
             key: 'is_active',
             render: (_: any, record: UserType) => (
-                <RequireRole allowedRoles={['Admin', 'Owner', 'Manager']} fallback={<Tag color={record.is_active ? 'green' : 'red'}>{record.is_active ? 'Active' : 'Locked'}</Tag>}>
+                <RoleGuard allowedRoles={['Admin', 'Owner', 'Manager']} fallback={<Tag color={record.is_active ? 'green' : 'red'}>{record.is_active ? 'Active' : 'Locked'}</Tag>}>
                     <Switch 
                         checked={record.is_active} 
                         onChange={(checked) => updateStatusMutation.mutate({ id: record.id, is_active: checked })}
                         loading={updateStatusMutation.isPending}
                     />
-                </RequireRole>
+                </RoleGuard>
             )
         },
         {
             title: 'Thao tác',
             key: 'actions',
             render: (_: any, record: UserType) => (
-                <RequireRole allowedRoles={['Admin', 'Owner']}>
+                <RoleGuard allowedRoles={['Admin', 'Owner']}>
                     <Tooltip title="Gỡ khỏi tổ chức">
                         <Button 
                            danger 
@@ -112,7 +112,7 @@ export const UserManager: React.FC = () => {
                            }}
                         />
                     </Tooltip>
-                </RequireRole>
+                </RoleGuard>
             )
         }
     ];
@@ -126,11 +126,11 @@ export const UserManager: React.FC = () => {
                 </div>
                 
                 {/* Chỉ có Admin/Owner/Manager mới đc mời */}
-                <RequireRole allowedRoles={['Admin', 'Owner', 'Manager']}>
+                <RoleGuard allowedRoles={['Admin', 'Owner', 'Manager']}>
                     <Button type="primary" icon={<UserAddOutlined />} onClick={() => navigate('/manage/users/invite')}>
                         Mời thành viên
                     </Button>
-                </RequireRole>
+                </RoleGuard>
             </div>
 
             <Card className="shadow-sm rounded-lg mb-4" bordered={false} bodyStyle={{ padding: '16px' }}>

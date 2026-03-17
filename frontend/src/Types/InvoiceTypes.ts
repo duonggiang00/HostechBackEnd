@@ -102,8 +102,8 @@ export const InvoiceFormSchema = z.object({
 export type InvoiceFormValues = z.infer<typeof InvoiceFormSchema>;
 
 export const InvoiceItemSchema = z.object({
-    type: z.string().min(1, "Vui lòng chọn loại chi phí"),
-    service_id: z.string().default(""),
+    type: z.enum(["RENT", "SERVICE", "PENALTY", "DISCOUNT", "ADJUSTMENT", "DEPOSIT"]),
+    service_id: z.string().default("").optional().nullable(),
     description: z.string().min(1, "Vui lòng nhập mô tả"),
     quantity: z.number().min(1, "Số lượng phải >= 1"),
     unit_price: z.number().min(0, "Đơn giá không được âm"),

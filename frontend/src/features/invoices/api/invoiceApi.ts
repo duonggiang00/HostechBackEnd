@@ -64,6 +64,24 @@ export const hardDeleteInvoice = async (id: string): Promise<void> => {
     await Api.delete(`invoices/${id}/force`);
 };
 
+// Phát hành hóa đơn
+export const issueInvoice = async (id: string): Promise<Invoice> => {
+    const res = await Api.put(`invoices/${id}/issue`);
+    return res.data?.data ?? res.data;
+};
+
+// Xác nhận thanh toán hóa đơn
+export const payInvoice = async (id: string, data?: any): Promise<Invoice> => {
+    const res = await Api.put(`invoices/${id}/pay`, data);
+    return res.data?.data ?? res.data;
+};
+
+// Hủy hóa đơn
+export const cancelInvoice = async (id: string): Promise<Invoice> => {
+    const res = await Api.put(`invoices/${id}/cancel`);
+    return res.data?.data ?? res.data;
+};
+
 // Thêm dòng chi phí vào hóa đơn
 export const addInvoiceItem = async (invoiceId: string, data: InvoiceItemFormValues): Promise<InvoiceItem> => {
     const res = await Api.post(`invoices/${invoiceId}/items`, data);
