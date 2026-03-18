@@ -1,37 +1,47 @@
-import { useEffect, useState } from "react";
-import { Button, Input, Form, Select, InputNumber, notification, Upload, Tabs, Divider, Space, Card, Empty, Skeleton } from "antd";
+import { useEffect } from "react";
+import { Button, Input, Form, Select, InputNumber, Skeleton } from "antd";
 import { useNavigate, useParams } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRoom, useUpdateRoom, useProperties, useFloorsByProperty } from "../../hooks/useProperties";
-import { useServices } from "../../../../features/services/hooks/useServices";
-import { uploadMedia } from "../../../../features/media/api/mediaApi";
-import { QUERY_KEYS } from "../../../../shared/constants/queryKeys";
-import { 
-  DoorOpen, Home, Layers, Hash, Coins, Maximize, Users, 
-  X as XIcon, Plus, Trash2, ClipboardList, Wrench, 
-  ImagePlus, Info, CheckCircle2, ChevronRight, Pencil
+import {
+  useRoom,
+  useUpdateRoom,
+  useProperties,
+  useFloorsByProperty,
+  useProperty,
+  useRooms,
+} from "../../hooks/useProperties";
+import {
+  DoorOpen,
+  Home,
+  Layers,
+  Hash,
+  Coins,
+  Maximize,
+  Users,
+  X as XIcon,
+  Pencil,
 } from "lucide-react";
-import type { FloorDTO } from "../../types";
 
 const EditRoom = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
-  const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState("basic");
-  const [fileList, setFileList] = useState<any[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
 
   const { data: room, isLoading: roomLoading } = useRoom(id || "");
   const updateMutation = useUpdateRoom(id || "");
 
   const selectedPropertyId = Form.useWatch("property_id", form);
 
-  const { data: propertiesData, isLoading: propertiesLoading } = useProperties();
+  const propertyId = Form.useWatch("property_id", form);
+  const { data: property } = useProperty(propertyId || "");
+  const { data: rooms } = useRooms({ property_id: propertyId });
+
+  const { data: propertiesData, isLoading: propertiesLoading } =
+    useProperties();
   const properties = propertiesData?.data || [];
 
-  const { data: floors, isLoading: floorsLoading } = useFloorsByProperty(selectedPropertyId || "");
-  const { data: services, isLoading: servicesLoading } = useServices();
+  const { data: floors, isLoading: floorsLoading } = useFloorsByProperty(
+    selectedPropertyId || "",
+  );
 
   useEffect(() => {
     if (room) {
@@ -44,23 +54,7 @@ const EditRoom = () => {
         area: room.area,
         capacity: room.capacity,
         description: room.description,
-        assets: (room as any).assets || [],
-        services: Array.isArray((room as any).utilities) 
-          ? (room as any).utilities 
-          : ((room as any).utilities ? JSON.parse((room as any).utilities) : []),
       });
-
-      // Initialize fileList
-      const roomImages = (room as any).images || (room as any).media || [];
-      if (Array.isArray(roomImages)) {
-        setFileList(roomImages.map((m: any) => ({
-          uid: m.id,
-          name: m.file_name || m.name,
-          status: 'done',
-          url: m.original_url || m.url,
-          id: m.id
-        })));
-      }
     }
   }, [room, form]);
 
@@ -69,496 +63,298 @@ const EditRoom = () => {
   };
 
   const handlePropertyChange = () => {
-    form.setFieldValue("floor_id", undefined); 
+    form.setFieldValue("floor_id", undefined); // Reset floor when property changes
   };
-
-  const onFinish = async (values: any) => {
-    setIsUploading(true);
-    try {
-      const mediaIds: string[] = [];
-      
-      // 1. Existing media items
-      fileList.forEach(file => {
-        if (file.id && !file.originFileObj) {
-          mediaIds.push(file.id);
-        }
-      });
-
-      // 2. New uploads
-      for (const file of fileList) {
-        if (file.originFileObj) {
-          const res = await uploadMedia(file.originFileObj, "room");
-          mediaIds.push(res.id);
-        }
-      }
-
-      // 3. Prepare payload
-      const { services, ...restValues } = values;
-      const payload = {
-        ...restValues,
-        media_ids: mediaIds,
-        utilities: services ? JSON.stringify(services) : null,
-      };
-
-      updateMutation.mutate(payload, {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.detail(id!) });
-          navigate(-1);
-        }
-      });
-    } catch (error: any) {
-      notification.error({ message: "Lỗi cập nhật ảnh" });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const tabItems = [
-    {
-      key: "basic",
-      label: (
-        <span className="flex items-center gap-2">
-          <Info size={16} /> Thông tin cơ bản
-        </span>
-      ),
-      children: (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50">
-              <Form.Item
-                name="property_id"
-                label={<span className="text-slate-600 font-medium flex items-center gap-2"><Home size={16} className="text-indigo-500" /> Chọn nhà trọ <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Vui lòng chọn nhà trọ!" }]}
-                className="mb-0"
-              >
-                <Select
-                  placeholder="Chọn nhà trọ..."
-                  loading={propertiesLoading}
-                  options={properties.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` }))}
-                  showSearch
-                  size="large"
-                  onChange={handlePropertyChange}
-                  className="rounded-xl"
-                />
-              </Form.Item>
-            </div>
-
-            <div className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50">
-              <Form.Item
-                name="floor_id"
-                label={<span className="text-slate-600 font-medium flex items-center gap-2"><Layers size={16} className="text-indigo-500" /> Chọn tầng <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Vui lòng chọn tầng!" }]}
-                className="mb-0"
-              >
-                <Select
-                  placeholder="Chọn tầng..."
-                  loading={floorsLoading}
-                  disabled={!selectedPropertyId}
-                  options={floors?.data?.map((f: FloorDTO) => ({ value: f.id, label: f.name })) || []}
-                  size="large"
-                  className="rounded-xl"
-                />
-              </Form.Item>
-            </div>
-          </div>
-
-          <Card className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden" styles={{ body: { padding: 24 } }}>
-            <h3 className="text-base font-semibold text-slate-700 mb-6 flex items-center gap-2">
-              <ClipboardList size={18} className="text-emerald-500" />
-              Chi tiết phòng
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Form.Item
-                name="name"
-                label={<span className="text-slate-600 font-medium font-inter">Tên phòng <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Vui lòng nhập tên phòng!" }]}
-              >
-                <Input
-                  prefix={<DoorOpen size={16} className="text-slate-400 mr-2" />}
-                  placeholder="Ví dụ: P.101, Phòng VIP..."
-                  className="rounded-xl h-12"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="code"
-                label={<span className="text-slate-600 font-medium font-inter">Mã phòng</span>}
-              >
-                <Input
-                  prefix={<Hash size={16} className="text-slate-400 mr-2" />}
-                  placeholder="R101"
-                  className="rounded-xl h-12 uppercase"
-                />
-              </Form.Item>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
-              <Form.Item
-                name="base_price"
-                label={<span className="text-slate-600 font-medium font-inter">Giá thuê (VNĐ) <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
-              >
-                <InputNumber
-                  min={0}
-                  step={100000}
-                  prefix={<Coins size={16} className="text-slate-400 mr-2" />}
-                  placeholder="3,500,000"
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, '')) as any}
-                  className="w-full rounded-xl h-12 flex items-center"
-                  controls={false}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="area"
-                label={<span className="text-slate-600 font-medium font-inter">Diện tích (m²)</span>}
-              >
-                <InputNumber
-                  min={0}
-                  prefix={<Maximize size={16} className="text-slate-400 mr-2" />}
-                  placeholder="25"
-                  className="w-full rounded-xl h-12 flex items-center"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="capacity"
-                label={<span className="text-slate-600 font-medium font-inter">Sức chứa tối đa (người)</span>}
-              >
-                <InputNumber
-                  min={1}
-                  prefix={<Users size={16} className="text-slate-400 mr-2" />}
-                  placeholder="2"
-                  className="w-full rounded-xl h-12 flex items-center"
-                />
-              </Form.Item>
-            </div>
-
-            <Form.Item
-              name="description"
-              label={<span className="text-slate-600 font-medium font-inter mt-4 block">Mô tả thêm</span>}
-              className="mt-4"
-            >
-              <Input.TextArea
-                rows={4}
-                placeholder="Tiện ích nội thất, view phòng, hướng nắng..."
-                className="rounded-xl p-3"
-              />
-            </Form.Item>
-          </Card>
-        </div>
-      )
-    },
-    {
-      key: "assets",
-      label: (
-        <span className="flex items-center gap-2">
-          <Wrench size={16} /> Tài sản & Dịch vụ
-        </span>
-      ),
-      children: (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" styles={{ body: { padding: 24 } }}>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="text-base font-semibold text-slate-700 flex items-center gap-2">
-                  <Wrench size={18} className="text-blue-500" />
-                  Danh sách trang thiết bị
-                </h3>
-                <p className="text-sm text-slate-500 mt-1">Các vật dụng có sẵn trong phòng khi bàn giao</p>
-              </div>
-            </div>
-
-            <Form.List name="assets">
-              {(fields, { add, remove }) => (
-                <div className="space-y-4">
-                  {fields.map(({ key, name, ...restField }) => (
-                    <div key={key} className="p-4 bg-slate-50/50 rounded-2xl border border-gray-100 flex items-start gap-4">
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'name']}
-                          rules={[{ required: true, message: 'Nhập tên tài sản' }]}
-                          className="mb-0"
-                        >
-                          <Input placeholder="Tên: Tivi, Điều hòa..." className="rounded-xl h-10" />
-                        </Form.Item>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'serial']}
-                          className="mb-0"
-                        >
-                          <Input placeholder="Số serial (nếu có)" className="rounded-xl h-10" />
-                        </Form.Item>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'condition']}
-                          className="mb-0"
-                        >
-                          <Select placeholder="Tình trạng" className="rounded-xl" style={{ height: 40 }}>
-                            <Select.Option value="Likenew">Mới 100%</Select.Option>
-                            <Select.Option value="Good">Hoạt động tốt</Select.Option>
-                            <Select.Option value="Old">Cũ/Trầy xước</Select.Option>
-                            <Select.Option value="Pending">Cần bảo trì</Select.Option>
-                          </Select>
-                        </Form.Item>
-                      </div>
-                      <Button 
-                        type="text" 
-                        danger 
-                        icon={<Trash2 size={18} />} 
-                        onClick={() => remove(name)}
-                        className="flex items-center justify-center p-0 w-10 h-10 rounded-full hover:bg-red-50"
-                      />
-                    </div>
-                  ))}
-                  <Button
-                    type="dashed"
-                    onClick={() => add()}
-                    block
-                    icon={<Plus size={16} />}
-                    className="h-12 rounded-xl text-slate-500 border-slate-300 hover:text-emerald-600 hover:border-emerald-600 flex items-center justify-center gap-2"
-                  >
-                    Thêm trang thiết bị
-                  </Button>
-                  {fields.length === 0 && (
-                    <Empty description="Chưa có trang thiết bị nào được thêm" image={Empty.PRESENTED_IMAGE_SIMPLE} className="py-2" />
-                  )}
-                </div>
-              )}
-            </Form.List>
-          </Card>
-
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" styles={{ body: { padding: 24 } }}>
-            <h3 className="text-base font-semibold text-slate-700 mb-6 flex items-center gap-2">
-              <CheckCircle2 size={18} className="text-emerald-500" />
-              Dịch vụ đính kèm
-            </h3>
-            <Form.Item name="services" className="mb-0">
-              <Select
-                mode="multiple"
-                style={{ width: '100%' }}
-                placeholder="Chọn các dịch vụ áp dụng cho phòng này (Điện, nước, rác...)"
-                loading={servicesLoading}
-                className="rounded-xl custom-multiple-select"
-                size="large"
-                options={services?.map((s: any) => ({ label: `${s.name} (${s.unit})`, value: s.id }))}
-                maxTagCount="responsive"
-              />
-            </Form.Item>
-            <p className="text-xs text-slate-400 mt-3 italic">* Khách thuê sẽ được tự động gán các dịch vụ này khi tạo hợp đồng</p>
-          </Card>
-        </div>
-      )
-    },
-    {
-      key: "images",
-      label: (
-        <span className="flex items-center gap-2">
-          <ImagePlus size={16} /> Hình ảnh
-        </span>
-      ),
-      children: (
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" styles={{ body: { padding: 32 } }}>
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ImagePlus size={28} className="text-emerald-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-slate-800">Hình ảnh căn bản của phòng</h3>
-              <p className="text-slate-500">Tải lên ít nhất 3 ảnh để phòng trông chuyên nghiệp hơn</p>
-            </div>
-            
-            <Upload
-              listType="picture-card"
-              fileList={fileList}
-              onChange={({ fileList }) => setFileList(fileList)}
-              beforeUpload={() => false}
-              multiple
-              className="upload-room-images flex flex-wrap justify-center gap-4"
-            >
-              {fileList.length >= 8 ? null : (
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <Plus size={20} className="text-slate-400" />
-                  <div className="text-xs text-slate-500 font-medium">Tải lên</div>
-                </div>
-              )}
-            </Upload>
-            
-            <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-xl">
-              <div className="flex gap-3">
-                <Info size={18} className="text-orange-500 shrink-0 mt-0.5" />
-                <div className="text-sm text-orange-700">
-                  <span className="font-semibold block mb-1">Mẹo nhỏ:</span>
-                  Ảnh đẹp giúp tăng khả năng khách thuê chốt phòng lên đến 40%. Nên chụp góc rộng và đủ sáng.
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )
-    }
-  ];
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/70 flex justify-center py-12 px-4 font-inter">
-      <div className="w-full max-w-5xl flex flex-col bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white overflow-hidden backdrop-blur-sm">
-
-        {/* HEADER AREA */}
-        <div className="px-10 py-8 bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="space-y-1">
-            <Space size={12}>
-              <div className="w-12 h-12 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                <Pencil size={24} className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                  Chỉnh sửa phòng
-                </h2>
-                <nav className="flex items-center text-sm text-slate-400 font-medium gap-1.5">
-                  <span className="hover:text-slate-600 transition-colors cursor-default">Quản lý nhà</span>
-                  <ChevronRight size={14} />
-                  <span className="text-amber-500">Chỉnh sửa</span>
-                </nav>
-              </div>
-            </Space>
+    <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
+      <div className="w-full max-w-4xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* HEADER */}
+        <div className="px-6 py-5 border-b border-gray-100 bg-slate-50/50 flex justify-between items-center shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Pencil size={20} className="text-amber-500" />
+              Chỉnh sửa phòng
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Cập nhật thông tin phòng
+            </p>
           </div>
           <Button
             type="text"
-            icon={<XIcon size={20} className="text-slate-400" />}
+            icon={<XIcon size={20} className="text-slate-500" />}
             onClick={handleClose}
-            className="hover:bg-slate-100 rounded-2xl w-11 h-11 flex items-center justify-center transition-all"
+            className="hover:bg-slate-200 rounded-full w-10 h-10 flex items-center justify-center p-0"
           />
         </div>
 
-        <Divider className="my-0 border-slate-50" />
-
-        {/* LOADING STATE OR FORM */}
-        {roomLoading ? (
-            <div className="p-10">
-                <Skeleton active paragraph={{ rows: 15 }} />
-            </div>
-        ) : (
-          <div className="flex-1 flex flex-col md:flex-row h-full min-h-[600px]">
-            
-            {/* NAVIGATION BAR (LEFT) */}
-            <div className="w-full md:w-72 bg-slate-50/40 p-6 md:p-8 space-y-6">
-              <div className="hidden md:block mb-8">
-                <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-4">Các bước thực hiện</h4>
-                <div className="space-y-3">
-                  {[
-                    { key: "basic", label: "Thông tin cơ bản", icon: Info, color: "text-indigo-500", bg: "bg-indigo-50" },
-                    { key: "assets", label: "Tài sản & Dịch vụ", icon: Wrench, color: "text-blue-500", bg: "bg-blue-50" },
-                    { key: "images", label: "Hình ảnh phòng", icon: ImagePlus, color: "text-emerald-500", bg: "bg-emerald-50" }
-                  ].map((item) => (
-                    <div 
-                      key={item.key}
-                      onClick={() => setActiveTab(item.key)}
-                      className={`
-                        p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all duration-300 group
-                        ${activeTab === item.key 
-                          ? 'bg-white shadow-md shadow-slate-200/50 scale-[1.02]' 
-                          : 'hover:bg-slate-100/70 border border-transparent'}
-                      `}
-                    >
-                      <div className={`
-                        w-10 h-10 rounded-xl flex items-center justify-center transition-colors
-                        ${activeTab === item.key ? item.bg + ' ' + item.color : 'bg-white text-slate-400'}
-                      `}>
-                        <item.icon size={18} />
-                      </div>
-                      <span className={`text-[14.5px] font-bold transition-colors ${activeTab === item.key ? 'text-slate-800' : 'text-slate-500'}`}>
-                        {item.label}
+        {/* FORM BODY */}
+        <div className="p-6">
+          {roomLoading ? (
+            <Skeleton active paragraph={{ rows: 8 }} />
+          ) : (
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={(v) => updateMutation.mutate(v)}
+              requiredMark={false}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 flex flex-col justify-center">
+                  <Form.Item
+                    name="property_id"
+                    label={
+                      <span className="text-slate-600 font-medium flex items-center gap-2">
+                        <Home size={16} className="text-indigo-500" /> Chọn nhà
+                        trọ <span className="text-red-500">*</span>
                       </span>
-                    </div>
-                  ))}
+                    }
+                    rules={[
+                      { required: true, message: "Vui lòng chọn nhà trọ!" },
+                    ]}
+                    className="mb-0"
+                  >
+                    <Select
+                      placeholder="Chọn nhà trọ..."
+                      loading={propertiesLoading}
+                      options={properties.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} (${p.code})`,
+                      }))}
+                      showSearch
+                      filterOption={(input, option) =>
+                        String(option?.label ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      size="large"
+                      onChange={handlePropertyChange}
+                    />
+                  </Form.Item>
+                </div>
+
+                <div className="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-100 flex flex-col justify-center">
+                  <Form.Item
+                    name="floor_id"
+                    label={
+                      <span className="text-slate-600 font-medium flex items-center gap-2">
+                        <Layers size={16} className="text-indigo-500" /> Chọn
+                        tầng <span className="text-red-500">*</span>
+                      </span>
+                    }
+                    rules={[{ required: true, message: "Vui lòng chọn tầng!" }]}
+                    className="mb-0"
+                  >
+                    <Select
+                      placeholder="Chọn tầng..."
+                      loading={floorsLoading}
+                      disabled={!selectedPropertyId}
+                      options={
+                        floors?.data?.map((f) => ({
+                          value: f.id,
+                          label: f.name,
+                        })) || []
+                      }
+                      size="large"
+                    />
+                  </Form.Item>
                 </div>
               </div>
-              
-              <div className="p-5 bg-gradient-to-tr from-slate-900 to-slate-800 rounded-3xl text-white shadow-xl shadow-slate-200">
-                 <div className="flex items-center gap-2 mb-3">
-                   <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Trạng thái</span>
-                 </div>
-                 <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                   Đang chỉnh sửa {room?.name}
-                 </p>
+
+              <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+                <h3 className="text-base font-semibold text-slate-700 mb-2 px-1 border-b border-gray-50 pb-3">
+                  Thông tin chi tiết phỏng
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Form.Item
+                    name="name"
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Tên phòng <span className="text-red-500">*</span>
+                      </span>
+                    }
+                    rules={[
+                      { required: true, message: "Vui lòng nhập tên phòng!" },
+                    ]}
+                  >
+                    <Input
+                      prefix={
+                        <DoorOpen size={16} className="text-slate-400 mr-2" />
+                      }
+                      placeholder="Ví dụ: P.101, Phòng VIP..."
+                      className="rounded-xl h-11"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="code"
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Mã phòng
+                      </span>
+                    }
+                  >
+                    <Input
+                      prefix={
+                        <Hash size={16} className="text-slate-400 mr-2" />
+                      }
+                      placeholder="R101"
+                      className="rounded-xl h-11 uppercase"
+                    />
+                  </Form.Item>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Form.Item
+                    name="base_price"
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Giá thuê (VNĐ) <span className="text-red-500">*</span>
+                      </span>
+                    }
+                    rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
+                  >
+                    <InputNumber
+                      min={0}
+                      step={100000}
+                      prefix={
+                        <Coins size={16} className="text-slate-400 mr-2" />
+                      }
+                      placeholder="3,500,000"
+                      formatter={(val) =>
+                        `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      parser={(val) =>
+                        Number(val?.replace(/\$\s?|(,*)/g, "")) as any
+                      }
+                      className="w-full rounded-xl h-11"
+                      controls={false}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="area"
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Diện tích (m²)
+                      </span>
+                    }
+                    rules={[
+                      {
+                        required: true,
+                        message: "Vui lòng nhập diện tích phòng",
+                      },
+                      {
+                        validator: async (_, value) => {
+                          if (!value) return Promise.resolve();
+
+                          if (!property?.area || !rooms?.data) {
+                            return Promise.resolve();
+                          }
+
+                          // ✅ FILTER LẠI
+                          const roomsData = (rooms.data ?? []).filter(
+                            (r: any) =>
+                              String(r.property_id) === String(propertyId),
+                          );
+
+                          const editingRoom = roomsData.find(
+                            (r: any) => String(r.id) === String(id),
+                          );
+
+                          const currentRoomArea = Number(
+                            editingRoom?.area || 0,
+                          );
+
+                          const totalRoomArea = roomsData.reduce(
+                            (sum: number, r: any) => sum + Number(r.area || 0),
+                            0,
+                          );
+
+                          const newTotal =
+                            totalRoomArea - currentRoomArea + Number(value);
+
+                          if (newTotal > Number(property.area)) {
+                            return Promise.reject(
+                              new Error(
+                                `Tổng diện tích phòng (${newTotal} m²) vượt quá diện tích nhà (${property.area} m²)`,
+                              ),
+                            );
+                          }
+
+                          return Promise.resolve();
+                        },
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={1}
+                      prefix={
+                        <Maximize size={16} className="text-slate-400 mr-2" />
+                      }
+                      placeholder="25"
+                      className="w-full rounded-xl h-11"
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="capacity"
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Sức chứa tối đa (người)
+                      </span>
+                    }
+                  >
+                    <InputNumber
+                      min={1}
+                      prefix={
+                        <Users size={16} className="text-slate-400 mr-2" />
+                      }
+                      placeholder="2"
+                      className="w-full rounded-xl h-11"
+                    />
+                  </Form.Item>
+                </div>
+
+                <Form.Item
+                  name="description"
+                  label={
+                    <span className="text-slate-600 font-medium">
+                      Mô tả thêm
+                    </span>
+                  }
+                >
+                  <Input.TextArea
+                    rows={3}
+                    placeholder="Tiện ích nội thất, view phòng..."
+                    className="rounded-xl p-3"
+                  />
+                </Form.Item>
               </div>
-            </div>
+            </Form>
+          )}
+        </div>
 
-            {/* FORM FIELDS (RIGHT/CENTER) */}
-            <div className="flex-1 bg-white p-6 md:p-10">
-              <Form 
-                form={form} 
-                layout="vertical" 
-                onFinish={onFinish} 
-                requiredMark={false}
-                autoComplete="off"
-                initialValues={{ assets: [] }}
-              >
-                <Tabs 
-                  activeKey={activeTab} 
-                  onChange={setActiveTab} 
-                  renderTabBar={() => <></>}
-                  items={tabItems}
-                />
-              </Form>
-            </div>
-          </div>
-        )}
-
-        {/* FOOTER ACTIONS */}
-        <div className="px-10 py-8 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md">
-           <div className="flex items-center gap-2 text-slate-400">
-             <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-             <span className="text-xs font-semibold uppercase tracking-wider">Hostech Property Management</span>
-           </div>
-           
-           <div className="flex gap-4">
-              <Button
-                onClick={handleClose}
-                className="rounded-2xl h-12 px-8 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all border-2"
-              >
-                Hủy bỏ
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => form.submit()}
-                loading={updateMutation.isPending || isUploading}
-                disabled={roomLoading}
-                className="rounded-2xl h-12 px-10 bg-amber-500 hover:bg-amber-600 border-none shadow-lg shadow-amber-500/20 font-bold text-[15px] transition-all transform hover:translate-y-[-2px] active:translate-y-[0]"
-              >
-                {isUploading ? 'Đang tải...' : 'Lưu thay đổi'}
-              </Button>
-           </div>
+        {/* FOOTER */}
+        <div className="p-5 bg-slate-50 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+          <Button
+            onClick={handleClose}
+            className="rounded-xl h-10 px-6 border-slate-200 text-slate-600 hover:text-slate-800"
+          >
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            onClick={() => form.submit()}
+            loading={updateMutation.isPending}
+            disabled={roomLoading}
+            className="rounded-xl h-10 px-8 bg-amber-500 hover:bg-amber-600 border-none shadow-md shadow-amber-500/20 font-medium"
+          >
+            Cập nhật
+          </Button>
         </div>
       </div>
-      
-      {/* GLOBAL CUSTOM STYLES */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-multiple-select .ant-select-selector {
-          border-radius: 12px !important;
-          padding: 6px 12px !important;
-          border-color: #e2e8f0 !important;
-        }
-        .upload-room-images .ant-upload-select-picture-card {
-          border-radius: 20px !important;
-          border: 2px dashed #e2e8f0 !important;
-          background: #f8fafc !important;
-          width: 120px !important;
-          height: 120px !important;
-        }
-        .upload-room-images .ant-upload-list-item {
-          border-radius: 20px !important;
-          width: 120px !important;
-          height: 120px !important;
-        }
-        .ant-form-item-label label {
-          font-family: 'Inter', sans-serif !important;
-        }
-      ` }} />
     </div>
   );
 };

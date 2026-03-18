@@ -1,7 +1,8 @@
-
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 
 const Notfound = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="mt-15">
       <div className="container">
@@ -23,14 +24,14 @@ const Notfound = () => {
               <div className="contant_box_404">
                 <h3 className="h2">Không tìm thấy trang phù hợp</h3>
 
-                <p className="mb-5">Vui long quay lại!</p>
+                <p className="mb-5">Vui lòng quay lại!</p>
 
-                <Link
-                  to="/auth"
+                <button
+                  onClick={() => navigate(-1)}
                   className="p-2 text-white hover:font-bold bg-green-600 drop-shadow drop-shadow-red-600"
                 >
-                  Chuyển đến đăng nhập
-                </Link>
+                  Quay lại trang trước
+                </button>
               </div>
             </div>
           </div>

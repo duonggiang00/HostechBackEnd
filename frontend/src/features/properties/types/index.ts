@@ -22,7 +22,7 @@ export interface RoomAssetType {
   room_id?: string | number;
   name: string;
   quantity?: number;
-  status?: 'good' | 'damaged' | 'lost' | string;
+  status?: "good" | "damaged" | "lost" | string;
   serial?: string;
   condition?: string;
   notes?: string;
@@ -62,6 +62,7 @@ export interface FloorDTO {
   id: string;
   property_id: string;
   code: string;
+  area: string;
   name: string;
   sort_order: string;
   created_at: string;
