@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Finance\Payment;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Policies\Finance\FinancePolicy;
 use App\Policies\Org\OrgPolicy;
 use App\Policies\Org\UserPolicy;
 use App\Policies\Property\FloorPolicy;
@@ -22,12 +24,13 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        User::class => UserPolicy::class,
-        Org::class => OrgPolicy::class,
+        User::class     => UserPolicy::class,
+        Org::class      => OrgPolicy::class,
         Property::class => PropertyPolicy::class,
-        Floor::class => FloorPolicy::class,
-        Room::class => RoomPolicy::class,
+        Floor::class    => FloorPolicy::class,
+        Room::class     => RoomPolicy::class,
         \App\Models\Handover\Handover::class => \App\Policies\Handover\HandoverPolicy::class,
+        Payment::class  => FinancePolicy::class,
     ];
 
     /**
