@@ -18,7 +18,7 @@ class RBACSeeder extends Seeder
         // 1. Create System Roles (Not managed by specific module policies)
         $systemRoles = ['Admin'];
         foreach ($systemRoles as $roleName) {
-            Role::firstOrCreate(['name' => $roleName]);
+            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
         }
         $this->command->info('✅ System Roles created: '.implode(', ', $systemRoles));
 

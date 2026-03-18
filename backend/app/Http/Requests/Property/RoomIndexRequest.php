@@ -14,6 +14,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam filter[property_id] string ID Bất động sản. Example: uuid
  * @queryParam filter[floor_id] string ID Tầng. Example: uuid
  * @queryParam sort string Sắp xếp. Example: -code
+ * @queryParam include string Các quan hệ kèm theo. Example: contracts,meters,invoices,roomServices,contracts.members,assets,media
  */
 class RoomIndexRequest extends FormRequest
 {
@@ -34,6 +35,12 @@ class RoomIndexRequest extends FormRequest
             'filter.type' => ['nullable', 'string'],
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.floor_id' => ['nullable', 'uuid'],
+            'filter.price_min' => ['nullable', 'numeric', 'min:0'],
+            'filter.price_max' => ['nullable', 'numeric', 'min:0'],
+            'filter.area_min' => ['nullable', 'numeric', 'min:0'],
+            'filter.area_max' => ['nullable', 'numeric', 'min:0'],
+            'filter.capacity_min' => ['nullable', 'integer', 'min:0'],
+            'filter.capacity_max' => ['nullable', 'integer', 'min:0'],
             'sort' => ['nullable', 'string', 'in:code,status,type,created_at,-code,-status,-type,-created_at'],
         ];
     }

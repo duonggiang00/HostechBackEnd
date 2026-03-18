@@ -273,8 +273,43 @@ class DashboardService
                 'revenue' => $this->managerRevenueStats($orgId, $propertyIds, $from, $to),
                 'contracts' => $this->managerContractStats($orgId, $propertyIds),
                 'tickets' => $this->managerTicketStats($orgId, $propertyIds),
+                'properties' => $this->managerPropertyStats($orgId, $propertyIds),
             ];
         });
+    }
+
+    private function managerPropertyStats(?string $orgId, array $propertyIds): array
+    {
+        if (! $orgId || empty($propertyIds)) {
+            return ['total_properties' => 0, 'total_rooms' => 0, 'occupied_rooms' => 0, 'available_rooms' => 0, 'occupancy_rate' => 0];
+        }
+
+        $properties = Property::withoutGlobalScopes()
+            ->where('org_id', $orgId)
+            ->whereIn('id', $propertyIds)
+            ->withCount([
+                'rooms',
+                'rooms as occupied_rooms_count' => function ($q) {
+                    $q->where('status', 'occupied');
+                },
+                'rooms as available_rooms_count' => function ($q) {
+                    $q->where('status', 'available');
+                },
+            ])
+            ->get();
+
+        $totalRooms = $properties->sum('rooms_count');
+        $occupiedRooms = $properties->sum('occupied_rooms_count');
+
+        return [
+            'total_properties' => $properties->count(),
+            'total_rooms' => $totalRooms,
+            'occupied_rooms' => $occupiedRooms,
+            'available_rooms' => $properties->sum('available_rooms_count'),
+            'occupancy_rate' => $totalRooms > 0
+                ? round(($occupiedRooms / $totalRooms) * 100, 2)
+                : 0,
+        ];
     }
 
     private function managerTenantStats(?string $orgId, array $propertyIds, Carbon $from, Carbon $to): array
@@ -408,12 +443,24 @@ class DashboardService
         $done = $statuses['DONE'] ?? 0;
         $cancelled = $statuses['CANCELLED'] ?? 0;
 
+        // Calculate MTTR in hours for DONE tickets in the last 30 days
+        $mttr = Ticket::withoutGlobalScopes()
+            ->where('org_id', $orgId)
+            ->whereIn('property_id', $propertyIds)
+            ->where('status', 'DONE')
+            ->whereNotNull('updated_at')
+            ->where('updated_at', '>=', now()->subDays(30))
+            ->select(DB::raw('AVG(TIMESTAMPDIFF(HOUR, created_at, updated_at)) as avg_hours'))
+            ->first()
+            ->avg_hours ?? 0;
+
         return [
             'pending' => $pending,
             'in_progress' => $inProgress,
             'done' => $done,
             'cancelled' => $cancelled,
             'total' => $pending + $inProgress + $done + $cancelled,
+            'mttr_hours' => round((float) $mttr, 1),
             'by_status' => $statuses,
         ];
     }

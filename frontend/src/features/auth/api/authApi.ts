@@ -15,19 +15,9 @@ export const login = async (data: any) => {
   });
 };
 
-// Verify OTP
-export const verifyOTP = async (data: any) => {
-  return axiosClient.post("auth/otp/verify", data);
-};
-
-// Gửi lại mã OTP
-export const resendOTP = (data: any) => {
-  return axiosClient.post("auth/otp/request", { ...data });
-};
-
-// Register Users
-export const registerUser = async (data: any) => {
-  return axiosClient.post("auth/register-user", { ...data });
+// Two Factor Challenge
+export const twoFactorChallenge = async (data: { code?: string; recovery_code?: string }) => {
+  return await axiosClient.post("auth/two-factor-challenge", data);
 };
 
 // Lấy thông tin người dùng hiện tại

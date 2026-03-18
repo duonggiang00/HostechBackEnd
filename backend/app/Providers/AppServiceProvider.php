@@ -15,6 +15,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        \App\Models\Contract\Contract::observe(\App\Observers\ContractObserver::class);
+
         $this->configureRateLimiting();
 
         \Illuminate\Support\Facades\Gate::define('viewApiDocs', function ($user = null) {

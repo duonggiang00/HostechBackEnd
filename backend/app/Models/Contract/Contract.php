@@ -42,6 +42,10 @@ class Contract extends Model
         'join_code_revoked_at',
         'signed_at',
         'terminated_at',
+        'base_rent',
+        'fixed_services_fee',
+        'total_rent',
+        'cycle_months',
         'created_by_user_id',
         'meta',
     ];
@@ -51,6 +55,10 @@ class Contract extends Model
         return [
             'start_date' => 'date',
             'end_date' => 'date',
+            'base_rent' => 'decimal:2',
+            'fixed_services_fee' => 'decimal:2',
+            'total_rent' => 'decimal:2',
+            'cycle_months' => 'integer',
             'rent_price' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
             'join_code_expires_at' => 'datetime',

@@ -36,9 +36,44 @@ class Room extends Model implements HasMedia
         return $query->where('status', '!=', 'draft');
     }
 
+    public function scopePriceMin($query, $price)
+    {
+        return $query->where('base_price', '>=', $price);
+    }
+
+    public function scopePriceMax($query, $price)
+    {
+        return $query->where('base_price', '<=', $price);
+    }
+
+    public function scopeAreaMin($query, $area)
+    {
+        return $query->where('area', '>=', $area);
+    }
+
+    public function scopeAreaMax($query, $area)
+    {
+        return $query->where('area', '<=', $area);
+    }
+
+    public function scopeCapacityMin($query, $capacity)
+    {
+        return $query->where('capacity', '>=', $capacity);
+    }
+
+    public function scopeCapacityMax($query, $capacity)
+    {
+        return $query->where('capacity', '<=', $capacity);
+    }
+
     public function isDraft(): bool
     {
         return $this->status === 'draft';
+    }
+
+    public function isOccupied(): bool
+    {
+        return $this->status === 'occupied';
     }
 
     protected function casts(): array
@@ -95,5 +130,27 @@ class Room extends Model implements HasMedia
     public function floorPlanNode()
     {
         return $this->hasOne(RoomFloorPlanNode::class);
+    }
+
+    public function priceHistories()
+    {
+        return $this->hasMany(RoomPrice::class)->orderBy('start_date', 'desc');
+    }
+
+    public function meters()
+    {
+        return $this->hasMany(\App\Models\Meter\Meter::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(\App\Models\Invoice\Invoice::class);
+    }
+
+    public function activeContract()
+    {
+        return $this->hasOne(\App\Models\Contract\Contract::class)
+            ->where('status', 'ACTIVE')
+            ->latestOfMany();
     }
 }

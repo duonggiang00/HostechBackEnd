@@ -5,6 +5,7 @@ namespace App\Services\System;
 use App\Models\Org\User;
 use App\Models\System\UserInvitation;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class UserInvitationService
@@ -80,5 +81,55 @@ class UserInvitationService
         }
 
         return $invitation;
+    }
+
+    /**
+     * Accept a token and register the user
+     */
+    public function acceptToken(string $token, array $data): User
+    {
+        $invitation = $this->validateToken($token);
+
+        DB::beginTransaction();
+        try {
+            // If it's an Owner invitation without an Org, create the Org first
+            if (is_null($invitation->org_id) && $invitation->role_name === 'Owner') {
+                if (empty($data['org_name'])) {
+                    abort(422, 'Tên tổ chức (org_name) là bắt buộc để khởi tạo tài khoản Chủ sở hữu.');
+                }
+                $org = \App\Models\Org\Org::create(['name' => $data['org_name']]);
+                $orgId = $org->id;
+            } else {
+                $orgId = $invitation->org_id;
+            }
+
+            // Create User
+            $user = User::create([
+                'org_id' => $orgId,
+                'email' => $invitation->email,
+                'full_name' => $data['full_name'],
+                'password' => $data['password'],
+                'is_active' => true,
+            ]);
+
+            // Assign Role
+            $user->assignRole($invitation->role_name);
+
+            // Assign properties scope if specified
+            if (! empty($invitation->properties_scope)) {
+                $user->properties()->sync($invitation->properties_scope);
+            }
+
+            // Mark invitation as registered
+            $invitation->update(['registered_at' => Carbon::now()]);
+
+            DB::commit();
+
+            return $user;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }

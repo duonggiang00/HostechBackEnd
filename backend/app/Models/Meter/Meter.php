@@ -20,7 +20,7 @@ class Meter extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'room_id', 'code', 'type', 'installed_at', 'is_active', 'meta',
+        'org_id', 'room_id', 'property_id', 'service_id', 'code', 'type', 'is_master', 'installed_at', 'is_active', 'meta',
     ];
 
     protected function casts(): array
@@ -28,6 +28,7 @@ class Meter extends Model
         return [
             'installed_at' => 'date',
             'is_active' => 'boolean',
+            'is_master' => 'boolean',
             'meta' => 'array',
         ];
     }
@@ -42,8 +43,23 @@ class Meter extends Model
         return $this->belongsTo(Room::class);
     }
 
+    public function property()
+    {
+        return $this->belongsTo(\App\Models\Property\Property::class);
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(\App\Models\Service\Service::class);
+    }
+
     public function readings()
     {
         return $this->hasMany(MeterReading::class);
+    }
+
+    public function latestReading()
+    {
+        return $this->hasOne(MeterReading::class)->latestOfMany();
     }
 }

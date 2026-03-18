@@ -9,6 +9,7 @@ use App\Models\Contract\ContractMember;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
 use App\Services\Invoice\InvoiceService;
+use App\Services\Service\ServiceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -18,6 +19,7 @@ class ContractService
 {
     public function __construct(
         protected InvoiceService $invoiceService,
+        protected ServiceService $serviceService,
     ) {}
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
@@ -134,6 +136,28 @@ class ContractService
             if (! isset($contractData['join_code'])) {
                 $contractData['join_code'] = $this->generateJoinCode();
             }
+
+            // --- FINANCIAL CALCULATION ---
+            $rentPrice = (float) ($contractData['rent_price'] ?? 0);
+            $contractData['base_rent'] = $rentPrice;
+
+            $roomId = $contractData['room_id'] ?? null;
+            $orgId = $contractData['org_id'];
+            $fixedServicesFee = 0;
+
+            if ($roomId) {
+                $roomServices = $this->serviceService->getRoomServices($roomId, $orgId);
+                foreach ($roomServices as $rs) {
+                    // Only include fixed/recurring services (not metered)
+                    if ($rs->service->calc_mode !== 'PER_METER') {
+                        $fixedServicesFee += (float) ($rs->service->current_price * $rs->quantity);
+                    }
+                }
+            }
+
+            $contractData['fixed_services_fee'] = $fixedServicesFee;
+            $contractData['total_rent'] = $rentPrice + $fixedServicesFee;
+            // -----------------------------
 
             $contract = Contract::create($contractData);
 
@@ -437,11 +461,11 @@ class ContractService
      */
     private function createInitialInvoice(Contract $contract, User $tenant): Invoice
     {
-        $periodStart = $contract->start_date;
-        $periodEnd = $contract->start_date->copy()->addMonth()->subDay();
+        $periodStart = \Carbon\Carbon::parse($contract->start_date);
+        $periodEnd = $periodStart->copy()->addMonth()->subDay();
         $dueDate = now()->addDays(3);
 
-        $rentPrice = (float) $contract->rent_price;
+        $baseRent = (float) $contract->base_rent;
         $depositAmount = (float) $contract->deposit_amount;
 
         // Xây dựng danh sách items
@@ -450,10 +474,25 @@ class ContractService
                 'type' => InvoiceItemType::RENT->value,
                 'description' => 'Tiền phòng tháng đầu tiên',
                 'quantity' => 1,
-                'unit_price' => $rentPrice,
-                'amount' => $rentPrice,
+                'unit_price' => $baseRent,
+                'amount' => $baseRent,
             ],
         ];
+
+        // Thêm các dịch vụ cố định (fixed services)
+        $roomServices = $this->serviceService->getRoomServices($contract->room_id, $contract->org_id);
+        foreach ($roomServices as $rs) {
+            if ($rs->service->calc_mode !== 'PER_METER') {
+                $itemAmount = (float) ($rs->service->current_price * $rs->quantity);
+                $items[] = [
+                    'type' => InvoiceItemType::SERVICE->value,
+                    'description' => "Phí dịch vụ: {$rs->service->name}",
+                    'quantity' => $rs->quantity,
+                    'unit_price' => (float) $rs->service->current_price,
+                    'amount' => $itemAmount,
+                ];
+            }
+        }
 
         if ($depositAmount > 0) {
             $items[] = [

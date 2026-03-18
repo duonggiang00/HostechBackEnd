@@ -8,12 +8,16 @@ use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
 use App\Http\Responses\Auth\LoginResponse;
 use App\Http\Responses\Auth\RegisterResponse;
+use App\Http\Responses\Auth\TwoFactorChallengeResponse;
+use App\Http\Responses\Auth\TwoFactorLoginResponse;
 use App\Models\Org\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
+use Laravel\Fortify\Contracts\TwoFactorChallengeResponse as TwoFactorChallengeResponseContract;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse as TwoFactorLoginResponseContract;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -26,6 +30,8 @@ class FortifyServiceProvider extends ServiceProvider
         // Bind custom response classes
         $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
         $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
+        $this->app->singleton(TwoFactorChallengeResponseContract::class, TwoFactorChallengeResponse::class);
+        $this->app->singleton(TwoFactorLoginResponseContract::class, TwoFactorLoginResponse::class);
     }
 
     /**

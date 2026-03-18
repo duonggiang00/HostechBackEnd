@@ -28,11 +28,16 @@ class LoginResponse implements LoginResponseContract
 
         return response()->json([
             'user' => [
-                'id' => $user->id,
+                'id'        => (string) $user->id,
                 'full_name' => $user->full_name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'roles' => $user->roles->pluck('name'),
+                'email'     => $user->email,
+                'phone'     => $user->phone,
+                // Single role string — sufficient for immediate post-login routing
+                'role'      => $user->roles->first()?->name,
+                // org_id so Owner can be scoped to their org without extra call
+                'org_id'    => $user->org_id ? (string) $user->org_id : null,
+                // Keep roles[] for backwards compat
+                'roles'     => $user->roles->pluck('name'),
             ],
             'token' => $plainToken,
         ], 200);

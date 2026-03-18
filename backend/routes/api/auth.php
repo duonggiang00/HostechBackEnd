@@ -16,7 +16,7 @@ Route::post('/auth/logout', function (Illuminate\Http\Request $request) {
 });
 
 Route::get('/auth/me', function (Illuminate\Http\Request $request) {
-    $user = $request->user()->loadMissing('roles', 'permissions', 'media');
+    $user = $request->user()->loadMissing('roles', 'permissions', 'media', 'properties');
 
     return new \App\Http\Resources\Org\UserResource($user);
 });

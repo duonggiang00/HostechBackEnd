@@ -9,6 +9,9 @@ use App\Http\Requests\Property\RoomPublishRequest;
 use App\Http\Requests\Property\RoomQuickCreateRequest;
 use App\Http\Requests\Property\RoomStoreRequest;
 use App\Http\Requests\Property\RoomUpdateRequest;
+use App\Http\Requests\Property\RoomBatchDeleteRequest;
+use App\Http\Requests\Property\RoomBatchFloorPlanRequest;
+use App\Http\Requests\Property\RoomQuickCreateBatchRequest;
 use App\Http\Resources\Property\RoomResource;
 use App\Models\Property\Room;
 use App\Services\Property\RoomService;
@@ -39,7 +42,19 @@ class RoomController extends Controller
 
         $perPage = (int) $request->query('per_page', 15);
         $search = $request->input('search');
-        $allowed = ['code', 'status', 'type', AllowedFilter::exact('property_id'), AllowedFilter::exact('floor_id')];
+        $allowed = [
+            'code', 
+            'status', 
+            'type', 
+            AllowedFilter::exact('property_id'), 
+            AllowedFilter::exact('floor_id'),
+            AllowedFilter::scope('price_min'),
+            AllowedFilter::scope('price_max'),
+            AllowedFilter::scope('area_min'),
+            AllowedFilter::scope('area_max'),
+            AllowedFilter::scope('capacity_min'),
+            AllowedFilter::scope('capacity_max'),
+        ];
 
         $paginator = $this->service->paginate($allowed, $perPage, $search, $request->user());
 
@@ -83,7 +98,19 @@ class RoomController extends Controller
 
         $this->authorize('view', $room);
 
-        $room->loadMissing(['assets', 'prices', 'statusHistories', 'media']);
+        $room->loadMissing([
+            'floor',
+            'property',
+            'assets',
+            'prices',
+            'statusHistories',
+            'media',
+            'contracts.members',
+            'activeContract.members',
+            'meters.latestReading',
+            'invoices',
+            'roomServices.service'
+        ]);
 
         return new RoomResource($room);
     }
@@ -117,6 +144,20 @@ class RoomController extends Controller
     }
 
     /**
+     * Xóa nhiều phòng
+     */
+    public function destroyBatch(RoomBatchDeleteRequest $request)
+    {
+        $this->authorize('deleteAny', Room::class);
+        $result = $this->service->deleteBatch($request->validated('ids'));
+
+        return response()->json([
+            'message' => "Deleted {$result['deleted']} rooms.",
+            'failed' => $result['failed']
+        ]);
+    }
+
+    /**
      * Khôi phục phòng
      */
     public function restore(string $id)
@@ -144,6 +185,36 @@ class RoomController extends Controller
         return response()->json(['message' => 'Permanently deleted successfully']);
     }
 
+    /**
+     * Khôi phục nhiều phòng
+     */
+    public function restoreBatch(Request $request)
+    {
+        $this->authorize('deleteAny', Room::class);
+        $ids = $request->input('ids', []);
+        $result = $this->service->restoreBatch($ids);
+
+        return response()->json([
+            'message' => "Restored {$result['restored']} rooms.",
+            'failed' => $result['failed']
+        ]);
+    }
+
+    /**
+     * Xóa vĩnh viễn nhiều phòng
+     */
+    public function forceDeleteBatch(Request $request)
+    {
+        $this->authorize('deleteAny', Room::class);
+        $ids = $request->input('ids', []);
+        $result = $this->service->forceDeleteBatch($ids);
+
+        return response()->json([
+            'message' => "Permanently deleted {$result['deleted']} rooms.",
+            'failed' => $result['failed']
+        ]);
+    }
+
     // ─── Quick Create (Draft) ────────────────────────────────────────────────
 
     /**
@@ -159,6 +230,18 @@ class RoomController extends Controller
         $room = $this->service->quickCreate($request->validated(), $request->user());
 
         return (new RoomResource($room))->response()->setStatusCode(201);
+    }
+
+    /**
+     * Tạo hàng loạt phòng nhanh (Draft)
+     */
+    public function quickCreateBatch(RoomQuickCreateBatchRequest $request)
+    {
+        $this->authorize('create', Room::class);
+
+        $rooms = $this->service->quickCreateBatch($request->validated(), $request->user());
+
+        return RoomResource::collection($rooms);
     }
 
     /**
@@ -232,5 +315,20 @@ class RoomController extends Controller
         $this->service->removeFloorPlanNode($room);
 
         return response()->json(['message' => 'Floor plan node removed successfully.']);
+    }
+
+    /**
+     * Cập nhật vị trí nhiều phòng trên sơ đồ tầng
+     */
+    public function batchFloorPlan(RoomBatchFloorPlanRequest $request)
+    {
+        $this->authorize('updateAny', Room::class);
+
+        $nodes = $this->service->batchSetFloorPlanNodes($request->validated('nodes'), $request->user());
+
+        return response()->json([
+            'message' => 'Batch floor plan updated successfully.',
+            'data'    => $nodes,
+        ]);
     }
 }

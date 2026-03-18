@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 // --- Public API Routes ---
 Route::get('invitations/validate/{token}', [UserInvitationController::class, 'validateToken']);
+Route::post('invitations/accept/{token}', [UserInvitationController::class, 'accept']);
 
 // --- Protected API Routes (Modularized) ---
 Route::middleware('auth:sanctum')->group(function () {

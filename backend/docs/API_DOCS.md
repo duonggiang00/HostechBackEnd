@@ -40,3 +40,11 @@ class UserStoreRequest extends FormRequest {}
 **TUYỆT ĐỐI KHÔNG** trả về Array thuần hay Eloquent Model trực tiếp.
 - Phải sử dụng `Illuminate\Http\Resources\Json\JsonResource`.
 - Các relation load thêm phải được check bằng `$this->whenLoaded('relation_name')`.
+
+## 4. Strict Mode & Agent Compliance
+Mọi thay đổi hoặc bổ sung API phải tuân thủ nghiêm ngặt:
+- [API_STANDARD.md](file:///c:/laragon/www/laravel/HostechBackEnd/backend/docs/API_STANDARD.md): Quy chuẩn cấu trúc JSON.
+- [AGENT_PROTOCOL.md](file:///c:/laragon/www/laravel/HostechBackEnd/backend/docs/AGENT_PROTOCOL.md): Quy chuẩn hoạt động cho AI Agent.
+
+> [!IMPORTANT]
+> Agent KHÔNG ĐƯỢC tự ý tạo ra các endpoint ảo. Mọi endpoint phải được định nghĩa trong route và có Resource cụ thể.
