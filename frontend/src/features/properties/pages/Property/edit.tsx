@@ -1,10 +1,18 @@
 import { useEffect } from "react";
-import { Button, Input, Form, Switch, Skeleton, Select } from "antd";
+import {
+  Button,
+  Input,
+  Form,
+  Switch,
+  Select,
+  InputNumber,
+  Skeleton,
+} from "antd";
 import { useNavigate, useParams } from "react-router";
 import { useUpdateProperty, useProperty } from "../../hooks/useProperties";
 import { useOrgs } from "../../hooks/useOrgs";
 import { usePermission } from "../../../../shared/hooks/usePermission";
-import { Home, MapPin, Hash, X, Building2 } from "lucide-react";
+import { Home, MapPin, Hash, X, Building2, Maximize } from "lucide-react";
 
 const EditProperty = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,37 +27,57 @@ const EditProperty = () => {
   const orgs = orgsData?.data || [];
 
   useEffect(() => {
-    if (property) {
-      form.setFieldsValue(property);
+    if (property && orgs.length > 0) {
+      form.setFieldsValue({
+        ...property,
+        area: Number(property.area),
+        org_id: property.org_id,
+        use_floors: Boolean(property.use_floors),
+      });
     }
-  }, [property, form]);
+  }, [property, orgs, form]);
 
   const handleClose = () => {
     navigate("/manage/properties", { replace: true });
   };
 
   const handleSubmit = (values: any) => {
-    updateMutation.mutate(values, {
+    if (!property) return;
+
+    const payload = {
+      name: values.name ?? property.name,
+      code: values.code ?? property.code,
+      address: values.address ?? property.address,
+      note: values.note ?? property.note,
+      org_id: values.org_id ?? property.org_id,
+      use_floors: values.use_floors ? 1 : 0,
+      area: Number(values.area ?? property.area),
+    };
+    console.log("FINAL PAYLOAD =", payload);
+
+    updateMutation.mutate(payload, {
       onSuccess: () => {
         handleClose();
       },
     });
   };
-
   const orgOptions = orgs.map((org) => ({
-    value: org.id,
+    value: String(org.id),
     label: org.name,
   }));
 
   return (
     <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
       <div className="w-full max-w-3xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
         {/* HEADER */}
         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">Cập nhật nhà trọ</h2>
-            <p className="text-sm text-slate-500 mt-1">Chỉnh sửa thông tin nhà trọ</p>
+            <h2 className="text-xl font-bold text-slate-800">
+              Cập nhật nhà trọ
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Chỉnh sửa thông tin nhà trọ
+            </p>
           </div>
           <Button
             type="text"
@@ -62,7 +90,11 @@ const EditProperty = () => {
         {/* FORM BODY */}
         <div className="p-6">
           {isLoading ? (
-            <Skeleton active paragraph={{ rows: 6 }} className="bg-white p-6 rounded-2xl border border-gray-100" />
+            <Skeleton
+              active
+              paragraph={{ rows: 6 }}
+              className="bg-white p-6 rounded-2xl border border-gray-100"
+            />
           ) : (
             <Form
               form={form}
@@ -79,7 +111,11 @@ const EditProperty = () => {
                   </h3>
                   <Form.Item
                     name="org_id"
-                    label={<span className="text-slate-600 font-medium">Tổ chức quản lý</span>}
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Tổ chức quản lý
+                      </span>
+                    }
                     className="mb-0"
                   >
                     <Select
@@ -88,23 +124,37 @@ const EditProperty = () => {
                       options={orgOptions}
                       showSearch
                       filterOption={(input, option) =>
-                        String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                        String(option?.label ?? "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
                       }
                       className="h-11 rounded-xl"
                       size="large"
-                      notFoundContent={<span className="text-slate-400 text-sm">Không có tổ chức nào</span>}
+                      notFoundContent={
+                        <span className="text-slate-400 text-sm">
+                          Không có tổ chức nào
+                        </span>
+                      }
                     />
                   </Form.Item>
                 </div>
               )}
 
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm mb-6">
-                <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">Thông tin chung</h3>
+                <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">
+                  Thông tin chung
+                </h3>
 
                 <Form.Item
                   name="name"
-                  label={<span className="text-slate-600 font-medium">Tên nhà trọ <span className="text-red-500">*</span></span>}
-                  rules={[{ required: true, message: "Vui lòng nhập tên nhà trọ!" }]}
+                  label={
+                    <span className="text-slate-600 font-medium">
+                      Tên nhà trọ <span className="text-red-500">*</span>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: "Vui lòng nhập tên nhà trọ!" },
+                  ]}
                 >
                   <Input
                     prefix={<Home size={16} className="text-slate-400 mr-2" />}
@@ -116,45 +166,71 @@ const EditProperty = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Form.Item
                     name="code"
-                    label={<span className="text-slate-600 font-medium">Mã nhà trọ <span className="text-red-500">*</span></span>}
-                    rules={[{ required: true, message: "Vui lòng nhập mã nhà trọ!" }]}
+                    label={
+                      <span className="text-slate-600 font-medium">
+                        Mã nhà trọ <span className="text-red-500">*</span>
+                      </span>
+                    }
+                    rules={[
+                      { required: true, message: "Vui lòng nhập mã nhà trọ!" },
+                    ]}
                   >
                     <Input
-                      prefix={<Hash size={16} className="text-slate-400 mr-2" />}
+                      prefix={
+                        <Hash size={16} className="text-slate-400 mr-2" />
+                      }
                       placeholder="AURORA_01"
                       className="rounded-xl h-11 border-slate-200 uppercase"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="area"
-                    label={<span className="text-slate-600 font-medium">Tổng diện tích (m²)</span>}
-                    rules={[{ pattern: /^\d+(\.\d{1,2})?$/, message: "Vui lòng nhập số hợp lệ!" }]}
-                  >
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Ví dụ: 200.5"
-                      className="rounded-xl h-11 border-slate-200"
                     />
                   </Form.Item>
                 </div>
 
                 <Form.Item
                   name="address"
-                  label={<span className="text-slate-600 font-medium">Địa chỉ</span>}
+                  label={
+                    <span className="text-slate-600 font-medium">Địa chỉ</span>
+                  }
                 >
                   <Input
-                    prefix={<MapPin size={16} className="text-slate-400 mr-2" />}
+                    prefix={
+                      <MapPin size={16} className="text-slate-400 mr-2" />
+                    }
                     placeholder="Số nhà, đường, phường/xã, quận/huyện..."
                     className="rounded-xl h-11 border-slate-200"
                   />
                 </Form.Item>
 
                 <Form.Item
+                  name="area"
+                  label={
+                    <span className="text-slate-600 font-medium">
+                      Diện tích nhà (m²) <span className="text-red-500">*</span>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: "Vui lòng nhập diện tích nhà!" },
+                    {
+                      type: "number",
+                      min: 1,
+                      message: "Diện tích phải lớn hơn 0",
+                    },
+                  ]}
+                >
+                  <InputNumber
+                    min={1}
+                    prefix={
+                      <Maximize size={16} className="text-slate-400 mr-2" />
+                    }
+                    placeholder="500"
+                    className="w-full rounded-xl h-11"
+                  />
+                </Form.Item>
+
+                <Form.Item
                   name="note"
-                  label={<span className="text-slate-600 font-medium">Ghi chú</span>}
+                  label={
+                    <span className="text-slate-600 font-medium">Ghi chú</span>
+                  }
                   className="mb-0"
                 >
                   <Input.TextArea
@@ -166,7 +242,9 @@ const EditProperty = () => {
               </div>
 
               <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">Cấu hình</h3>
+                <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">
+                  Cấu hình
+                </h3>
                 <Form.Item
                   name="use_floors"
                   valuePropName="checked"
@@ -174,8 +252,12 @@ const EditProperty = () => {
                 >
                   <div className="flex justify-between items-center w-full">
                     <div>
-                      <div className="font-medium text-slate-700">Sử dụng phân tầng</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Quản lý phòng theo từng tầng của tòa nhà</div>
+                      <div className="font-medium text-slate-700">
+                        Sử dụng phân tầng
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        Quản lý phòng theo từng tầng của tòa nhà
+                      </div>
                     </div>
                     <Switch className="bg-slate-300" />
                   </div>

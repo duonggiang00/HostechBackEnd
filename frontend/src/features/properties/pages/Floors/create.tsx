@@ -16,7 +16,8 @@ const CreateFloor = () => {
   const statePropertyId = location.state?.propertyId as string | undefined;
 
   // Fetch properties for the dropdown or auto-fill
-  const { data: propertiesData, isLoading: propertiesLoading } = useProperties();
+  const { data: propertiesData, isLoading: propertiesLoading } =
+    useProperties();
   const properties = propertiesData?.data || [];
 
   // Auto-fill property_id
@@ -30,14 +31,21 @@ const CreateFloor = () => {
   }, [statePropertyId, properties, form]);
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => createFloor(data),
+    mutationFn: ({ sort_order, ...data }: any) =>
+      createFloor({
+        ...data,
+        property_id: data.property_id,
+        floor_number: sort_order,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.floors.all });
       notification.success({ message: "Tạo tầng thành công" });
       handleClose();
     },
     onError: (err: any) => {
-      notification.error({ message: err?.response?.data?.message ?? "Lỗi tạo tầng" });
+      notification.error({
+        message: err?.response?.data?.message ?? "Lỗi tạo tầng",
+      });
     },
   });
 
@@ -50,7 +58,6 @@ const CreateFloor = () => {
   return (
     <div className="w-full min-h-full bg-slate-50/50 flex justify-center py-8">
       <div className="w-full max-w-3xl flex flex-col bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
         {/* HEADER */}
         <div className="px-6 py-5 border-b border-gray-100 bg-slate-50/50 flex justify-between items-center shadow-sm">
           <div>
@@ -58,7 +65,9 @@ const CreateFloor = () => {
               <Layers size={20} className="text-indigo-500" />
               Thêm tầng mới
             </h2>
-            <p className="text-sm text-slate-500 mt-1">Điền thông tin cơ bản cho tầng</p>
+            <p className="text-sm text-slate-500 mt-1">
+              Điền thông tin cơ bản cho tầng
+            </p>
           </div>
           <Button
             type="text"
@@ -70,8 +79,14 @@ const CreateFloor = () => {
 
         {/* FORM BODY */}
         <div className="p-6">
-          <Form form={form} layout="vertical" onFinish={(v) => createMutation.mutate(v)} requiredMark={false}>
-
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{
+              property_id: statePropertyId,
+            }}
+            onFinish={(v) => createMutation.mutate(v)}
+          >
             {/* Property selector: hidden if property_id is provided via routing state */}
             {showPropertyDropdown ? (
               <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100 shadow-sm mb-6">
@@ -81,34 +96,57 @@ const CreateFloor = () => {
                 </h3>
                 <Form.Item
                   name="property_id"
-                  label={<span className="text-slate-600 font-medium">Chọn nhà trọ <span className="text-red-500">*</span></span>}
-                  rules={[{ required: true, message: "Vui lòng chọn nhà trọ!" }]}
+                  label={
+                    <span className="text-slate-600 font-medium">
+                      Chọn nhà trọ <span className="text-red-500">*</span>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: "Vui lòng chọn nhà trọ!" },
+                  ]}
                   className="mb-0"
                 >
                   <Select
                     placeholder="Chọn nhà trọ..."
                     loading={propertiesLoading}
-                    options={properties.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` }))}
+                    options={properties.map((p) => ({
+                      value: p.id,
+                      label: `${p.name} (${p.code})`,
+                    }))}
                     showSearch
                     filterOption={(input, option) =>
-                      String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                      String(option?.label ?? "")
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
                     }
                     size="large"
-                    notFoundContent={<span className="text-slate-400 text-sm">Không có nhà trọ nào</span>}
+                    notFoundContent={
+                      <span className="text-slate-400 text-sm">
+                        Không có nhà trọ nào
+                      </span>
+                    }
                   />
                 </Form.Item>
               </div>
             ) : (
               // Form.Item hidden to hold the property_id value
-              <Form.Item name="property_id" hidden><Input /></Form.Item>
+              <Form.Item name="property_id" hidden>
+                <Input />
+              </Form.Item>
             )}
 
             <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">Thông tin tầng</h3>
+              <h3 className="text-base font-semibold text-slate-700 mb-4 px-1">
+                Thông tin tầng
+              </h3>
 
               <Form.Item
                 name="name"
-                label={<span className="text-slate-600 font-medium">Tên tầng <span className="text-red-500">*</span></span>}
+                label={
+                  <span className="text-slate-600 font-medium">
+                    Tên tầng <span className="text-red-500">*</span>
+                  </span>
+                }
                 rules={[{ required: true, message: "Vui lòng nhập tên tầng!" }]}
               >
                 <Input
@@ -121,7 +159,9 @@ const CreateFloor = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Form.Item
                   name="code"
-                  label={<span className="text-slate-600 font-medium">Mã tầng</span>}
+                  label={
+                    <span className="text-slate-600 font-medium">Mã tầng</span>
+                  }
                 >
                   <Input
                     prefix={<Hash size={16} className="text-slate-400 mr-2" />}
@@ -132,7 +172,11 @@ const CreateFloor = () => {
 
                 <Form.Item
                   name="sort_order"
-                  label={<span className="text-slate-600 font-medium">Thứ tự sắp xếp</span>}
+                  label={
+                    <span className="text-slate-600 font-medium">
+                      Thứ tự sắp xếp
+                    </span>
+                  }
                 >
                   <InputNumber
                     min={0}

@@ -10,7 +10,7 @@ const Dashboard: React.FC = () => {
 
   const role = roles?.[0]?.toLowerCase();
 
-  if (role === "admin") return <OwnerDashboard />;
+  if (role === "owner") return <OwnerDashboard />;
   if (role === "manager" || role === "staff") return <StaffDashboard />;
   if (role === "tenant") return <TenantDashboard />;
 

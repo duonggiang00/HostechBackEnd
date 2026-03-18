@@ -22,10 +22,11 @@ import { userRoutes } from "../../features/users/routes.tsx";
 import { meterRoutes } from "../../features/meters/routes";
 import { ticketRoutes } from "../../features/tickets/routes.tsx";
 import { handoverRoutes } from "../../features/handover/routes.tsx";
-import { dashboardRoutes } from "../../features/dashboard/routes.tsx";
 // ── Thêm feature mới → import ở đây ────────────────────────────
 import { profileRoutes } from "../../features/profile/routes";
 import { dashboardRoutes } from "@/Pages/Admin/Dashboards/router";
+import { orgRoutes } from "@/features/organizations/routes.tsx";
+import { systemRoutes } from "@/features/system/routes.tsx";
 
 /**
  * Tất cả routes bên trong /manage layout.
@@ -48,7 +49,6 @@ export const manageRoutes: RouteConfig[] = [
   ...meterRoutes,
   ...ticketRoutes,
   ...handoverRoutes,
-  ...dashboardRoutes,
 ];
 
 /**

@@ -1,16 +1,48 @@
 import { useEffect, useState } from "react";
-import { Button, Input, Form, Select, InputNumber, notification, Upload, Tabs, Divider, Space, Card, Empty } from "antd";
+import {
+  Button,
+  Input,
+  Form,
+  Select,
+  InputNumber,
+  notification,
+  Upload,
+  Tabs,
+  Divider,
+  Space,
+  Card,
+  Empty,
+} from "antd";
 import { useNavigate, useLocation } from "react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createRoom } from "../../api/propertyApi";
 import { uploadMedia } from "../../../../features/media/api/mediaApi";
 import { useServices } from "../../../../features/services/hooks/useServices";
 import { QUERY_KEYS } from "../../../../shared/constants/queryKeys";
-import { useProperties, useFloorsByProperty } from "../../hooks/useProperties";
-import { 
-  DoorOpen, Home, Layers, Hash, Coins, Maximize, Users, 
-  X as XIcon, Plus, Trash2, ClipboardList, Wrench, 
-  ImagePlus, Info, CheckCircle2, ChevronRight
+import {
+  useProperties,
+  useFloorsByProperty,
+  useFloor,
+  useRooms,
+  useProperty,
+} from "../../hooks/useProperties";
+import {
+  DoorOpen,
+  Home,
+  Layers,
+  Hash,
+  Coins,
+  Maximize,
+  Users,
+  X as XIcon,
+  Plus,
+  Trash2,
+  ClipboardList,
+  Wrench,
+  ImagePlus,
+  Info,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 import type { FloorDTO } from "../../types";
 
@@ -28,10 +60,21 @@ const CreateRoom = () => {
 
   const selectedPropertyId = Form.useWatch("property_id", form);
 
-  const { data: propertiesData, isLoading: propertiesLoading } = useProperties();
+  const floorId = Form.useWatch("floor_id", form);
+  const propertyId = Form.useWatch("property_id", form);
+  const { data: property } = useProperty(propertyId || "");
+  const { data: rooms } = useRooms({ floor_id: floorId });
+
+  const roomsData = rooms?.data ?? [];
+  const currentRoomArea = Number(rooms?.data.map((r) => r.area) || 0);
+
+  const { data: propertiesData, isLoading: propertiesLoading } =
+    useProperties();
   const properties = propertiesData?.data || [];
 
-  const { data: floors, isLoading: floorsLoading } = useFloorsByProperty(selectedPropertyId || statePropertyId || "");
+  const { data: floors, isLoading: floorsLoading } = useFloorsByProperty(
+    selectedPropertyId || statePropertyId || "",
+  );
   const { data: services, isLoading: servicesLoading } = useServices();
 
   useEffect(() => {
@@ -55,14 +98,21 @@ const CreateRoom = () => {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => createRoom(data),
+    mutationFn: ({ property_id, ...data }: any) =>
+      createRoom({
+        ...data,
+        floor_id: floorId,
+        property_id: property_id,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.rooms.all });
       notification.success({ message: "Tạo phòng thành công" });
       navigate(-1);
     },
     onError: (err: any) => {
-      notification.error({ message: err?.response?.data?.message ?? "Lỗi tạo phòng" });
+      notification.error({
+        message: err?.response?.data?.message ?? "Lỗi tạo phòng",
+      });
     },
   });
 
@@ -70,7 +120,7 @@ const CreateRoom = () => {
     setIsUploading(true);
     try {
       const mediaIds: string[] = [];
-      
+
       // 1. Upload images if any
       for (const file of fileList) {
         if (file.originFileObj) {
@@ -113,14 +163,24 @@ const CreateRoom = () => {
               <div className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50">
                 <Form.Item
                   name="property_id"
-                  label={<span className="text-slate-600 font-medium flex items-center gap-2"><Home size={16} className="text-indigo-500" /> Chọn nhà trọ <span className="text-red-500">*</span></span>}
-                  rules={[{ required: true, message: "Vui lòng chọn nhà trọ!" }]}
+                  label={
+                    <span className="text-slate-600 font-medium flex items-center gap-2">
+                      <Home size={16} className="text-indigo-500" /> Chọn nhà
+                      trọ <span className="text-red-500">*</span>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: "Vui lòng chọn nhà trọ!" },
+                  ]}
                   className="mb-0"
                 >
                   <Select
                     placeholder="Chọn nhà trọ..."
                     loading={propertiesLoading}
-                    options={properties.map((p) => ({ value: p.id, label: `${p.name} (${p.code})` }))}
+                    options={properties.map((p) => ({
+                      value: p.id,
+                      label: `${p.name} (${p.code})`,
+                    }))}
                     showSearch
                     size="large"
                     onChange={handlePropertyChange}
@@ -129,14 +189,21 @@ const CreateRoom = () => {
                 </Form.Item>
               </div>
             ) : (
-              <Form.Item name="property_id" hidden><Input /></Form.Item>
+              <Form.Item name="property_id" hidden>
+                <Input />
+              </Form.Item>
             )}
 
             {showFloorDropdown ? (
               <div className="bg-indigo-50/30 p-5 rounded-2xl border border-indigo-100/50">
                 <Form.Item
                   name="floor_id"
-                  label={<span className="text-slate-600 font-medium flex items-center gap-2"><Layers size={16} className="text-indigo-500" /> Chọn tầng <span className="text-red-500">*</span></span>}
+                  label={
+                    <span className="text-slate-600 font-medium flex items-center gap-2">
+                      <Layers size={16} className="text-indigo-500" /> Chọn tầng{" "}
+                      <span className="text-red-500">*</span>
+                    </span>
+                  }
                   rules={[{ required: true, message: "Vui lòng chọn tầng!" }]}
                   className="mb-0"
                 >
@@ -144,31 +211,49 @@ const CreateRoom = () => {
                     placeholder="Chọn tầng..."
                     loading={floorsLoading}
                     disabled={!selectedPropertyId && !statePropertyId}
-                    options={floors?.data?.map((f: FloorDTO) => ({ value: f.id, label: f.name })) || []}
+                    options={
+                      floors?.data?.map((f) => ({
+                        value: f.id,
+                        label: f.name,
+                      })) || []
+                    }
                     size="large"
                     className="rounded-xl"
                   />
                 </Form.Item>
               </div>
             ) : (
-              <Form.Item name="floor_id" hidden><Input /></Form.Item>
+              <Form.Item name="floor_id" hidden>
+                <Input />
+              </Form.Item>
             )}
           </div>
 
-          <Card className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden" bodyStyle={{ padding: 24 }}>
+          <Card
+            className="rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+            bodyStyle={{ padding: 24 }}
+          >
             <h3 className="text-base font-semibold text-slate-700 mb-6 flex items-center gap-2">
               <ClipboardList size={18} className="text-emerald-500" />
               Chi tiết phòng
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <Form.Item
                 name="name"
-                label={<span className="text-slate-600 font-medium font-inter">Tên phòng <span className="text-red-500">*</span></span>}
-                rules={[{ required: true, message: "Vui lòng nhập tên phòng!" }]}
+                label={
+                  <span className="text-slate-600 font-medium font-inter">
+                    Tên phòng <span className="text-red-500">*</span>
+                  </span>
+                }
+                rules={[
+                  { required: true, message: "Vui lòng nhập tên phòng!" },
+                ]}
               >
                 <Input
-                  prefix={<DoorOpen size={16} className="text-slate-400 mr-2" />}
+                  prefix={
+                    <DoorOpen size={16} className="text-slate-400 mr-2" />
+                  }
                   placeholder="Ví dụ: P.101, Phòng VIP..."
                   className="rounded-xl h-12"
                 />
@@ -176,7 +261,11 @@ const CreateRoom = () => {
 
               <Form.Item
                 name="code"
-                label={<span className="text-slate-600 font-medium font-inter">Mã phòng</span>}
+                label={
+                  <span className="text-slate-600 font-medium font-inter">
+                    Mã phòng
+                  </span>
+                }
               >
                 <Input
                   prefix={<Hash size={16} className="text-slate-400 mr-2" />}
@@ -189,7 +278,11 @@ const CreateRoom = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-4">
               <Form.Item
                 name="base_price"
-                label={<span className="text-slate-600 font-medium font-inter">Giá thuê (VNĐ) <span className="text-red-500">*</span></span>}
+                label={
+                  <span className="text-slate-600 font-medium font-inter">
+                    Giá thuê (VNĐ) <span className="text-red-500">*</span>
+                  </span>
+                }
                 rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
               >
                 <InputNumber
@@ -197,8 +290,12 @@ const CreateRoom = () => {
                   step={100000}
                   prefix={<Coins size={16} className="text-slate-400 mr-2" />}
                   placeholder="3,500,000"
-                  formatter={(val) => `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',',)}
-                  parser={(val) => Number(val?.replace(/\$\s?|(,*)/g, '')) as any}
+                  formatter={(val) =>
+                    `${val}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(val) =>
+                    Number(val?.replace(/\$\s?|(,*)/g, "")) as any
+                  }
                   className="w-full rounded-xl h-12 flex items-center"
                   controls={false}
                 />
@@ -206,19 +303,61 @@ const CreateRoom = () => {
 
               <Form.Item
                 name="area"
-                label={<span className="text-slate-600 font-medium font-inter">Diện tích (m²)</span>}
+                label={
+                  <span className="text-slate-600 font-medium">
+                    Diện tích (m²)
+                  </span>
+                }
+                rules={[
+                  { required: true, message: "Vui lòng nhập diện tích phòng" },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return Promise.resolve();
+
+                      const propertyArea = Number(property?.area || 0);
+
+                      const filteredRooms = (roomsData || []).filter(
+                        (r: any) => String(r.floor_id) === String(floorId),
+                      );
+
+                      const totalRoomArea =
+                        filteredRooms.reduce(
+                          (sum: number, r: any) => sum + Number(r.area || 0),
+                          0,
+                        ) - Number(currentRoomArea || 0);
+
+                      const newTotal = totalRoomArea + Number(value);
+
+                      if (newTotal > propertyArea) {
+                        return Promise.reject(
+                          new Error(
+                            `Tổng diện tích phòng (${newTotal} m²) vượt quá diện tích nhà (${propertyArea} m²)`,
+                          ),
+                        );
+                      }
+
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <InputNumber
-                  min={0}
-                  prefix={<Maximize size={16} className="text-slate-400 mr-2" />}
+                  min={1}
+                  prefix={
+                    <Maximize size={16} className="text-slate-400 mr-2" />
+                  }
                   placeholder="25"
-                  className="w-full rounded-xl h-12 flex items-center"
-                />
+                  className="w-full rounded-xl h-11"
+                />di
               </Form.Item>
 
               <Form.Item
                 name="capacity"
-                label={<span className="text-slate-600 font-medium font-inter">Sức chứa tối đa (người)</span>}
+                label={
+                  <span className="text-slate-600 font-medium font-inter">
+                    Sức chứa tối đa (người)
+                  </span>
+                }
               >
                 <InputNumber
                   min={1}
@@ -231,7 +370,11 @@ const CreateRoom = () => {
 
             <Form.Item
               name="description"
-              label={<span className="text-slate-600 font-medium font-inter mt-4 block">Mô tả thêm</span>}
+              label={
+                <span className="text-slate-600 font-medium font-inter mt-4 block">
+                  Mô tả thêm
+                </span>
+              }
               className="mt-4"
             >
               <Input.TextArea
@@ -242,7 +385,7 @@ const CreateRoom = () => {
             </Form.Item>
           </Card>
         </div>
-      )
+      ),
     },
     {
       key: "assets",
@@ -253,14 +396,19 @@ const CreateRoom = () => {
       ),
       children: (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" bodyStyle={{ padding: 24 }}>
+          <Card
+            className="rounded-2xl border border-gray-100 shadow-sm"
+            bodyStyle={{ padding: 24 }}
+          >
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="text-base font-semibold text-slate-700 flex items-center gap-2">
                   <Wrench size={18} className="text-blue-500" />
                   Danh sách trang thiết bị
                 </h3>
-                <p className="text-sm text-slate-500 mt-1">Các vật dụng có sẵn trong phòng khi bàn giao</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Các vật dụng có sẵn trong phòng khi bàn giao
+                </p>
               </div>
             </div>
 
@@ -268,40 +416,63 @@ const CreateRoom = () => {
               {(fields, { add, remove }) => (
                 <div className="space-y-4">
                   {fields.map(({ key, name, ...restField }) => (
-                    <div key={key} className="p-4 bg-slate-50/50 rounded-2xl border border-gray-100 flex items-start gap-4">
+                    <div
+                      key={key}
+                      className="p-4 bg-slate-50/50 rounded-2xl border border-gray-100 flex items-start gap-4"
+                    >
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <Form.Item
                           {...restField}
-                          name={[name, 'name']}
-                          rules={[{ required: true, message: 'Nhập tên tài sản' }]}
+                          name={[name, "name"]}
+                          rules={[
+                            { required: true, message: "Nhập tên tài sản" },
+                          ]}
                           className="mb-0"
                         >
-                          <Input placeholder="Tên: Tivi, Điều hòa..." className="rounded-xl h-10" />
+                          <Input
+                            placeholder="Tên: Tivi, Điều hòa..."
+                            className="rounded-xl h-10"
+                          />
                         </Form.Item>
                         <Form.Item
                           {...restField}
-                          name={[name, 'serial']}
+                          name={[name, "serial"]}
                           className="mb-0"
                         >
-                          <Input placeholder="Số serial (nếu có)" className="rounded-xl h-10" />
+                          <Input
+                            placeholder="Số serial (nếu có)"
+                            className="rounded-xl h-10"
+                          />
                         </Form.Item>
                         <Form.Item
                           {...restField}
-                          name={[name, 'condition']}
+                          name={[name, "condition"]}
                           className="mb-0"
                         >
-                          <Select placeholder="Tình trạng" className="rounded-xl" style={{ height: 40 }}>
-                            <Select.Option value="Likenew">Mới 100%</Select.Option>
-                            <Select.Option value="Good">Hoạt động tốt</Select.Option>
-                            <Select.Option value="Old">Cũ/Trầy xước</Select.Option>
-                            <Select.Option value="Pending">Cần bảo trì</Select.Option>
+                          <Select
+                            placeholder="Tình trạng"
+                            className="rounded-xl"
+                            style={{ height: 40 }}
+                          >
+                            <Select.Option value="Likenew">
+                              Mới 100%
+                            </Select.Option>
+                            <Select.Option value="Good">
+                              Hoạt động tốt
+                            </Select.Option>
+                            <Select.Option value="Old">
+                              Cũ/Trầy xước
+                            </Select.Option>
+                            <Select.Option value="Pending">
+                              Cần bảo trì
+                            </Select.Option>
                           </Select>
                         </Form.Item>
                       </div>
-                      <Button 
-                        type="text" 
-                        danger 
-                        icon={<Trash2 size={18} />} 
+                      <Button
+                        type="text"
+                        danger
+                        icon={<Trash2 size={18} />}
                         onClick={() => remove(name)}
                         className="flex items-center justify-center p-0 w-10 h-10 rounded-full hover:bg-red-50"
                       />
@@ -317,14 +488,21 @@ const CreateRoom = () => {
                     Thêm trang thiết bị
                   </Button>
                   {fields.length === 0 && (
-                    <Empty description="Chưa có trang thiết bị nào được thêm" image={Empty.PRESENTED_IMAGE_SIMPLE} className="py-2" />
+                    <Empty
+                      description="Chưa có trang thiết bị nào được thêm"
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      className="py-2"
+                    />
                   )}
                 </div>
               )}
             </Form.List>
           </Card>
 
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" bodyStyle={{ padding: 24 }}>
+          <Card
+            className="rounded-2xl border border-gray-100 shadow-sm"
+            bodyStyle={{ padding: 24 }}
+          >
             <h3 className="text-base font-semibold text-slate-700 mb-6 flex items-center gap-2">
               <CheckCircle2 size={18} className="text-emerald-500" />
               Dịch vụ đính kèm
@@ -332,19 +510,24 @@ const CreateRoom = () => {
             <Form.Item name="services" className="mb-0">
               <Select
                 mode="multiple"
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
                 placeholder="Chọn các dịch vụ áp dụng cho phòng này (Điện, nước, rác...)"
                 loading={servicesLoading}
                 className="rounded-xl custom-multiple-select"
                 size="large"
-                options={services?.map((s: any) => ({ label: `${s.name} (${s.unit})`, value: s.id }))}
+                options={services?.map((s: any) => ({
+                  label: `${s.name} (${s.unit})`,
+                  value: s.id,
+                }))}
                 maxTagCount="responsive"
               />
             </Form.Item>
-            <p className="text-xs text-slate-400 mt-3 italic">* Khách thuê sẽ được tự động gán các dịch vụ này khi tạo hợp đồng</p>
+            <p className="text-xs text-slate-400 mt-3 italic">
+              * Khách thuê sẽ được tự động gán các dịch vụ này khi tạo hợp đồng
+            </p>
           </Card>
         </div>
-      )
+      ),
     },
     {
       key: "images",
@@ -355,15 +538,22 @@ const CreateRoom = () => {
       ),
       children: (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <Card className="rounded-2xl border border-gray-100 shadow-sm" bodyStyle={{ padding: 32 }}>
+          <Card
+            className="rounded-2xl border border-gray-100 shadow-sm"
+            bodyStyle={{ padding: 32 }}
+          >
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ImagePlus size={28} className="text-emerald-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-800">Hình ảnh căn bản của phòng</h3>
-              <p className="text-slate-500">Tải lên ít nhất 3 ảnh để phòng trông chuyên nghiệp hơn</p>
+              <h3 className="text-lg font-semibold text-slate-800">
+                Hình ảnh căn bản của phòng
+              </h3>
+              <p className="text-slate-500">
+                Tải lên ít nhất 3 ảnh để phòng trông chuyên nghiệp hơn
+              </p>
             </div>
-            
+
             <Upload
               listType="picture-card"
               fileList={fileList}
@@ -375,30 +565,32 @@ const CreateRoom = () => {
               {fileList.length >= 8 ? null : (
                 <div className="flex flex-col items-center justify-center gap-2">
                   <Plus size={20} className="text-slate-400" />
-                  <div className="text-xs text-slate-500 font-medium">Tải lên</div>
+                  <div className="text-xs text-slate-500 font-medium">
+                    Tải lên
+                  </div>
                 </div>
               )}
             </Upload>
-            
+
             <div className="mt-8 p-4 bg-orange-50 border border-orange-100 rounded-xl">
               <div className="flex gap-3">
                 <Info size={18} className="text-orange-500 shrink-0 mt-0.5" />
                 <div className="text-sm text-orange-700">
                   <span className="font-semibold block mb-1">Mẹo nhỏ:</span>
-                  Ảnh đẹp giúp tăng khả năng khách thuê chốt phòng lên đến 40%. Nên chụp góc rộng và đủ sáng.
+                  Ảnh đẹp giúp tăng khả năng khách thuê chốt phòng lên đến 40%.
+                  Nên chụp góc rộng và đủ sáng.
                 </div>
               </div>
             </div>
           </Card>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <div className="w-full min-h-screen bg-slate-50/70 flex justify-center py-12 px-4">
       <div className="w-full max-w-5xl flex flex-col bg-white rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.05)] border border-white overflow-hidden backdrop-blur-sm">
-
         {/* HEADER AREA */}
         <div className="px-10 py-8 bg-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-1">
@@ -411,7 +603,9 @@ const CreateRoom = () => {
                   Thêm phòng mới
                 </h2>
                 <nav className="flex items-center text-sm text-slate-400 font-medium gap-1.5">
-                  <span className="hover:text-slate-600 transition-colors cursor-default">Quản lý nhà</span>
+                  <span className="hover:text-slate-600 transition-colors cursor-default">
+                    Quản lý nhà
+                  </span>
                   <ChevronRight size={14} />
                   <span className="text-emerald-500">Thêm phòng</span>
                 </nav>
@@ -430,69 +624,103 @@ const CreateRoom = () => {
 
         {/* FORM CONTENT */}
         <div className="flex-1 flex flex-col md:flex-row h-full min-h-[600px]">
-          
           {/* NAVIGATION BAR (LEFT) */}
           <div className="w-full md:w-72 bg-slate-50/40 p-6 md:p-8 space-y-6">
             <div className="hidden md:block mb-8">
-              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-4">Các bước thực hiện</h4>
+              <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest px-1 mb-4">
+                Các bước thực hiện
+              </h4>
               <div className="space-y-3">
                 {[
-                  { key: "basic", label: "Thông tin cơ bản", icon: Info, color: "text-indigo-500", bg: "bg-indigo-50" },
-                  { key: "assets", label: "Tài sản & Dịch vụ", icon: Wrench, color: "text-blue-500", bg: "bg-blue-50" },
-                  { key: "images", label: "Hình ảnh phòng", icon: ImagePlus, color: "text-emerald-500", bg: "bg-emerald-50" }
+                  {
+                    key: "basic",
+                    label: "Thông tin cơ bản",
+                    icon: Info,
+                    color: "text-indigo-500",
+                    bg: "bg-indigo-50",
+                  },
+                  {
+                    key: "assets",
+                    label: "Tài sản & Dịch vụ",
+                    icon: Wrench,
+                    color: "text-blue-500",
+                    bg: "bg-blue-50",
+                  },
+                  {
+                    key: "images",
+                    label: "Hình ảnh phòng",
+                    icon: ImagePlus,
+                    color: "text-emerald-500",
+                    bg: "bg-emerald-50",
+                  },
                 ].map((item) => (
-                  <div 
+                  <div
                     key={item.key}
                     onClick={() => setActiveTab(item.key)}
                     className={`
                       p-4 rounded-2xl flex items-center gap-3 cursor-pointer transition-all duration-300 group
-                      ${activeTab === item.key 
-                        ? 'bg-white shadow-md shadow-slate-200/50 scale-[1.02]' 
-                        : 'hover:bg-slate-100/70 border border-transparent'}
+                      ${
+                        activeTab === item.key
+                          ? "bg-white shadow-md shadow-slate-200/50 scale-[1.02]"
+                          : "hover:bg-slate-100/70 border border-transparent"
+                      }
                     `}
                   >
-                    <div className={`
+                    <div
+                      className={`
                       w-10 h-10 rounded-xl flex items-center justify-center transition-colors
-                      ${activeTab === item.key ? item.bg + ' ' + item.color : 'bg-white text-slate-400'}
-                    `}>
+                      ${activeTab === item.key ? item.bg + " " + item.color : "bg-white text-slate-400"}
+                    `}
+                    >
                       <item.icon size={18} />
                     </div>
-                    <span className={`text-[14.5px] font-bold transition-colors ${activeTab === item.key ? 'text-slate-800' : 'text-slate-500'}`}>
+                    <span
+                      className={`text-[14.5px] font-bold transition-colors ${activeTab === item.key ? "text-slate-800" : "text-slate-500"}`}
+                    >
                       {item.label}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
-            
+
             <div className="p-5 bg-gradient-to-tr from-slate-900 to-slate-800 rounded-3xl text-white shadow-xl shadow-slate-200">
-               <div className="flex items-center gap-2 mb-3">
-                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Trạng thái</span>
-               </div>
-               <p className="text-xs text-slate-300 leading-relaxed font-medium">
-                 Đang tạo phòng mới cho {selectedPropertyId ? properties.find(p => p.id === selectedPropertyId)?.name : '...'}
-               </p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Trạng thái
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                Đang tạo phòng mới cho{" "}
+                {selectedPropertyId
+                  ? properties.find((p) => p.id === selectedPropertyId)?.name
+                  : "..."}
+              </p>
             </div>
           </div>
 
           {/* FORM FIELDS (RIGHT/CENTER) */}
           <div className="flex-1 bg-white p-6 md:p-10">
-            <Form 
-              form={form} 
-              layout="vertical" 
-              onFinish={onFinish} 
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
               requiredMark={false}
               autoComplete="off"
               initialValues={{ assets: [] }}
             >
               {/* HIDDEN INPUTS FOR STATE BINDING */}
-              <Form.Item name="property_id" hidden><Input /></Form.Item>
-              <Form.Item name="floor_id" hidden><Input /></Form.Item>
+              <Form.Item name="property_id" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="floor_id" hidden>
+                <Input />
+              </Form.Item>
 
-              <Tabs 
-                activeKey={activeTab} 
-                onChange={setActiveTab} 
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
                 renderTabBar={() => <></>}
                 items={tabItems}
               />
@@ -502,32 +730,40 @@ const CreateRoom = () => {
 
         {/* FOOTER ACTIONS */}
         <div className="px-10 py-8 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center bg-white/50 backdrop-blur-md">
-           <div className="flex items-center gap-2 text-slate-400">
-             <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-             <span className="text-xs font-semibold uppercase tracking-wider">Hostech Property Management</span>
-           </div>
-           
-           <div className="flex gap-4">
-              <Button
-                onClick={() => navigate(-1)}
-                className="rounded-2xl h-12 px-8 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all border-2"
-              >
-                Hủy bỏ
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => form.submit()}
-                loading={createMutation.isPending || isUploading}
-                className="rounded-2xl h-12 px-10 bg-emerald-500 hover:bg-emerald-600 border-none shadow-lg shadow-emerald-500/20 font-bold text-[15px] transition-all transform hover:translate-y-[-2px] active:translate-y-[0]"
-              >
-                {isUploading ? 'Đang tải ảnh...' : (activeTab === 'images' ? 'Hoàn tất & Tạo phòng' : 'Tạo phòng ngay')}
-              </Button>
-           </div>
+          <div className="flex items-center gap-2 text-slate-400">
+            <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Hostech Property Management
+            </span>
+          </div>
+
+          <div className="flex gap-4">
+            <Button
+              onClick={() => navigate(-1)}
+              className="rounded-2xl h-12 px-8 border-slate-200 text-slate-600 font-bold hover:bg-slate-100 transition-all border-2"
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              type="primary"
+              onClick={() => form.submit()}
+              loading={createMutation.isPending || isUploading}
+              className="rounded-2xl h-12 px-10 bg-emerald-500 hover:bg-emerald-600 border-none shadow-lg shadow-emerald-500/20 font-bold text-[15px] transition-all transform hover:translate-y-[-2px] active:translate-y-[0]"
+            >
+              {isUploading
+                ? "Đang tải ảnh..."
+                : activeTab === "images"
+                  ? "Hoàn tất & Tạo phòng"
+                  : "Tạo phòng ngay"}
+            </Button>
+          </div>
         </div>
       </div>
-      
+
       {/* GLOBAL CUSTOM STYLES */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         .custom-multiple-select .ant-select-selector {
           border-radius: 12px !important;
           padding: 6px 12px !important;
@@ -548,10 +784,11 @@ const CreateRoom = () => {
         .ant-form-item-label label {
           font-family: 'Inter', sans-serif !important;
         }
-      ` }} />
+      `,
+        }}
+      />
     </div>
   );
 };
 
 export default CreateRoom;
-
