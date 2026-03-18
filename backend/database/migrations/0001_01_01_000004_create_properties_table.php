@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('default_billing_cycle', 20)->default('MONTHLY');
             $table->integer('default_due_day')->default(5);
             $table->integer('default_cutoff_day')->default(30);
+            $table->decimal('area', 8, 2)->nullable();
+            $table->decimal('shared_area', 8, 2)->nullable();
             $table->json('bank_accounts')->nullable();
             $table->timestamps();
             $table->softDeletes();

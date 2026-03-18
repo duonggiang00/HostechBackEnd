@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Property;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Property\FloorIndexRequest;
+use App\Http\Requests\Property\FloorPlanImageUploadRequest;
+use App\Http\Requests\Property\FloorPlanSyncRequest;
 use App\Http\Requests\Property\FloorStoreRequest;
 use App\Http\Requests\Property\FloorUpdateRequest;
 use App\Http\Resources\Property\FloorResource;
@@ -143,5 +145,41 @@ class FloorController extends Controller
         $this->service->forceDelete($id);
 
         return response()->noContent();
+    }
+
+    /**
+     * Đồng bộ hóa bản vẽ mặt bằng
+     *
+     * Lưu trữ hàng loạt vị trí của các phòng trên bản vẽ mặt bằng.
+     */
+    public function syncFloorPlan(FloorPlanSyncRequest $request, string $id)
+    {
+        $floor = $this->service->find($id) ?? abort(404, 'Floor not found');
+
+        // To map rooms, user must have authority to edit the floor.
+        $this->authorize('update', $floor);
+
+        $this->service->syncFloorPlanNodes($id, $request->input('nodes', []));
+
+        return response()->json(['message' => 'Floor plan layout synchronized successfully.']);
+    }
+
+    /**
+     * Tải lên ảnh bản vẽ mặt bằng
+     *
+     * Tải lên ảnh nền cho bản vẽ mặt bằng của tầng (hỗ trợ jpeg, png, webp, max 5MB).
+     */
+    public function uploadImage(FloorPlanImageUploadRequest $request, string $id)
+    {
+        $floor = $this->service->find($id) ?? abort(404, 'Floor not found');
+
+        $this->authorize('update', $floor);
+
+        $media = $this->service->uploadFloorPlanImage($id, $request->file('image'));
+
+        return response()->json([
+            'message' => 'Floor plan image uploaded successfully.',
+            'url' => $media->getUrl(),
+        ]);
     }
 }

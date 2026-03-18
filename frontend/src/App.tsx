@@ -9,10 +9,9 @@ import { AcceptInvite } from "./features/auth/pages/AcceptInvite";
 import Notfound from "./Pages/Client/404";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import LayoutAuth from "./Layouts/Auth/LayoutAuth";
-
+// portalRoutes
 // Route registry — tất cả admin feature routes gộp tại đây
-import { adminRoutes, portalRoutes } from "./app/routes/registry";
-import LayoutPortal from "./Layouts/Portal/LayoutPortal";
+import { adminRoutes } from "./app/routes/registry";
 
 /**
  * App.tsx — KHÔNG cần sửa khi thêm feature mới.
@@ -43,14 +42,14 @@ function App() {
         ? <Navigate to="/manage/rooms" replace />
         : <Navigate to="/manage" replace />
     },
-    { 
-      path: "/auth", 
+    {
+      path: "/auth",
       Component: LayoutAuth,
       children: [
         { path: "", Component: AuthPage },
         { path: "login", Component: AuthPage },
         // { path: "register", Component: RegisterPage }, // Thêm sau khi hoàn thiện Register mới
-      ]
+      ],
     },
     { path: "/invite/:token", Component: AcceptInvite },
     { path: "/otp/verify", Component: VerifyOTP },
@@ -65,23 +64,39 @@ function App() {
             { path: "statistical", Component: Statistical },
             ...adminRoutes,
           ],
-        }
-      ]
+        },
+      ],
     },
+    // {
+    //   path: "manage",
+    //   Component: ProtectedRoute,
+    //   children: [
+    //     {
+    //       path: "",
+    //       Component: LayoutManage,
+    //       children: [
+    //         { path: "", Component: Dashboard },
+    //         { path: "statistical", Component: Statistical },
+    //         ...adminRoutes,
+    //       ],
+    //     },
+    //   ],
+    // },
+
     // Backward compatibility: /admin → /manage
     { path: "admin/*", element: <Navigate to="/manage" replace /> },
-    {
-      path: "me",
-      element: (
-        <ProtectedRoute allowedRoles={["Tenant"]}>
-          <LayoutPortal />
-        </ProtectedRoute>
-      ),
-      children: [
-        { path: "", element: <div>Tenant Dashboard (Coming Soon)</div> },
-        ...portalRoutes,
-      ]
-    },
+    // {
+    //   path: "me",
+    //   element: (
+    //     <ProtectedRoute allowedRoles={["Tenant"]}>
+    //       <LayoutPortal />
+    //     </ProtectedRoute>
+    //   ),
+    //   children: [
+    //     { path: "", element: <div>Tenant Dashboard (Coming Soon)</div> },
+    //     ...portalRoutes,
+    //   ],
+    // },
     { path: "*", Component: Notfound },
   ]);
 

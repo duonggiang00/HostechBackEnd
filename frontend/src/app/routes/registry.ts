@@ -25,8 +25,7 @@ import { handoverRoutes } from "../../features/handover/routes.tsx";
 import { dashboardRoutes } from "../../features/dashboard/routes.tsx";
 // ── Thêm feature mới → import ở đây ────────────────────────────
 import { profileRoutes } from "../../features/profile/routes";
-import { orgRoutes } from "../../features/organizations/routes.tsx";
-import { systemRoutes } from "../../features/system/routes.tsx";
+import { dashboardRoutes } from "@/Pages/Admin/Dashboards/router";
 
 /**
  * Tất cả routes bên trong /manage layout.
@@ -37,6 +36,7 @@ import { systemRoutes } from "../../features/system/routes.tsx";
  * Các route dành cho Quản lý (Owner/Manager/Staff)
  */
 export const manageRoutes: RouteConfig[] = [
+  dashboardRoutes,
   contractRoutes,
   invoiceRoutes,
   serviceRoutes,
@@ -55,7 +55,7 @@ export const manageRoutes: RouteConfig[] = [
  * Các route dành cho Khách thuê (Tenant Portal)
  */
 export const portalRoutes: RouteConfig[] = [
-  profileRoutes, // Cho phép Khách thuê truy cập /me/profile
+  // Sẽ thêm các feature của tenant vào đây
 ];
 
 // Giữ lại adminRoutes để tương thích ngược (Backward Compatibility)

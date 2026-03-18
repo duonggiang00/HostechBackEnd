@@ -4,7 +4,7 @@ import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useOrgs } from '../hooks/useOrg';
 import type { Organization } from '../types';
-import { RequireRole } from '../../../shared/components/RequireRole';
+import { RoleGuard } from '../../../shared/components/RoleGuard';
 
 const { Title, Text } = Typography;
 
@@ -57,11 +57,11 @@ export const OrgManager: React.FC = () => {
             key: 'action',
             render: (_: any, record: Organization) => (
                 // Chỉ hiển thị nút Sửa nếu role cho phép (Admin/Owner)
-                <RequireRole allowedRoles={['Admin', 'Owner']}>
+                <RoleGuard allowedRoles={['Admin', 'Owner']}>
                     <Button type="text" icon={<EditOutlined />} onClick={() => handleOpenEdit(record)}>
                         Sửa
                     </Button>
-                </RequireRole>
+                </RoleGuard>
             )
         }
     ];
@@ -74,11 +74,11 @@ export const OrgManager: React.FC = () => {
                    <Text type="secondary">Cài đặt công ty và ban quản lý</Text>
                 </div>
                 {/* Chỉ Admin mới được tạo mới Org theo specs (Owner tạo qua invite hoặc flow khác) */}
-                <RequireRole allowedRoles={['Admin']}>
+                <RoleGuard allowedRoles={['Admin']}>
                     <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
                         Tạo tổ chức
                     </Button>
-                </RequireRole>
+                </RoleGuard>
             </div>
 
             <Card className="shadow-sm rounded-lg" bordered={false} bodyStyle={{ padding: 0 }}>

@@ -78,3 +78,13 @@ export const getMyPendingContracts = async (): Promise<Contract[]> => {
     const res = await Api.get("contracts/my-pending");
     return res.data?.data ?? res.data;
 };
+
+// Chấp nhận ký hợp đồng (Tenant)
+export const acceptContractSignature = async (contractId: string): Promise<void> => {
+    await Api.post(`contracts/${contractId}/accept-signature`);
+};
+
+// Từ chối ký hợp đồng (Tenant)
+export const rejectContractSignature = async (contractId: string, reason?: string): Promise<void> => {
+    await Api.post(`contracts/${contractId}/reject-signature`, { reason });
+};

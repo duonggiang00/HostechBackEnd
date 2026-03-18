@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, UserPen, House } from "lucide-react";
 import { useOpenStore } from "../../shared/stores/openStore";
 import { useTokenStore } from "../../features/auth/stores/authStore";
 import Register from "../../features/auth/components/Register";
-import { RequireRole } from "../../shared/components/RequireRole";
+import { RoleGuard } from "../../shared/components/RoleGuard";
 import { sidebarFlatItems, infrasItems, financeItems, userGroups } from "../../app/sidebar-config";
 import type { SidebarItem } from "../../shared/types/navigation";
 import { SidebarCategory } from "../../shared/components/SidebarCategory";
@@ -178,7 +178,7 @@ const SidebarAdmin = () => {
       {/* Bottom Action & Toggle */}
       <div className={`p-4 border-t border-[#1e293b]/50 shrink-0 space-y-3 bg-[#0f172a]`}>
           {role && (
-            <RequireRole allowedRoles={["Admin", "Owner", "Manager"]}>
+            <RoleGuard allowedRoles={["Admin", "Owner", "Manager"]}>
                 <Register open={openRegister}>
                   <button
                     className={`flex items-center w-full py-3 rounded-xl bg-[#1e293b] hover:bg-[#2d3a4f] transition-all text-[#94a3b8] hover:text-white font-medium text-[13.5px] overflow-hidden group shadow-sm ${open ? "px-0" : "px-4"}`}
@@ -192,7 +192,7 @@ const SidebarAdmin = () => {
                     </span>
                   </button>
                 </Register>
-            </RequireRole>
+            </RoleGuard>
           )}
 
          <button 

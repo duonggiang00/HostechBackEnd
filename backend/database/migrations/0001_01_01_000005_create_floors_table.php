@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('code', 50)->nullable();
             $table->string('name', 255);
             $table->integer('sort_order')->default(0);
+            $table->decimal('area', 8, 2)->nullable();
+            $table->decimal('shared_area', 8, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
 

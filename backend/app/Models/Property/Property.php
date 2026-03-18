@@ -17,12 +17,13 @@ class Property extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'area', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts'];
+    protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'area', 'shared_area', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts'];
 
     protected function casts(): array
     {
         return [
             'area' => 'decimal:2',
+            'shared_area' => 'decimal:2',
             'use_floors' => 'boolean',
             'bank_accounts' => 'array',
         ];

@@ -12,6 +12,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\QueryBuilder;
+use Illuminate\Validation\ValidationException;
 
 class RoomService
 {
@@ -111,6 +112,11 @@ class RoomService
             // Auto-assign org_id from property
             $data['org_id'] = $property->org_id;
 
+            // Area validation
+            if (isset($data['area']) && $data['area'] > 0) {
+                $this->validateRoomArea($property, $data['floor_id'] ?? null, (float)$data['area']);
+            }
+
             $room = Room::create($data);
 
             // Sync Media
@@ -175,6 +181,12 @@ class RoomService
             $oldPrice = $room->base_price;
 
             unset($data['assets'], $data['media_ids']);
+
+            // Area validation
+            $newArea = isset($data['area']) ? (float)$data['area'] : (float)$room->area;
+            if ($newArea > 0 && $newArea != (float)$room->area) {
+                 $this->validateRoomArea($room->property, $room->floor_id, $newArea, $room->id);
+            }
 
             $room->update($data);
 
@@ -361,5 +373,56 @@ class RoomService
         $node = RoomFloorPlanNode::where('room_id', $room->id)->first();
 
         return $node ? (bool) $node->delete() : false;
+    }
+
+    /**
+     * Validate that the room's area does not exceed limits.
+     */
+    protected function validateRoomArea(\App\Models\Property\Property $property, ?string $floorId, float $newArea, ?string $excludeRoomId = null): void
+    {
+        // Rule 1: Room Area <= Property Area (If property area is defined)
+        if ($property->area > 0 && $newArea > (float) $property->area) {
+            throw ValidationException::withMessages([
+                'area' => 'Diện tích phòng (' . $newArea . ' m²) không được lớn hơn tổng diện tích tòa nhà (' . (float) $property->area . ' m²).'
+            ]);
+        }
+
+        if ($property->use_floors && $floorId) {
+            $floor = \App\Models\Property\Floor::find($floorId);
+            if ($floor && $floor->area > 0) {
+                // Feature limits check for Floor
+                if ($newArea > (float) $floor->area) {
+                    throw ValidationException::withMessages([
+                        'area' => 'Diện tích phòng (' . $newArea . ' m²) không được lớn hơn diện tích tầng (' . (float) $floor->area . ' m²).'
+                    ]);
+                }
+
+                // Sum Check for Floor
+                $currentRoomsArea = Room::where('floor_id', $floorId)
+                    ->when($excludeRoomId, fn($q) => $q->where('id', '!=', $excludeRoomId))
+                    ->sum('area');
+                
+                $totalUsedArea = $currentRoomsArea + $newArea + (float) $floor->shared_area;
+                
+                if ($totalUsedArea > (float) $floor->area) {
+                    throw ValidationException::withMessages([
+                        'area' => 'Tổng diện tích các phòng và diện tích dùng chung (' . $totalUsedArea . ' m²) vượt quá diện tích thiết kế của tầng (' . (float) $floor->area . ' m²).'
+                    ]);
+                }
+            }
+        } elseif (! $property->use_floors && $property->area > 0) {
+            // Sum Check for Property
+            $currentRoomsArea = Room::where('property_id', $property->id)
+                ->when($excludeRoomId, fn($q) => $q->where('id', '!=', $excludeRoomId))
+                ->sum('area');
+            
+            $totalUsedArea = $currentRoomsArea + $newArea + (float) $property->shared_area;
+            
+            if ($totalUsedArea > (float) $property->area) {
+                throw ValidationException::withMessages([
+                    'area' => 'Tổng diện tích các phòng và diện tích dùng chung (' . $totalUsedArea . ' m²) vượt quá diện tích thiết kế của tòa nhà (' . (float) $property->area . ' m²).'
+                ]);
+            }
+        }
     }
 }

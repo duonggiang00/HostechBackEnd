@@ -3,15 +3,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
     Descriptions, Tag, Button, Spin, Alert, Table,
-    Form, Input, InputNumber, Select, Popconfirm, notification, Divider,
+    Form, Input, InputNumber, Select, Popconfirm, notification, Divider, Typography
 } from "antd";
 import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react";
-import { getInvoiceById, addInvoiceItem, removeInvoiceItem } from "../api/invoiceApi";
+
+const { Title } = Typography;
+import { getInvoiceById, addInvoiceItem, removeInvoiceItem, issueInvoice, payInvoice } from "../api/invoiceApi";
 import {
     InvoiceStatusLabels, InvoiceStatusColors, InvoiceItemSchema,
 } from "../../../Types/InvoiceTypes";
 import type { InvoiceStatus, InvoiceItemFormValues, InvoiceItem } from "../../../Types/InvoiceTypes";
 import { InvoiceStatus as InvoiceStatusEnum } from "../../../Types/InvoiceTypes";
+import { RoleGuard } from "../../../shared/components/RoleGuard";
 
 const itemTypeOptions = [
     { label: "Tiền thuê", value: "rent" },
@@ -49,6 +52,26 @@ const InvoiceDetail = () => {
             notification.success({ message: "Đã xóa dòng chi phí" });
             queryClient.invalidateQueries({ queryKey: ["invoice", id] });
         },
+    });
+
+    const issueMutation = useMutation({
+        mutationFn: () => issueInvoice(id!),
+        onSuccess: () => {
+            notification.success({ message: "Phát hành hóa đơn thành công" });
+            queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        },
+        onError: (e: any) => notification.error({ message: "Lỗi phát hành", description: e.message }),
+    });
+
+    const payMutation = useMutation({
+        mutationFn: () => payInvoice(id!),
+        onSuccess: () => {
+            notification.success({ message: "Xác nhận thanh toán thành công" });
+            queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+            queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        },
+        onError: (e: any) => notification.error({ message: "Lỗi thanh toán", description: e.message }),
     });
 
     const onAddItem = (values: any) => {
@@ -103,18 +126,20 @@ const InvoiceDetail = () => {
             title: "",
             key: "action",
             render: (_: any, item: InvoiceItem) => (
-                <Popconfirm
-                    title="Xóa dòng chi phí này?"
-                    onConfirm={() => removeItemMutation.mutate(item.id)}
-                    disabled={isLocked}
-                >
-                    <Button
-                        danger
-                        size="small"
-                        icon={<Trash2 size={13} />}
+                <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
+                    <Popconfirm
+                        title="Xóa dòng chi phí này?"
+                        onConfirm={() => removeItemMutation.mutate(item.id)}
                         disabled={isLocked}
-                    />
-                </Popconfirm>
+                    >
+                        <Button
+                            danger
+                            size="small"
+                            icon={<Trash2 size={13} />}
+                            disabled={isLocked}
+                        />
+                    </Popconfirm>
+                </RoleGuard>
             ),
         },
     ];
@@ -127,12 +152,30 @@ const InvoiceDetail = () => {
                     <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
                         <ArrowLeft className="w-5 h-5" />
                     </button>
-                    <h1 className="text-2xl font-bold">Chi tiết hóa đơn</h1>
+                    <Title level={4} className="!mb-0">Chi tiết hóa đơn</Title>
                 </div>
-                <Button icon={<Edit size={15} />} onClick={() => navigate(`/manage/invoices/edit/${id}`)}>
-
-                    Chỉnh sửa
-                </Button>
+                <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
+                    <div className="flex gap-2">
+                        {invoice?.status === InvoiceStatusEnum.DRAFT && (
+                            <Popconfirm title="Phát hành hóa đơn này cho khách thê?" onConfirm={() => issueMutation.mutate()}>
+                                <Button type="primary" loading={issueMutation.isPending}>Phát hành / Gửi</Button>
+                            </Popconfirm>
+                        )}
+                        {(invoice?.status === InvoiceStatusEnum.ISSUED || invoice?.status === InvoiceStatusEnum.PARTIAL || invoice?.status === InvoiceStatusEnum.OVERDUE) && (
+                            <Popconfirm title="Xác nhận khách đã thanh toán toàn bộ hóa đơn này?" onConfirm={() => payMutation.mutate()}>
+                                <Button type="primary" loading={payMutation.isPending}>Xác nhận thanh toán</Button>
+                            </Popconfirm>
+                        )}
+                        <Button 
+                            icon={<Edit size={15} />} 
+                            onClick={() => navigate(`/manage/invoices/edit/${id}`)}
+                            disabled={invoice?.status !== InvoiceStatusEnum.DRAFT}
+                            title={invoice?.status !== InvoiceStatusEnum.DRAFT ? "Chỉ có thể chỉnh sửa hóa đơn ở trạng thái Nháp" : ""}
+                        >
+                            Chỉnh sửa
+                        </Button>
+                    </div>
+                </RoleGuard>
             </div>
 
             {/* Thông tin chung */}
@@ -169,16 +212,18 @@ const InvoiceDetail = () => {
             <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
                 <div className="flex justify-between items-center mb-3">
                     <h3 className="font-semibold text-base">Chi tiết chi phí ({invoice?.items.length} dòng)</h3>
-                    <Button
-                        icon={<Plus size={14} />}
-                        size="small"
-                        type="dashed"
-                        disabled={isLocked}
-                        title={isLocked ? "Không thể chỉnh sửa hóa đơn đã kóa" : ""}
-                        onClick={() => !isLocked && setShowAddForm((v) => !v)}
-                    >
-                        {showAddForm ? "Đóng" : "Thêm dòng"}
-                    </Button>
+                    <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
+                        <Button
+                            icon={<Plus size={14} />}
+                            size="small"
+                            type="dashed"
+                            disabled={isLocked}
+                            title={isLocked ? "Không thể chỉnh sửa hóa đơn đã kóa" : ""}
+                            onClick={() => !isLocked && setShowAddForm((v) => !v)}
+                        >
+                            {showAddForm ? "Đóng" : "Thêm dòng"}
+                        </Button>
+                    </RoleGuard>
                 </div>
 
                 {/* Banner khoá */}
