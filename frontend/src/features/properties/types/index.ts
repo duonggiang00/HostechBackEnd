@@ -65,6 +65,7 @@ export interface FloorDTO {
   area: string;
   name: string;
   sort_order: string;
+  order?: number;
   created_at: string;
   updated_at: string;
 

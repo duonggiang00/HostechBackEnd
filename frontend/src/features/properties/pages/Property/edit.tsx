@@ -27,25 +27,42 @@ const EditProperty = () => {
   const orgs = orgsData?.data || [];
 
   useEffect(() => {
-    if (property) {
-      form.setFieldsValue(property);
+    if (property && orgs.length > 0) {
+      form.setFieldsValue({
+        ...property,
+        area: Number(property.area),
+        org_id: property.org_id,
+        use_floors: Boolean(property.use_floors),
+      });
     }
-  }, [property, form]);
+  }, [property, orgs, form]);
 
   const handleClose = () => {
     navigate("/manage/properties", { replace: true });
   };
 
   const handleSubmit = (values: any) => {
-    updateMutation.mutate(values, {
+    if (!property) return;
+
+    const payload = {
+      name: values.name ?? property.name,
+      code: values.code ?? property.code,
+      address: values.address ?? property.address,
+      note: values.note ?? property.note,
+      org_id: values.org_id ?? property.org_id,
+      use_floors: values.use_floors ? 1 : 0,
+      area: Number(values.area ?? property.area),
+    };
+    console.log("FINAL PAYLOAD =", payload);
+
+    updateMutation.mutate(payload, {
       onSuccess: () => {
         handleClose();
       },
     });
   };
-
   const orgOptions = orgs.map((org) => ({
-    value: org.id,
+    value: String(org.id),
     label: org.name,
   }));
 
@@ -164,20 +181,6 @@ const EditProperty = () => {
                       }
                       placeholder="AURORA_01"
                       className="rounded-xl h-11 border-slate-200 uppercase"
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="area"
-                    label={<span className="text-slate-600 font-medium">Tổng diện tích (m²)</span>}
-                    rules={[{ pattern: /^\d+(\.\d{1,2})?$/, message: "Vui lòng nhập số hợp lệ!" }]}
-                  >
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Ví dụ: 200.5"
-                      className="rounded-xl h-11 border-slate-200"
                     />
                   </Form.Item>
                 </div>
