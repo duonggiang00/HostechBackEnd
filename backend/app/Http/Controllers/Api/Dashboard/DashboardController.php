@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Services\Dashboard\DashboardService;
+use App\Models\Property\Property;
 use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
@@ -196,7 +197,9 @@ class DashboardController extends Controller
      */
     public function manager(Request $request): JsonResponse
     {
-        $request->validate($this->dateRules());
+        $request->validate(array_merge($this->dateRules(), [
+            'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
+        ]));
 
         /** @var \App\Models\Org\User $user */
         $user = $request->user();
@@ -206,7 +209,31 @@ class DashboardController extends Controller
         }
 
         [$from, $to] = $this->resolveRange($request);
+        $propertyId = $request->query('property_id');
 
+        // Case 1: Specific property requested
+        if ($propertyId) {
+            $property = \App\Models\Property\Property::withoutGlobalScopes()->findOrFail($propertyId);
+
+            // Authorization: Admin/Owner or assigned Manager/Staff
+            if (! $user->hasRole(['Admin', 'Owner'])) {
+                $isAssigned = $user->properties()->where('properties.id', $propertyId)->exists();
+                if (! $isAssigned) {
+                    abort(403, 'Bạn không có quyền truy cập dữ liệu của property này.');
+                }
+            }
+
+            return response()->json([
+                'role' => $user->hasRole('Manager') ? 'manager' : 'staff',
+                'property_id' => $propertyId,
+                'data' => array_merge(
+                    ['filter' => $this->filterPayload($from, $to)],
+                    $this->service->getPropertyDashboard($property, $from, $to),
+                ),
+            ]);
+        }
+
+        // Case 2: Aggregate manager dashboard
         return response()->json([
             'role' => $user->hasRole('Manager') ? 'manager' : 'staff',
             'data' => array_merge(

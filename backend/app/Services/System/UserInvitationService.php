@@ -6,7 +6,9 @@ use App\Models\Org\User;
 use App\Models\System\UserInvitation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use App\Mail\System\UserInvitationMail;
 
 class UserInvitationService
 {
@@ -60,8 +62,8 @@ class UserInvitationService
 
         $invitation = UserInvitation::create($data);
 
-        // TODO: Fire Job/Event to send email with Magic Link to $invitation->email
-        // Mail::to($invitation->email)->queue(new UserInvitationMail($invitation));
+        // Fire Job/Event to send email with Magic Link to $invitation->email
+        Mail::to($invitation->email)->queue(new UserInvitationMail($invitation));
 
         return $invitation;
     }

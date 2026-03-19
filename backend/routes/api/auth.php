@@ -1,22 +1,20 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\TwoFactorAuthenticationController;
 use Illuminate\Support\Facades\Route;
 
-/**
- * Đăng xuất
- *
- * Hủy bỏ token hiện tại, đăng xuất khỏi hệ thống.
- *
- * @tags Xác thực (Auth)
- */
-Route::post('/auth/logout', function (Illuminate\Http\Request $request) {
-    $request->user()?->currentAccessToken()?->delete();
+/*
+|--------------------------------------------------------------------------
+| Auth Routes (MFA, Profile, etc.)
+|--------------------------------------------------------------------------
+|
+| Prefix via parent: /api/v1 (or as defined in RouteServiceProvider)
+| Note: Fortify routes use /api/auth prefix directly from config/fortify.php
+|
+*/
 
-    return response()->json(['message' => 'Logged out successfully'], 200);
-});
-
-Route::get('/auth/me', function (Illuminate\Http\Request $request) {
-    $user = $request->user()->loadMissing('roles', 'permissions', 'media', 'properties');
-
-    return new \App\Http\Resources\Org\UserResource($user);
+Route::middleware(['auth:sanctum'])->prefix('user/mfa')->group(function () {
+    Route::get('setup', [TwoFactorAuthenticationController::class, 'setup']);
+    Route::post('enable', [TwoFactorAuthenticationController::class, 'enable']);
+    Route::delete('disable', [TwoFactorAuthenticationController::class, 'disable']);
 });

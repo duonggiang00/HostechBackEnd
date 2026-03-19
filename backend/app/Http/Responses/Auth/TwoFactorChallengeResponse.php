@@ -14,8 +14,12 @@ class TwoFactorChallengeResponse implements TwoFactorChallengeResponseContract
      */
     public function toResponse($request): JsonResponse
     {
+        $userId = $request->session()->get('fortify.two_factor_user_id');
+        $user = $userId ? \App\Models\Org\User::find($userId) : null;
+
         return response()->json([
             'two_factor' => true,
+            'method' => ($user && $user->mfa_enabled) ? ($user->mfa_method ?: 'totp') : 'totp',
             'message' => 'Two factor authentication challenge required.',
         ], 200);
     }

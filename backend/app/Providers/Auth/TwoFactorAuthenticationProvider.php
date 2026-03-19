@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Providers\Auth;
+
+use App\Models\Org\User;
+use App\Services\Auth\MfaService;
+use Laravel\Fortify\TwoFactorAuthenticationProvider as FortifyProvider;
+
+class TwoFactorAuthenticationProvider extends FortifyProvider
+{
+    /**
+     * Verify the given code for the given secret/email.
+     *
+     * @param  string  $secret
+     * @param  string  $code
+     * @return bool
+     */
+    public function verify($secret, $code)
+    {
+        // Get the challenged user from session
+        $userId = request()->session()->get('fortify.two_factor_user_id');
+        
+        if ($userId) {
+            $user = User::find($userId);
+            if ($user && $user->mfa_enabled) {
+                return app(MfaService::class)->verifyCode($user, $code, $secret);
+            }
+        }
+
+        return parent::verify($secret, $code);
+    }
+}

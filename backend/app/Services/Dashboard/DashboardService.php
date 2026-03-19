@@ -278,6 +278,62 @@ class DashboardService
         });
     }
 
+    public function getPropertyDashboard(Property $property, Carbon $from, Carbon $to): array
+    {
+        $orgId = $property->org_id;
+        $propertyIds = [$property->id];
+        $cacheKey = "dashboard:property:{$property->id}:{$from->format('Y-m-d')}:{$to->format('Y-m-d')}";
+
+        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($orgId, $propertyIds, $from, $to, $property) {
+            $tenants = $this->managerTenantStats($orgId, $propertyIds, $from, $to);
+            $revenue = $this->managerRevenueStats($orgId, $propertyIds, $from, $to);
+            $contracts = $this->managerContractStats($orgId, $propertyIds);
+            $tickets = $this->managerTicketStats($orgId, $propertyIds);
+            $propStats = $this->managerPropertyStats($orgId, $propertyIds);
+
+            return [
+                'stats' => [
+                    'totalTenants' => $tenants['active'],
+                    'totalRooms' => $propStats['total_rooms'],
+                    'vacantRooms' => $propStats['available_rooms'],
+                    'occupiedRooms' => $propStats['occupied_rooms'],
+                    'occupancyRate' => $propStats['occupancy_rate'],
+                    'pendingTickets' => $tickets['pending'],
+                    'unresolvedTickets' => $tickets['pending'] + $tickets['in_progress'],
+                    'unpaidInvoices' => $contracts['overdue'], // Using overdue contracts as proxy for unpaid invoices in this context
+                    'thisMonthRevenue' => $revenue['total'],
+                ],
+                'revenueTrend' => $this->getPropertyRevenueTrend($orgId, $property->id),
+            ];
+        });
+    }
+
+    private function getPropertyRevenueTrend(string $orgId, string $propertyId): array
+    {
+        $trend = [];
+        $now = Carbon::now();
+
+        for ($i = 5; $i >= 0; $i--) {
+            $month = $now->copy()->subMonths($i);
+            $revenue = Invoice::withoutGlobalScopes()
+                ->where('org_id', $orgId)
+                ->where('property_id', $propertyId)
+                ->where('status', 'PAID')
+                ->whereBetween('updated_at', [
+                    $month->copy()->startOfMonth(),
+                    $month->copy()->endOfMonth(),
+                ])
+                ->sum('paid_amount');
+
+            $trend[] = [
+                'month' => $month->format('M'),
+                'revenue' => (float) $revenue,
+            ];
+        }
+
+        return $trend;
+    }
+
     private function managerPropertyStats(?string $orgId, array $propertyIds): array
     {
         if (! $orgId || empty($propertyIds)) {
