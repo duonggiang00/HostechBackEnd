@@ -142,4 +142,20 @@ class MeterController extends Controller
 
         return response()->noContent();
     }
+
+    /**
+     * Lấy thống kê Đồng hồ theo Tòa nhà.
+     *
+     * Trả về thống kê tổng số đồng hồ, chỉ số tiêu thụ, v.v.
+     */
+    public function statisticsByProperty(Request $request, string $propertyId): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('viewAny', Meter::class);
+
+        $filters = array_merge($request->query('filter', []), ['property_id' => $propertyId]);
+
+        $stats = $this->service->getStatistics($filters, $propertyId);
+
+        return response()->json($stats);
+    }
 }

@@ -68,7 +68,12 @@ class MeterReadingController extends Controller
      */
     public function update(MeterReadingUpdateRequest $request, string $meterId, MeterReading $reading)
     {
-        $this->authorize('update', $reading);
+        // Check if this is an approval/rejection action
+        if (isset($request->validated()['status']) && in_array($request->validated()['status'], ['APPROVED', 'REJECTED'])) {
+            $this->authorize('approve', $reading);
+        } else {
+            $this->authorize('update', $reading);
+        }
 
         $updatedReading = $this->service->update($reading, $request->validated());
 

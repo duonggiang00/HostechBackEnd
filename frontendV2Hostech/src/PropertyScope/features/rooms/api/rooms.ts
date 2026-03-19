@@ -16,7 +16,7 @@ export const roomsApi = {
       search: params?.search || undefined,
       sort: params?.sort || undefined,
       with_trashed: params?.with_trashed ? 1 : undefined,
-      include: params?.include || 'floor,property,assets,media',
+      include: params?.include || 'floor,property',
       page: params?.page ?? 1,
       per_page: params?.per_page ?? 50,
       'filter[price_min]': params?.price_min || undefined,
@@ -28,8 +28,23 @@ export const roomsApi = {
     };
 
     const response = await apiClient.get('/rooms', { params: apiParams });
-    console.log('📡 API: GET /rooms:', response.data.data || response.data);
-    return (response.data.data || response.data) as Room[];
+    console.log('📡 API: GET /rooms - Full Response:', response.data);
+    
+    // Handle paginated response (has data, meta, links)
+    if (response.data?.data && Array.isArray(response.data.data)) {
+      console.log('📡 Returning paginated data:', response.data.data);
+      return response.data.data as Room[];
+    }
+    
+    // Handle direct array response
+    if (Array.isArray(response.data)) {
+      console.log('📡 Returning array data:', response.data);
+      return response.data as Room[];
+    }
+    
+    // Handle wrapped response
+    console.log('📡 Returning response.data:', response.data);
+    return (response.data || []) as Room[];
   },
 
   getDraftRooms: async (propertyId?: string) => {

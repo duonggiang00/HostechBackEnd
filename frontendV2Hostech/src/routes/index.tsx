@@ -32,7 +32,9 @@ import SessionsPage from '@/adminSystem/features/sessions/pages/SessionsPage';
 import AdminCommunicationPage from '@/adminSystem/features/dashboard/pages/AdminCommunicationPage';
 import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
 import PropertyDashboard from '@/PropertyScope/features/dashboard/pages/PropertyDashboard';
-import OrgSelectionPage from '@/OrgScope/features/organizations/pages/OrgSelectionPage';
+import SelectPropertyPage from '@/PropertyScope/features/select-property/pages/SelectPropertyPage';
+import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
+import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
 
 // Tenant Pages
 import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
@@ -186,6 +188,7 @@ export default function AppRoutes() {
           <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
             <PropertyScopeLayout><Outlet /></PropertyScopeLayout>
           </ProtectedRoute>
+<<<<<<< Updated upstream
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
@@ -199,6 +202,25 @@ export default function AppRoutes() {
         <Route path="rooms/create" element={<RoomCreatePage />} />
         <Route path="rooms/:roomId" element={<RoomDetailPage />} />
         <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
+=======
+        }>
+          <Route path="properties/:propertyId/dashboard" element={<PropertyDashboard />} />
+          <Route path="properties/:propertyId/floors" element={<FloorsPage />} />
+          <Route path="properties/:propertyId/floors/:floorId/rooms" element={<FloorPlanPage />} />
+          <Route path="properties/:propertyId/floors/:floorId/rooms/create" element={<RoomCreatePage />} />
+          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId" element={<RoomDetailPage />} />
+          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId/edit" element={<RoomEditPage />} />
+          <Route path="properties/:propertyId/rooms" element={<RoomListPage />} />
+          <Route path="properties/:propertyId/rooms/create" element={<RoomCreatePage />} />
+          <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
+          <Route path="properties/:propertyId/rooms/:roomId/edit" element={<RoomEditPage />} />
+          <Route path="rooms" element={<RoomListPage />} />
+          <Route path="properties/:propertyId/meters" element={<MeterListPage />} />
+          <Route path="properties/:propertyId/meters/:meterId" element={<MeterDetailPage />} />
+          {/* Manager/Staff with multiple properties → pick one */}
+          <Route path="select-property" element={<SelectPropertyPage />} />
+        </Route>
+>>>>>>> Stashed changes
       </Route>
 
       {/* --- Tenant App Portal --- */}

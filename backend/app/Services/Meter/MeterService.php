@@ -17,7 +17,7 @@ class MeterService
     public function paginate(array $filters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(Meter::class)
-            ->allowedFilters(array_merge($filters, [
+            ->allowedFilters([
                 AllowedFilter::exact('type'),
                 AllowedFilter::exact('is_active'),
                 AllowedFilter::exact('room_id'),
@@ -33,10 +33,29 @@ class MeterService
                         $q->where('floor_id', $value);
                     });
                 }),
-            ]))
+            ])
             ->allowedSorts(['installed_at', 'code', 'type', 'created_at'])
             ->defaultSort('-created_at')
             ->allowedIncludes(['room', 'room.property', 'room.floor']);
+        
+        // Apply manual filters if provided
+        foreach ($filters as $key => $value) {
+            if ($key === 'property_id' && $value) {
+                $query->whereHas('room', function (Builder $q) use ($value) {
+                    $q->where('property_id', $value);
+                });
+            } elseif ($key === 'floor_id' && $value) {
+                $query->whereHas('room', function (Builder $q) use ($value) {
+                    $q->where('floor_id', $value);
+                });
+            } elseif ($key === 'type' && $value) {
+                $query->where('type', $value);
+            } elseif ($key === 'is_active' && $value !== '') {
+                $query->where('is_active', (bool) $value);
+            } elseif ($key === 'room_id' && $value) {
+                $query->where('room_id', $value);
+            }
+        }
 
         $user = request()->user();
         if ($user && $user->hasRole('Tenant')) {
@@ -63,6 +82,63 @@ class MeterService
         }
 
         return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Get meter statistics including latest readings.
+     */
+    public function getStatistics(array $filters = [], ?string $propertyId = null): array
+    {
+        $query = Meter::query();
+        
+        // Apply filters
+        foreach ($filters as $key => $value) {
+            if ($key === 'property_id' && $value) {
+                $query->whereHas('room', function (Builder $q) use ($value) {
+                    $q->where('property_id', $value);
+                });
+            } elseif ($key === 'floor_id' && $value) {
+                $query->whereHas('room', function (Builder $q) use ($value) {
+                    $q->where('floor_id', $value);
+                });
+            } elseif ($key === 'type' && $value) {
+                $query->where('type', $value);
+            } elseif ($key === 'is_active' && $value !== '') {
+                $query->where('is_active', (bool) $value);
+            }
+        }
+        
+        // Apply property_id if provided
+        if ($propertyId) {
+            $query->whereHas('room', function (Builder $q) use ($propertyId) {
+                $q->where('property_id', $propertyId);
+            });
+        }
+        
+        $meters = $query->with('latestReading')->get();
+        
+        $totalElectric = 0;
+        $totalWater = 0;
+        
+        foreach ($meters as $meter) {
+            if ($meter->latestReading && $meter->latestReading->reading_value) {
+                if ($meter->type === 'ELECTRIC') {
+                    $totalElectric += $meter->latestReading->reading_value;
+                } else {
+                    $totalWater += $meter->latestReading->reading_value;
+                }
+            }
+        }
+        
+        return [
+            'total_meters' => $meters->count(),
+            'active_meters' => $meters->where('is_active', true)->count(),
+            'master_meters' => $meters->where('is_master', true)->count(),
+            'electric_meters' => $meters->where('type', 'ELECTRIC')->count(),
+            'water_meters' => $meters->where('type', 'WATER')->count(),
+            'total_electric_reading' => $totalElectric,
+            'total_water_reading' => $totalWater,
+        ];
     }
 
     /**

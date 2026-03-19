@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Meter\MeterReadingController;
 use Illuminate\Support\Facades\Route;
 
 // Meters
+Route::get('properties/{property_id}/meters/statistics', [MeterController::class, 'statisticsByProperty']);
 Route::get('properties/{property_id}/meters', [MeterController::class, 'indexByProperty']);
 Route::get('properties/{property_id}/floors/{floor_id}/meters', [MeterController::class, 'indexByFloor']);
 Route::apiResource('meters', MeterController::class);

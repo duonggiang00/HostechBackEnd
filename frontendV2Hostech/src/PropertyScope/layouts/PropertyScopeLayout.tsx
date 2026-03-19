@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   LogOut,
-  Home
+  Home,
+  Gauge
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -33,9 +34,10 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/properties/${propertyId}/dashboard`, exact: true },
-    { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
-    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/admin/properties/${propertyId}/dashboard`, exact: true },
+    { id: 'meters', icon: Gauge, label: 'Đồng hồ', path: `/admin/properties/${propertyId}/meters` },
+    { id: 'floors', icon: Layers, label: 'Floors', path: `/admin/properties/${propertyId}/floors` },
+    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/admin/properties/${propertyId}/rooms` },
   ];
 
   const SidebarContent = () => (

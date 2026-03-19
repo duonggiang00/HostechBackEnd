@@ -31,8 +31,20 @@ class MeterReadingResource extends JsonResource
             'updated_at' => $this->updated_at?->format('Y-m-d H:i:s'),
 
             'meter' => new MeterResource($this->whenLoaded('meter')),
-            'submitted_by' => $this->whenLoaded('submittedBy'),
-            'approved_by' => $this->whenLoaded('approvedBy'),
+            'submitted_by' => $this->whenLoaded('submittedBy', function () {
+                return [
+                    'id' => $this->submittedBy?->id,
+                    'name' => $this->submittedBy?->name,
+                    'email' => $this->submittedBy?->email,
+                ];
+            }),
+            'approved_by' => $this->whenLoaded('approvedBy', function () {
+                return [
+                    'id' => $this->approvedBy?->id,
+                    'name' => $this->approvedBy?->name,
+                    'email' => $this->approvedBy?->email,
+                ];
+            }),
             'adjustments' => AdjustmentNoteResource::collection($this->whenLoaded('adjustmentNotes')),
             'proofs' => $this->whenLoaded('media', function () {
                 return $this->getMedia('reading_proofs')->map(function ($media) {

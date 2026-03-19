@@ -23,7 +23,7 @@ class MeterStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'room_id' => ['required', 'uuid', 'exists:rooms,id'],
+            'room_id' => ['nullable', 'uuid', 'exists:rooms,id'],
             'code' => [
                 'required',
                 'string',
@@ -35,6 +35,8 @@ class MeterStoreRequest extends FormRequest
             'type' => ['required', 'string', Rule::in(['ELECTRIC', 'WATER'])],
             'installed_at' => ['nullable', 'date'],
             'is_active' => ['boolean'],
+            'is_master' => ['boolean'],
+            'base_reading' => ['nullable', 'numeric', 'min:0'],
             'meta' => ['nullable', 'array'],
         ];
     }

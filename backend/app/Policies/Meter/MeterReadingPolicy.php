@@ -87,4 +87,22 @@ class MeterReadingPolicy implements RbacModuleProvider
 
         return $this->checkPropertyScope($user, $meterReading);
     }
+
+    /**
+     * Only Managers can approve or reject meter readings.
+     */
+    public function approve(User $user, MeterReading $meterReading): bool
+    {
+        // Only Manager and Owner can approve (has 'U' permission which includes approve operations)
+        if (! $user->hasPermissionTo('update MeterReading')) {
+            return false;
+        }
+
+        // Additional check: Only Manager role (not Staff) can approve
+        if (! $user->hasRole(['Manager', 'Owner'])) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $meterReading);
+    }
 }
