@@ -69,18 +69,89 @@ class MeterReadingService
      */
     public function update(MeterReading $reading, array $data): MeterReading
     {
-        if (isset($data['status']) && $data['status'] === 'APPROVED' && $reading->status !== 'APPROVED') {
+        $isBecameApproved = isset($data['status']) && $data['status'] === 'APPROVED' && $reading->status !== 'APPROVED';
+
+        if ($isBecameApproved) {
             $data['approved_at'] = now();
             $data['approved_by_user_id'] = auth()->id();
         }
 
         $reading->update($data);
 
+        if ($isBecameApproved) {
+            $this->aggregateToMaster($reading);
+        }
+
         if (isset($data['proof_media_ids'])) {
             $this->attachProofs($reading, $data['proof_media_ids']);
         }
 
         return $reading;
+    }
+
+    /**
+     * Automatically aggregate room readings to the master meter for the property.
+     */
+    public function aggregateToMaster(MeterReading $reading)
+    {
+        $meter = $reading->meter;
+
+        // Skip if already a master meter or if no property link (should not happen for room meters)
+        if ($meter->is_master || !$meter->property_id) {
+            return;
+        }
+
+        // Find the master meter for this property and service type
+        $masterMeter = \App\Models\Meter\Meter::where('property_id', $meter->property_id)
+            ->where('service_id', $meter->service_id)
+            ->where('is_master', true)
+            ->first();
+
+        if (!$masterMeter) {
+            return;
+        }
+
+        // Recalculate total usage for this period from all room meters
+        // Usage = ReadingValue - (PreviousReadingValue OR BaseReading)
+        $totalPropertyUsage = \App\Models\Meter\MeterReading::whereHas('meter', function ($query) use ($masterMeter) {
+            $query->where('property_id', $masterMeter->property_id)
+                ->where('type', $masterMeter->type)
+                ->where('is_master', false);
+        })
+            ->where('period_start', $reading->period_start)
+            ->where('period_end', $reading->period_end)
+            ->where('status', 'APPROVED')
+            ->get()
+            ->sum(function ($r) {
+                $prev = \App\Models\Meter\MeterReading::where('meter_id', $r->meter_id)
+                    ->where('period_end', '<', $r->period_start)
+                    ->where('status', 'APPROVED')
+                    ->orderBy('period_end', 'desc')
+                    ->first();
+                
+                $prevValue = $prev ? $prev->reading_value : $r->meter->base_reading;
+                $usage = max(0, $r->reading_value - $prevValue);
+                return $usage;
+            });
+
+        // Update/Create the master reading for this period
+        if ($totalPropertyUsage > 0 || \App\Models\Meter\MeterReading::where('meter_id', $masterMeter->id)
+            ->where('period_start', $reading->period_start)
+            ->where('period_end', $reading->period_end)
+            ->exists()) {
+            
+            \App\Models\Meter\MeterReading::updateOrCreate([
+                'meter_id' => $masterMeter->id,
+                'period_start' => $reading->period_start,
+                'period_end' => $reading->period_end,
+                'org_id' => $reading->org_id,
+            ], [
+                'reading_value' => $masterMeter->base_reading + $totalPropertyUsage,
+                'status' => 'APPROVED',
+                'approved_at' => now(),
+                'approved_by_user_id' => auth()->id(),
+            ]);
+        }
     }
 
     protected function attachProofs(MeterReading $reading, array $mediaIds)

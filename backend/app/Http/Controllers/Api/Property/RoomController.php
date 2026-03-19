@@ -103,13 +103,14 @@ class RoomController extends Controller
             'property',
             'assets',
             'prices',
-            'statusHistories',
+            'statusHistories.changedByUser',
             'media',
-            'contracts.members',
-            'activeContract.members',
+            'contracts.members.user',
+            'activeContract.members.user',
             'meters.latestReading',
             'invoices',
-            'roomServices.service'
+            'roomServices.service.currentRate',
+            'floorPlanNode'
         ]);
 
         return new RoomResource($room);

@@ -74,6 +74,26 @@ class RoomPolicy implements RbacModuleProvider
         return $this->checkPropertyScope($user, $room);
     }
 
+    public function deleteAny(User $user): bool
+    {
+        return $user->hasPermissionTo('deleteAny Room');
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->hasPermissionTo('restoreAny Room');
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->hasPermissionTo('forceDeleteAny Room');
+    }
+
+    public function updateAny(User $user): bool
+    {
+        return $user->hasPermissionTo('updateAny Room');
+    }
+
     public function publish(User $user, Room $room): bool
     {
         // Chỉ Owner, Manager và Admin mới được publish phòng

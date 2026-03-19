@@ -1,7 +1,11 @@
 {
-  "dependencies": {
-    "date-fns": "^4.1.0",
-    "react-big-calendar": "^1.19.4",
-    "recharts": "^3.8.0"
+  "name": "hostech-fullstack",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix frontend && npm install --prefix frontendV2Hostech",
+    "dev:premium": "npm run dev --prefix frontend",
+    "dev:v2": "npm run dev --prefix frontendV2Hostech",
+    "dev:backend": "cd backend && php artisan serve",
+    "dev:all": "npx concurrently \"npm run dev:premium\" \"npm run dev:v2\" \"npm run dev:backend\""
   }
 }

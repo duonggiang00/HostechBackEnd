@@ -152,7 +152,7 @@ class RecurringBillingService
             ->orderBy('period_end', 'desc')
             ->first();
 
-        $prevValue = $previousReading ? $previousReading->reading_value : 0;
+        $prevValue = $previousReading ? $previousReading->reading_value : $meter->base_reading;
         $currValue = $currentReading->reading_value;
         $usage = $currValue - $prevValue;
 
@@ -169,7 +169,7 @@ class RecurringBillingService
         $totalAmount = 0;
         $tiersBreakdown = [];
 
-        if ($currentRate->tieredRates->count() > 0) {
+        if ($meter->is_master && $currentRate->tieredRates->count() > 0) {
             $remainingUsage = $usage;
             foreach ($currentRate->tieredRates as $tier) {
                 // Determine limits for this tier

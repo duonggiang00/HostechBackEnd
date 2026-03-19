@@ -9,8 +9,12 @@ enum RbacAction: string
     case CREATE = 'create';
     case UPDATE = 'update';
     case DELETE = 'delete';
+    case DELETE_ANY = 'deleteAny';
     case RESTORE = 'restore';
+    case RESTORE_ANY = 'restoreAny';
     case FORCE_DELETE = 'forceDelete';
+    case FORCE_DELETE_ANY = 'forceDeleteAny';
+    case UPDATE_ANY = 'updateAny';
 
     /**
      * Map short-hand characters to actions.
@@ -23,8 +27,8 @@ enum RbacAction: string
         return match (strtoupper($char)) {
             'C' => [self::CREATE],
             'R' => [self::VIEW_ANY, self::VIEW],
-            'U' => [self::UPDATE],
-            'D' => [self::DELETE],
+            'U' => [self::UPDATE, self::UPDATE_ANY],
+            'D' => [self::DELETE, self::DELETE_ANY, self::RESTORE, self::RESTORE_ANY, self::FORCE_DELETE, self::FORCE_DELETE_ANY],
             '*' => self::cases(),
             default => []
         };

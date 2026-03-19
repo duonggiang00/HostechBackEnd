@@ -101,4 +101,89 @@ class MeterService
     {
         return $meter->delete();
     }
+
+    /**
+     * Attach a meter to a specific room.
+     */
+    public function attachToRoom(Meter $meter, Room $room): Meter
+    {
+        $meter->update([
+            'room_id' => $room->id,
+            'property_id' => $room->property_id,
+            'is_master' => false,
+        ]);
+        
+        return $meter;
+    }
+
+    /**
+     * Detach a meter from its current room.
+     */
+    public function detachFromRoom(Meter $meter): Meter
+    {
+        $meter->update(['room_id' => null]);
+        
+        return $meter;
+    }
+
+    /**
+     * Set/Unset a meter as a Master Meter for a property.
+     */
+    public function setAsMaster(Meter $meter, bool $isMaster = true): Meter
+    {
+        // If setting as master, ensure no other master meter of same type exists for this property
+        if ($isMaster) {
+            Meter::where('property_id', $meter->property_id)
+                ->where('type', $meter->type)
+                ->where('is_master', true)
+                ->where('id', '!=', $meter->id)
+                ->update(['is_master' => false]);
+            
+            $meter->update(['is_master' => true, 'room_id' => null]);
+        } else {
+            $meter->update(['is_master' => false]);
+        }
+
+        return $meter;
+    }
+
+    /**
+     * Switch master meter and exchange base/reading values.
+     * Rule: The new master meter inherits the "running total" of the old one as its base_reading.
+     */
+    public function switchMasterMeter(Meter $oldMaster, Meter $newMaster): bool
+    {
+        if ($oldMaster->property_id !== $newMaster->property_id || $oldMaster->type !== $newMaster->type) {
+            return false;
+        }
+
+        \DB::transaction(function () use ($oldMaster, $newMaster) {
+            $latestReadingValue = $oldMaster->latestReading?->reading_value ?? $oldMaster->base_reading;
+
+            // Mark old as not master
+            $oldMaster->update(['is_master' => false]);
+
+            // Set new as master and transfer the cumulative value to its base_reading
+            $newMaster->update([
+                'is_master' => true,
+                'room_id' => null,
+                'base_reading' => $latestReadingValue,
+            ]);
+        });
+
+        return true;
+    }
+    /**
+     * Reset all base readings to 0 for a given organization and optionally a specific property.
+     */
+    public function resetBaseReadings(string $orgId, ?string $propertyId = null): int
+    {
+        $query = Meter::where('org_id', $orgId);
+
+        if ($propertyId) {
+            $query->where('property_id', $propertyId);
+        }
+
+        return $query->update(['base_reading' => 0]);
+    }
 }

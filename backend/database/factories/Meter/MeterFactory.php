@@ -15,7 +15,9 @@ class MeterFactory extends Factory
     {
         return [
             'org_id' => Org::inRandomOrder()->first()->id ?? Org::factory(),
-            'room_id' => Room::inRandomOrder()->first()->id ?? Room::factory(),
+            'property_id' => null,
+            'room_id' => null,
+            'service_id' => null,
             'code' => $this->faker->unique()->bothify('MT-#####'),
             'type' => $this->faker->randomElement(['ELECTRIC', 'WATER']),
             'installed_at' => $this->faker->date(),

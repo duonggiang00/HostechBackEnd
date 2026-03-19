@@ -52,24 +52,112 @@ class RoomResource extends JsonResource
             // 'floor' => FloorResource::make($this->whenLoaded('floor')),
             // 'property' => PropertyResource::make($this->whenLoaded('property')),
 
-            // Relations (eager loaded via QueryBuilder allowedIncludes or via direct load)
-            'assets' => $this->whenLoaded('assets'),
-            'price_histories' => $this->whenLoaded('prices'),
-            'status_histories' => $this->whenLoaded('statusHistories'),
-            'floor_plan_node' => $this->whenLoaded('floorPlanNode'),
-            'contracts' => \App\Http\Resources\Contract\ContractResource::collection($this->whenLoaded('contracts')),
-            'active_contract' => \App\Http\Resources\Contract\ContractResource::make($this->whenLoaded('activeContract')),
-            'meters' => \App\Http\Resources\Meter\MeterResource::collection($this->whenLoaded('meters')),
-            'electricity_reading' => $this->whenLoaded('meters', function() {
-                return $this->meters->where('type', 'ELECTRIC')->first()?->latestReading?->reading_value ?? 0;
+            // Relations (optimized for single-call detail view)
+            'assets' => $this->whenLoaded('assets', function () {
+                return $this->assets->map(fn($asset) => [
+                    'id' => $asset->id,
+                    'name' => $asset->name,
+                    'serial' => $asset->serial,
+                    'condition' => $asset->condition,
+                ]);
             }),
-            'water_reading' => $this->whenLoaded('meters', function() {
-                return $this->meters->where('type', 'WATER')->first()?->latestReading?->reading_value ?? 0;
+            'price_histories' => $this->whenLoaded('prices', function () {
+                return collect($this->prices)->sortByDesc('effective_from')->take(10)->values()->map(fn($price) => [
+                    'price' => (float) $price->price,
+                    'start_date' => $price->effective_from?->format('Y-m-d'),
+                    'end_date' => null,
+                ]);
             }),
-            'invoices' => \App\Http\Resources\Invoice\InvoiceResource::collection($this->whenLoaded('invoices')),
-            'room_services' => \App\Http\Resources\Service\RoomServiceResource::collection($this->whenLoaded('roomServices')),
+            'status_histories' => $this->whenLoaded('statusHistories', function () {
+                return collect($this->statusHistories)->sortByDesc('created_at')->take(10)->values()->map(fn($history) => [
+                    'id' => $history->id,
+                    'from_status' => $history->from_status,
+                    'to_status' => $history->to_status,
+                    'notes' => $history->reason,
+                    'actor_name' => $history->changedByUser?->full_name,
+                    'created_at' => $history->created_at?->toIso8601String(),
+                ]);
+            }),
+            'floor_plan_node' => $this->whenLoaded('floorPlanNode', function () {
+                return $this->floorPlanNode ? [
+                    'x' => $this->floorPlanNode->x,
+                    'y' => $this->floorPlanNode->y,
+                    'width' => $this->floorPlanNode->width,
+                    'height' => $this->floorPlanNode->height,
+                ] : null;
+            }),
 
-            // Media (Spatie MediaLibrary)
+            'contracts' => $this->whenLoaded('contracts', function () {
+                return collect($this->contracts)->sortByDesc('start_date')->take(5)->values()->map(fn($contract) => [
+                    'id' => $contract->id,
+                    'start_date' => $contract->start_date instanceof \Carbon\Carbon ? $contract->start_date->format('Y-m-d') : ($contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') : null),
+                    'end_date' => $contract->end_date instanceof \Carbon\Carbon ? $contract->end_date->format('Y-m-d') : ($contract->end_date ? \Carbon\Carbon::parse($contract->end_date)->format('Y-m-d') : null),
+                    'status' => strtolower($contract->status),
+                    'monthly_rent' => (float) $contract->rent_price,
+                    'deposit_amount' => (float) $contract->deposit_amount,
+                    'members' => $contract->members->map(fn($m) => [
+                        'id' => $m->id,
+                        'full_name' => $m->user?->full_name,
+                        'role' => $m->role,
+                        'status' => $m->status,
+                        'is_primary' => $m->role === 'TENANT',
+                    ]),
+                ]);
+            }),
+
+            'active_contract' => $this->when($this->activeContract, function () {
+                $contract = $this->activeContract;
+                return [
+                    'id' => $contract->id,
+                    'status' => strtolower($contract->status),
+                    'start_date' => $contract->start_date instanceof \Carbon\Carbon ? $contract->start_date->format('Y-m-d') : ($contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') : null),
+                    'monthly_rent' => (float) $contract->rent_price,
+                    'deposit_amount' => (float) $contract->deposit_amount,
+                    'members' => $contract->members->map(fn($m) => [
+                        'full_name' => $m->user?->full_name,
+                        'role' => $m->role,
+                        'status' => $m->status,
+                    ]),
+                ];
+            }),
+
+            'meters' => $this->whenLoaded('meters', function () {
+                return collect($this->meters)->map(fn($meter) => [
+                    'id' => $meter->id,
+                    'room_id' => $meter->room_id,
+                    'code' => $meter->code,
+                    'type' => $meter->type,
+                    'last_reading' => (float) ($meter->latestReading?->reading_value ?? 0),
+                    'last_reading_date' => $meter->latestReading?->period_end instanceof \Carbon\Carbon ? $meter->latestReading->period_end->format('Y-m-d') : ($meter->latestReading?->period_end ? \Carbon\Carbon::parse($meter->latestReading->period_end)->format('Y-m-d') : null),
+                ]);
+            }),
+
+            'invoices' => $this->whenLoaded('invoices', function () {
+                return collect($this->invoices)->sortByDesc('period_start')->take(10)->values()->map(fn($invoice) => [
+                    'id' => $invoice->id,
+                    'issue_date' => $invoice->created_at instanceof \Carbon\Carbon ? $invoice->created_at->format('Y-m-d') : ($invoice->created_at ? \Carbon\Carbon::parse($invoice->created_at)->format('Y-m-d') : null),
+                    'period_start' => $invoice->period_start instanceof \Carbon\Carbon ? $invoice->period_start->format('Y-m-d') : ($invoice->period_start ? \Carbon\Carbon::parse($invoice->period_start)->format('Y-m-d') : null),
+                    'period_end' => $invoice->period_end instanceof \Carbon\Carbon ? $invoice->period_end->format('Y-m-d') : ($invoice->period_end ? \Carbon\Carbon::parse($invoice->period_end)->format('Y-m-d') : null),
+                    'status' => strtolower($invoice->status),
+                    'total_amount' => (float) $invoice->total_amount,
+                    'paid_amount' => (float) $invoice->paid_amount,
+                ]);
+            }),
+
+            'room_services' => $this->whenLoaded('roomServices', function () {
+                return $this->roomServices->map(fn($rs) => [
+                    'id' => $rs->id,
+                    'quantity' => (int) ($rs->quantity ?? 1),
+                    'service' => [
+                        'name' => $rs->service?->name,
+                        'price' => (float) ($rs->service?->current_price ?? 0),
+                        'unit' => $rs->service?->unit,
+                        'calc_mode' => $rs->service?->calc_mode,
+                    ],
+                ]);
+            }),
+
+            // Media (Spatie MediaLibrary) - Optimized mapping
             'images' => $this->whenLoaded('media', function () {
                 return $this->getMedia('gallery')->map(function ($media) {
                     return [

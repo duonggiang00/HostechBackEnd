@@ -16,6 +16,9 @@ use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Service\Service;
+use App\Models\Meter\Meter;
+use App\Models\Meter\MeterReading;
+use App\Services\Meter\MeterReadingService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -53,11 +56,9 @@ class OrgSeeder extends Seeder
             'Love Street Hotel',
         ];
         $orgCount = count($orgNames);
-        $usersPerOrg = 15;
-        $propertiesPerOrg = 5;
-        $floorsPerProperty = 4;
-        $roomsPerFloor = 5;
-        $roomsWithoutFloor = 3;
+        $usersPerOrg = 10;
+        $propertiesPerOrg = rand(2, 3);
+        $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
@@ -105,6 +106,8 @@ class OrgSeeder extends Seeder
             $serviceDataList = [
                 ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 4000],
                 ['code' => 'NUOC', 'name' => 'Tiền nước', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 30000],
+                ['code' => 'DIEN_BT', 'name' => 'Điện bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 1984],
+                ['code' => 'NUOC_BT', 'name' => 'Nước bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 5973],
                 ['code' => 'INTERNET', 'name' => 'Internet', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 100000],
                 ['code' => 'QL', 'name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 50000],
                 ['code' => 'GUIXE', 'name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY', 'unit' => 'bike', 'price' => 100000],
@@ -137,9 +140,31 @@ class OrgSeeder extends Seeder
                     'created_at' => now(),
                 ]);
 
-                if ($data['code'] === 'DIEN') {
+                if ($data['code'] === 'DIEN_BT') {
                     $tiers = [
-                        ['tier_from' => 0, 'tier_to' => null, 'price' => 4000],
+                        ['tier_from' => 0, 'tier_to' => 50, 'price' => 1984],
+                        ['tier_from' => 50, 'tier_to' => 100, 'price' => 2050],
+                        ['tier_from' => 100, 'tier_to' => 200, 'price' => 2380],
+                        ['tier_from' => 200, 'tier_to' => null, 'price' => 2998],
+                    ];
+                    foreach ($tiers as $tier) {
+                        DB::table('tiered_rates')->insert([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $org->id,
+                            'service_rate_id' => $rateId,
+                            'tier_from' => $tier['tier_from'],
+                            'tier_to' => $tier['tier_to'],
+                            'price' => $tier['price'],
+                        ]);
+                    }
+                }
+
+                if ($data['code'] === 'NUOC_BT') {
+                    $tiers = [
+                        ['tier_from' => 0, 'tier_to' => 10, 'price' => 5973],
+                        ['tier_from' => 10, 'tier_to' => 20, 'price' => 7052],
+                        ['tier_from' => 20, 'tier_to' => 30, 'price' => 8669],
+                        ['tier_from' => 30, 'tier_to' => null, 'price' => 15929],
                     ];
                     foreach ($tiers as $tier) {
                         DB::table('tiered_rates')->insert([
@@ -158,11 +183,15 @@ class OrgSeeder extends Seeder
             $this->command->info("\n🏢 Tạo bất động sản (Properties)...");
             $this->command->line("└─ Số lượng bất động sản: <fg=cyan>$propertiesPerOrg</>");
 
-            Property::factory($propertiesPerOrg)
+            Property::factory(rand(2, 3))
                 ->state(['org_id' => $org->id])
-                ->sequence(fn ($sequence) => ['area' => fake()->randomFloat(2, 95, 500)])
+                ->sequence(fn ($sequence) => [
+                    'area' => rand(60, 90),
+                    'shared_area' => rand(5, 10), // Assuming there is a shared_area column or meta
+                ])
                 ->create()
-                ->each(function (Property $property, $index) use ($org, $floorsPerProperty, $roomsPerFloor, $roomsWithoutFloor, $serviceIds) {
+                ->each(function (Property $property, $index) use ($org, $serviceIds) {
+                    $floorsCount = rand(3, 4);
                     // Get all managers and staff for this org
                     $managers = User::where('org_id', $org->id)->role('Manager')->get();
                     $staffs = User::where('org_id', $org->id)->role('Staff')->get();
@@ -180,11 +209,11 @@ class OrgSeeder extends Seeder
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
                     // Create floors
-                    $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsPerProperty</>");
+                    $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
 
-                    $totalRoomsInProperty = ($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor;
+                    $totalRoomsInProperty = 0; 
 
-                    for ($i = 1; $i <= $floorsPerProperty; $i++) {
+                    for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
                             'org_id' => $org->id,
                             'property_id' => $property->id,
@@ -193,47 +222,48 @@ class OrgSeeder extends Seeder
                             'sort_order' => $i,
                         ]);
 
-                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsPerFloor</> phòng");
+                        $availableArea = $property->area - ($property->shared_area ?? 5);
+                        $roomsOnFloor = floor($availableArea / 20);
+                        if ($roomsOnFloor < 1) $roomsOnFloor = 1;
 
-                        // Ensure sum of room areas <= property area
-                        // Usable area for rooms is e.g. 80% of property area
-                        $usableArea = $property->area * 0.8;
-                        $averageRoomArea = $usableArea / $roomsPerFloor;
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng");
 
-                        for ($j = 0; $j < $roomsPerFloor; $j++) {
+                        $remainingArea = $availableArea;
+                        for ($j = 0; $j < $roomsOnFloor; $j++) {
+                            $isLast = ($j === $roomsOnFloor - 1);
+                            if ($isLast) {
+                                $roomArea = $remainingArea;
+                            } else {
+                                // Fair distribution with a bit of randomness
+                                $avg = $remainingArea / ($roomsOnFloor - $j);
+                                $roomArea = rand(2000, $avg * 100) / 100;
+                            }
+                            
+                            $roomArea = max(20, round($roomArea, 2));
+                            $remainingArea -= $roomArea;
+                            
                             Room::factory()->create([
                                 'org_id' => $org->id,
                                 'property_id' => $property->id,
                                 'floor_id' => $floor->id,
-                                'area' => round($averageRoomArea * (rand(8, 12) / 10), 2),
+                                'area' => $roomArea,
+                                'base_price' => $roomArea * 125000,
                                 'floor_number' => $i,
                             ]);
                         }
                     }
 
-                    // Create rooms without floor
-                    $this->command->line("     • Không có tầng - Tạo <fg=cyan>$roomsWithoutFloor</> phòng");
-                    for ($j = 0; $j < $roomsWithoutFloor; $j++) {
-                        Room::factory()->create([
-                            'org_id' => $org->id,
-                            'property_id' => $property->id,
-                            'floor_id' => null,
-                            'area' => fake()->randomFloat(2, 20, 50),
-                            'floor_number' => 0,
-                        ]);
-                    }
-
-                    $this->command->line("     ✅ Tổng cộng <fg=green>$totalRoomsInProperty</> phòng");
+                    $this->command->line("     ✅ Tổng cộng <fg=green>" . Room::where('property_id', $property->id)->count() . "</> phòng");
 
                     // CREATE MASTER METERS
                     $this->command->line("     📡 Tạo đồng hồ tổng cho tòa nhà...");
                     $masterMeterConfigs = [
-                        ['type' => 'ELECTRIC', 'prefix' => 'M-E-', 'service_code' => 'DIEN'],
-                        ['type' => 'WATER', 'prefix' => 'M-W-', 'service_code' => 'NUOC'],
+                        ['type' => 'ELECTRIC', 'prefix' => 'M-E-', 'service_code' => 'DIEN_BT'],
+                        ['type' => 'WATER', 'prefix' => 'M-W-', 'service_code' => 'NUOC_BT'],
                     ];
 
                     foreach ($masterMeterConfigs as $mConfig) {
-                        DB::table('meters')->insert([
+                        Meter::create([
                             'id' => Str::uuid()->toString(),
                             'org_id' => $org->id,
                             'property_id' => $property->id,
@@ -242,6 +272,7 @@ class OrgSeeder extends Seeder
                             'code' => $mConfig['prefix'] . $property->code,
                             'type' => $mConfig['type'],
                             'is_master' => true,
+                            'base_reading' => 0, // Will be updated if sum is needed
                             'installed_at' => '2025-01-01',
                             'is_active' => true,
                             'created_at' => '2025-01-01',
@@ -258,6 +289,15 @@ class OrgSeeder extends Seeder
             $ownerId = User::where('org_id', $org->id)->first()->id;
 
             foreach ($properties as $property) {
+                $masterMeterIds = DB::table('meters')
+                    ->where('property_id', $property->id)
+                    ->where('is_master', true)
+                    ->pluck('id', 'type')
+                    ->toArray();
+
+                $propertyMonthlyUsage = []; // [month_string][type] => sum_usage
+                $initialMeterSum = ['ELECTRIC' => 0, 'WATER' => 0];
+
                 $roomsInProperty = Room::where('property_id', $property->id)->get();
                 $occupancyRate = rand(50, 80) / 100;
                 $numOccupiedRooms = round($roomsInProperty->count() * $occupancyRate);
@@ -281,7 +321,8 @@ class OrgSeeder extends Seeder
 
                     foreach ($meterConfigs as $mConfig) {
                         $meterId = Str::uuid()->toString();
-                        DB::table('meters')->insert([
+                        $initialValue = rand(10, 100);
+                        Meter::create([
                             'id' => $meterId,
                             'org_id' => $org->id,
                             'property_id' => $room->property_id,
@@ -290,12 +331,14 @@ class OrgSeeder extends Seeder
                             'code' => $mConfig['prefix'] . $room->code . '-' . rand(10, 99),
                             'type' => $mConfig['type'],
                             'is_master' => false,
+                            'base_reading' => $initialValue,
                             'installed_at' => '2025-01-01',
                             'is_active' => true,
                             'created_at' => '2025-01-01',
                             'updated_at' => '2025-01-01',
                         ]);
-                        $meters[] = ['id' => $meterId, 'config' => $mConfig, 'last_value' => rand(10, 100)];
+                        $meters[] = ['id' => $meterId, 'config' => $mConfig, 'last_value' => $initialValue];
+                        $initialMeterSum[$mConfig['type']] += $initialValue;
                     }
 
                     $mandatoryCodes = ['DIEN', 'NUOC'];
@@ -328,7 +371,7 @@ class OrgSeeder extends Seeder
                         $endDate = $currentDate->copy()->addMonths($duration);
                         
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId
+                            $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
 
                         $currentDate = $endDate->copy()->addMonths(1)->startOfMonth();
@@ -337,11 +380,25 @@ class OrgSeeder extends Seeder
                     // 2. Active Contract
                     if ($isActiveRoom && $currentDate->lt($cutoffDate)) {
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId
+                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
                         $room->update(['status' => 'occupied']);
                     } else {
                         $room->update(['status' => 'draft']);
+                    }
+                }
+
+                // C. Update Master Meter initial readings
+                foreach ($initialMeterSum as $type => $sum) {
+                    $masterMeter = Meter::where('property_id', $property->id)
+                        ->where('type', $type)
+                        ->where('is_master', true)
+                        ->first();
+                    
+                    if ($masterMeter) {
+                        $masterMeter->update(['base_reading' => $sum]);
+                        
+                        // Initial reading placeholder (vốn dĩ đã ở dial này rồi)
                     }
                 }
             }
@@ -353,9 +410,9 @@ class OrgSeeder extends Seeder
     $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
     $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
     $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
-    $this->command->line('✅ Bất động sản: <fg=cyan>'.($orgCount * $propertiesPerOrg).'</>');
-    $this->command->line('✅ Tầng: <fg=cyan>'.($orgCount * $propertiesPerOrg * $floorsPerProperty).'</>');
-    $this->command->line('✅ Phòng: <fg=cyan>'.($orgCount * $propertiesPerOrg * (($floorsPerProperty * $roomsPerFloor) + $roomsWithoutFloor)).'</>');
+    $this->command->line('✅ Bất động sản: <fg=cyan>'.Property::count().'</>');
+    $this->command->line('✅ Tầng: <fg=cyan>'.Floor::count().'</>');
+    $this->command->line('✅ Phòng: <fg=cyan>'.Room::count().'</>');
 
     // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
     $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
@@ -367,9 +424,10 @@ class OrgSeeder extends Seeder
     $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
 }
 
-    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $staffId)
+    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $staffId, &$propertyMonthlyUsage)
 {
     $cutoffLimit = Carbon::parse('2026-03-31');
+    $readingService = app(MeterReadingService::class);
     
     // Calculate fixed services fee (non-metered services)
     $roomServiceIds = DB::table('room_services')->where('room_id', $room->id)->pluck('service_id');
@@ -496,23 +554,22 @@ class OrgSeeder extends Seeder
             $newValue = $m['last_value'] + $usage;
             $readingId = Str::uuid()->toString();
 
-            DB::table('meter_readings')->updateOrInsert(
-                [
-                    'org_id' => $org->id,
-                    'meter_id' => $m['id'],
-                    'period_start' => $pStart->toDateString(),
-                    'period_end' => $pEnd->toDateString(),
-                ],
-                [
-                    'id' => $readingId,
-                    'reading_value' => $newValue,
-                    'status' => 'LOCKED',
-                    'submitted_by_user_id' => $staffId,
-                    'submitted_at' => $pEnd->copy()->addDay(),
-                    'created_at' => $pEnd,
-                    'updated_at' => $pEnd,
-                ]
-            );
+            $reading = $readingService->create([
+                'org_id' => $org->id,
+                'meter_id' => $m['id'],
+                'period_start' => $pStart->toDateString(),
+                'period_end' => $pEnd->toDateString(),
+                'reading_value' => $newValue,
+                'submitted_by_user_id' => $staffId,
+                'submitted_at' => $pEnd->copy()->addDay(),
+            ]);
+
+            // Approve to trigger master aggregation
+            $readingService->update($reading, ['status' => 'APPROVED']);
+
+            // Aggregate to property monthly total
+            $monthKey = $tempDate->toDateString();
+            $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
 
             InvoiceItem::create([
                 'id' => Str::uuid()->toString(),

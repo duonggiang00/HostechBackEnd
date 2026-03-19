@@ -443,26 +443,41 @@ class RoomService
             $oldStatus = $room->status;
             $room->update(array_merge($data, ['status' => 'available']));
 
-            // Ghi Price History
-            RoomPrice::create([
+            // Attach initial price
+            $room->prices()->create([
                 'org_id' => $room->org_id,
-                'room_id' => $room->id,
-                'effective_from' => now()->toDateString(),
-                'price' => $room->base_price,
-                'created_by_user_id' => $performer->id,
+                'price' => $data['base_price'],
+                'start_date' => now(),
             ]);
 
-            // Ghi Status History
-            RoomStatusHistory::create([
+            // Attach services
+            if (isset($data['services'])) {
+                $room->services()->sync($data['services']);
+            }
+
+            // Create meters
+            if (isset($data['meters'])) {
+                foreach ($data['meters'] as $meterData) {
+                    $room->meters()->create([
+                        'org_id' => $room->org_id,
+                        'property_id' => $room->property_id,
+                        'type' => $meterData['type'],
+                        'code' => $meterData['code'],
+                        'base_reading' => $meterData['initial_reading'] ?? 0,
+                        'is_active' => true,
+                    ]);
+                }
+            }
+
+            // Initial status history
+            $room->statusHistories()->create([
                 'org_id' => $room->org_id,
-                'room_id' => $room->id,
-                'from_status' => $oldStatus,
-                'to_status' => 'available',
-                'reason' => 'Published',
-                'changed_by_user_id' => $performer->id,
+                'status' => $room->status,
+                'changed_at' => now(),
+                'note' => 'Initial status',
             ]);
 
-            return $room->fresh();
+            return $room;
         });
     }
 

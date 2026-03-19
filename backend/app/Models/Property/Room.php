@@ -142,6 +142,11 @@ class Room extends Model implements HasMedia
         return $this->hasMany(\App\Models\Meter\Meter::class);
     }
 
+    public function services()
+    {
+        return $this->belongsToMany(\App\Models\Service\Service::class, 'room_services');
+    }
+
     public function invoices()
     {
         return $this->hasMany(\App\Models\Invoice\Invoice::class);
