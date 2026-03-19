@@ -28,13 +28,12 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
 
   // Admin System Menu Items
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Global Dashboard', path: '/admin', exact: true },
-    ...(user?.role === 'Admin' ? [{ id: 'organizations', icon: LayersIcon, label: 'Organizations', path: '/admin/organizations', exact: true }] : []),
-    { id: 'properties', icon: Building2, label: 'Properties', path: '/admin/properties', exact: true },
-    { id: 'communication', icon: MessageSquare, label: 'Communication', path: '/admin/communication' },
-    { id: 'audit', icon: HistoryIcon, label: 'Audit Logs', path: '/admin/audit-logs' },
-    { id: 'sessions', icon: Shield, label: 'Security & Sessions', path: '/admin/sessions' },
-    { id: 'settings', icon: Settings, label: 'Settings', path: '/admin/settings' }
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Global Dashboard', path: '/system/dashboard', exact: true },
+    ...(user?.role === 'Admin' ? [{ id: 'organizations', icon: LayersIcon, label: 'Organizations', path: '/system/organizations', exact: true }] : []),
+    { id: 'communication', icon: MessageSquare, label: 'Communication', path: '/system/communication' },
+    { id: 'audit', icon: HistoryIcon, label: 'Audit Logs', path: '/system/audit-logs' },
+    { id: 'sessions', icon: Shield, label: 'Security & Sessions', path: '/system/sessions' },
+    { id: 'settings', icon: Settings, label: 'Settings', path: '/system/settings' }
   ];
 
   const SidebarContent = () => (
@@ -100,10 +99,10 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
       <div className="p-4 border-t border-slate-100 bg-slate-50/50">
         <div className="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
           <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shadow-inner uppercase">
-            {user?.name?.[0] || 'U'}
+            {user?.full_name?.[0] || 'U'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">{user?.name || 'Guest'}</p>
+            <p className="text-sm font-bold text-slate-900 truncate">{user?.full_name || 'Guest'}</p>
             <p className="text-[10px] font-medium text-slate-500 truncate capitalize">{user?.role?.replace('_', ' ') || 'No Role'}</p>
           </div>
           <button 

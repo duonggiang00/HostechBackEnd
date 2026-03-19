@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2, ArrowRight, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 
 /**
  * SelectPropertyPage — shown to Manager/Staff who belong to multiple properties.
@@ -10,13 +9,10 @@ import { useScopeStore } from '@/shared/stores/useScopeStore';
 export default function SelectPropertyPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { setPropertyId } = useScopeStore();
-
   const assigned = user?.properties ?? [];
 
   const handleSelect = (propertyId: string) => {
-    setPropertyId(propertyId);
-    navigate(`/admin/properties/${propertyId}/dashboard`, { replace: true });
+    navigate(`/properties/${propertyId}/dashboard`, { replace: true });
   };
 
   const handleLogout = async () => {

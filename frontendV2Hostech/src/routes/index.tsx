@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { Loader2 } from 'lucide-react';
 
 // Layouts
@@ -33,7 +32,6 @@ import SessionsPage from '@/adminSystem/features/sessions/pages/SessionsPage';
 import AdminCommunicationPage from '@/adminSystem/features/dashboard/pages/AdminCommunicationPage';
 import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
 import PropertyDashboard from '@/PropertyScope/features/dashboard/pages/PropertyDashboard';
-import SelectPropertyPage from '@/PropertyScope/features/select-property/pages/SelectPropertyPage';
 
 // Tenant Pages
 import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
@@ -73,7 +71,6 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode, allow
  */
 const RootRedirect = () => {
   const { user, isAuthenticated, isLoading } = useAuthStore();
-  const { propertyId, setPropertyId } = useScopeStore();
 
   if (isLoading) {
     return (
@@ -89,28 +86,20 @@ const RootRedirect = () => {
 
   switch (user.role) {
     case 'Admin':
-      return <Navigate to="/admin/dashboard" replace />;
+      return <Navigate to="/system/dashboard" replace />;
 
     case 'Owner':
-      return <Navigate to="/admin/properties" replace />;
-
     case 'Manager':
+      return <Navigate to="/org/dashboard" replace />;
+
     case 'Staff': {
       const assigned = user.properties ?? [];
-
-      // Single property → auto-set scope and go straight to dashboard
+      // Single property → go straight to dashboard
       if (assigned.length === 1) {
-        if (!propertyId) setPropertyId(assigned[0].id);
-        return <Navigate to={`/admin/properties/${assigned[0].id}/dashboard`} replace />;
+        return <Navigate to={`/properties/${assigned[0].id}/dashboard`} replace />;
       }
-
-      // Multiple properties + active selection → resume current property
-      if (assigned.length > 1 && propertyId) {
-        return <Navigate to={`/admin/properties/${propertyId}/dashboard`} replace />;
-      }
-
       // Multiple (or none assigned) → show property selector
-      return <Navigate to="/admin/select-property" replace />;
+      return <Navigate to="/org/properties" replace />;
     }
 
     case 'Tenant':
@@ -137,8 +126,9 @@ export default function AppRoutes() {
         </div>
       } />
 
-      {/* --- Root Entry Point: always go to /admin, which handles role routing --- */}
-      <Route path="/" element={<Navigate to="/admin" replace />} />
+      {/* --- Root Entry Point: handles role routing --- */}
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/admin" element={<Navigate to="/" replace />} />
 
       {/* --- Super Admin Portal (Legacy/Specialized) --- */}
       <Route 
@@ -155,66 +145,64 @@ export default function AppRoutes() {
         } 
       />
 
-      {/* --- Main Admin/Employee Portal --- */}
+      {/* 1. Admin System Scope Layout */}
       <Route 
-        path="/admin" 
+        path="/system"
         element={
-          <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
-            <Outlet />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<RootRedirect />} />
-
-        {/* 1. Admin System Scope Layout */}
-        <Route element={
           <ProtectedRoute allowedRoles={['Admin']}>
             <AdminSystemLayout><Outlet /></AdminSystemLayout>
           </ProtectedRoute>
-        }>
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="organizations" element={<OrganizationsPage />} />
-          <Route path="audit-logs" element={<AuditLogPage />} />
-          <Route path="sessions" element={<SessionsPage />} />
-          <Route path="communication" element={<AdminCommunicationPage />} />
-          <Route path="settings" element={<div>System Settings</div>} />
-        </Route>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="organizations" element={<OrganizationsPage />} />
+        <Route path="audit-logs" element={<AuditLogPage />} />
+        <Route path="sessions" element={<SessionsPage />} />
+        <Route path="communication" element={<AdminCommunicationPage />} />
+        <Route path="settings" element={<div>System Settings</div>} />
+      </Route>
 
-        {/* 2. Organization Scope Layout — Admin & Owner only */}
-        <Route element={
-          <ProtectedRoute allowedRoles={['Admin', 'Owner']}>
+      {/* 2. Organization Scope Layout — Owner & Manager (and Staff optionally for lists) */}
+      <Route 
+        path="/org"
+        element={
+          <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
             <OrgScopeLayout><Outlet /></OrgScopeLayout>
           </ProtectedRoute>
-        }>
-          <Route path="organizations/:orgId/properties" element={<ProtectedRoute allowedRoles={['Admin']}><PropertiesPage /></ProtectedRoute>} />
-          <Route path="properties" element={<PropertiesPage />} />
-          <Route path="properties/add" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><PropertyForm /></ProtectedRoute>} />
-          <Route path="properties/:id/edit" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><PropertyForm /></ProtectedRoute>} />
-          <Route path="staff" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><StaffPage /></ProtectedRoute>} />
-          <Route path="finance" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><FinanceDashboard /></ProtectedRoute>} />
-          <Route path="invoices" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><InvoicesPage /></ProtectedRoute>} />
-        </Route>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><FinanceDashboard /></ProtectedRoute>} />
+        <Route path="organizations/:orgId/properties" element={<ProtectedRoute allowedRoles={['Admin']}><PropertiesPage /></ProtectedRoute>} />
+        <Route path="properties" element={<PropertiesPage />} />
+        <Route path="properties/add" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><PropertyForm /></ProtectedRoute>} />
+        <Route path="properties/:id/edit" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><PropertyForm /></ProtectedRoute>} />
+        <Route path="staff" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><StaffPage /></ProtectedRoute>} />
+        <Route path="finance" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><FinanceDashboard /></ProtectedRoute>} />
+        <Route path="invoices" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><InvoicesPage /></ProtectedRoute>} />
+      </Route>
 
-        {/* 3. Property Scope Layout — Admin, Owner, Manager, Staff */}
-        <Route element={
+      {/* 3. Property Scope Layout — Admin, Owner, Manager, Staff */}
+      <Route 
+        path="/properties/:propertyId"
+        element={
           <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
             <PropertyScopeLayout><Outlet /></PropertyScopeLayout>
           </ProtectedRoute>
-        }>
-          <Route path="properties/:propertyId/dashboard" element={<PropertyDashboard />} />
-          <Route path="properties/:propertyId/floors" element={<FloorsPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms" element={<FloorPlanPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/create" element={<RoomCreatePage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId/edit" element={<RoomEditPage />} />
-          <Route path="properties/:propertyId/rooms" element={<RoomListPage />} />
-          <Route path="properties/:propertyId/rooms/create" element={<RoomCreatePage />} />
-          <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="properties/:propertyId/rooms/:roomId/edit" element={<RoomEditPage />} />
-          <Route path="rooms" element={<RoomListPage />} />
-          {/* Manager/Staff with multiple properties → pick one */}
-          <Route path="select-property" element={<SelectPropertyPage />} />
-        </Route>
+        }
+      >
+        <Route index element={<Navigate to="dashboard" replace />} />
+        <Route path="dashboard" element={<PropertyDashboard />} />
+        <Route path="floors" element={<FloorsPage />} />
+        <Route path="floors/:floorId/rooms" element={<FloorPlanPage />} />
+        <Route path="floors/:floorId/rooms/create" element={<RoomCreatePage />} />
+        <Route path="floors/:floorId/rooms/:roomId" element={<RoomDetailPage />} />
+        <Route path="floors/:floorId/rooms/:roomId/edit" element={<RoomEditPage />} />
+        <Route path="rooms" element={<RoomListPage />} />
+        <Route path="rooms/create" element={<RoomCreatePage />} />
+        <Route path="rooms/:roomId" element={<RoomDetailPage />} />
+        <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
       </Route>
 
       {/* --- Tenant App Portal --- */}
@@ -228,7 +216,7 @@ export default function AppRoutes() {
           </ProtectedRoute>
         } 
       >
-        <Route index element={<RootRedirect />} />
+        <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<TenantDashboard />} />
         <Route path="requests" element={<TenantRequestsPage />} />
         <Route path="messages" element={<TenantMessagingPage />} />

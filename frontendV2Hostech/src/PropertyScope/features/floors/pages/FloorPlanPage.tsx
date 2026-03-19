@@ -15,22 +15,14 @@ import {
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
 import { useRooms, useRoomActions } from '@/PropertyScope/features/rooms/hooks/useRooms';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { useFloorDetail } from '@/PropertyScope/features/floors/hooks/useFloors';
 import type { Floor } from '@/PropertyScope/features/floors/types';
 
 import { isUuid } from '@/lib/utils';
 
 export default function FloorPlanPage() {
-  const { propertyId: propIdParam, floorId: floorIdParam } = useParams();
-  const { propertyId: scopedPropertyId } = useScopeStore();
+  const { propertyId, floorId: floorIdParam } = useParams<{ propertyId: string; floorId?: string }>();
   const navigate = useNavigate();
-
-  const propertyId = useMemo(() => {
-    if (isUuid(propIdParam)) return propIdParam as string;
-    if (isUuid(scopedPropertyId)) return scopedPropertyId as string;
-    return undefined;
-  }, [propIdParam, scopedPropertyId]);
 
   const floorId = useMemo(() => {
     if (isUuid(floorIdParam)) return floorIdParam as string;
@@ -68,8 +60,8 @@ export default function FloorPlanPage() {
 
   const selectedRoom = useMemo(() => rooms.find(r => r.id === selectedRoomId), [rooms, selectedRoomId]);
 
-  const { organizationId } = useScopeStore();
   const { user } = useAuthStore();
+  const organizationId = user?.org_id;
   const { batchSetFloorPlan } = useRoomActions();
 
   if (isLoading) {
@@ -105,13 +97,13 @@ export default function FloorPlanPage() {
         <p className="max-w-md mx-auto text-slate-500 font-medium leading-relaxed">{message}</p>
         <div className="mt-8 flex items-center justify-center gap-4">
           <button 
-            onClick={() => navigate('/admin/properties')}
+            onClick={() => navigate('/org/properties')}
             className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
           >
             Đến danh sách tòa nhà
           </button>
           <button 
-            onClick={() => navigate('/admin')}
+            onClick={() => navigate('/system')}
             className="px-8 py-3 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all"
           >
             Bảng điều khiển
@@ -136,7 +128,7 @@ export default function FloorPlanPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate(`/admin/properties/${propertyId}/floors`)}
+            onClick={() => navigate(`/properties/${propertyId}/floors`)}
             className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -189,9 +181,9 @@ export default function FloorPlanPage() {
                 <button 
                   onClick={() => {
                     if (selectedRoom) {
-                       navigate(`/admin/properties/${propertyId}/floors/${selectedRoom.floor_id}/rooms/${selectedRoom.id}/edit`);
+                       navigate(`/properties/${propertyId}/floors/${selectedRoom.floor_id}/rooms/${selectedRoom.id}/edit`);
                     } else if (selectedFloor) {
-                       navigate(`/admin/properties/${propertyId}/floors/${selectedFloor.id}/rooms/create`);
+                       navigate(`/properties/${propertyId}/floors/${selectedFloor.id}/rooms/create`);
                     } else {
                        setManagementMode('individual');
                        setIsManagementOpen(true);
@@ -250,7 +242,7 @@ export default function FloorPlanPage() {
                 onFloorSelect={(floor) => {
                     setSelectedFloor(floor);
                     if (floor && floor.id !== floorId) {
-                        navigate(`/admin/properties/${propertyId}/floors/${floor.id}/rooms`);
+                        navigate(`/properties/${propertyId}/floors/${floor.id}/rooms`);
                     }
                 }} 
              />

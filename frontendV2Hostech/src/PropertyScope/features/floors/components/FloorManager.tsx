@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, Loader2, Layers, CopyPlus, FileImage } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { useFloors, useFloorActions, type Floor } from '@/PropertyScope/features/floors/hooks/useFloors';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { toast } from 'react-hot-toast';
 
 interface FloorManagerProps {
@@ -10,7 +10,7 @@ interface FloorManagerProps {
 }
 
 export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorManagerProps) {
-  const { propertyId } = useScopeStore();
+  const { propertyId } = useParams<{ propertyId: string }>();
   const { data: floors, isLoading } = useFloors(propertyId || undefined);
   const { createFloor, deleteFloor, uploadFloorPlan } = useFloorActions();
   

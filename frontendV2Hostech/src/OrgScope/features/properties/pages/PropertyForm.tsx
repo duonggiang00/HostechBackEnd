@@ -4,7 +4,6 @@ import { usePropertyActions, usePropertyDetail } from '@/OrgScope/features/prope
 import type { Property } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { useOrganizations } from '@/adminSystem/features/organizations/hooks/useOrganizations';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { ArrowLeft, Save, Loader2, Building2, MapPin, Hash, Ruler, FileText, Settings, CreditCard, Users, Briefcase } from 'lucide-react';
 
 export default function PropertyForm() {
@@ -12,7 +11,7 @@ export default function PropertyForm() {
   const navigate = useNavigate();
   const isEdit = !!id;
   const { user } = useAuth();
-  const { organizationId: currentOrgId } = useScopeStore();
+  const currentOrgId = user?.org_id;
   const isAdmin = user?.role === 'Admin';
   
   const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations();

@@ -1,15 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { propertiesApi } from '../api/properties';
 import type { Property } from '../types';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import toast from 'react-hot-toast';
 import { isUuid } from '@/lib/utils';
 
 export type { Property };
 
 export const useProperties = (params?: Record<string, any>) => {
-  const { organizationId: scopedOrgId } = useScopeStore();
-  const orgId = params?.['filter[org_id]'] || params?.orgId || scopedOrgId;
+  const orgId = params?.['filter[org_id]'] || params?.orgId;
 
   return useQuery({
     queryKey: ['properties', orgId, params],

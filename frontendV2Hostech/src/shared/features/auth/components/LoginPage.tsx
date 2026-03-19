@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, ArrowRight, ArrowLeft, RefreshCw, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import OTPInput from './OTPInput';
 import { authApi } from '@/shared/features/auth/api/auth';
 import type { LoginStep } from '../types';
@@ -21,7 +20,6 @@ export default function LoginPage() {
     startOtpCooldown,
     decrementCooldown
   } = useAuthStore();
-  const { setOrganizationId } = useScopeStore();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -112,13 +110,8 @@ export default function LoginPage() {
       // Step 4: Replace store with full user data
       useAuthStore.getState().setAuth(fullUser, token);
 
-      // Step 5: Set org context if available (Owner, Manager, etc.)
-      if (fullUser.org_id) {
-        setOrganizationId(fullUser.org_id);
-      }
-
-      // Step 6: Navigate to /admin — RootRedirect will route to the correct scope
-      navigate('/admin');
+      // Step 6: Navigate to root, where RootRedirect will dynamically route user based on their specific role
+      navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
       const errorMessage =

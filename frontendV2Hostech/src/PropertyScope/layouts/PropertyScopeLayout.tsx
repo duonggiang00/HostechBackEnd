@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { useParams } from 'react-router-dom';
 import { 
   Building2, 
   DoorOpen, 
@@ -26,16 +26,16 @@ interface PropertyScopeLayoutProps {
 
 export default function PropertyScopeLayout({ children }: PropertyScopeLayoutProps) {
   const { user, logout } = useAuthStore();
-  const { propertyId } = useScopeStore();
+  const { propertyId } = useParams<{ propertyId: string }>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const dashboardPath = useDashboardHomePath();
+  const dashboardPath = useDashboardHomePath(propertyId);
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/admin/properties/${propertyId}/dashboard`, exact: true },
-    { id: 'floors', icon: Layers, label: 'Floors', path: `/admin/properties/${propertyId}/floors` },
-    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/admin/properties/${propertyId}/rooms` },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/properties/${propertyId}/dashboard`, exact: true },
+    { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
+    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
   ];
 
   const SidebarContent = () => (

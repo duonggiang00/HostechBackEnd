@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import OrgSwitcher from '@/adminSystem/features/organizations/components/OrgSwitcher';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
-import { useDashboardHomePath } from '@/shared/hooks/useDashboardHomePath';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface OrgScopeLayoutProps {
@@ -27,14 +26,14 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   const { user, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const dashboardPath = useDashboardHomePath();
+
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: dashboardPath, exact: true },
-    { id: 'properties', icon: Building2, label: 'Properties', path: '/admin/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Staff', path: '/admin/staff' },
-    { id: 'finance', icon: BarChart3, label: 'Finance', path: '/admin/finance' },
-    { id: 'invoices', icon: Receipt, label: 'Invoices', path: '/admin/invoices' },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/org/dashboard', exact: true },
+    { id: 'properties', icon: Building2, label: 'Properties', path: '/org/properties', exact: true },
+    { id: 'staff', icon: Users, label: 'Staff', path: '/org/staff' },
+    { id: 'finance', icon: BarChart3, label: 'Finance', path: '/org/finance' },
+    { id: 'invoices', icon: Receipt, label: 'Invoices', path: '/org/invoices' },
   ];
 
   const SidebarContent = () => (

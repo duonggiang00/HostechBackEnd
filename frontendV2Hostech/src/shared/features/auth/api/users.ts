@@ -1,5 +1,5 @@
 import apiClient from '@/shared/api/client';
-import type { User } from '../types';
+import type { AuthUser as User } from '../types';
 
 export const usersApi = {
   getUsers: async (params?: { page?: number; per_page?: number; search?: string }) => {

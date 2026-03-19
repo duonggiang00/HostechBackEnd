@@ -1,28 +1,20 @@
-import { useState, useEffect } from 'react';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
 import { Building2, ChevronDown, Check, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function PropertySwitcher() {
-  const { propertyId, setPropertyId, organizationId } = useScopeStore();
+  const { propertyId } = useParams<{ propertyId?: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const organizationId = user?.org_id;
+
   const { data: properties = [], isLoading, isError } = useProperties({ 
     'filter[org_id]': organizationId || undefined 
   });
   const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-
-  // Handle empty or auto-selection
-  useEffect(() => {
-    if (!isLoading && properties.length > 0) {
-      if (!propertyId || !properties.find(p => p.id === propertyId)) {
-        // Auto-select first property if none selected or current not in list
-        // Caution: Only auto-select if needed to avoid infinite loops
-        // For now, just let the user select.
-      }
-    }
-  }, [isLoading, properties, propertyId]);
 
   const selectedProperty = properties.find(p => p.id === propertyId);
 
@@ -85,8 +77,7 @@ export default function PropertySwitcher() {
                   <button
                     key={property.id}
                     onClick={() => {
-                      setPropertyId(property.id);
-                      queryClient.invalidateQueries();
+                      navigate(`/properties/${property.id}/dashboard`);
                       setIsOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all ${

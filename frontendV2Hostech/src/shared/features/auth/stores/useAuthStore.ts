@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import type { AuthState } from '../types';
 
 export const useAuthStore = create<AuthState>()(
@@ -24,7 +23,6 @@ export const useAuthStore = create<AuthState>()(
       decrementCooldown: () => set((state) => ({ otpCooldown: Math.max(0, state.otpCooldown - 1) })),
       logout: () => {
         set({ user: null, token: null, isAuthenticated: false, error: null });
-        useScopeStore.getState().clearScope();
       },
       hasPermission: (permission) => {
         const user = get().user;

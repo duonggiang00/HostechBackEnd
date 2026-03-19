@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useRooms, useRoomActions } from '../hooks/useRooms';
 import { useFloors } from '../../floors/hooks/useFloors';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import type { RoomStatus } from '../types';
@@ -43,7 +42,7 @@ const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
 };
 
 export default function RoomListPage() {
-  const { propertyId } = useScopeStore();
+  const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   // Search state (Kept separate and debounced for real-time responsiveness)
   const [searchTerm, setSearchTerm] = useState('');
@@ -237,7 +236,7 @@ export default function RoomListPage() {
             Tạo nhanh
           </button>
           <button 
-            onClick={() => navigate(`/admin/properties/${propertyId}/rooms/create`)}
+            onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
             className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
           >
             <Plus className="w-5 h-5" />
@@ -587,7 +586,7 @@ export default function RoomListPage() {
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex flex-col cursor-pointer group/row" onClick={() => navigate(`/admin/properties/${propertyId}/rooms/${room.id}`)}>
+                    <div className="flex flex-col cursor-pointer group/row" onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}>
                       <span className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                         {room.name}
                       </span>
@@ -641,7 +640,7 @@ export default function RoomListPage() {
                       ) : (
                         <>
                           <button 
-                            onClick={() => navigate(`/admin/properties/${propertyId}/rooms/${room.id}/edit`)}
+                            onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}/edit`)}
                             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-hover"
                           >
                             <Edit2 className="w-4 h-4" />

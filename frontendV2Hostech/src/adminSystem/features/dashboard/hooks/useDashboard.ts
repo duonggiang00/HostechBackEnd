@@ -1,11 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { dashboardApi } from '../api/dashboard';
 import type { DashboardResponse } from '../types';
 
-export function useDashboard(dateRange?: { from: string; to: string }) {
-  const { propertyId, organizationId } = useScopeStore();
-
+export function useDashboard(propertyId?: string | null, organizationId?: string | null, dateRange?: { from: string; to: string }) {
   return useQuery<DashboardResponse>({
     queryKey: ['dashboard-stats', propertyId, organizationId, dateRange],
     queryFn: async () => {

@@ -1,14 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersApi, type User } from '../api/users';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { usersApi } from '../api/users';
+import type { AuthUser as User } from '../types';
 
 export type { User };
 
-export const useUsers = (page = 1, perPage = 15, search = '') => {
-  const { organizationId } = useScopeStore();
-
+export const useUsers = (orgId?: string, page = 1, perPage = 15, search = '') => {
   return useQuery({
-    queryKey: ['users', organizationId, page, perPage, search],
+    queryKey: ['users', orgId, page, perPage, search],
     queryFn: () => usersApi.getUsers({ page, per_page: perPage, search }),
   });
 };

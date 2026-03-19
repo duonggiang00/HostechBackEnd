@@ -1,14 +1,15 @@
 import { motion } from 'framer-motion';
+import { useParams } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { useDashboard } from '@/adminSystem/features/dashboard/hooks/useDashboard';
 import { Users, Building2, CheckCircle2, TrendingUp, AlertCircle, Loader2, DollarSign } from 'lucide-react';
 import type { DashboardData } from '@/adminSystem/features/dashboard/types';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const { organizationId, propertyId } = useScopeStore();
-  const { data: dashboardResp, isLoading, error } = useDashboard();
+  const { propertyId } = useParams<{ propertyId?: string }>();
+  const organizationId = user?.org_id;
+  const { data: dashboardResp, isLoading, error } = useDashboard(propertyId, organizationId);
 
   // For Admin and Owner, continue showing the global dashboard
   if (isLoading) {

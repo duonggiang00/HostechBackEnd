@@ -1,7 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
 
@@ -16,13 +15,19 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use((config) => {
   const { token } = useAuthStore.getState();
-  const { organizationId, propertyId } = useScopeStore.getState();
+
+  // Extract scope IDs from URL as the single source of truth
+  const path = window.location.pathname;
+  const propMatch = path.match(/\/properties\/([a-fA-F0-9\-]{36})/);
+  const orgMatch = path.match(/\/organizations\/([a-fA-F0-9\-]{36})/);
+  
+  const propertyId = propMatch ? propMatch[1] : null;
+  const organizationId = orgMatch ? orgMatch[1] : null;
 
   // Standardized logging for every request
   console.log(`%c 🚀 [API Request] ${config.method?.toUpperCase()} ${config.url}`, 'background: #6366f1; color: white; font-weight: bold; padding: 2px 5px; border-radius: 3px;');
   if (config.params) console.log('   Params:', config.params);
   if (config.data) console.log('   Body:', config.data);
-  console.log('   Headers:', config.headers);
 
   if (token && token !== 'session-cookie-active') {
     config.headers.Authorization = `Bearer ${token}`;

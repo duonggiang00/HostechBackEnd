@@ -22,7 +22,8 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
 import { AddFloorModal, AddRoomModal } from './PropertyModals';
 
@@ -56,7 +57,7 @@ const SortableTreeNode = ({
   onNavigate: (propertyId: string) => void;
 }) => {
   const [isExpanded, setIsExpanded] = useState(depth < 1);
-  const { propertyId, floorId, roomId, setPropertyId, setFloorId, setRoomId } = useScopeStore();
+  const { propertyId, floorId, roomId } = useParams<{ propertyId?: string, floorId?: string, roomId?: string }>();
   
   const {
     attributes,
@@ -89,12 +90,8 @@ const SortableTreeNode = ({
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (node.type === 'property') {
-      setPropertyId(node.id);
-      // Use React Router navigate (passed as prop) — no full page reload
       onNavigate(node.id);
     }
-    if (node.type === 'floor') setFloorId(node.id);
-    if (node.type === 'room') setRoomId(node.id);
   };
 
   const handleChildDragEnd = (event: DragEndEvent) => {
@@ -209,7 +206,8 @@ export default function PropertyTreeView() {
   const [treeData, setTreeData] = useState<PropertyNodeProps[]>([]);
   const [activeModal, setActiveModal] = useState<{ type: 'floor' | 'room', node: PropertyNodeProps } | null>(null);
   
-  const { organizationId } = useScopeStore();
+  const { user } = useAuth();
+  const organizationId = user?.org_id;
   const { data: properties = [], isLoading } = useProperties({
     'filter[org_id]': organizationId || undefined
   });
@@ -277,9 +275,9 @@ export default function PropertyTreeView() {
     }
   };
 
-  // Navigate to /admin/properties/:id/floors after setting property scope
+  // Navigate to /properties/:id/floors after setting property scope
   const handleNavigateToRooms = useCallback((propertyId: string) => {
-    navigate(`/admin/properties/${propertyId}/floors`);
+    navigate(`/properties/${propertyId}/floors`);
   }, [navigate]);
 
   return (

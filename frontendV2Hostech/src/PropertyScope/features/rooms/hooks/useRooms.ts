@@ -1,8 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { roomsApi } from '../api/rooms';
 import type { Room, RoomStatus, PriceHistory, RoomQueryParams, CreateRoomPayload } from '../types';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
-import toast from 'react-hot-toast';
 import { isUuid } from '@/lib/utils';
 
 // Re-export types for backward compatibility if needed, or import directly from API
@@ -22,8 +20,7 @@ const PRICE_HISTORY_KEY = 'room-price-histories';
  * GET /api/rooms
  */
 export const useRooms = (params?: RoomQueryParams) => {
-  const { propertyId: scopedPropertyId } = useScopeStore();
-  const propertyId = params?.property_id || scopedPropertyId;
+  const propertyId = params?.property_id;
 
   return useQuery({
     queryKey: [ROOMS_KEY, propertyId, params],
@@ -50,8 +47,7 @@ export const useRooms = (params?: RoomQueryParams) => {
  * GET /api/rooms/drafts
  */
 export const useDraftRooms = (propertyId?: string) => {
-  const { propertyId: scopedId } = useScopeStore();
-  const pid = propertyId || scopedId;
+  const pid = propertyId;
   return useQuery({
     queryKey: [DRAFTS_KEY, pid],
     queryFn: () => roomsApi.getDraftRooms(pid || undefined),
@@ -63,8 +59,7 @@ export const useDraftRooms = (propertyId?: string) => {
  * GET /api/rooms/trash
  */
 export const useTrashRooms = (propertyId?: string) => {
-  const { propertyId: scopedId } = useScopeStore();
-  const pid = propertyId || scopedId;
+  const pid = propertyId;
   return useQuery({
     queryKey: [TRASH_KEY, pid],
     queryFn: () => roomsApi.getTrashRooms(pid || undefined),

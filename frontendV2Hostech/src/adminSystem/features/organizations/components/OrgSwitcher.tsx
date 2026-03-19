@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useOrganizations } from '@/adminSystem/features/organizations/hooks/useOrganizations';
 import { Globe, ChevronDown, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQueryClient } from '@tanstack/react-query';
 
 export default function OrgSwitcher() {
-  const { organizationId, setOrganizationId } = useScopeStore();
+  const { orgId } = useParams<{ orgId?: string }>();
+  const navigate = useNavigate();
+  const organizationId = orgId || null;
+
   const { data: organizations = [], isLoading } = useOrganizations();
   const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const selectedOrg = organizations.find(o => o.id === organizationId);
 
@@ -59,8 +60,7 @@ export default function OrgSwitcher() {
               <div className="max-h-60 overflow-y-auto space-y-1 cust-scrollbar">
                 <button
                   onClick={() => {
-                    setOrganizationId(null);
-                    queryClient.invalidateQueries();
+                    navigate('/system/dashboard');
                     setIsOpen(false);
                   }}
                   className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all ${
@@ -76,8 +76,7 @@ export default function OrgSwitcher() {
                   <button
                     key={org.id}
                     onClick={() => {
-                      setOrganizationId(org.id);
-                      queryClient.invalidateQueries();
+                      // Navigate to the system view of this organization (when implemented in the future)
                       setIsOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all ${
