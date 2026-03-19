@@ -56,6 +56,7 @@ const SortableTreeNode = ({
   onReorder: (parentId: string, activeId: string, overId: string) => void;
   onNavigate: (propertyId: string) => void;
 }) => {
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(depth < 1);
   const { propertyId, floorId, roomId } = useParams<{ propertyId?: string, floorId?: string, roomId?: string }>();
   
@@ -91,6 +92,12 @@ const SortableTreeNode = ({
     e.stopPropagation();
     if (node.type === 'property') {
       onNavigate(node.id);
+    }
+    if (node.type === 'floor' && propertyId) {
+      navigate(`/properties/${propertyId}/floors/${node.id}`);
+    }
+    if (node.type === 'room' && propertyId) {
+      navigate(`/properties/${propertyId}/rooms/${node.id}`);
     }
   };
 
@@ -275,8 +282,7 @@ export default function PropertyTreeView() {
     }
   };
 
-  // Navigate to /properties/:id/floors after setting property scope
-  const handleNavigateToRooms = useCallback((propertyId: string) => {
+  const handleNavigate = useCallback((propertyId: string) => {
     navigate(`/properties/${propertyId}/floors`);
   }, [navigate]);
 
@@ -312,7 +318,7 @@ export default function PropertyTreeView() {
                 onAddFloor={(n) => setActiveModal({ type: 'floor', node: n })}
                 onAddRoom={(n) => setActiveModal({ type: 'room', node: n })}
                 onReorder={handleReorder}
-                onNavigate={handleNavigateToRooms}
+                onNavigate={handleNavigate}
               />
             ))}
           </SortableContext>

@@ -20,7 +20,7 @@ export default function RoomDetailPage() {
   const [managementMode, setManagementMode] = useState<'edit' | 'contract' | 'individual' | 'quick'>('edit');
 
   const handleBack = () => {
-    navigate(`/admin/properties/${propertyId}/rooms`);
+    navigate(`/org/properties/${propertyId}/rooms`);
   };
 
   const handleEdit = () => {

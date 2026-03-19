@@ -189,6 +189,11 @@ export default function LoginPage() {
                     type="text"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleIdentify();
+                      }
+                    }}
                     placeholder="Email or Phone Number"
                     className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-3xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold placeholder:text-slate-300"
                   />
@@ -239,6 +244,11 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handlePasswordLogin();
+                      }
+                    }}
                     placeholder="Security Password"
                     className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-3xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold placeholder:text-slate-300"
                   />

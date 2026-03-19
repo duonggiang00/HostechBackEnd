@@ -115,7 +115,7 @@ export default function PropertiesPage() {
             {...prop}
             roomCount={prop.roomCount || 0}
             staffCount={prop.staffCount || 0}
-            onClick={() => navigate(`/admin/properties/${prop.id}/floors`)}
+            onClick={() => navigate(`/properties/${prop.id}/floors`)}
           />
         ))}
 

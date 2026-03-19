@@ -29,12 +29,12 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
 
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/org/dashboard', exact: true },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
     { id: 'properties', icon: Building2, label: 'Properties', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Staff', path: '/org/staff' },
-    { id: 'finance', icon: BarChart3, label: 'Finance', path: '/org/finance' },
-    { id: 'invoices', icon: Receipt, label: 'Invoices', path: '/org/invoices' },
-  ];
+    { id: 'staff', icon: Users, label: 'Staff', path: '/org/staff', roles: ['Admin', 'Owner'] },
+    { id: 'finance', icon: BarChart3, label: 'Finance', path: '/org/finance', roles: ['Admin', 'Owner'] },
+    { id: 'invoices', icon: Receipt, label: 'Invoices', path: '/org/invoices', roles: ['Admin', 'Owner'] },
+  ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
 
   const SidebarContent = () => (
     <>

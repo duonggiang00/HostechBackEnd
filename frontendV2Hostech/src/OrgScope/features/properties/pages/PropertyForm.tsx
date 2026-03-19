@@ -53,7 +53,7 @@ export default function PropertyForm() {
       } else {
         await createProperty.mutateAsync(formData);
       }
-      navigate('/admin/properties');
+      navigate('/org/properties');
     } catch (error) {
       console.error('Failed to save property:', error);
     }
@@ -316,7 +316,7 @@ export default function PropertyForm() {
             </button>
             <button
               type="button"
-              onClick={() => navigate('/admin/properties')}
+              onClick={() => navigate('/org/properties')}
               className="w-full py-4 text-slate-500 font-bold hover:text-slate-700 transition-colors"
             >
               Cancel

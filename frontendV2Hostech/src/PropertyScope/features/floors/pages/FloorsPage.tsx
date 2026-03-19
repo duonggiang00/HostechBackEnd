@@ -84,7 +84,7 @@ export default function FloorsPage() {
                     floorNumber={floor.floor_number}
                     roomsCount={floor.rooms_count || 0}
                     vacantCount={floor.vacant_rooms_count || 0}
-                    onClick={() => navigate(`/admin/properties/${propertyId}/floors/${floor.id}/rooms`)}
+                    onClick={() => navigate(`/properties/${propertyId}/floors/${floor.id}/rooms`)}
                 />
             </motion.div>
             ))}
