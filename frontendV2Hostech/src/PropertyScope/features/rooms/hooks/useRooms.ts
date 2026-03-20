@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import type { UseQueryOptions } from '@tanstack/react-query';
 import { roomsApi } from '../api/rooms';
 import type { Room, RoomStatus, PriceHistory, RoomQueryParams, CreateRoomPayload } from '../types';
 import { isUuid } from '@/lib/utils';
@@ -19,16 +20,16 @@ const PRICE_HISTORY_KEY = 'room-price-histories';
 /**
  * GET /api/rooms
  */
-export const useRooms = (params?: RoomQueryParams) => {
+export const useRooms = (params?: RoomQueryParams, options?: Partial<UseQueryOptions<Room[]>>) => {
   const propertyId = params?.property_id;
 
   return useQuery({
     queryKey: [ROOMS_KEY, propertyId, params],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const rooms = await roomsApi.getRooms({
         ...params,
         property_id: propertyId || undefined,
-      });
+      }, signal);
       // Flatten floor_plan_node coords for FloorPlanViewer compatibility
       return rooms.map(room => ({
         ...room,
@@ -38,8 +39,10 @@ export const useRooms = (params?: RoomQueryParams) => {
         _height: Number(room.floor_plan_node?.height ?? 100),
       }));
     },
-    enabled: isUuid(propertyId),
-    staleTime: 60 * 1000, // 1 minute stale time for the list
+    ...options,
+    enabled: options?.enabled !== undefined ? options.enabled && isUuid(propertyId) : isUuid(propertyId),
+    staleTime: options?.staleTime ?? 60 * 1000, // 1 minute stale time for the list
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -58,12 +61,14 @@ export const useDraftRooms = (propertyId?: string) => {
 /**
  * GET /api/rooms/trash
  */
-export const useTrashRooms = (propertyId?: string) => {
-  const pid = propertyId;
+export const useTrashRooms = (params?: RoomQueryParams, options?: Partial<UseQueryOptions<Room[]>>) => {
+  const propertyId = params?.property_id;
   return useQuery({
-    queryKey: [TRASH_KEY, pid],
-    queryFn: () => roomsApi.getTrashRooms(pid || undefined),
-    enabled: isUuid(pid),
+    queryKey: [TRASH_KEY, propertyId, params],
+    queryFn: ({ signal }) => roomsApi.getTrashRooms(params, signal),
+    ...options,
+    enabled: options?.enabled !== undefined ? options.enabled && isUuid(propertyId) : isUuid(propertyId),
+    placeholderData: keepPreviousData,
   });
 };
 

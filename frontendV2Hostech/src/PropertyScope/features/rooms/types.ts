@@ -1,4 +1,8 @@
+import type { RoomContract } from '@/PropertyScope/features/contracts/types';
+
+
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'draft';
+
 
 export interface RoomAsset {
   id?: string;
@@ -31,23 +35,6 @@ export interface RoomMeter {
   installed_at?: string;
   is_active?: boolean;
   readings?: RoomReading[];
-}
-
-export interface RoomContract {
-  id: string;
-  status: 'active' | 'pending' | 'draft' | 'expired' | 'terminated';
-  start_date: string;
-  end_date: string;
-  monthly_rent: number;
-  deposit_amount: number;
-  billing_cycle?: 'monthly' | 'quarterly';
-  members?: Array<{ 
-    id: string; 
-    full_name: string; 
-    role: 'TENANT' | 'ROOMMATE' | string;
-    status: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
-    is_primary?: boolean;
-  }>;
 }
 
 export interface RoomFloor {

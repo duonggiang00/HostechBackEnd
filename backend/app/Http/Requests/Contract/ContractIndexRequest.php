@@ -32,7 +32,7 @@ class ContractIndexRequest extends FormRequest
 
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.room_id' => ['nullable', 'uuid'],
-            'filter.status' => ['nullable', 'string', 'in:DRAFT,ACTIVE,ENDED,CANCELLED'],
+            'filter.status' => ['nullable', 'string', 'in:' . implode(',', \App\Enums\ContractStatus::values())],
 
             'sort' => ['nullable', 'string', 'in:start_date,end_date,created_at,status,rent_price,-start_date,-end_date,-created_at,-status,-rent_price'],
         ];

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import apiClient from '@/shared/api/client';
 
 export interface Handover {
   id: string;
@@ -34,7 +34,7 @@ export function useHandover() {
   const useHandovers = (filters?: any) => useQuery({
     queryKey: ['handovers', filters],
     queryFn: async () => {
-      const response = await axios.get('/api/handovers', { params: filters });
+      const response = await apiClient.get('/handovers', { params: filters });
       return response.data;
     }
   });
@@ -42,7 +42,7 @@ export function useHandover() {
   const useHandoverDetails = (id: string) => useQuery({
     queryKey: ['handover', id],
     queryFn: async () => {
-      const response = await axios.get(`/api/handovers/${id}`);
+      const response = await apiClient.get(`/handovers/${id}`);
       return response.data.data as Handover;
     },
     enabled: !!id,
@@ -50,7 +50,7 @@ export function useHandover() {
 
   const createHandover = useMutation({
     mutationFn: async (data: Partial<Handover>) => {
-      const response = await axios.post('/api/handovers', data);
+      const response = await apiClient.post('/handovers', data);
       return response.data.data;
     },
     onSuccess: () => {
@@ -60,7 +60,7 @@ export function useHandover() {
 
   const confirmHandover = useMutation({
     mutationFn: async (id: string) => {
-      const response = await axios.post(`/api/handovers/${id}/confirm`);
+      const response = await apiClient.post(`/handovers/${id}/confirm`);
       return response.data.data;
     },
     onSuccess: (_, id) => {
@@ -71,7 +71,7 @@ export function useHandover() {
 
   const addItem = useMutation({
     mutationFn: async ({ handoverId, data }: { handoverId: string, data: any }) => {
-      const response = await axios.post(`/api/handovers/${handoverId}/items`, data);
+      const response = await apiClient.post(`/handovers/${handoverId}/items`, data);
       return response.data.data;
     },
     onSuccess: (_, { handoverId }) => {
@@ -81,7 +81,7 @@ export function useHandover() {
 
   const addSnapshot = useMutation({
     mutationFn: async ({ handoverId, data }: { handoverId: string, data: any }) => {
-      const response = await axios.post(`/api/handovers/${handoverId}/snapshots`, data);
+      const response = await apiClient.post(`/handovers/${handoverId}/snapshots`, data);
       return response.data.data;
     },
     onSuccess: (_, { handoverId }) => {

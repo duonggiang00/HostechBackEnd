@@ -18,7 +18,7 @@ export default function ServicePicker({
   onPriceChange
 }: ServicePickerProps) {
   const { useServices } = useService();
-  const { data: response, isLoading, error } = useServices({ is_active: true });
+  const { data: response, isLoading, error } = useServices({ 'filter[is_active]': 1, per_page: 100 });
   
   // The API returns { data: Service[], ... } or just array based on standard setup
   // Based on useService.ts, response.data might be the array if it's paginated, 
@@ -36,10 +36,15 @@ export default function ServicePicker({
 
   const getCalculationLabel = (mode: string) => {
     switch(mode) {
-      case 'fixed': return 'Fixed / Month';
-      case 'metered': return 'Usage Based';
+      case 'fixed':
+      case 'PER_MONTH':
+      case 'PER_ROOM': return 'Fixed / Month';
+      case 'metered':
+      case 'PER_METER': return 'Usage Based';
       case 'tiered': return 'Tiered Pricing';
-      case 'per_tenant': return 'Per Person';
+      case 'per_tenant':
+      case 'PER_TENANT': return 'Per Person';
+      case 'PER_QUANTITY': return 'Per Quantity';
       default: return 'Custom';
     }
   };
@@ -125,7 +130,7 @@ export default function ServicePicker({
                 ) : (
                   <div className="flex items-baseline gap-1">
                     <span className="font-black text-slate-900">
-                      {service.calc_mode === 'tiered' ? 'Tiered' : `${currentPrice.toLocaleString()}₫`}
+                      {service.calc_mode === 'tiered' ? 'Tiered' : `${(currentPrice ?? 0).toLocaleString()}₫`}
                     </span>
                     {service.calc_mode !== 'tiered' && (
                       <span className="text-xs text-slate-500 font-medium">/ {service.unit}</span>

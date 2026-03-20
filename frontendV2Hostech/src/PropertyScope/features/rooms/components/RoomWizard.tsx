@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Home, Tag, Users, Maximize2, DollarSign, ImageIcon, Zap, 
   ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
-  Package, Activity, CloudUpload, Layout 
+  Package, Activity, CloudUpload, Layout, ChevronDown, ChevronUp,
+  FileText, Hash, Calendar, Shield
 } from 'lucide-react';
 import { type Room, useRoomActions, useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
@@ -50,6 +51,13 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     description: initialData?.description ?? '',
   });
 
+  // Auto-select first floor when no floorId is provided (e.g. from RoomListPage)
+  useEffect(() => {
+    if (!formData.floor_id && floors.length > 0) {
+      setFormData(prev => ({ ...prev, floor_id: floors[0].id }));
+    }
+  }, [floors, formData.floor_id]);
+
   const { data: floor } = useFloorDetail(formData.floor_id || undefined);
   const { data: rooms = [] } = useRooms({ 
     property_id: propertyId, 
@@ -58,7 +66,8 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
 
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [assets, setAssets] = useState<Array<{ name: string; serial?: string; condition: string }>>([]);
+  const [assets, setAssets] = useState<Array<{ name: string; serial: string; condition: string; purchased_at: string; warranty_end: string; note: string }>>([]);
+  const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
   const [meters, setMeters] = useState<Array<{ type: 'ELECTRIC' | 'WATER'; code: string; initial_reading: number }>>([
     { type: 'ELECTRIC', code: '', initial_reading: 0 },
     { type: 'WATER', code: '', initial_reading: 0 },
@@ -153,7 +162,16 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       property_id: propertyId,
       status: isDraft ? 'draft' : 'available',
       services: selectedServices,
-      assets: assets.filter(a => a.name.trim()),
+      assets: assets
+        .filter(a => a.name.trim())
+        .map(({ name, serial, condition, purchased_at, warranty_end, note }) => ({
+          name: name.trim(),
+          condition,
+          ...(serial?.trim() ? { serial: serial.trim() } : {}),
+          ...(purchased_at ? { purchased_at } : {}),
+          ...(warranty_end ? { warranty_end } : {}),
+          ...(note?.trim() ? { note: note.trim() } : {}),
+        })),
       meters: meters.filter(m => m.code.trim()),
     };
 
@@ -268,7 +286,9 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                             onChange={e => setFormData({ ...formData, floor_id: e.target.value })}
                             className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-bold text-slate-800 appearance-none cursor-pointer"
                           >
-                            
+                            {!formData.floor_id && (
+                              <option value="" disabled>— Chọn tầng —</option>
+                            )}
                             {floors.map(f => (
                               <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
@@ -451,53 +471,147 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-black text-slate-800">Danh mục tài sản</h3>
                     <button 
-                      onClick={() => setAssets([...assets, { name: '', condition: 'good' }])}
+                      onClick={() => setAssets([...assets, { name: '', serial: '', condition: 'good', purchased_at: '', warranty_end: '', note: '' }])}
                       className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-black hover:bg-slate-900 transition-all active:scale-95"
                     >
                       + Thêm tài sản
                     </button>
                   </div>
                   
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
                     {assets.length === 0 && (
                       <div className="text-center py-12 border-2 border-dashed border-slate-100 rounded-[32px]">
                         <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                         <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Chưa có tài sản nào</p>
                       </div>
                     )}
-                    {assets.map((asset, i) => (
-                      <div key={i} className="flex gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 group">
-                        <input 
-                          placeholder="Tên tài sản (e.g. Điều hòa)"
-                          value={asset.name}
-                          onChange={e => {
-                            const newAssets = [...assets];
-                            newAssets[i].name = e.target.value;
-                            setAssets(newAssets);
-                          }}
-                          className="flex-1 bg-white border border-slate-100 px-4 py-2 rounded-xl outline-none focus:border-indigo-500 font-bold text-sm"
-                        />
-                        <select
-                          value={asset.condition}
-                          onChange={e => {
-                            const newAssets = [...assets];
-                            newAssets[i].condition = e.target.value;
-                            setAssets(newAssets);
-                          }}
-                          className="bg-white border border-slate-100 px-4 py-2 rounded-xl outline-none font-black text-xs uppercase"
-                        >
-                          <option value="new">Mới</option>
-                          <option value="good">Tốt</option>
-                          <option value="old">Cũ</option>
-                        </select>
-                        <button 
-                          onClick={() => setAssets(assets.filter((_, idx) => idx !== i))}
-                          className="p-2 text-slate-400 hover:text-rose-500"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                    {assets.map((asset, i) => {
+                      const isExpanded = expandedAssets.has(i);
+                      return (
+                        <div key={i} className="bg-slate-50 rounded-2xl border border-slate-100 overflow-hidden group">
+                          {/* Row chính: Tên + Tình trạng + Nút mở rộng + Xóa */}
+                          <div className="flex gap-3 p-4 items-center">
+                            <input 
+                              placeholder="Tên tài sản (VD: Điều hòa, Tivi...)"
+                              value={asset.name}
+                              onChange={e => {
+                                const newAssets = [...assets];
+                                newAssets[i].name = e.target.value;
+                                setAssets(newAssets);
+                              }}
+                              className="flex-1 bg-white border border-slate-100 px-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 font-bold text-sm"
+                            />
+                            <select
+                              value={asset.condition}
+                              onChange={e => {
+                                const newAssets = [...assets];
+                                newAssets[i].condition = e.target.value;
+                                setAssets(newAssets);
+                              }}
+                              className="bg-white border border-slate-100 px-4 py-2.5 rounded-xl outline-none font-black text-xs uppercase w-24"
+                            >
+                              <option value="new">Mới</option>
+                              <option value="good">Tốt</option>
+                              <option value="old">Cũ</option>
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setExpandedAssets(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(i)) next.delete(i); else next.add(i);
+                                  return next;
+                                });
+                              }}
+                              className="p-2 text-slate-400 hover:text-indigo-500 transition-colors"
+                              title="Chi tiết"
+                            >
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setAssets(assets.filter((_, idx) => idx !== i));
+                                setExpandedAssets(prev => { const n = new Set(prev); n.delete(i); return n; });
+                              }}
+                              className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          {/* Panel mở rộng: Serial, Ngày mua, Bảo hành, Ghi chú */}
+                          {isExpanded && (
+                            <div className="px-4 pb-4 pt-0 border-t border-slate-100 bg-white/60">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4">
+                                <div>
+                                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    <Hash className="w-3 h-3" /> Số serial
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="VD: SN-2024-XYZ"
+                                    value={asset.serial}
+                                    onChange={e => {
+                                      const newAssets = [...assets];
+                                      newAssets[i].serial = e.target.value;
+                                      setAssets(newAssets);
+                                    }}
+                                    className="w-full bg-white border border-slate-100 px-3 py-2 rounded-xl outline-none focus:border-indigo-500 text-sm font-medium"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    <Calendar className="w-3 h-3" /> Ngày mua
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.purchased_at}
+                                    onChange={e => {
+                                      const newAssets = [...assets];
+                                      newAssets[i].purchased_at = e.target.value;
+                                      setAssets(newAssets);
+                                    }}
+                                    className="w-full bg-white border border-slate-100 px-3 py-2 rounded-xl outline-none focus:border-indigo-500 text-sm font-medium"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                    <Shield className="w-3 h-3" /> Hạn bảo hành
+                                  </label>
+                                  <input
+                                    type="date"
+                                    value={asset.warranty_end}
+                                    min={asset.purchased_at || undefined}
+                                    onChange={e => {
+                                      const newAssets = [...assets];
+                                      newAssets[i].warranty_end = e.target.value;
+                                      setAssets(newAssets);
+                                    }}
+                                    className="w-full bg-white border border-slate-100 px-3 py-2 rounded-xl outline-none focus:border-indigo-500 text-sm font-medium"
+                                  />
+                                </div>
+                              </div>
+                              <div className="mt-3">
+                                <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                                  <FileText className="w-3 h-3" /> Ghi chú
+                                </label>
+                                <textarea
+                                  placeholder="Ghi chú thêm về tài sản..."
+                                  value={asset.note}
+                                  onChange={e => {
+                                    const newAssets = [...assets];
+                                    newAssets[i].note = e.target.value;
+                                    setAssets(newAssets);
+                                  }}
+                                  rows={2}
+                                  className="w-full bg-white border border-slate-100 px-3 py-2 rounded-xl outline-none focus:border-indigo-500 text-sm font-medium resize-none"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

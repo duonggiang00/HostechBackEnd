@@ -1,31 +1,158 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import type { UseQueryOptions } from '@tanstack/react-query';
 import { contractsApi } from '../api/contracts';
-import type { Contract } from '../types';
+import type { Contract, ContractQueryParams, ContractListResponse, CreateContractPayload } from '../types';
+import { isUuid } from '@/lib/utils';
 
-export type { Contract };
+// Re-export types for backward compatibility if needed
+export type { Contract, ContractQueryParams };
 
-export function useContracts(roomId?: string | null, options: { enabled?: boolean } = {}) {
+// ─── Query Keys ───────────────────────────────────────────────────────────────
+
+export const CONTRACTS_KEY = 'contracts';
+export const CONTRACT_KEY = 'contract';
+export const TRASH_CONTRACTS_KEY = 'contracts-trash';
+export const PENDING_CONTRACTS_KEY = 'contracts-pending';
+
+// ─── List Hooks ───────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/contracts
+ * Returns { data: Contract[], status_counts: StatusCounts }
+ */
+export const useContracts = (params?: ContractQueryParams, options?: Partial<UseQueryOptions<ContractListResponse>>) => {
+  const propertyId = params?.property_id;
+
+  return useQuery({
+    queryKey: [CONTRACTS_KEY, propertyId, params],
+    queryFn: async ({ signal }) => {
+      return contractsApi.getContracts(params, signal);
+    },
+    ...options,
+    enabled: options?.enabled !== undefined ? options.enabled : true,
+    staleTime: options?.staleTime ?? 60 * 1000, // 1 minute stale time for the list
+    placeholderData: keepPreviousData,
+  });
+};
+
+/**
+ * GET /api/contracts/trash
+ */
+export const useTrashContracts = (params?: ContractQueryParams, options?: Partial<UseQueryOptions<Contract[]>>) => {
+  const propertyId = params?.property_id;
+  
+  return useQuery({
+    queryKey: [TRASH_CONTRACTS_KEY, propertyId, params],
+    queryFn: ({ signal }) => contractsApi.getTrashContracts(params, signal),
+    ...options,
+    enabled: options?.enabled !== undefined ? options.enabled : true,
+    placeholderData: keepPreviousData,
+  });
+};
+
+/**
+ * GET /api/contracts/{id}
+ */
+export const useContract = (id?: string) => {
+  return useQuery({
+    queryKey: [CONTRACT_KEY, id],
+    queryFn: async ({ signal }) => {
+      if (!id) return null;
+      return contractsApi.getContract(id, signal);
+    },
+    enabled: isUuid(id),
+  });
+};
+
+/**
+ * GET /api/contracts/my-pending-contracts
+ */
+export const useMyPendingContracts = () => {
+  return useQuery({
+    queryKey: [PENDING_CONTRACTS_KEY],
+    queryFn: () => contractsApi.getMyPendingContracts(),
+  });
+};
+
+// ─── Mutation Actions ─────────────────────────────────────────────────────────
+
+export const useContractActions = () => {
   const queryClient = useQueryClient();
 
-  const query = useQuery({
-    queryKey: ['contracts', roomId],
-    queryFn: () => {
-      if (!roomId) return [];
-      return contractsApi.getContracts(roomId);
-    },
-    enabled: options.enabled !== undefined ? options.enabled && !!roomId : !!roomId,
+  const invalidateContracts = () => {
+    queryClient.invalidateQueries({ queryKey: [CONTRACTS_KEY] });
+    queryClient.invalidateQueries({ queryKey: [TRASH_CONTRACTS_KEY] });
+    queryClient.invalidateQueries({ queryKey: [PENDING_CONTRACTS_KEY] });
+  };
+
+  /** POST /api/contracts */
+  const createContract = useMutation({
+    mutationFn: (data: CreateContractPayload) => contractsApi.createContract(data),
+    onSuccess: () => invalidateContracts(),
   });
 
-  const createContract = useMutation({
-    mutationFn: (newContract: Partial<Contract>) => contractsApi.createContract(newContract),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contracts'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+  /** PUT /api/contracts/{id} */
+  const updateContract = useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & any) => contractsApi.updateContract(id, data),
+    onSuccess: (contract) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, contract?.id] });
+      invalidateContracts();
+    },
+  });
+
+  /** DELETE /api/contracts/{id} */
+  const deleteContract = useMutation({
+    mutationFn: (id: string) => contractsApi.deleteContract(id),
+    onSuccess: () => invalidateContracts(),
+  });
+
+  /** POST /api/contracts/{id}/restore */
+  const restoreContract = useMutation({
+    mutationFn: (id: string) => contractsApi.restoreContract(id),
+    onSuccess: () => invalidateContracts(),
+  });
+
+  /** DELETE /api/contracts/{id}/force */
+  const forceDeleteContract = useMutation({
+    mutationFn: (id: string) => contractsApi.forceDeleteContract(id),
+    onSuccess: () => invalidateContracts(),
+  });
+
+  /** POST /api/contracts/{id}/accept-signature */
+  const acceptSignature = useMutation({
+    mutationFn: (id: string) => contractsApi.acceptSignature(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, id] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/reject-signature */
+  const rejectSignature = useMutation({
+    mutationFn: (id: string) => contractsApi.rejectSignature(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, id] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/room-transfer */
+  const requestRoomTransfer = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.requestRoomTransfer(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      invalidateContracts();
     },
   });
 
   return {
-    ...query,
     createContract,
+    updateContract,
+    deleteContract,
+    restoreContract,
+    forceDeleteContract,
+    acceptSignature,
+    rejectSignature,
+    requestRoomTransfer,
   };
-}
+};

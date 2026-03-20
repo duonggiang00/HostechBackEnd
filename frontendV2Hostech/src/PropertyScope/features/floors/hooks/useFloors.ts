@@ -10,10 +10,10 @@ const isUuid = (id?: string | null): boolean => {
 
 export type { Floor };
 
-export const useFloors = (propertyId?: string) => {
+export const useFloors = (propertyId?: string, showTrash = false) => {
   return useQuery({
-    queryKey: ['floors', propertyId],
-    queryFn: () => floorsApi.getFloors(propertyId),
+    queryKey: ['floors', propertyId, showTrash],
+    queryFn: () => showTrash ? floorsApi.getFloorsTrash(propertyId) : floorsApi.getFloors(propertyId),
     enabled: isUuid(propertyId),
   });
 };
@@ -57,10 +57,25 @@ export const useFloorActions = () => {
 
   const deleteFloor = useMutation({
     mutationFn: (id: string) => floorsApi.deleteFloor(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['floors'] });
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: [ 'floors' ] });
+      queryClient.invalidateQueries({ queryKey: [ 'floor', id ] });
     },
   });
 
-  return { createFloor, updateFloor, deleteFloor, uploadFloorPlan };
+  const restoreFloor = useMutation({
+    mutationFn: (id: string) => floorsApi.restoreFloor(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ 'floors' ] });
+    },
+  });
+
+  const forceDeleteFloor = useMutation({
+    mutationFn: (id: string) => floorsApi.forceDeleteFloor(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ 'floors' ] });
+    },
+  });
+
+  return { createFloor, updateFloor, deleteFloor, uploadFloorPlan, restoreFloor, forceDeleteFloor };
 };

@@ -60,7 +60,9 @@ class FloorController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         $search = $request->input('search');
 
-        $floors = $this->service->paginateTrash(['property_id', 'name', 'code'], $perPage, $search, $request->user());
+        $propertyId = $request->input('filter.property_id') ?? $request->input('property_id');
+
+        $floors = $this->service->paginateTrash(['property_id', 'name', 'code'], $perPage, $search, $request->user(), $propertyId);
 
         return FloorResource::collection($floors);
     }

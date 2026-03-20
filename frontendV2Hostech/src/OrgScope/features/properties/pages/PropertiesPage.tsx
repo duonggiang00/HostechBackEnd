@@ -85,7 +85,7 @@ export default function PropertiesPage() {
           <p className="text-slate-500 mt-1">Manage all your properties and hospitality zones.</p>
         </div>
         <button 
-          onClick={() => navigate('/admin/properties/add')}
+          onClick={() => navigate('/org/properties/add')}
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
@@ -121,7 +121,7 @@ export default function PropertiesPage() {
 
         {/* Empty State / Add New Placeholder */}
         <div 
-          onClick={() => navigate('/admin/properties/add')}
+          onClick={() => navigate('/org/properties/add')}
           className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3 py-10 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group cursor-pointer"
         >
           <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">

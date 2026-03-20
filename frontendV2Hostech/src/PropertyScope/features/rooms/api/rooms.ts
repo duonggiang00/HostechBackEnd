@@ -6,7 +6,7 @@ import type {
 } from '../types';
 
 export const roomsApi = {
-  getRooms: async (params?: RoomQueryParams) => {
+  getRooms: async (params?: RoomQueryParams, signal?: AbortSignal) => {
     const apiParams: any = {
       'filter[property_id]': params?.property_id || undefined,
       'filter[floor_id]': params?.floor_id || undefined,
@@ -27,7 +27,7 @@ export const roomsApi = {
       'filter[capacity_max]': params?.capacity_max || undefined,
     };
 
-    const response = await apiClient.get('/rooms', { params: apiParams });
+    const response = await apiClient.get('/rooms', { params: apiParams, signal });
     console.log('📡 API: GET /rooms - Full Response:', response.data);
     
     // Handle paginated response (has data, meta, links)
@@ -55,10 +55,27 @@ export const roomsApi = {
     return (response.data.data || response.data) as Room[];
   },
 
-  getTrashRooms: async (propertyId?: string) => {
-    const response = await apiClient.get('/rooms/trash', {
-      params: { 'filter[property_id]': propertyId || undefined },
-    });
+  getTrashRooms: async (params?: RoomQueryParams, signal?: AbortSignal) => {
+    const apiParams: any = {
+      'filter[property_id]': params?.property_id || undefined,
+      'filter[floor_id]': params?.floor_id || undefined,
+      'filter[status]': params?.status || undefined,
+      'filter[type]': params?.type || undefined,
+      'filter[code]': params?.code || undefined,
+      search: params?.search || undefined,
+      sort: params?.sort || undefined,
+      include: params?.include || 'floor,property',
+      page: params?.page ?? 1,
+      per_page: params?.per_page ?? 50,
+      'filter[price_min]': params?.price_min || undefined,
+      'filter[price_max]': params?.price_max || undefined,
+      'filter[area_min]': params?.area_min || undefined,
+      'filter[area_max]': params?.area_max || undefined,
+      'filter[capacity_min]': params?.capacity_min || undefined,
+      'filter[capacity_max]': params?.capacity_max || undefined,
+    };
+
+    const response = await apiClient.get('/rooms/trash', { params: apiParams, signal });
     console.log('📡 API: GET /rooms/trash:', response.data.data || response.data);
     return (response.data.data || response.data) as Room[];
   },

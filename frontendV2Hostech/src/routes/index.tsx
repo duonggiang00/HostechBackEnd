@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { Loader2 } from 'lucide-react';
@@ -32,9 +33,13 @@ import SessionsPage from '@/adminSystem/features/sessions/pages/SessionsPage';
 import AdminCommunicationPage from '@/adminSystem/features/dashboard/pages/AdminCommunicationPage';
 import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
 import PropertyDashboard from '@/PropertyScope/features/dashboard/pages/PropertyDashboard';
-import SelectPropertyPage from '@/PropertyScope/features/select-property/pages/SelectPropertyPage';
+import OrgSelectionPage from '@/OrgScope/features/organizations/pages/OrgSelectionPage';
 import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
 import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
+import ProfilePage from '@/shared/features/profile/pages/ProfilePage';
+const ContractListPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractListPage'));
+const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractCreatePage'));
+const ContractDetailPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractDetailPage'));
 
 // Tenant Pages
 import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
@@ -159,6 +164,7 @@ export default function AppRoutes() {
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="communication" element={<AdminCommunicationPage />} />
         <Route path="settings" element={<div>System Settings</div>} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* 2. Organization Scope Layout — Owner & Manager (and Staff optionally for lists) */}
@@ -179,6 +185,7 @@ export default function AppRoutes() {
         <Route path="staff" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><StaffPage /></ProtectedRoute>} />
         <Route path="finance" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><FinanceDashboard /></ProtectedRoute>} />
         <Route path="invoices" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><InvoicesPage /></ProtectedRoute>} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* 3. Property Scope Layout — Admin, Owner, Manager, Staff */}
@@ -188,7 +195,6 @@ export default function AppRoutes() {
           <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
             <PropertyScopeLayout><Outlet /></PropertyScopeLayout>
           </ProtectedRoute>
-<<<<<<< Updated upstream
         }
       >
         <Route index element={<Navigate to="dashboard" replace />} />
@@ -202,25 +208,12 @@ export default function AppRoutes() {
         <Route path="rooms/create" element={<RoomCreatePage />} />
         <Route path="rooms/:roomId" element={<RoomDetailPage />} />
         <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
-=======
-        }>
-          <Route path="properties/:propertyId/dashboard" element={<PropertyDashboard />} />
-          <Route path="properties/:propertyId/floors" element={<FloorsPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms" element={<FloorPlanPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/create" element={<RoomCreatePage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="properties/:propertyId/floors/:floorId/rooms/:roomId/edit" element={<RoomEditPage />} />
-          <Route path="properties/:propertyId/rooms" element={<RoomListPage />} />
-          <Route path="properties/:propertyId/rooms/create" element={<RoomCreatePage />} />
-          <Route path="properties/:propertyId/rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="properties/:propertyId/rooms/:roomId/edit" element={<RoomEditPage />} />
-          <Route path="rooms" element={<RoomListPage />} />
-          <Route path="properties/:propertyId/meters" element={<MeterListPage />} />
-          <Route path="properties/:propertyId/meters/:meterId" element={<MeterDetailPage />} />
-          {/* Manager/Staff with multiple properties → pick one */}
-          <Route path="select-property" element={<SelectPropertyPage />} />
-        </Route>
->>>>>>> Stashed changes
+        <Route path="meters" element={<MeterListPage />} />
+        <Route path="meters/:meterId" element={<MeterDetailPage />} />
+        <Route path="contracts" element={<ContractListPage />} />
+        <Route path="contracts/create" element={<ContractCreatePage />} />
+        <Route path="contracts/:contractId" element={<ContractDetailPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* --- Tenant App Portal --- */}
@@ -240,7 +233,7 @@ export default function AppRoutes() {
         <Route path="messages" element={<TenantMessagingPage />} />
         <Route path="billing" element={<TenantBillingPage />} />
         <Route path="news" element={<div className="p-8 text-center text-slate-400">Announcements Coming Soon</div>} />
-        <Route path="profile" element={<div className="p-8 text-center text-slate-400">Profile Settings Coming Soon</div>} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* --- Fallback Route --- */}

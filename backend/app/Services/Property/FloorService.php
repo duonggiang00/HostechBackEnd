@@ -10,7 +10,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class FloorService
 {
-    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
+    public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false, ?User $performer = null, bool $onlyTrashed = false): LengthAwarePaginator
     {
         $allowedFilters = array_merge($allowedFilters, [\Spatie\QueryBuilder\AllowedFilter::exact('property_id')]);
 
@@ -60,16 +60,18 @@ class FloorService
             $query->where('property_id', $propertyId);
         }
 
-        if ($withTrashed) {
+        if ($onlyTrashed) {
+            $query->onlyTrashed();
+        } elseif ($withTrashed) {
             $query->withTrashed();
         }
 
         return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
-    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
+    public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null, ?string $propertyId = null): LengthAwarePaginator
     {
-        return $this->paginate($allowedFilters, $perPage, $search, null, true, $performer);
+        return $this->paginate($allowedFilters, $perPage, $search, $propertyId, false, $performer, true);
     }
 
     public function find(string $id): ?Floor

@@ -39,7 +39,14 @@ class ContractController extends Controller
             user: $request->user()
         );
 
-        return ContractResource::collection($paginator);
+        $statusCounts = $this->service->getStatusCounts(
+            user: $request->user(),
+            propertyId: $request->input('filter.property_id'),
+        );
+
+        return ContractResource::collection($paginator)->additional([
+            'status_counts' => $statusCounts,
+        ]);
     }
 
     /**

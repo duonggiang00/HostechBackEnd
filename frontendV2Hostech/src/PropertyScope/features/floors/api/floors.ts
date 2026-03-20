@@ -10,6 +10,14 @@ export const floorsApi = {
     return response.data.data as Floor[];
   },
 
+  getFloorsTrash: async (propertyId?: string) => {
+    const response = await apiClient.get('/floors/trash', {
+      params: propertyId ? { 'filter[property_id]': propertyId } : undefined
+    });
+    console.log('📡 API: GET /floors/trash:', response.data.data);
+    return response.data.data as Floor[];
+  },
+
   getFloor: async (id: string) => {
     const response = await apiClient.get(`/floors/${id}`);
     console.log(`📡 API: GET /floors/${id}:`, response.data.data);
@@ -39,5 +47,15 @@ export const floorsApi = {
 
   deleteFloor: async (id: string) => {
     await apiClient.delete(`/floors/${id}`);
+  },
+
+  restoreFloor: async (id: string) => {
+    const response = await apiClient.post(`/floors/${id}/restore`);
+    return response.data;
+  },
+
+  forceDeleteFloor: async (id: string) => {
+    const response = await apiClient.delete(`/floors/${id}/force`);
+    return response.data;
   },
 };

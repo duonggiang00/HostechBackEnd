@@ -22,11 +22,12 @@ class TwoFactorAuthenticationProvider extends FortifyProvider
         
         if ($userId) {
             $user = User::find($userId);
-            if ($user && $user->mfa_enabled) {
+            if ($user && $user->mfa_enabled && $user->mfa_method === 'email') {
                 return app(MfaService::class)->verifyCode($user, $code, $secret);
             }
         }
 
+        // For TOTP or if user not in session (setup phase), use standard logic
         return parent::verify($secret, $code);
     }
 }

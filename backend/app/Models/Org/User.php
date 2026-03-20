@@ -41,6 +41,11 @@ class User extends Authenticatable implements HasMedia
         'identity_issued_place',
         'date_of_birth',
         'address',
+        'mfa_enabled',
+        'mfa_method',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     protected $hidden = [
@@ -52,7 +57,7 @@ class User extends Authenticatable implements HasMedia
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
-            'mfa_enrolled_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
             'mfa_enabled' => 'boolean',
             'is_active' => 'boolean',
             'meta' => 'array',

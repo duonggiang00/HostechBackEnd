@@ -44,6 +44,8 @@ export interface AuthUser {
   is_active?: boolean;
 }
 
+export type User = AuthUser;
+
 export interface AuthState {
   user: AuthUser | null;
   token: string | null;

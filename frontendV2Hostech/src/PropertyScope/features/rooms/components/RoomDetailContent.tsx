@@ -84,7 +84,7 @@ export default function RoomDetailContent({
                 </p>
               </div>
               <button
-                onClick={() => navigate(`/org/properties/${propertyId}/rooms/${room.id}`)}
+                onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}
                 className="group flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
@@ -215,7 +215,7 @@ export default function RoomDetailContent({
                           <button 
                               onClick={() => {
                                   if (onOpenManagement) onOpenManagement('edit');
-                                  else navigate(`/org/properties/${propertyId}/floors/${room.floor_id}/rooms/${room.id}/edit`);
+                                  else navigate(`/properties/${propertyId}/floors/${room.floor_id}/rooms/${room.id}/edit`);
                               }}
                               className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
                           >
@@ -290,7 +290,7 @@ export default function RoomDetailContent({
                 propertyId={propertyId!} 
                 data={room.contracts}
                 isLoading={isLoading}
-                onOpenWizard={() => onOpenManagement?.('contract')}
+                onOpenWizard={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
               />
             </motion.div>
           )}

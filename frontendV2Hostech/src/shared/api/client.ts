@@ -53,6 +53,12 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error: AxiosError | any) => {
+    // Handle request cancellation gracefully
+    if (axios.isCancel(error)) {
+      console.log(`%c ℹ️ [API Canceled] ${error.config?.url || 'Unknown URL'}`, 'color: #94a3b8; font-style: italic;');
+      return Promise.reject(error);
+    }
+
     // Standardized logging for every error
     console.group(`❌ [API Error] ${error.response?.status || 'Network Error'} ${error.config?.url}`);
     console.error('Message:', error.message);

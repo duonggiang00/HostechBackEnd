@@ -41,7 +41,7 @@ class RoomIndexRequest extends FormRequest
             'filter.area_max' => ['nullable', 'numeric', 'min:0'],
             'filter.capacity_min' => ['nullable', 'integer', 'min:0'],
             'filter.capacity_max' => ['nullable', 'integer', 'min:0'],
-            'sort' => ['nullable', 'string', 'in:code,status,type,created_at,-code,-status,-type,-created_at'],
+            'sort' => ['nullable', 'string', 'in:code,name,status,type,area,capacity,base_price,floor_number,created_at,-code,-name,-status,-type,-area,-capacity,-base_price,-floor_number,-created_at'],
         ];
     }
 

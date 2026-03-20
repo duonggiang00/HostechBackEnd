@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -18,7 +18,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 // @ts-expect-error - Module resolution issue with auto-created component
@@ -39,7 +38,7 @@ const METER_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode; 
 
 export default function MeterListPage() {
   const navigate = useNavigate();
-  const { propertyId } = useScopeStore();
+  const { propertyId } = useParams<{ propertyId: string }>();
 
   // Search state (Kept separate and debounced for real-time responsiveness)
   const [searchTerm, setSearchTerm] = useState('');
@@ -441,7 +440,7 @@ export default function MeterListPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => navigate(`/admin/properties/${propertyId}/meters/${meter.id}`)}
+                            onClick={() => navigate(`/properties/${propertyId}/meters/${meter.id}`)}
                             className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
                             title="Xem chi tiết"
                           >

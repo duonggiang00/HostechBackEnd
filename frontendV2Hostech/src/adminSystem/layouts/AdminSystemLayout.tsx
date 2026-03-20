@@ -13,7 +13,8 @@ import {
   X,
   Layers as LayersIcon,
   Building2,
-  MessageSquare
+  MessageSquare,
+  User
 } from 'lucide-react';
 import OrgSwitcher from '@/adminSystem/features/organizations/components/OrgSwitcher';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -105,6 +106,14 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
             <p className="text-sm font-bold text-slate-900 truncate">{user?.full_name || 'Guest'}</p>
             <p className="text-[10px] font-medium text-slate-500 truncate capitalize">{user?.role?.replace('_', ' ') || 'No Role'}</p>
           </div>
+          <NavLink 
+            to="/system/profile"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
+            title="Hồ sơ cá nhân"
+          >
+            <User className="w-4 h-4" />
+          </NavLink>
           <button 
             onClick={() => {
               logout();

@@ -9,12 +9,13 @@ import {
   LayoutDashboard,
   Bell,
   Search,
-  Shield,
   Menu,
   X,
   LogOut,
   Home,
-  Gauge
+  Gauge,
+  User,
+  FileText
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -34,10 +35,11 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/admin/properties/${propertyId}/dashboard`, exact: true },
-    { id: 'meters', icon: Gauge, label: 'Đồng hồ', path: `/admin/properties/${propertyId}/meters` },
-    { id: 'floors', icon: Layers, label: 'Floors', path: `/admin/properties/${propertyId}/floors` },
-    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/admin/properties/${propertyId}/rooms` },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/properties/${propertyId}/dashboard`, exact: true },
+    { id: 'meters', icon: Gauge, label: 'Đồng hồ', path: `/properties/${propertyId}/meters` },
+    { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
+    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
+    { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
   ];
 
   const SidebarContent = () => (
@@ -102,6 +104,14 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             <p className="text-sm font-bold text-slate-900 truncate">{user?.full_name || 'Guest'}</p>
             <p className="text-[10px] font-medium text-slate-500 truncate capitalize">{user?.role?.replace('_', ' ') || 'No Role'}</p>
           </div>
+          <NavLink 
+            to={`/properties/${propertyId}/profile`}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
+            title="Hồ sơ cá nhân"
+          >
+            <User className="w-4 h-4" />
+          </NavLink>
           <button 
             onClick={() => {
               logout();

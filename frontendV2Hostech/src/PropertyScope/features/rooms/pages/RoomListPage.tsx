@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -15,7 +15,7 @@ import {
   History,
   ArrowDownUp,
 } from 'lucide-react';
-import { useRooms, useRoomActions } from '../hooks/useRooms';
+import { useRooms, useRoomActions, useTrashRooms } from '../hooks/useRooms';
 import { useFloors } from '../../floors/hooks/useFloors';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
@@ -44,49 +44,96 @@ const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
 export default function RoomListPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Helper to parse numbers safely from URL
+  const getNumberParam = (key: string) => {
+    const val = searchParams.get(key);
+    return val ? Number(val) : '';
+  };
+
   // Search state (Kept separate and debounced for real-time responsiveness)
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebounce(searchTerm, 500);
 
+  type RoomFiltersState = {
+    floorId: string;
+    status: RoomStatus | '';
+    type: string;
+    priceMin: number | '';
+    priceMax: number | '';
+    areaMin: number | '';
+    areaMax: number | '';
+    capacityMin: number | '';
+    capacityMax: number | '';
+  };
+
   // Grouped Filter State (Updates immediately for UI responsiveness)
-  const [pendingFilters, setPendingFilters] = useState({
-    floorId: '',
-    status: '' as RoomStatus | '',
-    type: '',
-    priceMin: '' as number | '',
-    priceMax: '' as number | '',
-    areaMin: '' as number | '',
-    areaMax: '' as number | '',
-    capacityMin: '' as number | '',
-    capacityMax: '' as number | '',
+  const [pendingFilters, setPendingFilters] = useState<RoomFiltersState>({
+    floorId: searchParams.get('floor_id') || '',
+    status: (searchParams.get('status') as RoomStatus) || '',
+    type: searchParams.get('type') || '',
+    priceMin: getNumberParam('price_min'),
+    priceMax: getNumberParam('price_max'),
+    areaMin: getNumberParam('area_min'),
+    areaMax: getNumberParam('area_max'),
+    capacityMin: getNumberParam('capacity_min'),
+    capacityMax: getNumberParam('capacity_max'),
   });
 
   // Applied Filter State (Actual filters sent to API)
-  const [appliedFilters, setAppliedFilters] = useState(pendingFilters);
+  const [appliedFilters, setAppliedFilters] = useState<RoomFiltersState>(pendingFilters);
 
-  const sort = '-created_at';
-  const [showTrashed, setShowTrashed] = useState(false);
-  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState(searchParams.get('sort') || '-created_at');
+  const [showTrashed, setShowTrashed] = useState(searchParams.get('trashed') === 'true');
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(
+    !!(pendingFilters.priceMin || pendingFilters.priceMax || pendingFilters.areaMin || pendingFilters.areaMax || pendingFilters.capacityMin || pendingFilters.capacityMax)
+  );
 
-  const { data: rooms, isLoading } = useRooms({
+  // Sync state to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    if (appliedFilters.floorId) params.set('floor_id', appliedFilters.floorId);
+    if (appliedFilters.status) params.set('status', appliedFilters.status);
+    if (appliedFilters.type) params.set('type', appliedFilters.type);
+    if (appliedFilters.priceMin) params.set('price_min', appliedFilters.priceMin.toString());
+    if (appliedFilters.priceMax) params.set('price_max', appliedFilters.priceMax.toString());
+    if (appliedFilters.areaMin) params.set('area_min', appliedFilters.areaMin.toString());
+    if (appliedFilters.areaMax) params.set('area_max', appliedFilters.areaMax.toString());
+    if (appliedFilters.capacityMin) params.set('capacity_min', appliedFilters.capacityMin.toString());
+    if (appliedFilters.capacityMax) params.set('capacity_max', appliedFilters.capacityMax.toString());
+    if (sort !== '-created_at') params.set('sort', sort);
+    if (page > 1) params.set('page', page.toString());
+    if (showTrashed) params.set('trashed', 'true');
+
+    setSearchParams(params, { replace: true });
+  }, [debouncedSearch, appliedFilters, sort, page, showTrashed, setSearchParams]);
+
+  const queryParams = {
     property_id: propertyId || undefined,
     floor_id: appliedFilters.floorId || undefined,
-    status: appliedFilters.status || undefined,
+    status: (appliedFilters.status as RoomStatus) || undefined,
     type: appliedFilters.type || undefined,
     search: debouncedSearch || undefined,
     sort: sort || undefined,
-    with_trashed: showTrashed,
     page,
     per_page: 50,
-    price_min: appliedFilters.priceMin || undefined,
-    price_max: appliedFilters.priceMax || undefined,
-    area_min: appliedFilters.areaMin || undefined,
-    area_max: appliedFilters.areaMax || undefined,
+    price_min: (appliedFilters.priceMin as number) || undefined,
+    price_max: (appliedFilters.priceMax as number) || undefined,
+    area_min: (appliedFilters.areaMin as number) || undefined,
+    area_max: (appliedFilters.areaMax as number) || undefined,
     capacity_min: (appliedFilters.capacityMin as number) || undefined,
     capacity_max: (appliedFilters.capacityMax as number) || undefined,
-  });
+  };
+
+  const { data: regularRooms, isLoading: isRegularLoading } = useRooms(queryParams, { enabled: !showTrashed });
+  const { data: trashRooms, isLoading: isTrashLoading } = useTrashRooms(queryParams, { enabled: showTrashed });
+
+  const rooms = showTrashed ? trashRooms : regularRooms;
+  const isLoading = showTrashed ? isTrashLoading : isRegularLoading;
 
   const handleApplyFilters = () => {
     setAppliedFilters(pendingFilters);
@@ -108,12 +155,18 @@ export default function RoomListPage() {
     setPendingFilters(cleared);
     setAppliedFilters(cleared);
     setSearchTerm('');
+    setSort('-created_at');
     setPage(1);
+  };
+
+  const toggleSort = (field: string) => {
+    setSort(prev => prev === field ? `-${field}` : field);
   };
 
   const isFilterChanged = useMemo(() => {
     return JSON.stringify(pendingFilters) !== JSON.stringify(appliedFilters);
   }, [pendingFilters, appliedFilters]);
+
   const { data: floors } = useFloors(propertyId || undefined);
 
   const { 
@@ -130,9 +183,9 @@ export default function RoomListPage() {
     if (!rooms) return null;
     return {
       total: rooms.length,
-      available: rooms.filter(r => r.status === 'available').length,
-      occupied: rooms.filter(r => r.status === 'occupied').length,
-      maintenance: rooms.filter(r => r.status === 'maintenance').length,
+      available: rooms.filter((r: any) => r.status === 'available').length,
+      occupied: rooms.filter((r: any) => r.status === 'occupied').length,
+      maintenance: rooms.filter((r: any) => r.status === 'maintenance').length,
     };
   }, [rooms]);
 
@@ -141,7 +194,7 @@ export default function RoomListPage() {
     if (selectedIds.length === rooms.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(rooms.map(r => r.id));
+      setSelectedIds(rooms.map((r: any) => r.id));
     }
   };
 
@@ -154,7 +207,7 @@ export default function RoomListPage() {
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
     
-    const occupiedRooms = rooms?.filter(r => selectedIds.includes(r.id) && r.status === 'occupied') || [];
+    const occupiedRooms = rooms?.filter((r: any) => selectedIds.includes(r.id) && r.status === 'occupied') || [];
     
     if (occupiedRooms.length > 0) {
       toast.error(`Không thể xóa ${occupiedRooms.length} phòng đang có người thuê. Vui lòng thanh lý hợp đồng trước khi thực hiện.\n\nDanh sách: ${occupiedRooms.map(r => r.name).join(', ')}`, {
@@ -544,27 +597,67 @@ export default function RoomListPage() {
                     className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Mã phòng
+                <th 
+                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleSort('code')}
+                >
+                  <div className="flex items-center gap-1">
+                    Mã phòng
+                    {sort.includes('code') && (
+                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Tên phòng
+                <th 
+                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleSort('name')}
+                >
+                  <div className="flex items-center gap-1">
+                    Tên phòng
+                    {sort.includes('name') && (
+                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
                 </th>
                 <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tầng</th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Loại
+                <th 
+                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleSort('type')}
+                >
+                  <div className="flex items-center gap-1">
+                    Loại
+                    {sort.includes('type') && (
+                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Giá
+                <th 
+                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleSort('base_price')}
+                >
+                  <div className="flex items-center gap-1">
+                    Giá
+                    {sort.includes('base_price') && (
+                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Trạng thái
+                <th 
+                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  onClick={() => toggleSort('status')}
+                >
+                  <div className="flex items-center gap-1">
+                    Trạng thái
+                    {sort.includes('status') && (
+                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
+                    )}
+                  </div>
                 </th>
                 <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {rooms?.map((room) => (
+              {rooms?.map((room: any) => (
                 <motion.tr 
                   layout
                   key={room.id} 
@@ -611,7 +704,7 @@ export default function RoomListPage() {
                   </td>
                   <td className="p-4">
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusStyle(room.status)}`}>
-                       {ROOM_STATUS_LABELS[room.status] || room.status}
+                       {ROOM_STATUS_LABELS[room.status as RoomStatus] || room.status}
                     </span>
                   </td>
                   <td className="p-4 text-right">

@@ -21,7 +21,8 @@ class ServiceResource extends JsonResource
             'name' => $this->name,
             'calc_mode' => $this->calc_mode,
             'unit' => $this->unit,
-            'price' => $this->current_price, // Accessed via attribute accessor
+            'price' => $this->current_price,
+            'current_price' => $this->current_price, // Added for frontend compatibility
             'tiered_rates' => $this->when($this->calc_mode === 'PER_METER', function () {
                 return $this->currentRate?->tieredRates->map(function ($tier) {
                     return [

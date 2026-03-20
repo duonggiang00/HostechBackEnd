@@ -20,7 +20,7 @@ export default function RoomDetailPage() {
   const [managementMode, setManagementMode] = useState<'edit' | 'contract' | 'individual' | 'quick'>('edit');
 
   const handleBack = () => {
-    navigate(`/org/properties/${propertyId}/rooms`);
+    navigate(`/properties/${propertyId}/rooms`);
   };
 
   const handleEdit = () => {
@@ -104,7 +104,7 @@ export default function RoomDetailPage() {
                   Edit Unit
                 </button>
                 <button 
-                  onClick={() => handleOpenManagement('contract')}
+                  onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
                   className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
                 >
                   <Zap className="w-4 h-4" />
@@ -163,6 +163,7 @@ export default function RoomDetailPage() {
         )}
         {managementMode === 'contract' && (
           <ContractWizard 
+            propertyId={propertyId as string}
             roomId={room.id}
             onSuccess={() => {
               setIsManagementOpen(false);

@@ -53,6 +53,7 @@ class Contract extends Model
     protected function casts(): array
     {
         return [
+            'status' => \App\Enums\ContractStatus::class,
             'start_date' => 'date',
             'end_date' => 'date',
             'base_rent' => 'decimal:2',

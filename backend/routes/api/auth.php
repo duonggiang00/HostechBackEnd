@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:sanctum'])->prefix('user/mfa')->group(function () {
     Route::get('setup', [TwoFactorAuthenticationController::class, 'setup']);
+    Route::post('initialize', [TwoFactorAuthenticationController::class, 'initialize']);
     Route::post('enable', [TwoFactorAuthenticationController::class, 'enable']);
     Route::delete('disable', [TwoFactorAuthenticationController::class, 'disable']);
 });

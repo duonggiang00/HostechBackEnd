@@ -26,7 +26,7 @@ class RoomService
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
-            ->allowedSorts(['name', 'code', 'status', 'created_at', 'floor_number', 'base_price'])
+            ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price'])
             ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
@@ -59,8 +59,16 @@ class RoomService
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
+        $allowedFilters = array_merge($allowedFilters, [
+            \Spatie\QueryBuilder\AllowedFilter::exact('property_id'),
+            \Spatie\QueryBuilder\AllowedFilter::exact('floor_id'),
+        ]);
+
         $query = QueryBuilder::for(Room::onlyTrashed())
+            ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
+            ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price', 'deleted_at'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
         if ($performer && $performer->hasRole(['Manager', 'Staff'])) {

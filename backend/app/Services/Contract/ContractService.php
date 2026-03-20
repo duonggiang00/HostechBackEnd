@@ -21,6 +21,56 @@ class ContractService
         protected InvoiceService $invoiceService,
         protected ServiceService $serviceService,
     ) {}
+    /**
+     * Aggregate status counts for KPI cards (single query).
+     * Uses the same role-based scoping as paginate().
+     */
+    public function getStatusCounts(?User $user = null, ?string $propertyId = null): array
+    {
+        $query = Contract::query();
+
+        if ($propertyId) {
+            $query->where('property_id', $propertyId);
+        }
+
+        // Same role-based scoping as paginate
+        if ($user) {
+            if ($user->hasRole('Tenant')) {
+                $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
+            } elseif ($user->hasRole(['Manager', 'Staff'])) {
+                $query->whereHas('property.managers', fn($q) => $q->where('user_id', $user->id));
+            } elseif (! $user->hasRole('Admin')) {
+                $query->where('org_id', $user->org_id);
+            }
+        }
+
+        $now = now()->toDateString();
+        $in30 = now()->addDays(30)->toDateString();
+
+        // Single query: all status counts + expiring (conditional aggregate)
+        $row = $query
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as draft_count", [ContractStatus::DRAFT->value])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_sig_count", [ContractStatus::PENDING_SIGNATURE->value])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_pay_count", [ContractStatus::PENDING_PAYMENT->value])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_count", [ContractStatus::ACTIVE->value])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as ended_count", [ContractStatus::ENDED->value])
+            ->selectRaw("SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled_count", [ContractStatus::CANCELLED->value])
+            ->selectRaw("SUM(CASE WHEN status = ? AND end_date IS NOT NULL AND end_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as expiring_count", [ContractStatus::ACTIVE->value, $now, $in30])
+            ->first();
+
+        return [
+            'total'             => (int) ($row->total ?? 0),
+            'DRAFT'             => (int) ($row->draft_count ?? 0),
+            'PENDING_SIGNATURE' => (int) ($row->pending_sig_count ?? 0),
+            'PENDING_PAYMENT'   => (int) ($row->pending_pay_count ?? 0),
+            'ACTIVE'            => (int) ($row->active_count ?? 0),
+            'ENDED'             => (int) ($row->ended_count ?? 0),
+            'CANCELLED'         => (int) ($row->cancelled_count ?? 0),
+            'expiring'          => (int) ($row->expiring_count ?? 0),
+        ];
+    }
+
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $query = QueryBuilder::for(Contract::class)

@@ -43,7 +43,21 @@ class MfaService
         }
 
         // Default to TOTP
+        return $this->verifyTotp($user, $code, $secret);
+    }
+
+    /**
+     * Verify TOTP code using the underlying provider.
+     */
+    public function verifyTotp(User $user, string $code, ?string $secret = null): bool
+    {
         $otpSecret = $secret ?: decrypt($user->two_factor_secret);
+        
+        // Use the underlying Fortify logic. 
+        // If the provider is our custom one, we call verify there which handles it.
+        // We removed the recursion by making TwoFactorAuthenticationProvider::verify 
+        // call parent::verify for TOTP.
+        
         return $this->provider->verify($otpSecret, $code);
     }
 
@@ -69,14 +83,22 @@ class MfaService
     }
 
     /**
+     * Generate a new TOTP secret for the user.
+     */
+    public function generateSecret(): string
+    {
+        return $this->provider->generateSecret();
+    }
+
+    /**
      * Get QR Code SVG for TOTP setup.
      */
-    public function getTwoFactorQrCodeSvg(User $user): string
+    public function getTwoFactorQrCodeSvg(User $user, string $secret): string
     {
         return $this->provider->qrCodeSvg(
             config('app.name'),
             $user->email,
-            decrypt($user->two_factor_secret)
+            $secret
         );
     }
 }

@@ -27,11 +27,15 @@ class ContractResource extends JsonResource
             'start_date' => $this->start_date ? $this->start_date->format('Y-m-d') : null,
             'end_date' => $this->end_date ? $this->end_date->format('Y-m-d') : null,
             'rent_price' => (float) $this->rent_price,
+            'base_rent' => (float) $this->base_rent,
+            'fixed_services_fee' => (float) $this->fixed_services_fee,
+            'total_rent' => (float) $this->total_rent,
             'monthly_rent' => (float) $this->rent_price, // Alias for frontend
             'deposit_amount' => (float) $this->deposit_amount,
             'billing_cycle' => $this->billing_cycle,
-            'due_day' => $this->due_day,
-            'cutoff_day' => $this->cutoff_day,
+            'cycle_months' => (int) $this->cycle_months,
+            'due_day' => (int) $this->due_day,
+            'cutoff_day' => (int) $this->cutoff_day,
             'tenant' => $this->whenLoaded('members', function () {
                 $tenant = $this->members->first();
                 return $tenant ? [

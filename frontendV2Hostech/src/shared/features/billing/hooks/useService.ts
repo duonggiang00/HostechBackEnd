@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
-import type { Service, ServiceRate, TieredRate } from '../types';
+import apiClient from '@/shared/api/client';
+import type { Service } from '../types';
 
 export function useService() {
   const queryClient = useQueryClient();
@@ -8,7 +8,7 @@ export function useService() {
   const useServices = (filters?: any) => useQuery({
     queryKey: ['services', filters],
     queryFn: async () => {
-      const response = await axios.get('/api/services', { params: filters });
+      const response = await apiClient.get('/services', { params: filters });
       return response.data;
     }
   });
@@ -16,7 +16,7 @@ export function useService() {
   const useServiceDetails = (id: string) => useQuery({
     queryKey: ['service', id],
     queryFn: async () => {
-      const response = await axios.get(`/api/services/${id}`);
+      const response = await apiClient.get(`/services/${id}`);
       return response.data.data as Service;
     },
     enabled: !!id,
@@ -24,7 +24,7 @@ export function useService() {
 
   const createService = useMutation({
     mutationFn: async (data: Partial<Service>) => {
-      const response = await axios.post('/api/services', data);
+      const response = await apiClient.post('/services', data);
       return response.data.data;
     },
     onSuccess: () => {
@@ -34,7 +34,7 @@ export function useService() {
 
   const updateService = useMutation({
     mutationFn: async ({ id, data }: { id: string, data: Partial<Service> }) => {
-      const response = await axios.put(`/api/services/${id}`, data);
+      const response = await apiClient.put(`/services/${id}`, data);
       return response.data.data;
     },
     onSuccess: (_, { id }) => {
@@ -45,7 +45,7 @@ export function useService() {
 
   const deleteService = useMutation({
     mutationFn: async (id: string) => {
-      await axios.delete(`/api/services/${id}`);
+      await apiClient.delete(`/services/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });

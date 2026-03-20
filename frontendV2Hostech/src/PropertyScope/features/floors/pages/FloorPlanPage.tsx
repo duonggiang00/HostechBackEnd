@@ -348,7 +348,6 @@ export default function FloorPlanPage() {
         onOpenManagement={(mode) => {
           setManagementMode(mode);
           setIsManagementOpen(true);
-          setSelectedRoomId(null);
         }}
       />
     </div>

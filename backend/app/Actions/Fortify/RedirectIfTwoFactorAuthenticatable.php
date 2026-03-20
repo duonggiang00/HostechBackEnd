@@ -28,7 +28,9 @@ class RedirectIfTwoFactorAuthenticatable extends FortifyRedirect
             },
             // Custom logic to send Email OTP if needed
             function ($request, $next) {
-                $user = $request->user();
+                // Fetch the user from the session, as they are not authenticated yet
+                $userId = $request->session()->get('fortify.two_factor_user_id');
+                $user = $userId ? \App\Models\Org\User::find($userId) : null;
 
                 if ($user && $user->mfa_enabled && $user->mfa_method === 'email') {
                     app(MfaService::class)->sendEmailOtp($user);
@@ -46,7 +48,7 @@ class RedirectIfTwoFactorAuthenticatable extends FortifyRedirect
      * @param  mixed  $user
      * @return mixed
      */
-    protected function twoFactorChallengeResponse(Request $request, $user)
+    protected function twoFactorChallengeResponse($request, $user)
     {
         // If it's an API request, return the challenge JSON
         if ($request->wantsJson()) {
