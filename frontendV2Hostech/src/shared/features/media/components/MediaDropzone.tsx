@@ -92,7 +92,7 @@ export default function MediaDropzone({
         onClick={() => inputRef.current?.click()}
         className={twMerge(
           clsx(
-            "relative flex flex-col items-center justify-center w-full h-48 px-4 py-6 border-2 border-dashed rounded-[2rem] transition-all cursor-pointer group hover:bg-slate-50",
+            "relative flex flex-col items-center justify-center w-full h-48 px-4 py-6 border-2 border-dashed rounded-4xl transition-all cursor-pointer group hover:bg-slate-50",
             {
               "border-indigo-500 bg-indigo-50/50": isDragActive,
               "border-slate-200 bg-white": !isDragActive,

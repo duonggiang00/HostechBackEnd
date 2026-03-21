@@ -11,14 +11,14 @@ export default function OrganizationCard({ name, code, propertyCount, onClick }:
   return (
     <div 
       onClick={onClick}
-      className="group bg-white border border-slate-200 rounded-[2rem] p-6 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
+      className="group bg-white border border-slate-200 rounded-4xl p-6 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
     >
       <div className="flex justify-between items-start mb-6">
         <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
           <Building className="w-7 h-7" />
         </div>
         <div className="text-right">
-            <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Org Code</span>
+            <span className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-1">Org Code</span>
             <span className="font-mono text-xs font-bold text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">{code}</span>
         </div>
       </div>

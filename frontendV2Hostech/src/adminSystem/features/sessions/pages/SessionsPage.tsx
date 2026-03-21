@@ -40,7 +40,7 @@ export default function SessionsPage() {
                       <div className="flex items-center gap-2">
                         <p className="text-base font-bold text-slate-900">{session.name}</p>
                         {session.is_current && (
-                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase rounded-full tracking-wider">
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-xs font-black uppercase rounded-full tracking-wider">
                             Current Session
                           </span>
                         )}

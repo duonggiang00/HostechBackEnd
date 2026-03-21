@@ -69,6 +69,13 @@ export function useMeterActions(propertyId?: string | null) {
     },
   });
 
+  const bulkCreateReadingsMutation = useMutation({
+    mutationFn: (data: any[]) => meteringApi.bulkCreateReadings(propertyId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+    },
+  });
+
   return {
     createMeter: createMeterMutation.mutate,
     createMeterAsync: createMeterMutation.mutateAsync,
@@ -79,6 +86,7 @@ export function useMeterActions(propertyId?: string | null) {
     deleteMeter: deleteMeterMutation.mutate,
     deleteMeterAsync: deleteMeterMutation.mutateAsync,
     isDeleting: deleteMeterMutation.isPending,
+    bulkCreateReadings: bulkCreateReadingsMutation,
   };
 }
 

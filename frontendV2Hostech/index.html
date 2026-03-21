@@ -4,7 +4,56 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontendv2hostech</title>
+    <title>Hostech V2 – Smart Management</title>
+
+    <!--
+      FOUC Prevention Script
+      ─────────────────────────────────────────────────────────────────────
+      This inline script runs synchronously BEFORE any stylesheet or
+      React bundle is parsed. It immediately:
+        1. Reads the persisted color mode from localStorage
+        2. Adds `dark` class to <html> if needed
+        3. Sets `--font-size-base` CSS variable on <html>
+
+      This eliminates the flash of light theme or wrong font size
+      that would otherwise be visible during React hydration.
+      It must stay as an inline script — link/src would be async.
+      ─────────────────────────────────────────────────────────────────────
+    -->
+    <script>
+      (function () {
+        var KEYS = { color: 'hostech-color-mode', font: 'hostech-font-size' };
+        var FONT_SIZE_MAP = { sm: '14px', md: '16px', lg: '18px' };
+
+        // ── Color Mode ─────────────────────────────────────────────────
+        var storedMode;
+        try { storedMode = localStorage.getItem(KEYS.color); } catch (e) {}
+
+        var isDark =
+          storedMode === 'dark' ||
+          (storedMode !== 'light' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+
+        // ── Font Size ──────────────────────────────────────────────────
+        var storedFont;
+        try { storedFont = localStorage.getItem(KEYS.font); } catch (e) {}
+
+        var fontSize = FONT_SIZE_MAP[storedFont] || FONT_SIZE_MAP['md'];
+        document.documentElement.style.setProperty('--font-size-base', fontSize);
+      })();
+    </script>
+
+    <!-- Google Fonts – Inter (preconnect for performance) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <div id="root"></div>

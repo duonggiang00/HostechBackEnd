@@ -20,6 +20,7 @@ class MeterReadingResource extends JsonResource
             'period_start' => $this->period_start?->format('Y-m-d'),
             'period_end' => $this->period_end?->format('Y-m-d'),
             'reading_value' => $this->reading_value,
+            'consumption' => $this->consumption,
             'status' => $this->status,
             'submitted_by_user_id' => $this->submitted_by_user_id,
             'submitted_at' => $this->submitted_at?->format('Y-m-d H:i:s'),

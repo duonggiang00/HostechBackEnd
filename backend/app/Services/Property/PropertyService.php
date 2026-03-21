@@ -104,13 +104,23 @@ class PropertyService
             abort(422, 'Organization ID is required.');
         }
 
-        return Property::create($data);
+        $property = Property::create($data);
+
+        if (isset($data['default_services']) && is_array($data['default_services'])) {
+            $property->defaultServices()->sync($data['default_services']);
+        }
+
+        return $property;
     }
 
     public function update(string $id, array $data): ?Property
     {
         $property = $this->find($id) ?? abort(404, 'Property not found');
         $property->update($data);
+
+        if (isset($data['default_services']) && is_array($data['default_services'])) {
+            $property->defaultServices()->sync($data['default_services']);
+        }
 
         return $property;
     }

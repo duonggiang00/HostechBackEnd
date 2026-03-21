@@ -23,7 +23,7 @@ class MeterReading extends Model implements HasMedia
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'meter_id', 'period_start', 'period_end', 'reading_value',
+        'org_id', 'meter_id', 'period_start', 'period_end', 'reading_value', 'consumption',
         'status', 'submitted_by_user_id', 'submitted_at', 'approved_by_user_id',
         'approved_at', 'locked_at', 'meta', // Thêm meta
     ];
@@ -34,6 +34,7 @@ class MeterReading extends Model implements HasMedia
             'period_start' => 'date',
             'period_end' => 'date',
             'reading_value' => 'integer',
+            'consumption' => 'decimal:2',
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
             'locked_at' => 'datetime',

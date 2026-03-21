@@ -130,18 +130,18 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-auto">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl dark:shadow-black/50 border border-transparent dark:border-white/10 max-w-lg w-full max-h-[90vh] overflow-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200 sticky top-0 bg-white">
-          <h2 className="text-2xl font-bold text-slate-900">
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-white/10 sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
             {isEditing ? 'Sửa đồng hồ' : 'Thêm đồng hồ mới'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+            className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
-            <X className="w-6 h-6 text-slate-500" />
+            <X className="w-6 h-6 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
 
@@ -149,8 +149,8 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Code */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              Mã đồng hồ <span className="text-red-600">*</span>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Mã đồng hồ <span className="text-red-600 dark:text-red-400">*</span>
             </label>
             <input
               type="text"
@@ -160,17 +160,19 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 if (errors.code) setErrors({ ...errors, code: '' });
               }}
               placeholder="e.g., DH001, DH-001"
-              className={`w-full px-4 py-2.5 border ${
-                errors.code ? 'border-red-500' : 'border-slate-200'
-              } rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100`}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${
+                errors.code 
+                  ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10' 
+                  : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
+              }`}
             />
-            {errors.code && <p className="text-red-600 text-sm mt-1">{errors.code}</p>}
+            {errors.code && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.code}</p>}
           </div>
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              Loại đồng hồ <span className="text-red-600">*</span>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Loại đồng hồ <span className="text-red-600 dark:text-red-400">*</span>
             </label>
             <select
               value={type}
@@ -178,27 +180,29 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 setType(e.target.value as 'ELECTRIC' | 'WATER');
                 if (errors.type) setErrors({ ...errors, type: '' });
               }}
-              className={`w-full px-4 py-2.5 border ${
-                errors.type ? 'border-red-500' : 'border-slate-200'
-              } rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100`}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
+                errors.type 
+                  ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10'
+                  : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
+              }`}
             >
               <option value="">Chọn loại</option>
               <option value="ELECTRIC">Điện</option>
               <option value="WATER">Nước</option>
             </select>
-            {errors.type && <p className="text-red-600 text-sm mt-1">{errors.type}</p>}
+            {errors.type && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.type}</p>}
           </div>
 
           {/* Room (optional) */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              Phòng <span className="text-slate-500 text-xs font-normal">(tùy chọn)</span>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Phòng <span className="text-slate-500 dark:text-slate-400 text-xs font-normal">(tùy chọn)</span>
             </label>
             <select
               value={roomId}
               onChange={(e) => setRoomId(e.target.value)}
               disabled={loadingRooms}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-100 disabled:opacity-50"
+              className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-500/10 disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:opacity-50"
             >
               <option value="">
                 {loadingRooms ? 'Đang tải phòng...' : 'Không gán phòng'}
@@ -210,14 +214,14 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
               ))}
             </select>
             {rooms.length === 0 && !loadingRooms && (
-              <p className="text-slate-500 text-xs mt-1">Không có phòng nào</p>
+              <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Không có phòng nào</p>
             )}
           </div>
 
           {/* Base Reading */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              Chỉ số cơ sở <span className="text-slate-500 text-xs font-normal">(tùy chọn)</span>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Chỉ số cơ sở <span className="text-slate-500 dark:text-slate-400 text-xs font-normal">(tùy chọn)</span>
             </label>
             <input
               type="number"
@@ -228,40 +232,42 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 if (errors.baseReading) setErrors({ ...errors, baseReading: '' });
               }}
               placeholder="0.00"
-              className={`w-full px-4 py-2.5 border ${
-                errors.baseReading ? 'border-red-500' : 'border-slate-200'
-              } rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100`}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${
+                errors.baseReading 
+                  ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10'
+                  : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
+              }`}
             />
             {errors.baseReading && (
-              <p className="text-red-600 text-sm mt-1">{errors.baseReading}</p>
+              <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.baseReading}</p>
             )}
           </div>
 
           {/* Installed At */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">
-              Ngày cài đặt <span className="text-slate-500 text-xs font-normal">(tùy chọn)</span>
+            <label className="block text-sm font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Ngày cài đặt <span className="text-slate-500 dark:text-slate-400 text-xs font-normal">(tùy chọn)</span>
             </label>
             <input
               type="date"
               value={installedAt}
               onChange={(e) => setInstalledAt(e.target.value)}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-500/10"
             />
           </div>
 
           {/* Checkboxes */}
-          <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
+          <div className="space-y-3 bg-slate-50 dark:bg-slate-700/50 p-4 rounded-lg border border-slate-100 dark:border-white/10">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isMaster}
                 onChange={(e) => setIsMaster(e.target.checked)}
-                className="w-5 h-5 border border-slate-300 rounded text-indigo-600 focus:ring-2 focus:ring-indigo-500"
+                className="w-5 h-5 border border-slate-300 dark:border-slate-600 rounded text-indigo-600 focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700"
               />
-              <span className="text-sm font-medium text-slate-900">
+              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                 Đồng hồ Master
-                <p className="text-xs text-slate-500 font-normal mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                   Đồng hồ chính dùng để tính mức tiêu thụ tổng
                 </p>
               </span>
@@ -272,11 +278,11 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="w-5 h-5 border border-slate-300 rounded text-green-600 focus:ring-2 focus:ring-green-500"
+                className="w-5 h-5 border border-slate-300 dark:border-slate-600 rounded text-green-600 focus:ring-2 focus:ring-green-500 dark:bg-slate-700"
               />
-              <span className="text-sm font-medium text-slate-900">
+              <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
                 Hoạt động
-                <p className="text-xs text-slate-500 font-normal mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-normal mt-0.5">
                   Đồng hồ này đang được sử dụng
                 </p>
               </span>
@@ -288,7 +294,7 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-200 text-slate-900 font-semibold rounded-lg hover:bg-slate-50 transition-colors"
+              className="flex-1 px-4 py-2.5 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               Hủy
             </button>

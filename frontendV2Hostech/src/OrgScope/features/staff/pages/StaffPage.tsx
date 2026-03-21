@@ -126,12 +126,12 @@ export default function StaffPage() {
                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{member.name}</h3>
                    <div className="flex flex-wrap gap-2 mt-1">
                       {member.roles?.map((role: any) => (
-                        <span key={role.id} className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${getRoleStyle(role.name)}`}>
+                        <span key={role.id} className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-wider border ${getRoleStyle(role.name)}`}>
                           {role.name}
                         </span>
                       ))}
                       {(!member.roles || member.roles.length === 0) && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${roleStyles.staff}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-black uppercase tracking-wider border ${roleStyles.staff}`}>
                           User
                         </span>
                       )}
@@ -152,8 +152,8 @@ export default function StaffPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 bg-white">
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Joined {format(new Date(member.created_at), 'MMM dd, yyyy')}</p>
-                   <button className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:underline">Manage Access</button>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Joined {format(new Date(member.created_at), 'MMM dd, yyyy')}</p>
+                   <button className="text-xs font-black uppercase tracking-widest text-indigo-600 hover:underline">Manage Access</button>
                 </div>
              </div>
           </div>
@@ -166,7 +166,7 @@ export default function StaffPage() {
            </div>
            <div className="text-center">
               <h4 className="text-sm font-bold text-slate-700">Invite New Member</h4>
-              <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">Expand property team</p>
+              <p className="text-xs text-slate-400 uppercase font-black tracking-widest mt-1">Expand property team</p>
            </div>
         </div>
       </div>

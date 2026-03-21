@@ -72,12 +72,12 @@ export default function HandoverListing() {
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
               
               <div className="flex items-center justify-between mb-6 relative">
-                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${
                   item.type === 'check_in' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                 }`}>
                   {item.type.replace('_', ' ')}
                 </div>
-                <div className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest ${
+                <div className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-widest ${
                   item.status === 'confirmed' ? 'text-indigo-600' : 'text-amber-600'
                 }`}>
                   {item.status === 'confirmed' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
@@ -92,11 +92,11 @@ export default function HandoverListing() {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900">Room {item.room?.number || 'N/A'}</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase">{item.property?.name || 'Main Property'}</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase">{item.property?.name || 'Main Property'}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 pl-1 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <div className="flex items-center gap-6 pl-1 text-xs font-black text-slate-400 uppercase tracking-widest">
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3 h-3" />
                     {new Date(item.handover_date).toLocaleDateString()}
@@ -110,14 +110,14 @@ export default function HandoverListing() {
 
               <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-100 relative">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checklist</p>
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Checklist</p>
                   <p className="text-xs font-bold text-slate-900 flex items-center gap-2">
                     <Package className="w-3 h-3 text-indigo-400" />
                     {item.items_count || 0} Assets
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Meter Caps</p>
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Meter Caps</p>
                   <div className="flex items-center gap-2">
                     <Zap className="w-3 h-3 text-amber-400" />
                     <Droplets className="w-3 h-3 text-blue-400" />

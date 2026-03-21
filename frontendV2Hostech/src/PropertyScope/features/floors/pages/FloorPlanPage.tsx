@@ -89,22 +89,22 @@ export default function FloorPlanPage() {
     }
 
     return (
-      <div className="p-12 text-center text-slate-500 bg-white border border-slate-200 rounded-[3rem] m-8 shadow-xl shadow-slate-200/50">
-        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Info className="w-10 h-10 text-slate-300" />
+      <div className="p-12 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/60 rounded-6xl m-8 shadow-xl shadow-slate-200/50 dark:shadow-none backdrop-blur-sm">
+        <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800/80 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Info className="w-10 h-10 text-slate-300 dark:text-slate-500" />
         </div>
-        <h3 className="text-2xl font-black text-slate-900 mb-2">{title}</h3>
-        <p className="max-w-md mx-auto text-slate-500 font-medium leading-relaxed">{message}</p>
+        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{title}</h3>
+        <p className="max-w-md mx-auto text-slate-500 dark:text-slate-400 font-medium leading-relaxed">{message}</p>
         <div className="mt-8 flex items-center justify-center gap-4">
           <button 
             onClick={() => navigate('/org/properties')}
-            className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+            className="px-8 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all active:scale-95"
           >
             Đến danh sách tòa nhà
           </button>
           <button 
             onClick={() => navigate('/system')}
-            className="px-8 py-3 bg-white text-slate-600 border border-slate-200 rounded-2xl font-bold hover:bg-slate-50 transition-all"
+            className="px-8 py-3 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
           >
             Bảng điều khiển
           </button>
@@ -115,7 +115,7 @@ export default function FloorPlanPage() {
 
   if (error) {
      return (
-        <div className="p-12 text-center text-rose-500 bg-rose-50 border border-rose-100 rounded-3xl m-8">
+        <div className="p-12 text-center text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-3xl m-8">
            <AlertCircle className="w-12 h-12 mx-auto mb-4" />
            <h3 className="text-xl font-bold mb-2">Lỗi khi tải danh sách phòng</h3>
            <p>{error.message || 'Đã xảy ra lỗi khi lấy dữ liệu phòng.'}</p>
@@ -129,26 +129,26 @@ export default function FloorPlanPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate(`/properties/${propertyId}/floors`)}
-            className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">
                 {floorData?.name || selectedFloor?.name || 'Chọn tầng'}
             </h1>
-            <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
               Mã tòa nhà: {propertyId?.slice(0, 8)}... • {rooms.length} Phòng {selectedFloor ? 'trên tầng này' : 'Tổng cộng'}
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+            <div className="flex bg-slate-100 dark:bg-slate-900/60 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 backdrop-blur-sm">
                <button 
                  onClick={() => setIsDesignMode(false)}
                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                   !isDesignMode ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+                   !isDesignMode ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm border border-transparent dark:border-slate-700/50' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                  }`}
                >
                  <Layout className="w-4 h-4" />
@@ -161,7 +161,7 @@ export default function FloorPlanPage() {
                 <PermissionGate role={['Admin', 'Owner', 'Manager']}>
                   <button 
                     onClick={() => setIsDesignMode(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-bold bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
                   >
                     <FilePenLine className="w-4 h-4" />
                     Chỉnh sửa sơ đồ
@@ -173,7 +173,7 @@ export default function FloorPlanPage() {
                     setManagementMode('quick');
                     setIsManagementOpen(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-all border border-indigo-100 dark:border-indigo-500/30"
                 >
                   <Zap className="w-4 h-4" />
                   Tạo nhanh
@@ -189,7 +189,7 @@ export default function FloorPlanPage() {
                        setIsManagementOpen(true);
                     }
                   }}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-white text-slate-700 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700/60 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                 >
                   <Plus className="w-4 h-4" />
                   Thêm phòng
@@ -236,7 +236,7 @@ export default function FloorPlanPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
-          <div className="border-r border-slate-100 pr-4 lg:col-span-3">
+          <div className="border-r border-slate-100 dark:border-slate-800 pr-4 lg:col-span-3">
              <FloorManager 
                 selectedFloorId={selectedFloor?.id || floorId} 
                 onFloorSelect={(floor) => {
@@ -249,12 +249,12 @@ export default function FloorPlanPage() {
           </div>
           <div className="lg:col-span-9">
             {!(selectedFloor || floorData) && !isLoadingFloor ? (
-                <div className="flex flex-col items-center justify-center h-[500px] bg-slate-50/50 rounded-[3rem] border border-dashed border-slate-200 text-center px-12">
-                   <div className="w-20 h-20 rounded-full bg-indigo-50 flex items-center justify-center mb-6">
+                <div className="flex flex-col items-center justify-center h-[500px] bg-slate-50/50 dark:bg-slate-900/40 rounded-6xl border border-dashed border-slate-200 dark:border-slate-800/60 text-center px-12">
+                   <div className="w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center mb-6">
                       <Layout className="w-10 h-10 text-indigo-500" />
                    </div>
-                   <h3 className="text-xl font-black text-slate-900 mb-2">Vui lòng chọn tầng</h3>
-                   <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-xs">
+                   <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2">Vui lòng chọn tầng</h3>
+                   <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-xs">
                       Chọn một tầng từ cấu trúc dọc để bắt đầu quản lý vị trí phòng và sơ đồ tầng.
                    </p>
                 </div>
@@ -332,6 +332,7 @@ export default function FloorPlanPage() {
         )}
         {managementMode === 'contract' && selectedRoom && (
             <ContractWizard 
+                propertyId={propertyId!}
                 roomId={selectedRoom.id}
                 onSuccess={() => {
                   setIsManagementOpen(false);

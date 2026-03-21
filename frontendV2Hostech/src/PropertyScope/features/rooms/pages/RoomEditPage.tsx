@@ -14,17 +14,17 @@ export default function RoomEditPage() {
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
-        <Loader2 className="w-12 h-12 text-indigo-500 animate-spin" />
+        <Loader2 className="w-12 h-12 text-indigo-500 dark:text-indigo-400 animate-spin" />
       </div>
     );
   }
 
   if (error || !room) {
     return (
-      <div className="p-12 text-center text-rose-500 bg-rose-50 border border-rose-100 rounded-3xl m-8">
+      <div className="p-12 text-center text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-3xl m-8">
          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-         <h3 className="text-xl font-bold mb-2">Error Loading Room</h3>
-         <p>Something went wrong while fetching room data.</p>
+         <h3 className="text-xl font-bold mb-2">Lỗi tải dữ liệu phòng</h3>
+         <p>Đã xảy ra lỗi khi tải dữ liệu phòng.</p>
       </div>
     );
   }
@@ -34,17 +34,17 @@ export default function RoomEditPage() {
       <div className="flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
-          className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+          className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all shadow-sm"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 leading-tight">Edit {room.name}</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Update details, rules, pricing, or media</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">Chỉnh sửa {room.name}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cập nhật thông tin chi tiết, quy định, giá cả hoặc hình ảnh</p>
         </div>
       </div>
 
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
         <RoomForm 
           initialData={room}
           propertyId={propertyId} 

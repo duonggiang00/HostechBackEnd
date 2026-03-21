@@ -67,8 +67,8 @@ export default function OTPInput({ length = 6, onComplete, disabled = false }: O
           onChange={(e) => handleChange(index, e.target.value)}
           onKeyDown={(e) => handleKeyDown(index, e)}
           className={`
-            w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black rounded-2xl border-2 transition-all outline-none
-            ${digit ? 'border-indigo-600 bg-indigo-50/30 text-indigo-600' : 'border-slate-100 bg-white text-slate-900 focus:border-indigo-300'}
+            w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black rounded-2xl border-2 transition-colors outline-none
+            ${digit ? 'border-indigo-600 bg-indigo-50/30 text-indigo-600 dark:border-indigo-500 dark:bg-indigo-500/10 dark:text-indigo-400' : 'border-slate-100 bg-white text-slate-900 focus:border-indigo-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:border-indigo-500'}
             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           `}
         />

@@ -26,25 +26,25 @@ interface KPICardProps {
 
 const KPICard = ({ title, value, icon: Icon, trend, description, color }: KPICardProps) => {
   const colorMap = {
-    indigo: 'from-indigo-500/20 to-indigo-500/5 text-indigo-600 border-indigo-100',
-    emerald: 'from-emerald-500/20 to-emerald-500/5 text-emerald-600 border-emerald-100',
-    amber: 'from-amber-500/20 to-amber-500/5 text-amber-600 border-amber-100',
-    slate: 'from-slate-500/20 to-slate-500/5 text-slate-600 border-slate-100',
-    red: 'from-red-500/20 to-red-500/5 text-red-600 border-red-100',
-    purple: 'from-purple-500/20 to-purple-500/5 text-purple-600 border-purple-100',
+    indigo: 'from-indigo-500/20 to-indigo-500/5 dark:from-indigo-500/10 dark:to-indigo-500/5 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20',
+    emerald: 'from-emerald-500/20 to-emerald-500/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20',
+    amber: 'from-amber-500/20 to-amber-500/5 dark:from-amber-500/10 dark:to-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20',
+    slate: 'from-slate-500/20 to-slate-500/5 dark:from-slate-500/10 dark:to-slate-500/5 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-500/20',
+    red: 'from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5 text-red-600 dark:text-red-400 border-red-100 dark:border-red-500/20',
+    purple: 'from-purple-500/20 to-purple-500/5 dark:from-purple-500/10 dark:to-purple-500/5 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-500/20',
   };
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className={`relative overflow-hidden bg-gradient-to-br ${colorMap[color]} border rounded-3xl p-6 transition-all shadow-sm hover:shadow-xl hover:shadow-primary/5 group`}
+      className={`relative overflow-hidden bg-linear-to-br ${colorMap[color]} border rounded-3xl p-6 transition-all shadow-sm hover:shadow-xl hover:shadow-primary/5 group`}
     >
       <div className="flex justify-between items-start relative z-10">
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest opacity-70">{title}</p>
+          <p className="text-xs font-black uppercase tracking-widest opacity-70">{title}</p>
           <p className="text-3xl font-black tracking-tight">{value}</p>
         </div>
-        <div className="p-3 bg-white/50 backdrop-blur-md rounded-2xl border border-white/50 group-hover:scale-110 transition-transform">
+        <div className="p-3 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-white/50 dark:border-slate-700 group-hover:scale-110 transition-transform">
           <Icon className="h-6 w-6" />
         </div>
       </div>
@@ -52,7 +52,7 @@ const KPICard = ({ title, value, icon: Icon, trend, description, color }: KPICar
       {(trend || description) && (
         <div className="mt-4 flex items-center gap-2 relative z-10">
           <div className="h-1 w-1 rounded-full bg-current opacity-50" />
-          <p className="text-[10px] font-extrabold uppercase tracking-tight opacity-60">
+          <p className="text-xs font-extrabold uppercase tracking-tight opacity-60">
             {trend || description}
           </p>
         </div>
@@ -173,20 +173,20 @@ export default function ContractListPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc]">
+    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-900 transition-colors">
       {/* Header Section */}
-      <div className="px-6 lg:px-8 py-8 bg-white border-b border-slate-100 shadow-sm relative z-20">
+      <div className="px-6 lg:px-8 py-8 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800 shadow-sm relative z-20 transition-colors">
         <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 flex items-center gap-3">
-              <FileText className="h-10 w-10 text-indigo-600" />
+            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+              <FileText className="h-10 w-10 text-indigo-600 dark:text-indigo-400" />
               Hợp Đồng Thuê
             </h1>
-            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest mt-2 flex items-center gap-2">
-              <span className="w-8 h-[2px] bg-indigo-500 rounded-full" />
+            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest mt-2 flex items-center gap-2">
+              <span className="w-8 h-[2px] bg-indigo-500 dark:bg-indigo-400 rounded-full" />
               Quản lý pháp lý & chu kỳ thuê
             </p>
           </motion.div>
@@ -199,7 +199,7 @@ export default function ContractListPage() {
               <Button 
                 onClick={() => navigate(`/properties/${propertyId}/contracts/create`)}
                 size="lg"
-                className="rounded-2xl px-8 h-14 text-base font-black shadow-xl shadow-indigo-100 hover:shadow-indigo-200 active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700"
+                className="rounded-2xl px-8 h-14 text-base font-black shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20 hover:shadow-indigo-200 dark:hover:shadow-indigo-900/40 active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white"
               >
                 <Plus className="mr-2 h-6 w-6" />
                 Ký Hợp Đồng Mới
@@ -257,7 +257,7 @@ export default function ContractListPage() {
             transition={{ delay: 0.2 }}
           >
             {isLoading ? (
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 space-y-4">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-14 w-full rounded-lg" />
                 ))}
@@ -267,6 +267,7 @@ export default function ContractListPage() {
                 contracts={currentData}
                 isTrashView={isTrashView}
                 onEdit={handleEdit}
+                onViewDetail={handleEdit}
                 onDelete={handleDelete}
                 search={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -281,12 +282,12 @@ export default function ContractListPage() {
 
           {/* Pagination */}
           {!isLoading && currentData.length > 0 && (
-            <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
+            <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 shadow-sm transition-colors">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center text-xs font-black text-slate-700">
+                <div className="w-8 h-8 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg flex items-center justify-center text-xs font-black text-slate-700 dark:text-slate-300">
                   {currentData.length}
                 </div>
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">kết quả trang {page}</span>
+                <span className="text-xs font-black uppercase text-slate-400 tracking-widest">kết quả trang {page}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -299,7 +300,7 @@ export default function ContractListPage() {
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Trước
                 </Button>
-                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-black">
+                <div className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-black">
                   {page}
                 </div>
                 <Button

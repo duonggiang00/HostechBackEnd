@@ -79,7 +79,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
+        <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center p-0 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -92,7 +92,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
-            className="relative w-full max-w-lg bg-[#0A0A0B] border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg bg-[#0A0A0B] border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-5xl shadow-2xl overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="p-8 pb-4 flex items-center justify-between">

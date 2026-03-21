@@ -261,4 +261,45 @@ class ContractController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Xác nhận thanh toán & Kích hoạt hợp đồng (Admin)
+     *
+     * Luồng: Contract (PENDING_PAYMENT) -> Confirm -> ACTIVE.
+     * Đồng thời đổi trạng thái Room -> occupied.
+     */
+    public function confirmPayment(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('update', $contract);
+
+        $this->service->confirmPayment($contract, $request->user());
+
+        return response()->json(['message' => 'Đã xác nhận thanh toán và kích hoạt hợp đồng thành công.']);
+    }
+
+    /**
+     * Thanh lý hợp đồng / Kết thúc sớm (Admin)
+     *
+     * Kết thúc hợp đồng đang ACTIVE.
+     * Params: termination_date, reason, forfeit_deposit, refund_remaining_rent.
+     */
+    public function terminate(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('update', $contract);
+
+        $validated = $request->validate([
+            'termination_date' => 'nullable|date',
+            'reason' => 'nullable|string',
+            'forfeit_deposit' => 'nullable|boolean',
+            'refund_remaining_rent' => 'nullable|boolean',
+        ]);
+
+        $this->service->terminate($contract, $validated);
+
+        return response()->json(['message' => 'Đã thanh lý hợp đồng thành công.']);
+    }
 }

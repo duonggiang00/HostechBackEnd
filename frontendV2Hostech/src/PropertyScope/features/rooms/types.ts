@@ -169,7 +169,42 @@ export interface CreateRoomPayload {
   type: string;
   area: number;
   capacity: number;
-  base_price: number;
+  base_price?: number;
   description?: string;
   media_ids?: string[];
+}
+export interface RoomTemplateAsset {
+  id?: string;
+  name: string;
+}
+
+export interface RoomTemplateMeter {
+  id?: string;
+  type: 'ELECTRIC' | 'WATER';
+}
+
+export interface RoomTemplate {
+  id: string;
+  property_id: string;
+  name: string;
+  room_type: string;
+  area: number;
+  capacity: number;
+  base_price: number;
+  description: string | null;
+  amenities: string[] | null;
+  utilities: string[] | null;
+  assets?: RoomTemplateAsset[];
+  meters?: RoomTemplateMeter[];
+  services?: any[]; // Typically shared service models
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateRoomFromTemplatePayload {
+  template_id: string;
+  name: string;
+  code: string;
+  floor_id?: string;
+  floor_number?: number;
 }

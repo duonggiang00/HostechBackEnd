@@ -31,7 +31,7 @@ export default function MaintenanceReportModal({ isOpen, onClose }: MaintenanceR
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
+        <div className="fixed inset-0 z-100 flex items-end sm:items-center justify-center p-0 sm:p-6">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -44,12 +44,12 @@ export default function MaintenanceReportModal({ isOpen, onClose }: MaintenanceR
             initial={{ y: "100%", opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: "100%", opacity: 0 }}
-            className="relative w-full max-w-lg bg-[#0A0A0B] border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg bg-[#0A0A0B] border-t sm:border border-white/10 rounded-t-[2.5rem] sm:rounded-5xl shadow-2xl overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="p-8 pb-4 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em]">Step {step} of 2</span>
+                <span className="text-xs font-black uppercase text-slate-500 tracking-[0.3em]">Step {step} of 2</span>
                 <h2 className="text-2xl font-black text-white italic uppercase tracking-tight mt-1">Report Issue</h2>
               </div>
               <button 
@@ -72,7 +72,7 @@ export default function MaintenanceReportModal({ isOpen, onClose }: MaintenanceR
                           setCategory(cat.id);
                           setStep(2);
                         }}
-                        className={`group relative p-6 rounded-[2rem] border transition-all duration-300 text-left overflow-hidden ${
+                        className={`group relative p-6 rounded-4xl border transition-all duration-300 text-left overflow-hidden ${
                           category === cat.id 
                             ? `${cat.border} ${cat.bg} scale-[1.05]` 
                             : 'border-white/5 bg-white/5 hover:border-white/20'
@@ -111,11 +111,11 @@ export default function MaintenanceReportModal({ isOpen, onClose }: MaintenanceR
                     <div className="grid grid-cols-3 gap-3">
                       <button className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-white/20 hover:text-slate-300 transition-all bg-white/5">
                         <Camera className="w-6 h-6" />
-                        <span className="text-[10px] font-bold">Snap</span>
+                        <span className="text-xs font-bold">Snap</span>
                       </button>
                       <button className="aspect-square rounded-2xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-white/20 hover:text-slate-300 transition-all bg-white/5">
                         <Upload className="w-6 h-6" />
-                        <span className="text-[10px] font-bold">Upload</span>
+                        <span className="text-xs font-bold">Upload</span>
                       </button>
                     </div>
                   </div>

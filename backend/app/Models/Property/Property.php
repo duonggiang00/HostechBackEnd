@@ -17,7 +17,7 @@ class Property extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'area', 'shared_area', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts'];
+    protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'area', 'shared_area', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts', 'default_rent_price_per_m2', 'default_deposit_months'];
 
     protected function casts(): array
     {
@@ -26,6 +26,10 @@ class Property extends Model
             'shared_area' => 'decimal:2',
             'use_floors' => 'boolean',
             'bank_accounts' => 'array',
+            'default_rent_price_per_m2' => 'decimal:2',
+            'default_deposit_months' => 'integer',
+            'default_due_day' => 'integer',
+            'default_cutoff_day' => 'integer',
         ];
     }
 
@@ -51,5 +55,11 @@ class Property extends Model
     public function contracts()
     {
         return $this->hasMany(\App\Models\Contract\Contract::class);
+    }
+
+    public function defaultServices()
+    {
+        return $this->belongsToMany(\App\Models\Service\Service::class, 'property_default_services')
+            ->withTimestamps();
     }
 }

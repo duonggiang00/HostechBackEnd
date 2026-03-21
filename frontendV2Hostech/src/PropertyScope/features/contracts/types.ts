@@ -59,6 +59,9 @@ export interface Contract {
   cutoff_day: number | null;
   rent_price: number | null;
   deposit_amount: number | null;
+  deposit_status?: 'PENDING' | 'HELD' | 'REFUNDED' | 'PARTIAL_REFUND' | 'FORFEITED';
+  refunded_amount?: number;
+  forfeited_amount?: number;
   join_code: string | null;
   join_code_expires_at: string | null;
   join_code_revoked_at: string | null;
@@ -128,7 +131,7 @@ export interface CreateContractPayload {
   room_id: string;
   start_date: string;
   end_date?: string;
-  rent_price: number;
+  rent_price?: number;
   deposit_amount?: number;
   billing_cycle?: 'MONTHLY' | 'QUARTERLY';
   due_day?: number;

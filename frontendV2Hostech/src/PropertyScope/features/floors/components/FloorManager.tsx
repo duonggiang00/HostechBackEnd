@@ -85,19 +85,19 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
       <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <Layers className="w-5 h-5 text-indigo-500" />
-          <span className="font-bold text-slate-800">Cấu trúc tầng</span>
+          <span className="font-bold text-slate-800 dark:text-slate-100">Cấu trúc tầng</span>
         </div>
         <div className="flex items-center gap-1">
           <button 
             onClick={() => { setIsAutoGenerating(true); setIsAdding(false); }}
-            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+            className="p-1.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors"
             title="Tự động tạo tầng"
           >
             <CopyPlus className="w-4 h-4" />
           </button>
           <button 
             onClick={() => { setIsAdding(true); setIsAutoGenerating(false); }}
-            className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+            className="p-1.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-500/30 transition-colors"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -106,25 +106,25 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
 
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
         {isAdding && (
-          <div className="p-3 bg-white border-2 border-indigo-500 rounded-2xl shadow-lg ring-4 ring-indigo-500/5 animate-in slide-in-from-top-2">
+          <div className="p-3 bg-white dark:bg-slate-800 border-2 border-indigo-500 dark:border-indigo-400 rounded-2xl shadow-lg ring-4 ring-indigo-500/5 dark:ring-indigo-500/10 animate-in slide-in-from-top-2">
             <input 
               placeholder="VD: Tầng 1, Tầng hầm"
               autoFocus
               value={newFloorName}
               onChange={(e) => setNewFloorName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddFloor()}
-              className="w-full px-3 py-2 text-sm font-bold bg-slate-50 border-none rounded-xl outline-none"
+              className="w-full px-3 py-2 text-sm font-bold bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white border-none rounded-xl outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
             <div className="flex justify-end gap-2 mt-3">
               <button 
                 onClick={() => setIsAdding(false)}
-                className="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400"
+                className="px-3 py-1.5 text-xs font-black uppercase text-slate-400"
               >
                 Hủy
               </button>
               <button 
                 onClick={handleAddFloor}
-                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100"
+                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-100"
               >
                 Tạo
               </button>
@@ -133,10 +133,10 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
         )}
 
         {isAutoGenerating && (
-          <div className="p-3 bg-white border-2 border-indigo-500 rounded-2xl shadow-lg ring-4 ring-indigo-500/5 animate-in slide-in-from-top-2">
+          <div className="p-3 bg-white dark:bg-slate-800 border-2 border-indigo-500 dark:border-indigo-400 rounded-2xl shadow-lg ring-4 ring-indigo-500/5 dark:ring-indigo-500/10 animate-in slide-in-from-top-2">
             <div className="flex items-center gap-2 mb-2">
-              <CopyPlus className="w-4 h-4 text-indigo-500" />
-              <span className="text-sm font-bold text-slate-700">Tự động khởi tạo tầng</span>
+              <CopyPlus className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Tự động khởi tạo tầng</span>
             </div>
             <input 
               type="number"
@@ -147,21 +147,21 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
               value={floorCount}
               onChange={(e) => setFloorCount(parseInt(e.target.value) || 1)}
               onKeyDown={(e) => e.key === 'Enter' && handleAutoGenerate()}
-              className="w-full px-3 py-2 text-sm font-bold bg-slate-50 border-none rounded-xl outline-none"
+              className="w-full px-3 py-2 text-sm font-bold bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white border-none rounded-xl outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
-            <p className="text-[10px] text-slate-400 mt-2 font-medium px-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 font-medium px-1">
               Will generate names like "Tầng { (floors?.length || 0) + 1 }", "Tầng { (floors?.length || 0) + 2 }"
             </p>
             <div className="flex justify-end gap-2 mt-3">
               <button 
                 onClick={() => setIsAutoGenerating(false)}
-                className="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600"
+                className="px-3 py-1.5 text-xs font-black uppercase text-slate-400 hover:text-slate-600"
               >
                 Hủy
               </button>
               <button 
                 onClick={handleAutoGenerate}
-                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 transition-all active:scale-95"
+                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 hover:shadow-indigo-200 transition-all active:scale-95"
               >
                 Khởi tạo
               </button>
@@ -176,25 +176,25 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
             className={`
               group flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer
               ${selectedFloorId === floor.id 
-                ? 'bg-indigo-600 border-indigo-600 shadow-xl shadow-indigo-100 -translate-y-0.5' 
-                : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-lg hover:shadow-indigo-500/5'}
+                ? 'bg-indigo-600 border-indigo-600 shadow-xl shadow-indigo-100 dark:shadow-none -translate-y-0.5' 
+                : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/5'}
             `}
           >
             <div className="flex items-center gap-3">
               <div className={`
                 w-10 h-10 rounded-xl flex items-center justify-center transition-colors
-                ${selectedFloorId === floor.id ? 'bg-white/20' : 'bg-slate-50 group-hover:bg-indigo-50'}
+                ${selectedFloorId === floor.id ? 'bg-white/20' : 'bg-slate-50 dark:bg-slate-900/50 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/20'}
               `}>
-                <span className={`text-sm font-black ${selectedFloorId === floor.id ? 'text-white' : 'text-slate-600'}`}>
+                <span className={`text-sm font-black ${selectedFloorId === floor.id ? 'text-white' : 'text-slate-600 dark:text-slate-300'}`}>
                     {floor.floor_number}
                 </span>
               </div>
               <div>
-                <p className={`text-sm font-bold ${selectedFloorId === floor.id ? 'text-white' : 'text-slate-800'}`}>
+                <p className={`text-sm font-bold ${selectedFloorId === floor.id ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
                   {floor.name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[9px] font-black uppercase tracking-wider ${selectedFloorId === floor.id ? 'text-indigo-200' : 'text-slate-400'}`}>
+                    <span className={`text-[9px] font-black uppercase tracking-wider ${selectedFloorId === floor.id ? 'text-indigo-200 cursor-default' : 'text-slate-400 dark:text-slate-500 cursor-default'}`}>
                         {floor.rooms_count || 0} Phòng
                     </span>
                     {floor.floor_plan_image && (
@@ -223,8 +223,8 @@ export default function FloorManager({ onFloorSelect, selectedFloorId }: FloorMa
         ))}
 
         {!isLoading && floors?.length === 0 && !isAdding && (
-          <div className="text-center py-8 border-2 border-dashed border-slate-100 rounded-[2rem]">
-            <p className="text-xs font-bold text-slate-400">Chưa có tầng nào được thiết lập</p>
+          <div className="text-center py-8 border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-4xl">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Chưa có tầng nào được thiết lập</p>
           </div>
         )}
       </div>

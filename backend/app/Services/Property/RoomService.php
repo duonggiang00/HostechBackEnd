@@ -11,6 +11,7 @@ use App\Models\Property\RoomStatusHistory;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Property\RoomTemplate;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -125,7 +126,28 @@ class RoomService
                 $this->validateRoomArea($property, $data['floor_id'] ?? null, (float) $data['area']);
             }
 
+            // --- AUTO-CALCULATE BASE PRICE ---
+            // If base_price is not provided or zero, use property's default price per m2
+            if ((empty($data['base_price']) || (float) $data['base_price'] === 0.0) && $property->default_rent_price_per_m2 > 0) {
+                $area = (float) ($data['area'] ?? 0);
+                if ($area > 0) {
+                    $data['base_price'] = round($property->default_rent_price_per_m2 * $area, -3); // Làm tròn đến nghìn
+                }
+            }
+            // ---------------------------------
+
             $room = Room::create($data);
+
+            // --- ATTACH DEFAULT SERVICES ---
+            // If No services provided, inherit from Property defaults
+            $serviceIds = $data['service_ids'] ?? [];
+            if (empty($serviceIds)) {
+                $serviceIds = $property->defaultServices()->pluck('services.id')->toArray();
+            }
+            if (! empty($serviceIds)) {
+                $room->services()->sync($serviceIds);
+            }
+            // -------------------------------
 
             // Sync Media
             if (! empty($mediaIds)) {
@@ -167,6 +189,60 @@ class RoomService
                     'reason' => 'Initial creation',
                     'changed_by_user_id' => $performer->id,
                 ]);
+            }
+
+            return $room;
+        });
+    }
+
+    public function createFromTemplate(string $templateId, array $overrides, User $performer): Room
+    {
+        return DB::transaction(function () use ($templateId, $overrides, $performer) {
+            $template = RoomTemplate::with(['services', 'assets', 'meters'])->findOrFail($templateId);
+
+            $roomData = array_merge([
+                'room_type' => $template->room_type,
+                'area' => $template->area,
+                'capacity' => $template->capacity,
+                'base_price' => $template->base_price,
+                'description' => $template->description,
+                'amenities' => $template->amenities,
+                'utilities' => $template->utilities,
+                'property_id' => $template->property_id,
+                'status' => 'available',
+            ], $overrides);
+
+            // Inherit services if not explicitly provided
+            if (! isset($roomData['service_ids']) && $template->services->isNotEmpty()) {
+                $roomData['service_ids'] = $template->services->pluck('id')->toArray();
+            }
+
+            $room = $this->create($roomData, $performer);
+
+            // Assets: create from template if not provided in overrides
+            if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
+                foreach ($template->assets as $tAsset) {
+                    $room->assets()->create([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $room->org_id,
+                        'room_id' => $room->id,
+                        'name' => $tAsset->name,
+                    ]);
+                }
+            }
+
+            // Meters: create from template if not provided in overrides
+            if (! isset($overrides['meters']) && $template->meters->isNotEmpty()) {
+                foreach ($template->meters as $tMeter) {
+                    $room->meters()->create([
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $room->org_id,
+                        'property_id' => $room->property_id,
+                        'type' => $tMeter->type,
+                        'code' => $room->code.'-'.($tMeter->type === 'ELECTRIC' ? 'E' : 'W'),
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             return $room;
@@ -397,24 +473,82 @@ class RoomService
             }
 
             $rooms = collect();
+            $template = null;
+            if (isset($data['template_id'])) {
+                $template = RoomTemplate::with(['services', 'assets', 'meters'])->find($data['template_id']);
+            }
+
             for ($i = 0; $i < $count; $i++) {
                 $number = $startNumber + $i;
                 $name = "{$prefix} {$number}";
 
-                // Tự sinh code unique trong property
-                do {
-                    $code = 'DRAFT-'.strtoupper(Str::random(6));
-                } while (Room::where('property_id', $property->id)->where('code', $code)->exists());
-
-                $rooms->push(Room::create([
+                // Build data based on template if available
+                $roomData = [
                     'org_id' => $property->org_id,
                     'property_id' => $property->id,
                     'floor_id' => $data['floor_id'] ?? null,
-                    'code' => $code,
                     'name' => $name,
                     'status' => 'draft',
                     'base_price' => 0,
-                ]));
+                ];
+
+                if ($template) {
+                    $roomData = array_merge($roomData, [
+                        'room_type' => $template->room_type,
+                        'area' => $template->area,
+                        'capacity' => $template->capacity,
+                        'base_price' => $template->base_price,
+                        'description' => $template->description,
+                        'amenities' => $template->amenities,
+                        'utilities' => $template->utilities,
+                        'status' => 'available', // Templates usually imply ready-to-use
+                    ]);
+                }
+
+                // Tự sinh code unique trong property
+                do {
+                    if ($template) {
+                        $code = strtoupper(Str::slug($name));
+                        if (Room::where('property_id', $property->id)->where('code', $code)->exists()) {
+                            $code .= '-'.strtoupper(Str::random(4));
+                        }
+                    } else {
+                        $code = 'DRAFT-'.strtoupper(Str::random(6));
+                    }
+                } while (Room::where('property_id', $property->id)->where('code', $code)->exists());
+
+                $roomData['code'] = $code;
+                $room = Room::create($roomData);
+
+                if ($template) {
+                    // Sync Services
+                    if ($template->services->isNotEmpty()) {
+                        $room->services()->sync($template->services->pluck('id')->toArray());
+                    }
+
+                    // Create Assets
+                    foreach ($template->assets as $tAsset) {
+                        $room->assets()->create([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $room->org_id,
+                            'name' => $tAsset->name,
+                        ]);
+                    }
+
+                    // Create Meters
+                    foreach ($template->meters as $tMeter) {
+                        $room->meters()->create([
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $room->org_id,
+                            'property_id' => $room->property_id,
+                            'type' => $tMeter->type,
+                            'code' => $room->code.'-'.($tMeter->type === 'ELECTRIC' ? 'E' : 'W'),
+                            'is_active' => true,
+                        ]);
+                    }
+                }
+
+                $rooms->push($room);
             }
 
             return $rooms;
@@ -577,5 +711,13 @@ class RoomService
                 ]);
             }
         }
+    }
+
+    /**
+     * Get availability status of a room based on current active contracts.
+     */
+    public function getAvailabilityStatus(string $roomId): array
+    {
+        return app(\App\Services\Contract\ContractService::class)->getRoomAvailabilityStatus($roomId);
     }
 }

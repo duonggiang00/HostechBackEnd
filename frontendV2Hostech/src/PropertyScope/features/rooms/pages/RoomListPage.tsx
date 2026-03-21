@@ -13,9 +13,10 @@ import {
   Layers,
   LayoutGrid,
   History,
-  ArrowDownUp,
+  ArrowDownUp
 } from 'lucide-react';
 import { useRooms, useRoomActions, useTrashRooms } from '../hooks/useRooms';
+import { ActionButton } from '@/shared/components/ui/ActionButton';
 import { useFloors } from '../../floors/hooks/useFloors';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
@@ -269,7 +270,7 @@ export default function RoomListPage() {
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center gap-4">
            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-           <p className="text-slate-400 font-medium animate-pulse text-sm">Đang tải danh sách phòng...</p>
+           <p className="text-slate-400 dark:text-slate-500 font-medium animate-pulse text-sm">Đang tải danh sách phòng...</p>
         </div>
       </div>
     );
@@ -280,64 +281,65 @@ export default function RoomListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Danh mục phòng</h1>
-          <p className="text-slate-500 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Danh mục phòng</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm active:scale-95">
+          <button className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95">
             <Layers className="w-5 h-5" />
             Tạo nhanh
           </button>
-          <button 
+          <ActionButton 
             onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-            Thêm phòng
-          </button>
+            label="Thêm phòng"
+            icon={Plus}
+            variant="primary"
+            size="md"
+            className="shadow-xl"
+          />
         </div>
       </div>
 
       {/* Stats Summary */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Tổng cộng</p>
-            <p className="text-xl font-black text-slate-900">{stats.total}</p>
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <p className="text-xs font-black uppercase text-slate-400 tracking-widest mb-1">Tổng cộng</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white">{stats.total}</p>
           </div>
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <p className="text-[10px] font-black uppercase text-emerald-400 tracking-widest mb-1">Sẵn có</p>
-            <p className="text-xl font-black text-emerald-600">{stats.available}</p>
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <p className="text-xs font-black uppercase text-emerald-400 tracking-widest mb-1">Sẵn có</p>
+            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{stats.available}</p>
           </div>
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <p className="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-1">Đã thuê</p>
-            <p className="text-xl font-black text-blue-600">{stats.occupied}</p>
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <p className="text-xs font-black uppercase text-blue-400 tracking-widest mb-1">Đã thuê</p>
+            <p className="text-xl font-black text-blue-600 dark:text-blue-400">{stats.occupied}</p>
           </div>
-          <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
-            <p className="text-[10px] font-black uppercase text-amber-400 tracking-widest mb-1">Bảo trì</p>
-            <p className="text-xl font-black text-amber-600">{stats.maintenance}</p>
+          <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm">
+            <p className="text-xs font-black uppercase text-amber-400 tracking-widest mb-1">Bảo trì</p>
+            <p className="text-xl font-black text-amber-600 dark:text-amber-400">{stats.maintenance}</p>
           </div>
         </div>
       )}
 
       {/* Advanced Filters */}
-      <div className="bg-white p-4 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           {/* Search */}
-          <div className="flex-1 min-w-[300px] flex items-center gap-3 px-4 py-2.5 border border-slate-100 rounded-2xl bg-slate-50 group focus-within:bg-white focus-within:border-indigo-100 transition-all">
+          <div className="flex-1 min-w-[300px] flex items-center gap-3 px-4 py-2.5 border border-slate-100 dark:border-slate-800/60 rounded-2xl bg-slate-50 dark:bg-slate-800/30 group focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:border-indigo-100 dark:focus-within:border-indigo-500/50 transition-all">
             <Search className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500" />
             <input 
               type="text" 
               placeholder="Tìm kiếm theo tên hoặc mã..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium"
+              className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 font-medium dark:text-white"
             />
           </div>
 
           {/* Floor Filter */}
           <select 
-            className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-100"
+            className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50"
             value={pendingFilters.floorId}
             onChange={(e) => setPendingFilters(prev => ({ ...prev, floorId: e.target.value }))}
           >
@@ -349,7 +351,7 @@ export default function RoomListPage() {
 
           {/* Status Filter */}
           <select 
-            className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-100"
+            className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50"
             value={pendingFilters.status}
             onChange={(e) => setPendingFilters(prev => ({ ...prev, status: e.target.value as RoomStatus }))}
           >
@@ -361,7 +363,7 @@ export default function RoomListPage() {
 
           {/* Type Filter */}
           <select 
-            className="px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-indigo-100"
+            className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50"
             value={pendingFilters.type}
             onChange={(e) => setPendingFilters(prev => ({ ...prev, type: e.target.value }))}
           >
@@ -376,8 +378,8 @@ export default function RoomListPage() {
             onClick={() => setShowTrashed(!showTrashed)}
             className={`flex items-center gap-2 px-4 py-2.5 border rounded-2xl text-sm font-bold transition-all ${
               showTrashed 
-                ? 'bg-rose-50 text-rose-600 border-rose-100' 
-                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/30' 
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             <History className="w-4 h-4" />
@@ -389,8 +391,8 @@ export default function RoomListPage() {
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
             className={`flex items-center gap-2 px-4 py-2.5 border rounded-2xl text-sm font-bold transition-all ${
               showAdvancedFilters 
-                ? 'bg-indigo-50 text-indigo-600 border-indigo-100' 
-                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/30' 
+                : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
             }`}
           >
             <ArrowDownUp className="w-4 h-4" />
@@ -401,7 +403,7 @@ export default function RoomListPage() {
           <div className="flex items-center gap-2 ml-auto">
             <button 
               onClick={handleClearFilters}
-              className="px-4 py-2.5 text-slate-400 hover:text-rose-500 text-sm font-black uppercase tracking-widest transition-colors flex items-center gap-2"
+              className="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 text-sm font-black uppercase tracking-widest transition-colors flex items-center gap-2"
               title="Xóa tất cả bộ lọc"
             >
               <Trash2 className="w-4 h-4" />
@@ -412,8 +414,8 @@ export default function RoomListPage() {
               disabled={!isFilterChanged}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${
                 isFilterChanged 
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100 active:scale-95' 
-                  : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg shadow-indigo-100 dark:shadow-none active:scale-95' 
+                  : 'bg-slate-100 dark:bg-slate-800/50 text-slate-300 dark:text-slate-600 cursor-not-allowed'
               }`}
             >
               <RefreshCw className={`w-4 h-4 transition-transform duration-500 ${isFilterChanged ? 'group-hover:rotate-180' : ''}`} />
@@ -431,10 +433,10 @@ export default function RoomListPage() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-50 dark:border-slate-800/60">
                 {/* Price Range */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Khoảng giá (VNĐ)</label>
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Khoảng giá (VNĐ)</label>
                   <div className="flex items-center gap-2">
                     <input 
                       type="text" 
@@ -444,9 +446,9 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, priceMin: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
-                    <span className="text-slate-300">-</span>
+                    <span className="text-slate-300 dark:text-slate-600">-</span>
                     <input 
                       type="text" 
                       placeholder="Tối đa"
@@ -455,14 +457,14 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, priceMax: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
                   </div>
                 </div>
 
                 {/* Area Range */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Diện tích (m²)</label>
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Diện tích (m²)</label>
                   <div className="flex items-center gap-2">
                     <input 
                       type="text" 
@@ -472,9 +474,9 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, areaMin: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
-                    <span className="text-slate-300">-</span>
+                    <span className="text-slate-300 dark:text-slate-600">-</span>
                     <input 
                       type="text" 
                       placeholder="Tối đa"
@@ -483,14 +485,14 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, areaMax: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
                   </div>
                 </div>
 
                 {/* Capacity Range */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Số người ở</label>
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-widest ml-1">Số người ở</label>
                   <div className="flex items-center gap-2">
                     <input 
                       type="text" 
@@ -500,9 +502,9 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, capacityMin: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
-                    <span className="text-slate-300">-</span>
+                    <span className="text-slate-300 dark:text-slate-600">-</span>
                     <input 
                       type="text" 
                       placeholder="Tối đa"
@@ -511,7 +513,7 @@ export default function RoomListPage() {
                         const val = parseNumber(e.target.value);
                         setPendingFilters(prev => ({ ...prev, capacityMax: val === '' ? '' : Number(val) }));
                       }}
-                      className="w-full px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold focus:bg-white focus:border-indigo-100 outline-none"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl text-xs font-bold focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50 outline-none dark:text-white"
                     />
                   </div>
                 </div>
@@ -539,8 +541,8 @@ export default function RoomListPage() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center justify-between p-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                <p className="text-sm font-bold text-indigo-700 ml-2">
+              <div className="flex items-center justify-between p-3 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl">
+                <p className="text-sm font-bold text-indigo-700 dark:text-indigo-300 ml-2">
                   Đã chọn {selectedIds.length} phòng
                 </p>
                 <div className="flex items-center gap-2">
@@ -584,21 +586,21 @@ export default function RoomListPage() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-4xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 border-bottom border-slate-100">
+              <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800/60">
                 <th className="p-4 w-12 text-center">
                   <input 
                     type="checkbox" 
                     checked={rooms && rooms.length > 0 && selectedIds.length === rooms.length}
                     onChange={toggleSelectAll}
-                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 dark:bg-slate-900/50 text-indigo-600 focus:ring-indigo-500"
                   />
                 </th>
                 <th 
-                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('code')}
                 >
                   <div className="flex items-center gap-1">
@@ -609,7 +611,7 @@ export default function RoomListPage() {
                   </div>
                 </th>
                 <th 
-                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('name')}
                 >
                   <div className="flex items-center gap-1">
@@ -619,9 +621,9 @@ export default function RoomListPage() {
                     )}
                   </div>
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tầng</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest">Tầng</th>
                 <th 
-                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('type')}
                 >
                   <div className="flex items-center gap-1">
@@ -632,7 +634,7 @@ export default function RoomListPage() {
                   </div>
                 </th>
                 <th 
-                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('base_price')}
                 >
                   <div className="flex items-center gap-1">
@@ -643,7 +645,7 @@ export default function RoomListPage() {
                   </div>
                 </th>
                 <th 
-                  className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('status')}
                 >
                   <div className="flex items-center gap-1">
@@ -653,57 +655,57 @@ export default function RoomListPage() {
                     )}
                   </div>
                 </th>
-                <th className="p-4 text-[10px] font-black uppercase text-slate-400 tracking-widest text-right">Hành động</th>
+                <th className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest text-right">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60">
               {rooms?.map((room: any) => (
                 <motion.tr 
                   layout
                   key={room.id} 
-                  className={`group hover:bg-slate-50/80 transition-colors ${selectedIds.includes(room.id) ? 'bg-indigo-50/30' : ''}`}
+                  className={`group hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors ${selectedIds.includes(room.id) ? 'bg-indigo-50/30 dark:bg-indigo-500/10' : ''}`}
                 >
                   <td className="p-4 text-center">
                     <input 
                       type="checkbox" 
                       checked={selectedIds.includes(room.id)}
                       onChange={() => toggleSelect(room.id)}
-                      className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 dark:bg-slate-900/50 text-indigo-600 focus:ring-indigo-500"
                     />
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                       <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg text-[10px] font-black uppercase border border-slate-200">
+                       <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-black uppercase border border-slate-200 dark:border-slate-700">
                          {room.code}
                        </span>
                     </div>
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col cursor-pointer group/row" onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}>
-                      <span className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {room.name}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">{room.area} m² • {room.capacity} slots</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">{room.area} m² • {room.capacity} slots</span>
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-1.5 text-xs text-slate-600 font-bold">
-                       <Layers className="w-3 h-3 text-slate-300" />
+                    <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-bold">
+                       <Layers className="w-3 h-3 text-slate-300 dark:text-slate-600" />
                        {room.floor_name || room.floor?.name || 'N/A'}
                     </div>
                   </td>
-                  <td className="p-4 text-xs font-bold text-slate-500 capitalize">
+                  <td className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 capitalize">
                     {ROOM_TYPE_LABELS[room.type] || room.type}
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col">
-                       <span className="text-sm font-black text-rose-600">
+                       <span className="text-sm font-black text-rose-600 dark:text-rose-400">
                          {formatCurrency(room.base_price)}
                        </span>
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatusStyle(room.status)}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${getStatusStyle(room.status)}`}>
                        {ROOM_STATUS_LABELS[room.status as RoomStatus] || room.status}
                     </span>
                   </td>
@@ -713,7 +715,7 @@ export default function RoomListPage() {
                         <>
                           <button 
                             onClick={() => restoreRoom.mutate(room.id)}
-                            className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-2 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors"
                             title="Khôi phục phòng"
                           >
                             <RefreshCw className="w-4 h-4" />
@@ -724,7 +726,7 @@ export default function RoomListPage() {
                                 forceDeleteRoom.mutate(room.id);
                               }
                             }}
-                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors"
                             title="Xóa vĩnh viễn"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -734,7 +736,7 @@ export default function RoomListPage() {
                         <>
                           <button 
                             onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}/edit`)}
-                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all shadow-hover"
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all shadow-hover"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
@@ -749,13 +751,13 @@ export default function RoomListPage() {
                                 toast.success(`Đã xóa phòng ${room.name}.`);
                               }
                             }}
-                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-white rounded-lg transition-all shadow-hover"
+                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all shadow-hover"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
                       )}
-                      <button className="p-2 text-slate-300 hover:text-slate-600">
+                      <button className="p-2 text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400">
                         <MoreVertical className="w-4 h-4" />
                       </button>
                     </div>
@@ -766,12 +768,12 @@ export default function RoomListPage() {
                 <tr>
                   <td colSpan={8} className="p-20 text-center">
                     <div className="flex flex-col items-center gap-4">
-                       <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center">
-                          <LayoutGrid className="w-8 h-8 text-slate-200" />
+                       <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center">
+                          <LayoutGrid className="w-8 h-8 text-slate-200 dark:text-slate-700" />
                        </div>
                        <div>
-                           <p className="text-lg font-bold text-slate-600">Không tìm thấy phòng nào</p>
-                           <p className="text-sm text-slate-400">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm của bạn.</p>
+                           <p className="text-lg font-bold text-slate-600 dark:text-slate-300">Không tìm thấy phòng nào</p>
+                           <p className="text-sm text-slate-400 dark:text-slate-500">Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm của bạn.</p>
                        </div>
                     </div>
                   </td>
@@ -782,13 +784,13 @@ export default function RoomListPage() {
         </div>
 
         {/* Improved Pagination */}
-        <div className="p-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+        <div className="p-6 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
            <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-xs font-black text-slate-700">
+                 <div className="w-8 h-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-center text-xs font-black text-slate-700 dark:text-slate-300">
                     {rooms?.length || 0}
                  </div>
-                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-nowrap">Tổng kết quả</span>
+                 <span className="text-xs font-black uppercase text-slate-400 tracking-widest text-nowrap">Tổng kết quả</span>
               </div>
            </div>
 
@@ -801,7 +803,7 @@ export default function RoomListPage() {
                  <ChevronLeft className="w-5 h-5" />
               </button>
               <div className="flex items-center gap-1">
-                 <span className="text-sm font-black text-slate-900 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm min-w-[3rem] text-center">
+                 <span className="text-sm font-black text-slate-900 dark:text-white px-4 py-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm min-w-12 text-center">
                     {page}
                  </span>
               </div>

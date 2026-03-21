@@ -51,7 +51,7 @@ export default function OrgSelectionPage() {
             className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-full mb-6 border border-indigo-100 shadow-sm"
           >
             <ShieldCheck className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-wider">Secure Access Point</span>
+            <span className="text-xs font-black uppercase tracking-wider">Secure Access Point</span>
           </motion.div>
           <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">
             Select <span className="text-indigo-600">Organization</span>
@@ -70,17 +70,17 @@ export default function OrgSelectionPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
                 onClick={() => handleOrgClick(org.id)}
-                className="group bg-white border border-slate-200 rounded-[2.5rem] p-8 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
+                className="group bg-white border border-slate-200 rounded-5xl p-8 hover:shadow-2xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
               >
                 <div className="flex justify-between items-start mb-8">
                   <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm group-hover:shadow-indigo-200">
                     <Building className="w-8 h-8" />
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest block mb-1">Status</span>
+                    <span className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-1">Status</span>
                     <div className="flex items-center gap-1 text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] font-bold uppercase">Active</span>
+                      <span className="text-xs font-bold uppercase">Active</span>
                     </div>
                   </div>
                 </div>
@@ -98,7 +98,7 @@ export default function OrgSelectionPage() {
                 <div className="mt-8 flex items-center justify-between">
                    <div className="flex -space-x-2">
                       {[1, 2, 3].map(j => (
-                        <div key={j} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">
+                        <div key={j} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">
                           {String.fromCharCode(64 + i + j)}
                         </div>
                       ))}
@@ -111,7 +111,7 @@ export default function OrgSelectionPage() {
               </motion.div>
             ))
           ) : (
-            <div className="col-span-full p-12 bg-white rounded-[2.5rem] border border-slate-200 text-center space-y-4">
+            <div className="col-span-full p-12 bg-white rounded-5xl border border-slate-200 text-center space-y-4">
               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-300">
                 <Building className="w-8 h-8" />
               </div>
@@ -126,7 +126,7 @@ export default function OrgSelectionPage() {
           )}
         </div>
 
-        <div className="mt-16 text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
+        <div className="mt-16 text-center text-xs font-black uppercase tracking-[0.3em] text-slate-300">
            Unified Management Infrastructure
         </div>
       </div>

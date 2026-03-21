@@ -124,7 +124,7 @@ export default function TicketTimeline() {
                   }`}>
                     {step.label}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-lg">
+                  <span className="text-xs font-bold text-slate-600 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-lg">
                     {step.date}
                   </span>
                 </div>

@@ -20,7 +20,7 @@ export default function PropertySwitcher() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl">
+      <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/60 rounded-xl">
         <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
         <span className="text-xs font-bold text-slate-400">Loading Properties...</span>
       </div>
@@ -29,7 +29,7 @@ export default function PropertySwitcher() {
 
   if (isError) {
     return (
-        <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 border border-rose-100 rounded-xl text-rose-600">
+        <div className="flex items-center gap-2 px-4 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400">
             <AlertCircle className="w-4 h-4" />
             <span className="text-xs font-bold">Error loading</span>
         </div>
@@ -40,14 +40,14 @@ export default function PropertySwitcher() {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-slate-100 transition-colors group"
+        className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800/60 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group shadow-sm"
       >
-        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-indigo-100">
+        <div className="w-8 h-8 rounded-lg bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shrink-0 shadow-md shadow-indigo-500/20 dark:shadow-none">
           <Building2 className="w-4 h-4" />
         </div>
         <div className="text-left hidden sm:block">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Active Property</p>
-          <p className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Active Property</p>
+          <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[120px]">
             {selectedProperty?.name || 'Select Property'}
           </p>
         </div>
@@ -62,10 +62,10 @@ export default function PropertySwitcher() {
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl shadow-indigo-200/50 border border-slate-100 p-2 z-50"
+              className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200 dark:border-slate-800/60 p-2 z-50"
             >
-              <div className="px-3 py-2 border-b border-slate-50 mb-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Scope</p>
+              <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800/60 mb-1">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Select Scope</p>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-1 cust-scrollbar">
                 {properties.length === 0 && (
@@ -82,13 +82,13 @@ export default function PropertySwitcher() {
                     }}
                     className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all ${
                       property.id === propertyId 
-                        ? 'bg-indigo-50 text-indigo-600' 
-                        : 'hover:bg-slate-50 text-slate-600'
+                        ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' 
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300'
                     }`}
                   >
                     <div className="text-left">
                       <p className="text-xs font-bold">{property.name}</p>
-                      <p className="text-[10px] opacity-60 font-medium">{property.address || property.code}</p>
+                      <p className="text-xs opacity-60 font-medium">{property.address || property.code}</p>
                     </div>
                     {property.id === propertyId && <Check className="w-4 h-4" />}
                   </button>

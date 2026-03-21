@@ -42,7 +42,7 @@ export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) 
   const Icon = current.icon;
 
   return (
-    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider ${current.classes}`}>
+    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-black uppercase tracking-wider ${current.classes}`}>
       <Icon className="w-3 h-3" />
       {current.label}
     </div>

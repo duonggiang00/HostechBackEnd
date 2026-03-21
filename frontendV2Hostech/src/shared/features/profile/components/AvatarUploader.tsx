@@ -40,7 +40,7 @@ export default function AvatarUploader({ currentUrl, userName }: AvatarUploaderP
     <div className="flex items-center gap-6">
       {/* Avatar Circle */}
       <div className="relative group">
-        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-xl shadow-indigo-600/20 flex items-center justify-center">
+        <div className="w-24 h-24 rounded-2xl overflow-hidden bg-linear-to-br from-indigo-500 to-indigo-700 shadow-xl shadow-indigo-600/20 flex items-center justify-center">
           {displayUrl ? (
             <img src={displayUrl} alt={userName} className="w-full h-full object-cover" />
           ) : (

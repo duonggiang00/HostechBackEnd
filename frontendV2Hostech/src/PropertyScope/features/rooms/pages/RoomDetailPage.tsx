@@ -68,25 +68,25 @@ export default function RoomDetailPage() {
           <div className="flex items-center gap-4">
             <button 
               onClick={handleBack}
-              className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm"
+              className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-black text-slate-900 leading-tight">
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">
                   {room.name}
                 </h1>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  room.status === 'occupied' ? 'bg-emerald-100 text-emerald-700' :
-                  room.status === 'available' ? 'bg-indigo-100 text-indigo-700' :
-                  room.status === 'maintenance' ? 'bg-amber-100 text-amber-700' :
-                  'bg-slate-100 text-slate-600'
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${
+                  room.status === 'occupied' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' :
+                  room.status === 'available' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400' :
+                  room.status === 'maintenance' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' :
+                  'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                 }`}>
                   {room.status}
                 </span>
               </div>
-              <p className="text-slate-500 font-bold flex items-center gap-2 mt-1">
+              <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 mt-1">
                 <Layout className="w-4 h-4" />
                 {room.property_name || 'Property'} • {room.floor_name || room.floor?.name || 'No Floor'} • {room.type}
               </p>
@@ -95,24 +95,24 @@ export default function RoomDetailPage() {
 
           <div className="flex items-center gap-2">
             <PermissionGate role={['Admin', 'Owner', 'Manager']}>
-              <div className="flex items-center gap-2 bg-white/50 p-1.5 rounded-[1.25rem] border border-slate-200 backdrop-blur-sm">
+              <div className="flex items-center gap-2 bg-white/50 dark:bg-slate-900/50 p-1.5 rounded-[1.25rem] border border-slate-200 dark:border-slate-800 backdrop-blur-md">
                 <button 
                   onClick={handleEdit}
-                  className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 border border-slate-200 rounded-xl font-black text-sm hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm"
+                  className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-sm hover:border-indigo-300 dark:hover:border-indigo-500/50 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm"
                 >
                   <FileEdit className="w-4 h-4" />
                   Edit Unit
                 </button>
                 <button 
                   onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
-                  className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+                  className="flex items-center gap-2 px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-black text-sm hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-100 dark:shadow-none"
                 >
                   <Zap className="w-4 h-4" />
                   Issue Contract
                 </button>
                 <button 
                   onClick={handleDelete}
-                  className="p-3 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                  className="p-3 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-xl transition-all"
                   title="Delete Room"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -127,7 +127,7 @@ export default function RoomDetailPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white/80 backdrop-blur-md rounded-[3rem] border border-white shadow-2xl shadow-slate-200/50 overflow-hidden min-h-[600px]"
+        className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-6xl border border-white dark:border-slate-800/50 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden min-h-[600px]"
       >
         <RoomDetailContent 
           room={room}

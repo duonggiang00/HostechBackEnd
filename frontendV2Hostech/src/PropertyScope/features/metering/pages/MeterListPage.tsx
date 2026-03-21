@@ -27,12 +27,12 @@ const METER_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode; 
   ELECTRIC: {
     label: 'Điện',
     icon: <Zap className="w-4 h-4" />,
-    color: 'bg-yellow-50 text-yellow-700',
+    color: 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-700 dark:text-yellow-400',
   },
   WATER: {
     label: 'Nước',
     icon: <Droplet className="w-4 h-4" />,
-    color: 'bg-blue-50 text-blue-700',
+    color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400',
   },
 };
 
@@ -174,7 +174,7 @@ export default function MeterListPage() {
   if (!propertyId) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p className="text-slate-500">Vui lòng chọn tòa nhà</p>
+        <p className="text-slate-500 dark:text-slate-400">Vui lòng chọn tòa nhà</p>
       </div>
     );
   }
@@ -184,52 +184,61 @@ export default function MeterListPage() {
       {/* Header */}
       <div className="flex items-center justify-between pt-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Quản lý Đồng hồ</h1>
-          <p className="text-slate-500 mt-2 font-medium">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Quản lý Đồng hồ</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingMeter(null);
-            setShowFormModal(true);
-          }}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          Thêm đồng hồ
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(`/properties/${propertyId}/meters/quick-reading`)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
+          >
+            <Zap className="w-5 h-5 text-yellow-500" />
+            Chốt số nhanh
+          </button>
+          <button
+            onClick={() => {
+              setEditingMeter(null);
+              setShowFormModal(true);
+            }}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Thêm đồng hồ
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Tổng số</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{stats.total_meters}</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng số</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total_meters}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Đang hoạt động</p>
-            <p className="text-2xl font-black text-green-600 mt-1">{stats.active_meters}</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đang hoạt động</p>
+            <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{stats.active_meters}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Master</p>
-            <p className="text-2xl font-black text-purple-600 mt-1">{stats.master_meters}</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Master</p>
+            <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{stats.master_meters}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Đồng hồ Điện</p>
-            <p className="text-2xl font-black text-yellow-600 mt-1">{stats.electric_meters}</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Điện</p>
+            <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400 mt-1">{stats.electric_meters}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Đồng hồ Nước</p>
-            <p className="text-2xl font-black text-blue-600 mt-1">{stats.water_meters}</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Nước</p>
+            <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{stats.water_meters}</p>
           </div>
-          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 font-medium">Tổng Tiêu thụ</p>
+          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng Tiêu thụ</p>
             <div className="mt-1 space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-yellow-600 font-semibold">⚡ {stats.total_electric_reading?.toLocaleString('vi-VN') || '0'} kWh</span>
+                <span className="text-yellow-600 dark:text-yellow-400 font-semibold">⚡ {stats.total_electric_reading?.toLocaleString('vi-VN') || '0'} kWh</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-blue-600 font-semibold">💧 {stats.total_water_reading?.toLocaleString('vi-VN') || '0'} m³</span>
+                <span className="text-blue-600 dark:text-blue-400 font-semibold">💧 {stats.total_water_reading?.toLocaleString('vi-VN') || '0'} m³</span>
               </div>
             </div>
           </div>
@@ -237,7 +246,7 @@ export default function MeterListPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
@@ -247,7 +256,7 @@ export default function MeterListPage() {
               placeholder="Tìm kiếm mã đồng hồ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
@@ -260,7 +269,7 @@ export default function MeterListPage() {
                 type: (e.target.value as 'ELECTRIC' | 'WATER' | '') || '',
               })
             }
-            className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
           >
             <option value="">Loại - Tất cả</option>
             <option value="ELECTRIC">Điện</option>
@@ -285,7 +294,7 @@ export default function MeterListPage() {
                     : e.target.value === 'true',
               });
             }}
-            className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
           >
             <option value="">Trạng thái - Tất cả</option>
             <option value="true">Đang hoạt động</option>
@@ -305,7 +314,7 @@ export default function MeterListPage() {
           </button>
           <button
             onClick={handleClearFilters}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
           >
             <RotateCcw className="w-4 h-4" />
             Xóa bộ lọc
@@ -314,7 +323,7 @@ export default function MeterListPage() {
       </div>
 
       {/* Meters Table */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -324,26 +333,26 @@ export default function MeterListPage() {
           </div>
         ) : sortedMeters.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center px-6">
-            <AlertCircle className="w-12 h-12 text-slate-300 mb-3" />
-            <p className="text-slate-500 font-medium">Chưa có đồng hồ nào</p>
-            <p className="text-slate-400 text-sm mt-1">Hãy thêm đồng hồ đầu tiên để bắt đầu</p>
+            <AlertCircle className="w-12 h-12 text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Chưa có đồng hồ nào</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm mt-1">Hãy thêm đồng hồ đầu tiên để bắt đầu</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+              <thead className="bg-linear-to-r from-slate-50 to-slate-100 dark:from-slate-800/80 dark:to-slate-800/40 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 w-12">STT</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Mã đồng hồ</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Loại</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Master</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Phòng</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">Tổng</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700">Hành động</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 w-12">STT</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Mã đồng hồ</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Loại</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Master</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Phòng</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Chỉ số hiện tại</th>
+                  <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
                 <AnimatePresence>
                   {sortedMeters.map((meter, index) => (
                     <motion.tr
@@ -351,18 +360,18 @@ export default function MeterListPage() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="hover:bg-slate-50 transition-colors"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                     >
                       {/* STT */}
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 text-center">
+                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">
                         {(page - 1) * itemsPerPage + index + 1}
                       </td>
 
                       {/* Code */}
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-slate-900">{meter.code}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{meter.id}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white">{meter.code}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{meter.id}</p>
                         </div>
                       </td>
 
@@ -370,7 +379,7 @@ export default function MeterListPage() {
                       <td className="px-6 py-4">
                         <div
                           className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm ${
-                            METER_TYPE_LABELS[meter.type]?.color || 'bg-slate-100 text-slate-700'
+                            METER_TYPE_LABELS[meter.type]?.color || 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                           }`}
                         >
                           {METER_TYPE_LABELS[meter.type]?.icon}
@@ -381,12 +390,12 @@ export default function MeterListPage() {
                       {/* Master */}
                       <td className="px-6 py-4">
                         {meter.is_master ? (
-                          <div className="flex items-center gap-1 text-purple-600">
+                          <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
                             <Crown className="w-4 h-4" />
                             <span className="text-xs font-semibold">Có</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">Không</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500">Không</span>
                         )}
                       </td>
 
@@ -416,23 +425,30 @@ export default function MeterListPage() {
                       <td className="px-6 py-4">
                         {meter.room ? (
                           <div>
-                            <p className="font-medium text-slate-900">{meter.room.code}</p>
-                            <p className="text-xs text-slate-500">{meter.room.name}</p>
+                            <p className="font-medium text-slate-900 dark:text-slate-200">{meter.room.code}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{meter.room.name}</p>
                           </div>
                         ) : (
-                          <p className="text-slate-400 text-sm">-</p>
+                          <p className="text-slate-400 dark:text-slate-500 text-sm">-</p>
                         )}
                       </td>
 
-                      {/* Total (Base Reading) */}
+                      {/* Current Reading */}
                       <td className="px-6 py-4">
                         <div className="text-sm">
-                          {meter.base_reading ? (
-                            <p className="font-semibold text-slate-900">{meter.base_reading.toLocaleString('vi-VN')}</p>
+                          {(meter.last_reading !== undefined && meter.last_reading !== null) || (meter.base_reading !== undefined && meter.base_reading !== null) ? (
+                            <p className="font-semibold text-slate-900 dark:text-white">
+                              {(meter.last_reading ?? meter.base_reading ?? 0).toLocaleString('vi-VN')}
+                            </p>
                           ) : (
-                            <p className="text-slate-400">-</p>
+                            <p className="text-slate-400 dark:text-slate-500">-</p>
                           )}
-                          <p className="text-xs text-slate-500 mt-0.5">{meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}</p>
+                          {meter.last_reading_date && (
+                            <p className="text-xs text-slate-400 mt-1" title="Ngày chốt gần nhất">
+                              {new Date(meter.last_reading_date).toLocaleDateString('vi-VN')}
+                            </p>
+                          )}
                         </div>
                       </td>
 
@@ -441,14 +457,14 @@ export default function MeterListPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/properties/${propertyId}/meters/${meter.id}`)}
-                            className="p-2 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700/50 text-slate-600 dark:text-slate-400 rounded-lg transition-colors"
                             title="Xem chi tiết"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleEdit(meter)}
-                            className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"
+                            className="p-2 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg transition-colors"
                             title="Sửa"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -456,7 +472,7 @@ export default function MeterListPage() {
                           <div className="relative group">
                             <button
                               onClick={() => setShowDeleteConfirm(meter.id)}
-                              className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                              className="p-2 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg transition-colors"
                               title="Xóa"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -464,8 +480,8 @@ export default function MeterListPage() {
 
                             {/* Delete Confirmation */}
                             {showDeleteConfirm === meter.id && (
-                              <div className="absolute right-0 top-full mt-2 bg-white border border-slate-200 rounded-lg shadow-lg p-3 z-50 min-w-max">
-                                <p className="text-sm font-semibold text-slate-900 mb-3">Xóa đồng hồ này?</p>
+                              <div className="absolute right-0 top-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 z-50 min-w-max">
+                                <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Xóa đồng hồ này?</p>
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => handleDelete(meter.id)}
@@ -476,7 +492,7 @@ export default function MeterListPage() {
                                   </button>
                                   <button
                                     onClick={() => setShowDeleteConfirm(null)}
-                                    className="px-3 py-1.5 bg-slate-200 text-slate-900 text-sm font-semibold rounded-lg hover:bg-slate-300 transition-colors"
+                                    className="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
                                   >
                                     Hủy
                                   </button>
@@ -497,17 +513,17 @@ export default function MeterListPage() {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <div className="text-sm text-slate-600">
-            Trang <span className="font-semibold text-slate-900">{page}</span> / <span className="font-semibold text-slate-900">{totalPages}</span> 
-            <span className="ml-4">Tổng: <span className="font-semibold text-slate-900">{totalItems}</span> mục</span>
+        <div className="flex items-center justify-between bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+          <div className="text-sm text-slate-600 dark:text-slate-400">
+            Trang <span className="font-semibold text-slate-900 dark:text-white">{page}</span> / <span className="font-semibold text-slate-900 dark:text-white">{totalPages}</span> 
+            <span className="ml-4">Tổng: <span className="font-semibold text-slate-900 dark:text-white">{totalItems}</span> mục</span>
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
               disabled={page === 1 || isLoading}
-              className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Trang trước"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -522,7 +538,7 @@ export default function MeterListPage() {
                   className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${
                     page === p
                       ? 'bg-indigo-600 text-white'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50'
+                      : 'border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50'
                   }`}
                 >
                   {p}
@@ -533,7 +549,7 @@ export default function MeterListPage() {
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
               disabled={page === totalPages || isLoading}
-              className="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Trang sau"
             >
               <ChevronRight className="w-5 h-5" />

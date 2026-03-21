@@ -112,7 +112,7 @@ class MeterController extends Controller
     {
         $this->authorize('view', $meter);
 
-        return new MeterResource($meter->load(['room.property', 'room.floor']));
+        return new MeterResource($meter->load(['room.property', 'room.floor', 'latestReading']));
     }
 
     /**

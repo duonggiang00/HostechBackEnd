@@ -307,7 +307,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                               key={t}
                               type="button"
                               onClick={() => setFormData({ ...formData, type: t })}
-                              className={`py-3 px-2 rounded-2xl border-2 font-black transition-all capitalize text-[10px] sm:text-xs ${
+                              className={`py-3 px-2 rounded-2xl border-2 font-black transition-all capitalize text-xs sm:text-xs ${
                                 formData.type === t 
                                   ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-md shadow-indigo-100' 
                                   : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
@@ -383,11 +383,11 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                       
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">1</div>
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">1</div>
                           <p className="text-xs font-bold text-slate-600 leading-relaxed">Diện tích phòng tối thiểu phải đạt <span className="text-indigo-600">10 m²</span>.</p>
                         </div>
                         <div className="flex items-start gap-4">
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">2</div>
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">2</div>
                           <div className="space-y-3">
                             <p className="text-xs font-bold text-slate-600">Quy định số người ở tối đa:</p>
                             <div className="grid grid-cols-1 gap-2">
@@ -398,7 +398,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                                 { area: 'Trên 60 m²', max: '6 người' },
                               ].map((rule, i) => (
                                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/60 border border-indigo-50/50">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase">{rule.area}</span>
+                                  <span className="text-xs font-black text-slate-400 uppercase">{rule.area}</span>
                                   <span className="text-[11px] font-black text-indigo-600 uppercase">{rule.max}</span>
                                 </div>
                               ))}
@@ -406,12 +406,12 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                           </div>
                         </div>
                         <div className="flex items-start gap-4">
-                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">3</div>
+                          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-black text-indigo-600 shrink-0">3</div>
                           <p className="text-xs font-bold text-slate-600 leading-relaxed">Không cho phép ở quá <span className="text-rose-500 underline decoration-2 underline-offset-2">6 người</span> trong một hợp đồng.</p>
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-indigo-100/50 italic text-[10px] text-slate-400 font-medium leading-relaxed">
+                      <div className="pt-4 border-t border-indigo-100/50 italic text-xs text-slate-400 font-medium leading-relaxed">
                         * Các tiêu chuẩn trên giúp đảm bảo chất lượng vận hành và an toàn phòng cháy chữa cháy.
                       </div>
                     </div>
@@ -638,7 +638,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
 
                         <div className="space-y-4">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Mã đồng hồ</label>
+                            <label className="text-xs font-black text-slate-400 uppercase ml-1">Mã đồng hồ</label>
                             <input 
                               placeholder="Nhập mã (e.g. D001)"
                               value={m.code}
@@ -652,7 +652,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                             {errors[`meter_${i}_code`] && <p className="text-xs text-rose-500 mt-1">{errors[`meter_${i}_code`]}</p>}
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Chỉ số đầu</label>
+                            <label className="text-xs font-black text-slate-400 uppercase ml-1">Chỉ số đầu</label>
                             <input 
                               type="text"
                               value={formatNumber(m.initial_reading)}

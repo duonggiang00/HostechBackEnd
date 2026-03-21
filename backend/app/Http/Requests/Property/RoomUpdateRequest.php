@@ -52,7 +52,7 @@ class RoomUpdateRequest extends FormRequest
             'area' => ['nullable', 'numeric', 'min:0'],
             'floor_number' => ['nullable', 'integer'],
             'capacity' => ['nullable', 'integer', 'min:1'],
-            'base_price' => ['sometimes', 'numeric', 'min:0'],
+            'base_price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],
             'description' => ['nullable', 'string'],
             'amenities' => ['nullable', 'json'],

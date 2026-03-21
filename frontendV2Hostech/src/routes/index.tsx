@@ -17,6 +17,7 @@ import InvitationSetupPage from '@/shared/features/auth/components/InvitationSet
 
 // Admin Pages
 import PropertiesPage from '@/OrgScope/features/properties/pages/PropertiesPage';
+import PropertyDetailPage from '@/PropertyScope/features/properties/pages/PropertyDetailPage';
 import OrganizationsPage from '@/adminSystem/features/organizations/pages/OrganizationsPage';
 import FloorsPage from '@/PropertyScope/features/floors/pages/FloorsPage';
 import FloorPlanPage from '@/PropertyScope/features/floors/pages/FloorPlanPage';
@@ -36,6 +37,7 @@ import PropertyDashboard from '@/PropertyScope/features/dashboard/pages/Property
 import OrgSelectionPage from '@/OrgScope/features/organizations/pages/OrgSelectionPage';
 import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
 import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
+import QuickReadingPage from '@/PropertyScope/features/metering/pages/QuickReadingPage';
 import ProfilePage from '@/shared/features/profile/pages/ProfilePage';
 const ContractListPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractListPage'));
 const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractCreatePage'));
@@ -199,6 +201,7 @@ export default function AppRoutes() {
       >
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<PropertyDashboard />} />
+        <Route path="detail" element={<PropertyDetailPage />} />
         <Route path="floors" element={<FloorsPage />} />
         <Route path="floors/:floorId/rooms" element={<FloorPlanPage />} />
         <Route path="floors/:floorId/rooms/create" element={<RoomCreatePage />} />
@@ -209,6 +212,7 @@ export default function AppRoutes() {
         <Route path="rooms/:roomId" element={<RoomDetailPage />} />
         <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
         <Route path="meters" element={<MeterListPage />} />
+        <Route path="meters/quick-reading" element={<QuickReadingPage />} />
         <Route path="meters/:meterId" element={<MeterDetailPage />} />
         <Route path="contracts" element={<ContractListPage />} />
         <Route path="contracts/create" element={<ContractCreatePage />} />

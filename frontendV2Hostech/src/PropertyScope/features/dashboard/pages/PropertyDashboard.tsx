@@ -101,7 +101,7 @@ export default function PropertyDashboard() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 rounded-3xl shadow-lg relative overflow-hidden group"
+          className="lg:col-span-2 bg-linear-to-br from-indigo-600 to-indigo-800 p-8 rounded-3xl shadow-lg relative overflow-hidden group"
         >
           <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-[0.05] rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform" />
           

@@ -48,15 +48,15 @@ export default function RoomDetailContent({
           {onClose && (
             <button
               onClick={onClose}
-              className="absolute top-8 right-8 p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-all z-10"
+              className="absolute top-8 right-8 p-2.5 bg-slate-100 dark:bg-slate-800/80 backdrop-blur-sm hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full transition-all z-10"
             >
               <X className="w-5 h-5" />
             </button>
           ) || (
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-20">
+            <div className="p-8 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl sticky top-0 z-20">
               <button
                 onClick={() => navigate(-1)}
-                className="group flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase border border-slate-200 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm"
+                className="group flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-md text-slate-600 dark:text-slate-300 rounded-xl text-xs font-black uppercase border border-slate-200 dark:border-slate-700/50 hover:bg-slate-900 dark:hover:bg-slate-700 hover:text-white dark:hover:text-white transition-all shadow-sm"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Về trang trước
@@ -66,11 +66,11 @@ export default function RoomDetailContent({
 
           <div className="mb-8 mt-4">
             <div className="flex items-center gap-3 mb-2">
-              <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase border border-indigo-100">
+              <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-black uppercase border border-indigo-100 dark:border-indigo-500/30">
                 {room.code}
               </span>
               {room.deleted_at && (
-                <span className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase border border-rose-100 flex items-center gap-1.5">
+                <span className="px-3 py-1 bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-black uppercase border border-rose-100 dark:border-rose-500/30 flex items-center gap-1.5">
                   <Trash2 className="w-3 h-3" />
                   Đã xóa
                 </span>
@@ -78,14 +78,14 @@ export default function RoomDetailContent({
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-black text-slate-900 mb-1">{room.name}</h2>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-1">{room.name}</h2>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                   {room.type} • {room.floor_name || (room.floor ? `Tầng ${room.floor.floor_number ?? room.floor.name}` : 'Không có tầng')}
                 </p>
               </div>
               <button
                 onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}
-                className="group flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                className="group flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl text-xs font-black uppercase border border-indigo-100 dark:border-indigo-500/30 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500/50 transition-all shadow-sm"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
                 Toàn trang
@@ -93,10 +93,10 @@ export default function RoomDetailContent({
             </div>
 
             <div className="mt-4 flex items-center gap-3">
-              <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border inline-block ${
-                room.status === 'occupied' ? 'bg-blue-100 text-blue-700 border-blue-200' :
-                room.status === 'available' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                'bg-slate-100 text-slate-600 border-slate-200'
+              <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest border inline-block ${
+                room.status === 'occupied' ? 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30' :
+                room.status === 'available' ? 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30' :
+                'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
               }`}>
                 {room.status === 'occupied' ? 'Đã thuê' :
                 room.status === 'available' ? 'Sẵn có' :
@@ -104,7 +104,7 @@ export default function RoomDetailContent({
                 room.status === 'reserved' ? 'Đã đặt' :
                 room.status}
               </span>
-              <span className="text-lg font-black text-rose-600">
+              <span className="text-lg font-black text-rose-600 dark:text-rose-500">
                 {formattedPrice}
               </span>
             </div>
@@ -113,7 +113,7 @@ export default function RoomDetailContent({
       )}
 
       {/* Tabs Navigation */}
-      <div className="flex gap-1 p-1 bg-slate-50 rounded-2xl border border-slate-100 mb-8 overflow-x-auto no-scrollbar">
+      <div className="flex gap-1 p-1 bg-slate-50 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-100 dark:border-slate-800 mb-8 overflow-x-auto no-scrollbar">
         {[
           { id: 'info', label: 'Tổng quan', icon: Info },
           { id: 'lease', label: 'Hợp đồng', icon: FilePenLine },
@@ -128,10 +128,10 @@ export default function RoomDetailContent({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-black uppercase transition-all min-w-[100px] ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase transition-all min-w-[100px] ${
               activeTab === tab.id
-                ? 'bg-white text-slate-900 shadow-sm border border-slate-200'
-                : 'text-slate-400 hover:text-slate-600'
+                ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700/50 text-slate-900 dark:text-white'
+                : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300'
             }`}
           >
             <tab.icon className="w-4 h-4" />
@@ -152,34 +152,34 @@ export default function RoomDetailContent({
               className="space-y-6"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-3">Diện tích & Sức chứa</p>
+                  <div className="p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-4xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-3">Diện tích & Sức chứa</p>
                       <div className="flex items-center justify-between">
-                          <span className="text-xl font-black text-slate-900">{room.area} <span className="text-sm font-bold text-slate-400 lowercase">m²</span></span>
-                          <span className="text-xl font-black text-slate-900">{room.capacity} <span className="text-sm font-bold text-slate-400 lowercase">chỗ</span></span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white">{room.area} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">m²</span></span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white">{room.capacity} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">chỗ</span></span>
                       </div>
                   </div>
-                  <div className="p-5 bg-slate-50 rounded-[2rem] border border-slate-100">
-                      <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-3">Tòa nhà</p>
-                      <p className="text-lg font-black text-slate-900 truncate">{room.property?.name || 'N/A'}</p>
+                  <div className="p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-4xl border border-slate-100 dark:border-slate-700/60">
+                      <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-3">Tòa nhà</p>
+                      <p className="text-lg font-black text-slate-900 dark:text-white truncate">{room.property?.name || 'N/A'}</p>
                   </div>
               </div>
 
               {room.description && (
-                <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100">
-                    <h4 className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-3">Thông tin chi tiết</h4>
-                    <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed font-medium">{room.description}</p>
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-4xl border border-slate-100 dark:border-slate-700/60">
+                    <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-3">Thông tin chi tiết</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed font-medium">{room.description}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
+                <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-3xl border border-slate-100 dark:border-slate-700/60">
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-sm">
                     <Users className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Khách thuê hiện tại</p>
-                    <p className="text-base font-black text-slate-900">
+                    <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Khách thuê hiện tại</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white">
                       {room.status === 'occupied' 
                         ? (room.contracts?.[0]?.members?.[0]?.full_name || 'Đang ở') 
                         : 'Trống'}
@@ -187,13 +187,13 @@ export default function RoomDetailContent({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 shadow-sm">
+                <div className="flex items-center gap-4 p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-3xl border border-slate-100 dark:border-slate-700/60">
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-500 shadow-sm">
                     <Calendar className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Ngày tạo</p>
-                    <p className="text-base font-black text-slate-900">
+                    <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Ngày tạo</p>
+                    <p className="text-base font-black text-slate-900 dark:text-white">
                       {formattedDate}
                     </p>
                   </div>
@@ -201,11 +201,11 @@ export default function RoomDetailContent({
               </div>
 
               {/* Actions */}
-              <div className="pt-8 grid grid-cols-2 gap-4 border-t border-slate-100">
+              <div className="pt-8 grid grid-cols-2 gap-4 border-t border-slate-100 dark:border-slate-800">
                   {room.deleted_at ? (
                       <button 
                           onClick={() => restoreRoom.mutate(room.id)}
-                          className="col-span-2 px-8 py-4 bg-emerald-600 text-white rounded-[2rem] font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-100"
+                          className="col-span-2 px-8 py-4 bg-emerald-600 text-white rounded-4xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-100 dark:shadow-none"
                       >
                           <RefreshCw className={`w-5 h-5 ${restoreRoom.isPending ? 'animate-spin' : ''}`} />
                           Khôi phục phòng
@@ -217,7 +217,7 @@ export default function RoomDetailContent({
                                   if (onOpenManagement) onOpenManagement('edit');
                                   else navigate(`/properties/${propertyId}/floors/${room.floor_id}/rooms/${room.id}/edit`);
                               }}
-                              className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                              className="px-8 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-4xl font-bold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-100 dark:shadow-none flex items-center justify-center gap-2"
                           >
                               <FilePenLine className="w-5 h-5" />
                               Chỉnh sửa thông tin
@@ -232,7 +232,7 @@ export default function RoomDetailContent({
                                       deleteRoom.mutate(room.id, { onSuccess: () => onClose?.() });
                                   }
                               }}
-                              className="px-8 py-4 bg-white text-rose-500 border border-rose-200 rounded-[2rem] font-bold hover:bg-rose-50 transition-all flex items-center justify-center gap-2"
+                              className="px-8 py-4 bg-white dark:bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 outline-none rounded-4xl font-bold hover:bg-rose-50 dark:hover:bg-rose-500/20 transition-all flex items-center justify-center gap-2"
                           >
                               <Trash2 className="w-5 h-5" />
                               Xóa phòng

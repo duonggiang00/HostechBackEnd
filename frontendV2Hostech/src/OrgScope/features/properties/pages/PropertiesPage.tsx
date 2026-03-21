@@ -72,7 +72,7 @@ export default function PropertiesPage() {
               <stat.icon className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{stat.label}</p>
+              <p className="text-xs font-black uppercase text-slate-400 tracking-widest">{stat.label}</p>
               <h3 className="text-lg font-bold text-slate-900 leading-tight">{stat.value}</h3>
             </div>
           </motion.div>

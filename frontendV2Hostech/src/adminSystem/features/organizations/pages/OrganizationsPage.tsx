@@ -39,7 +39,7 @@ export default function OrganizationsPage() {
       </div>
 
       {!organizations?.length ? (
-        <div className="p-20 text-center bg-white border border-slate-200 rounded-[3rem] shadow-xl shadow-slate-200/50">
+        <div className="p-20 text-center bg-white border border-slate-200 rounded-6xl shadow-xl shadow-slate-200/50">
            <Info className="w-16 h-16 text-slate-200 mx-auto mb-4" />
            <h3 className="text-xl font-bold text-slate-900">No Organizations Found</h3>
            <p className="text-slate-500 mt-2">Get started by creating your first organization.</p>

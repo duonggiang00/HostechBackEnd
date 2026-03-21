@@ -34,7 +34,7 @@ export function PropertyBankAccounts({ property }: PropertyBankAccountsProps) {
           {accounts.map((account, idx) => (
             <div 
               key={idx} 
-              className="relative group p-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 text-white shadow-xl overflow-hidden"
+              className="relative group p-6 rounded-2xl bg-linear-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 text-white shadow-xl overflow-hidden"
             >
               {/* Card texture/pattern */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
@@ -42,14 +42,14 @@ export function PropertyBankAccounts({ property }: PropertyBankAccountsProps) {
               <div className="relative z-10 space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Ngân hàng</p>
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50 mb-1">Ngân hàng</p>
                     <p className="text-sm font-black tracking-tight">{account.bank_name}</p>
                   </div>
                   <CreditCard className="w-6 h-6 text-white/20" />
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Số tài khoản</p>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50 mb-1">Số tài khoản</p>
                   <div className="flex items-center gap-2">
                     <p className="text-xl font-mono font-bold tracking-widest">{account.account_number}</p>
                     <button 
@@ -62,7 +62,7 @@ export function PropertyBankAccounts({ property }: PropertyBankAccountsProps) {
                 </div>
 
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Chủ tài khoản</p>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50 mb-1">Chủ tài khoản</p>
                   <p className="text-sm font-bold uppercase tracking-wide">{account.account_holder}</p>
                 </div>
               </div>

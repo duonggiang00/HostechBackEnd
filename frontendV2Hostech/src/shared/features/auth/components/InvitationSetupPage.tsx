@@ -125,7 +125,7 @@ export default function InvitationSetupPage() {
       
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl shadow-2xl relative z-10 backdrop-blur-sm overflow-hidden">
         <div className="text-center pb-6 border-b border-slate-800 bg-slate-900/50 pt-6 px-6">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-tr from-indigo-500 to-sky-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
+          <div className="mx-auto w-16 h-16 bg-linear-to-tr from-indigo-500 to-sky-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/30">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-2xl font-bold text-white">Complete Your Setup</h2>

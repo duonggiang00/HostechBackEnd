@@ -36,7 +36,7 @@ export default function FinanceDashboard() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Finance Engine</h1>
-            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-bold uppercase tracking-widest">
               Admin Portal <ChevronRight className="w-3 h-3" /> {activeTab}
             </div>
           </div>
@@ -91,7 +91,7 @@ export default function FinanceDashboard() {
       {/* Global Invoice Preview Modal */}
       <AnimatePresence>
         {showInvoicePreview && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-8">
+          <div className="fixed inset-0 z-100 flex items-center justify-center p-8">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

@@ -14,8 +14,8 @@ export const OccupancyGauge = ({ percentage }: OccupancyGaugeProps) => {
       animate={{ opacity: 1, x: 0 }}
       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm flex flex-col items-center justify-center text-center h-[400px]"
     >
-      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Occupancy Rate</h3>
-      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8">Overall building filling status</p>
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Tỉ lệ lấp đầy</h3>
+      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8">Trạng thái lấp đầy tòa nhà hiện tại</p>
       
       <div className="relative w-48 h-48">
         <svg className="w-full h-full transform -rotate-90">

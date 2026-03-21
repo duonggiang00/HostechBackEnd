@@ -28,11 +28,11 @@ enum ContractStatus: string
     }
 
     /**
-     * Trạng thái cho phép huỷ hợp đồng.
+     * Trạng thái cho phép sửa hợp đồng.
      */
-    public static function allowCancel(): array
+    public static function allowEdit(): array
     {
-        return [self::DRAFT, self::PENDING_SIGNATURE, self::PENDING_PAYMENT];
+        return [self::DRAFT, self::PENDING_SIGNATURE, self::PENDING_PAYMENT, self::CANCELLED];
     }
 
     /**

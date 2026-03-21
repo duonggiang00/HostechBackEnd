@@ -11,25 +11,25 @@ export default function InvoiceProfessionalView() {
             </div>
             <h1 className="text-2xl font-black uppercase italic tracking-tighter">Hostech Billing</h1>
           </div>
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Property Operations Headquarters</p>
+          <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Property Operations Headquarters</p>
           <p className="text-xs text-slate-500 font-bold mt-1">123 Management Way, Silicon Suite</p>
         </div>
         <div className="text-right">
           <h2 className="text-4xl font-black italic uppercase tracking-tighter mb-2">Invoice</h2>
           <p className="text-sm font-black text-slate-900">#INV-94103</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Date: March 18, 2026</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Date: March 18, 2026</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-12 mb-16">
         <div>
-          <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Billed From</h3>
+          <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Billed From</h3>
           <p className="text-sm font-black uppercase italic">Urban Living Apartments</p>
           <p className="text-xs text-slate-500 font-bold">Block A, Suite 402</p>
           <p className="text-xs text-slate-500 font-bold">+1 (555) 000-0000</p>
         </div>
         <div>
-          <h3 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4">Billed To</h3>
+          <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Billed To</h3>
           <p className="text-sm font-black uppercase italic">Abebe Kelemu</p>
           <p className="text-xs text-slate-500 font-bold text-slate-400">Tenant ID: TEN-4402</p>
           <p className="text-xs text-slate-500 font-bold">Room 10.12, Floor 10</p>
@@ -40,10 +40,10 @@ export default function InvoiceProfessionalView() {
         <table className="w-full text-left">
           <thead>
             <tr className="border-b-2 border-slate-900">
-              <th className="py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Description</th>
-              <th className="py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Qty</th>
-              <th className="py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Price</th>
-              <th className="py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Total</th>
+              <th className="py-4 text-xs font-black uppercase tracking-widest text-slate-400">Description</th>
+              <th className="py-4 text-xs font-black uppercase tracking-widest text-slate-400 text-center">Qty</th>
+              <th className="py-4 text-xs font-black uppercase tracking-widest text-slate-400 text-right">Price</th>
+              <th className="py-4 text-xs font-black uppercase tracking-widest text-slate-400 text-right">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -83,12 +83,12 @@ export default function InvoiceProfessionalView() {
         <div className="text-right">
           <div className="space-y-1 mb-4">
             <div className="flex justify-between gap-12 opacity-40">
-              <span className="text-[10px] font-black uppercase tracking-widest">Subtotal</span>
-              <span className="text-[10px] font-black tracking-widest">$1,260.00</span>
+              <span className="text-xs font-black uppercase tracking-widest">Subtotal</span>
+              <span className="text-xs font-black tracking-widest">$1,260.00</span>
             </div>
             <div className="flex justify-between gap-12 opacity-40">
-              <span className="text-[10px] font-black uppercase tracking-widest">Tax (0%)</span>
-              <span className="text-[10px] font-black tracking-widest">$0.00</span>
+              <span className="text-xs font-black uppercase tracking-widest">Tax (0%)</span>
+              <span className="text-xs font-black tracking-widest">$0.00</span>
             </div>
           </div>
           <div className="flex items-center gap-8">
@@ -103,7 +103,7 @@ export default function InvoiceProfessionalView() {
            <Scissors className="w-4 h-4 text-slate-200" />
            <div className="h-px flex-1 bg-slate-100 w-32 hidden md:block" />
          </div>
-         <p className="text-[10px] font-bold text-slate-300 italic tracking-[0.3em] uppercase">This is a system generated document</p>
+         <p className="text-xs font-bold text-slate-300 italic tracking-[0.3em] uppercase">This is a system generated document</p>
       </div>
     </div>
   );

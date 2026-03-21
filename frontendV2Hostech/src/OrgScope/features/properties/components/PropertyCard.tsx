@@ -36,7 +36,7 @@ export default function PropertyCard({
           <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
             <Building2 className="w-6 h-6" />
           </div>
-          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${statusStyles[status]}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${statusStyles[status]}`}>
             {status}
           </span>
         </div>
@@ -56,7 +56,7 @@ export default function PropertyCard({
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900">{roomCount}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-medium">Rooms</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Rooms</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -65,7 +65,7 @@ export default function PropertyCard({
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900">{staffCount}</p>
-              <p className="text-[10px] text-slate-500 uppercase font-medium">Staff</p>
+              <p className="text-xs text-slate-500 uppercase font-medium">Staff</p>
             </div>
           </div>
         </div>

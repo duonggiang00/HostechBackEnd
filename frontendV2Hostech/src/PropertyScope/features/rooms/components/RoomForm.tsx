@@ -57,7 +57,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     type: initialData?.type ?? 'standard',
     capacity: initialData?.capacity ?? 2,
     area: initialData?.area ?? 25,
-    base_price: initialData?.base_price ?? 5_000_000,
+    base_price: initialData?.base_price ?? 0,
     description: initialData?.description ?? '',
   });
 
@@ -108,6 +108,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
 
     const basePayload = {
       ...formData,
+      base_price: formData.base_price > 0 ? formData.base_price : undefined,
       property_id: propertyId,
       floor_id: floorId || undefined,
     };
@@ -175,19 +176,19 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
       <div className="md:col-span-2 space-y-6">
         
         {/* Section: Basic Information */}
-        <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
+        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
             <Home className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-slate-800">Thông tin cơ bản</h2>
+            <h2 className="font-bold text-slate-800 dark:text-white">Thông tin cơ bản</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Name */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Tên phòng</label>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Tên phòng</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Home className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Home className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   value={formData.name}
@@ -195,8 +196,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                     setFormData({ ...formData, name: e.target.value });
                     if (errors.name) setErrors(p => ({ ...p, name: '' }));
                   }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 border rounded-2xl outline-none transition-all font-medium ${
-                    errors.name ? 'border-rose-300 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
+                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                    errors.name ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                   placeholder="e.g. Phòng 101"
                 />
@@ -206,10 +207,10 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
 
             {/* Code */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Mã phòng</label>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Mã phòng</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Tag className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Tag className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   value={formData.code}
@@ -217,8 +218,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                     setFormData({ ...formData, code: e.target.value });
                     if (errors.code) setErrors(p => ({ ...p, code: '' }));
                   }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 border rounded-2xl outline-none transition-all font-medium ${
-                    errors.code ? 'border-rose-300 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
+                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                    errors.code ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                   placeholder="P101"
                 />
@@ -230,10 +231,10 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Capacity */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Sức chứa tối đa</label>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Sức chứa tối đa</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Users className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Users className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   type="text"
@@ -243,8 +244,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                     setFormData({ ...formData, capacity: val === '' ? 0 : Number(val) });
                     if (errors.capacity) setErrors(p => ({ ...p, capacity: '' }));
                   }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 border rounded-2xl outline-none transition-all font-medium ${
-                    errors.capacity ? 'border-rose-300' : 'border-slate-100 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
+                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                    errors.capacity ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                 />
               </div>
@@ -253,10 +254,10 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
 
             {/* Area */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Diện tích (m²)</label>
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Diện tích (m²)</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Maximize2 className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                  <Maximize2 className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
                   type="text"
@@ -266,8 +267,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                     setFormData({ ...formData, area: val === '' ? 0 : Number(val) });
                     if (errors.area) setErrors(p => ({ ...p, area: '' }));
                   }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 border rounded-2xl outline-none transition-all font-medium ${
-                    errors.area ? 'border-rose-300' : 'border-slate-100 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20'
+                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                    errors.area ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                 />
               </div>
@@ -277,78 +278,93 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
         </section>
 
         {/* Section: Pricing & Services */}
-        <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
+        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
             <DollarSign className="w-5 h-5 text-emerald-500" />
-            <h2 className="font-bold text-slate-800">Giá thuê & Dịch vụ</h2>
+            <h2 className="font-bold text-slate-800 dark:text-white">Giá thuê & Dịch vụ</h2>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700 ml-1">Giá thuê hàng tháng (₫)</label>
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Giá thuê hàng tháng (₫)</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <DollarSign className="w-4 h-4 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                <DollarSign className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-emerald-500 transition-colors" />
+              </div>
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                  {formData.base_price === 0 ? 'Tự động tính' : ''}
+                </span>
               </div>
               <input
                 type="text"
-                value={formatNumber(formData.base_price)}
+                value={formData.base_price === 0 ? '' : formatNumber(formData.base_price)}
                 onChange={(e) => {
                   const val = parseNumber(e.target.value);
                   setFormData({ ...formData, base_price: val === '' ? 0 : Number(val) });
                 }}
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium text-lg"
+                placeholder={property?.default_rent_price_per_m2 ? `Mặc định: ${formatNumber(property.default_rent_price_per_m2)}đ/m²` : "Để trống để tự động tính"}
+                className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-emerald-950/10 border rounded-2xl outline-none transition-all font-medium text-lg dark:text-emerald-400 ${
+                   formData.base_price === 0 ? 'border-amber-200 dark:border-amber-500/20' : 'border-slate-100 dark:border-emerald-500/20 focus:border-emerald-500'
+                }`}
               />
             </div>
+            {formData.base_price === 0 && property?.default_rent_price_per_m2 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 ml-1 mt-1 font-medium">
+                Sẽ được tự động tính: {formatNumber(formData.area * property.default_rent_price_per_m2)}đ (theo {formatNumber(property.default_rent_price_per_m2)}đ/m²)
+              </p>
+            )}
           </div>
 
           <div className="pt-4 space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
               <Zap className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-slate-900">Dịch vụ riêng cho phòng</h4>
-                <p className="text-xs text-slate-500">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">Dịch vụ riêng cho phòng</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Chọn các dịch vụ có sẵn trong phòng này. Bạn có thể thay đổi giá mặc định của tòa nhà.
                 </p>
               </div>
             </div>
-            <ServicePicker
-              selectedServiceIds={selectedServices}
-              onChange={setSelectedServices}
-              servicePrices={servicePrices}
-              onPriceChange={(id, price) => setServicePrices(prev => ({ ...prev, [id]: price }))}
-            />
+            <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-2">
+              <ServicePicker
+                selectedServiceIds={selectedServices}
+                onChange={setSelectedServices}
+                servicePrices={servicePrices}
+                onPriceChange={(id, price) => setServicePrices(prev => ({ ...prev, [id]: price }))}
+              />
+            </div>
           </div>
         </section>
 
         {/* Section: Media */}
-        <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
+        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
             <ImageIcon className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-slate-800">Hình ảnh phòng</h2>
+            <h2 className="font-bold text-slate-800 dark:text-white">Hình ảnh phòng</h2>
           </div>
 
           <MediaDropzone onDrop={(files) => setMediaFiles(prev => [...prev, ...files])} maxFiles={10} />
 
           {mediaFiles.length > 0 && (
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-slate-700 ml-1">
+              <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
                 Đang chờ tải lên ({mediaFiles.length})
               </h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {mediaFiles.map((file, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 border border-slate-100 rounded-xl bg-slate-50">
-                    <div className="w-12 h-12 rounded-lg bg-slate-200 overflow-hidden shrink-0">
+                  <div key={i} className="flex items-center gap-3 p-2 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/50">
+                    <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0">
                       {file.type.startsWith('image/') ? (
                         <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400">
+                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
                           <FileText className="w-4 h-4" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-700 truncate">{file.name}</p>
-                      <p className="text-[10px] text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{file.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                     <button
                       type="button"
@@ -370,14 +386,14 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
       <div className="space-y-6">
         
         {/* Settings & Type */}
-        <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
+        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
             <Settings className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-slate-800">Cài đặt</h2>
+            <h2 className="font-bold text-slate-800 dark:text-white">Cài đặt</h2>
           </div>
 
           <div className="space-y-3">
-            <label className="text-sm font-bold text-slate-700 ml-1">Loại phòng</label>
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Loại phòng</label>
             <div className="grid grid-cols-2 gap-3">
               {ROOM_TYPES.map(type => (
                 <button
@@ -386,8 +402,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                   onClick={() => setFormData(prev => ({ ...prev, type }))}
                   className={`px-4 py-3 text-sm font-bold rounded-xl transition-all border capitalize ${
                     formData.type === type
-                      ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 shadow-sm'
+                      ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm'
                   }`}
                 >
                   {type}
@@ -398,17 +414,17 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
         </section>
 
         {/* Rules & Description */}
-        <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
+        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
             <FileSignature className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-slate-800">Mô tả & Quy định</h2>
+            <h2 className="font-bold text-slate-800 dark:text-white">Mô tả & Quy định</h2>
           </div>
 
           <textarea
             rows={5}
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm font-medium resize-none leading-relaxed"
+            className="w-full p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm font-medium resize-none leading-relaxed dark:text-white"
             placeholder="Chi tiết phòng, hướng nhìn, nội thất và các quy định riêng cho phòng này..."
           />
         </section>
@@ -418,7 +434,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
           <button
             type="submit"
             disabled={isMutating}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
           >
             {isMutating ? (
               <Loader2 className="w-6 h-6 animate-spin" />
@@ -435,7 +451,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
               type="button"
               onClick={handlePublish}
               disabled={isMutating}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black text-lg hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white rounded-2xl font-black text-lg hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-200 dark:shadow-emerald-900/20 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {publishRoom.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : <Zap className="w-6 h-6" />}
               Công khai phòng
@@ -445,7 +461,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
           <button
             type="button"
             onClick={onCancel}
-            className="w-full py-4 text-slate-500 font-bold hover:text-slate-700 transition-colors"
+            className="w-full py-4 text-slate-500 font-bold hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
           >
             Hủy
           </button>

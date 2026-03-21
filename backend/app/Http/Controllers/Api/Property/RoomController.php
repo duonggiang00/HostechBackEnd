@@ -11,6 +11,7 @@ use App\Http\Requests\Property\RoomStoreRequest;
 use App\Http\Requests\Property\RoomUpdateRequest;
 use App\Http\Requests\Property\RoomBatchDeleteRequest;
 use App\Http\Requests\Property\RoomBatchFloorPlanRequest;
+use App\Http\Requests\Property\RoomCreateFromTemplateRequest;
 use App\Http\Requests\Property\RoomQuickCreateBatchRequest;
 use App\Http\Resources\Property\RoomResource;
 use App\Models\Property\Room;
@@ -246,6 +247,22 @@ class RoomController extends Controller
     }
 
     /**
+     * Tạo phòng từ Template
+     */
+    public function createFromTemplate(RoomCreateFromTemplateRequest $request)
+    {
+        $this->authorize('create', Room::class);
+
+        $room = $this->service->createFromTemplate(
+            $request->validated('template_id'),
+            $request->validated(),
+            $request->user()
+        );
+
+        return new RoomResource($room);
+    }
+
+    /**
      * Danh sách phòng Draft
      *
      * Lấy danh sách các phòng đang ở trạng thái `draft`.
@@ -331,5 +348,21 @@ class RoomController extends Controller
             'message' => 'Batch floor plan updated successfully.',
             'data'    => $nodes,
         ]);
+    }
+
+    /**
+     * Trạng thái thuê của phòng
+     *
+     * Kiểm tra trạng thái thuê hiện tại của phòng (Trống, Đang ở, Sắp hết hạn).
+     */
+    public function availability(string $id)
+    {
+        $room = $this->service->find($id) ?? abort(404, 'Room not found');
+
+        $this->authorize('view', $room);
+
+        $status = $this->service->getAvailabilityStatus($id);
+
+        return response()->json($status);
     }
 }

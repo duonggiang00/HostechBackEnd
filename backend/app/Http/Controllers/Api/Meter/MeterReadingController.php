@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Meter;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Meter\MeterReadingBulkStoreRequest;
 use App\Http\Requests\Meter\MeterReadingStoreRequest;
 use App\Http\Requests\Meter\MeterReadingUpdateRequest;
 use App\Http\Resources\Meter\MeterReadingResource;
@@ -15,6 +16,18 @@ class MeterReadingController extends Controller
     public function __construct(
         protected MeterReadingService $service
     ) {}
+
+    /**
+     * Chốt số hàng loạt cho nhiều đồng hồ.
+     */
+    public function bulkStore(MeterReadingBulkStoreRequest $request)
+    {
+        $this->authorize('create', MeterReading::class);
+
+        $readings = $this->service->bulkStore($request->validated()['readings']);
+
+        return MeterReadingResource::collection($readings);
+    }
 
     /**
      * Lấy danh sách Lịch sử chốt chỉ số của một đồng hồ.

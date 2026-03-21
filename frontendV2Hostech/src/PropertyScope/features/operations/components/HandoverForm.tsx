@@ -48,7 +48,7 @@ export default function HandoverForm({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -61,7 +61,7 @@ export default function HandoverForm({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl bg-white rounded-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -71,7 +71,7 @@ export default function HandoverForm({
             </div>
             <div>
               <h2 className="text-xl font-black text-slate-900 tracking-tight">Record Room Inspection</h2>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Step {step} of 3 • {formData.type.replace('_', ' ')}</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Step {step} of 3 • {formData.type.replace('_', ' ')}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-200/50 rounded-xl transition-colors">
@@ -105,11 +105,11 @@ export default function HandoverForm({
                     <div className="flex p-1 bg-slate-100 rounded-2xl">
                       <button 
                         onClick={() => setFormData({ ...formData, type: 'check_in' })}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.type === 'check_in' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'check_in' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                       >Check-in</button>
                       <button 
                          onClick={() => setFormData({ ...formData, type: 'check_out' })}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.type === 'check_out' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'check_out' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                       >Check-out</button>
                     </div>
                   </div>
@@ -146,7 +146,7 @@ export default function HandoverForm({
                       ...formData, 
                       items: [...formData.items, { name: '', condition: 'good', notes: '' }] 
                     })}
-                    className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 hover:underline"
+                    className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 hover:underline"
                   >
                     <Plus className="w-3.5 h-3.5" /> Add Asset
                   </button>
@@ -175,7 +175,7 @@ export default function HandoverForm({
                           newItems[idx].condition = e.target.value as any;
                           setFormData({ ...formData, items: newItems });
                         }}
-                        className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600 outline-none"
+                        className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-widest text-slate-600 outline-none"
                       >
                         <option value="good">Good</option>
                         <option value="fair">Fair</option>
@@ -212,14 +212,14 @@ export default function HandoverForm({
                   </h3>
                   <div className="grid grid-cols-1 gap-4">
                     {formData.snapshots.map((snap, idx) => (
-                      <div key={idx} className="p-6 bg-slate-900 rounded-[2rem] text-white flex items-center justify-between border border-white/10 relative overflow-hidden group">
+                      <div key={idx} className="p-6 bg-slate-900 rounded-4xl text-white flex items-center justify-between border border-white/10 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-white/10" />
                         <div className="flex items-center gap-4 relative">
                           <div className={`p-3 rounded-2xl ${snap.meter_type === 'Electricity' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>
                             {snap.meter_type === 'Electricity' ? <Zap className="w-6 h-6" /> : <Droplets className="w-6 h-6" />}
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{snap.meter_type}</p>
+                            <p className="text-xs font-black text-white/40 uppercase tracking-widest">{snap.meter_type}</p>
                             <div className="flex items-baseline gap-2">
                               <input 
                                 type="number"
@@ -270,19 +270,19 @@ export default function HandoverForm({
             {step > 1 && (
               <button 
                 onClick={() => setStep(step - 1)}
-                className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all"
+                className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
               >Back</button>
             )}
             {step < 3 ? (
               <button 
                 onClick={() => setStep(step + 1)}
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-2"
+                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-2"
               >Next Step <ChevronRight className="w-3 h-3" /></button>
             ) : (
               <button 
                 onClick={handleSave}
                 disabled={createHandover.status === 'pending'}
-                className="px-10 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                className="px-10 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2 disabled:opacity-50"
               >
                 {createHandover.status === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                 Save Inspection

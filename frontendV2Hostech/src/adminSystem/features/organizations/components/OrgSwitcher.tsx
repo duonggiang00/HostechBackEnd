@@ -36,7 +36,7 @@ export default function OrgSwitcher() {
           <Globe className="w-4 h-4" />
         </div>
         <div className="text-left hidden sm:block">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Organization</p>
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Organization</p>
           <p className="text-xs font-bold text-slate-900 truncate max-w-[120px]">
             {selectedOrg?.name || 'Global View'}
           </p>
@@ -55,7 +55,7 @@ export default function OrgSwitcher() {
               className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl shadow-emerald-200/50 border border-slate-100 p-2 z-50"
             >
               <div className="px-3 py-2 border-b border-slate-50 mb-1">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select Organization</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Select Organization</p>
               </div>
               <div className="max-h-60 overflow-y-auto space-y-1 cust-scrollbar">
                 <button
@@ -87,7 +87,7 @@ export default function OrgSwitcher() {
                   >
                     <div className="text-left">
                       <p className="text-xs font-bold">{org.name}</p>
-                      <p className="text-[10px] opacity-60 font-medium">{org.code}</p>
+                      <p className="text-xs opacity-60 font-medium">{org.code}</p>
                     </div>
                     {org.id === organizationId && <Check className="w-4 h-4" />}
                   </button>

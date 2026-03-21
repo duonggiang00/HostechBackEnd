@@ -13,9 +13,9 @@ export default function TenantQRVerification() {
   return (
     <div className="space-y-6">
       {/* QR Code Section */}
-      <div className="bg-white border border-slate-100 rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center text-center">
+      <div className="bg-white border border-slate-100 rounded-5xl p-8 shadow-sm flex flex-col items-center text-center">
         <div className="relative mb-6">
-          <div className="w-56 h-56 bg-slate-900 rounded-[2rem] p-6 flex items-center justify-center relative overflow-hidden group">
+          <div className="w-56 h-56 bg-slate-900 rounded-4xl p-6 flex items-center justify-center relative overflow-hidden group">
             {/* Mock QR Code Pattern */}
             <div className="w-full h-full border-4 border-white/20 rounded-xl relative">
               <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg" />
@@ -42,7 +42,7 @@ export default function TenantQRVerification() {
           </div>
           
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-md border border-slate-100 flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400">Secure Token</span>
+            <span className="text-xs font-black uppercase tracking-tighter text-slate-400">Secure Token</span>
             <span className="text-xs font-bold text-slate-900">ROOM-101-X92</span>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function TenantQRVerification() {
       </div>
 
       {/* PII Document Manager Partial */}
-      <div className="bg-slate-900 rounded-[2.5rem] p-6 text-white overflow-hidden relative">
+      <div className="bg-slate-900 rounded-5xl p-6 text-white overflow-hidden relative">
         <div className="absolute top-0 right-0 p-8 opacity-10">
           <CreditCard className="w-32 h-32" />
         </div>
@@ -79,18 +79,18 @@ export default function TenantQRVerification() {
             </div>
             <div>
               <h4 className="font-bold text-sm">Residency Evidence</h4>
-              <p className="text-[10px] text-white/40 font-black uppercase tracking-widest">Pending Verification</p>
+              <p className="text-xs text-white/40 font-black uppercase tracking-widest">Pending Verification</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
               <span className="text-xs font-medium text-white/60">ID / Passport Scan</span>
-              <span className="text-[10px] font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
+              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
             </div>
             <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
               <span className="text-xs font-medium text-white/60">Proof of Employment</span>
-              <span className="text-[10px] font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
+              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
             </div>
           </div>
 

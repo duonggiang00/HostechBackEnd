@@ -1,50 +1,107 @@
-import { Building2, MapPin, Hash, CheckCircle2 } from 'lucide-react';
-import type { Property } from '../types';
+import { Building2, MapPin, Hash, FileEdit, Layers, Activity } from 'lucide-react';
+import type { Property } from '@/OrgScope/features/properties/types';
+import { motion } from 'framer-motion';
 
 interface PropertyHeaderProps {
   property: Property;
 }
 
 export function PropertyHeader({ property }: PropertyHeaderProps) {
+  const occupancyRate = property.stats?.occupancy_rate ?? 0;
+  
   return (
-    <div className="relative bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mb-8">
+    <div className="relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-[3rem] p-8 border border-white dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden mb-8 group">
       {/* Decorative gradient background */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2 opacity-60 group-hover:bg-indigo-500/20 transition-all duration-700" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-500/10 dark:bg-violet-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-40" />
 
-      <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="flex items-start gap-5">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center shadow-xl shadow-indigo-200/50 dark:shadow-none translate-y-[-4px]">
-            <Building2 className="w-10 h-10 text-white" />
-          </div>
+      <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-8">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: -2 }}
+            className="w-24 h-24 bg-linear-to-br from-indigo-500 to-violet-600 rounded-4xl flex items-center justify-center shadow-2xl shadow-indigo-200 dark:shadow-none shrink-0"
+          >
+            <Building2 className="w-12 h-12 text-white" />
+          </motion.div>
           
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                 {property.name}
               </h1>
-              <div className="px-3 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-1.5">
-                <CheckCircle2 className="w-3 h-3" />
+              <div className="px-4 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-emerald-500/20 flex items-center gap-2 backdrop-blur-sm">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Active
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                <Hash className="w-4 h-4 text-indigo-500" />
-                <span className="text-sm font-bold tracking-tight uppercase tracking-tighter">{property.code}</span>
+            <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
+              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 group/item">
+                <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover/item:bg-indigo-50 dark:group-hover/item:bg-indigo-500/10 transition-colors">
+                  <Hash className="w-4 h-4 text-indigo-500" />
+                </div>
+                <span className="text-sm font-black tracking-widest text-slate-600 dark:text-slate-300">{property.code}</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                <MapPin className="w-4 h-4 text-indigo-500" />
-                <span className="text-sm font-medium">{property.address}</span>
+              <div className="flex items-center gap-2.5 text-slate-500 dark:text-slate-400 group/item">
+                <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg group-hover/item:bg-indigo-50 dark:group-hover/item:bg-indigo-500/10 transition-colors">
+                  <MapPin className="w-4 h-4 text-indigo-500" />
+                </div>
+                <span className="text-sm font-bold">{property.address}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-slate-200 dark:shadow-none">
-            Edit Information
-          </button>
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+          {/* Occupancy Mini Stats */}
+          <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center gap-6 min-w-[240px]">
+            <div className="relative w-14 h-14 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90">
+                <circle 
+                  cx="28" cy="28" r="24" 
+                  fill="transparent" 
+                  stroke="currentColor" 
+                  strokeWidth="6" 
+                  className="text-slate-200 dark:text-slate-700" 
+                />
+                <motion.circle 
+                  cx="28" cy="28" r="24" 
+                  fill="transparent" 
+                  stroke="currentColor" 
+                  strokeWidth="6" 
+                  strokeDasharray={150.8}
+                  initial={{ strokeDashoffset: 150.8 }}
+                  animate={{ strokeDashoffset: 150.8 - (150.8 * occupancyRate) / 100 }}
+                  transition={{ duration: 1.5, ease: "easeOut" }}
+                  strokeLinecap="round"
+                  className="text-indigo-600 dark:text-indigo-400" 
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center flex-col">
+                <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 leading-none">{Math.round(occupancyRate)}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                <Activity className="w-3 h-3" />
+                Occupancy
+              </p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">
+                {property.stats?.occupied_rooms ?? 0} <span className="text-slate-400 font-bold">/ {property.stats?.total_rooms ?? property.rooms_count ?? 0} Units</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-sm hover:border-indigo-300 dark:hover:border-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm group/btn">
+              <FileEdit className="w-4 h-4 group-hover/btn:scale-120 transition-transform" />
+              Chỉnh sửa
+            </button>
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-200 dark:shadow-none group/action">
+              <Layers className="w-4 h-4 group-action:rotate-12 transition-transform" />
+              Sơ đồ tầng
+            </button>
+          </div>
         </div>
       </div>
     </div>

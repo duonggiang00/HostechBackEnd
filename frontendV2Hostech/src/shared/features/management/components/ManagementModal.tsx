@@ -50,7 +50,7 @@ export default function ManagementModal({ isOpen, onClose, roomName, title, chil
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 md:p-8">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -63,10 +63,10 @@ export default function ManagementModal({ isOpen, onClose, roomName, title, chil
             initial={{ opacity: 0, scale: 0.95, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 40 }}
-            className="bg-slate-50 rounded-[3rem] shadow-2xl w-full max-w-5xl h-fit max-h-[90vh] overflow-hidden relative border border-white/20 flex flex-col"
+            className="bg-slate-50 rounded-6xl shadow-2xl w-full max-w-5xl h-fit max-h-[90vh] overflow-hidden relative border border-white/20 flex flex-col"
           >
             {/* Modal Header */}
-            <div className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
                 {activeView !== 'selection' && (
                   <button 
@@ -121,7 +121,7 @@ export default function ManagementModal({ isOpen, onClose, roomName, title, chil
                             <button
                               key={view.id}
                               onClick={() => setActiveView(view.id)}
-                              className="group p-8 bg-white border border-slate-100 rounded-[2.5rem] text-left hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all active:scale-95 flex flex-col items-center text-center"
+                              className="group p-8 bg-white border border-slate-100 rounded-5xl text-left hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all active:scale-95 flex flex-col items-center text-center"
                             >
                               <div className={`w-20 h-20 ${view.color} rounded-3xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-500`}>
                                 <Icon className="w-10 h-10" />

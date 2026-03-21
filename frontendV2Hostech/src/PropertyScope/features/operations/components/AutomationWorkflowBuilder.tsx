@@ -37,7 +37,7 @@ export default function AutomationWorkflowBuilder() {
   const deleteRule = (id: string) => setRules(rules.filter(r => r.id !== id));
 
   return (
-    <div className="bg-[#0A0A0B] text-white rounded-[2.5rem] border border-white/10 overflow-hidden min-h-[700px] flex flex-col p-8 space-y-8 relative shadow-2xl">
+    <div className="bg-[#0A0A0B] text-white rounded-5xl border border-white/10 overflow-hidden min-h-[700px] flex flex-col p-8 space-y-8 relative shadow-2xl">
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-indigo-500/5 blur-[120px] pointer-events-none" />
       
       {/* Header Section */}
@@ -69,7 +69,7 @@ export default function AutomationWorkflowBuilder() {
           { label: 'Est. Hours Saved', value: '420h', color: 'text-amber-400' },
         ].map((stat, i) => (
           <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-6">
-            <p className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{stat.label}</p>
+            <p className="text-xs font-black uppercase text-slate-500 tracking-widest mb-1">{stat.label}</p>
             <p className={`text-2xl font-black italic ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
@@ -78,15 +78,15 @@ export default function AutomationWorkflowBuilder() {
       {/* Rules Palette */}
       <div className="flex-1 space-y-4 relative z-10 overflow-y-auto pr-2">
         <div className="flex items-center justify-between px-4 mb-2">
-          <span className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em]">Active Guardrails</span>
-          <span className="text-[10px] font-bold text-slate-700 uppercase">Sorted by Priority</span>
+          <span className="text-xs font-black uppercase text-slate-500 tracking-[0.3em]">Active Guardrails</span>
+          <span className="text-xs font-bold text-slate-700 uppercase">Sorted by Priority</span>
         </div>
 
         {rules.map((rule) => (
           <motion.div
             layout
             key={rule.id}
-            className={`group bg-white/5 border border-white/10 rounded-[2rem] p-6 hover:border-white/20 transition-all ${
+            className={`group bg-white/5 border border-white/10 rounded-4xl p-6 hover:border-white/20 transition-all ${
               rule.status === 'paused' ? 'opacity-60 grayscale' : ''
             }`}
           >
@@ -104,12 +104,12 @@ export default function AutomationWorkflowBuilder() {
                     {rule.name}
                   </h4>
                   <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-500 uppercase">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase">
                       <Clock className="w-3 h-3" />
                       Runs {rule.trigger}
                     </div>
                     <div className="w-1 h-1 rounded-full bg-slate-800" />
-                    <div className="flex items-center gap-1.5 text-[10px] font-black text-indigo-400 uppercase italic">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-indigo-400 uppercase italic">
                       <Settings2 className="w-3 h-3" />
                       EXECUTE: {rule.action}
                     </div>
@@ -121,9 +121,9 @@ export default function AutomationWorkflowBuilder() {
                 <div className="text-right">
                   <div className="flex justify-end gap-1 mb-1">
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                    <span className="text-[10px] font-black uppercase text-emerald-500">{rule.successRate}% OK</span>
+                    <span className="text-xs font-black uppercase text-emerald-500">{rule.successRate}% OK</span>
                   </div>
-                  <p className="text-[10px] font-bold text-slate-600 uppercase">Last: {rule.lastRun}</p>
+                  <p className="text-xs font-bold text-slate-600 uppercase">Last: {rule.lastRun}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -144,7 +144,7 @@ export default function AutomationWorkflowBuilder() {
       </div>
 
       {/* Visual Logic Builder Placeholder */}
-      <div className="p-8 bg-indigo-500/5 border border-indigo-500/10 rounded-[2.5rem] mt-auto">
+      <div className="p-8 bg-indigo-500/5 border border-indigo-500/10 rounded-5xl mt-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
@@ -152,7 +152,7 @@ export default function AutomationWorkflowBuilder() {
             </div>
             <span className="text-sm font-black uppercase italic tracking-wider">Scheduled Execution Timeline</span>
           </div>
-          <span className="text-[10px] font-black uppercase text-indigo-400/50 tracking-widest italic">Simulation Mode Active</span>
+          <span className="text-xs font-black uppercase text-indigo-400/50 tracking-widest italic">Simulation Mode Active</span>
         </div>
         
         <div className="flex gap-4">
@@ -166,7 +166,7 @@ export default function AutomationWorkflowBuilder() {
                 )}
                 <div className="absolute top-2 right-2 text-[8px] font-black text-slate-700">MAR {17 + day}</div>
               </div>
-              <p className="text-[10px] text-center font-black uppercase tracking-tighter text-slate-600">Day {day}</p>
+              <p className="text-xs text-center font-black uppercase tracking-tighter text-slate-600">Day {day}</p>
             </div>
           ))}
         </div>

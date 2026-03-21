@@ -18,7 +18,7 @@ export default function ContractWizard({ roomId, onSuccess, onCancel }: { roomId
           { title: 'Pricing Structure', desc: 'Security deposit, monthly rent and utilities', icon: Check, status: 'pending' },
           { title: 'Digital Signature', desc: 'Secure verification and agreement bond', icon: Check, status: 'pending' },
         ].map((step, i) => (
-          <div key={i} className={`p-8 rounded-[2rem] border-2 transition-all ${step.status === 'active' ? 'bg-white border-indigo-600 shadow-2xl shadow-indigo-100' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
+          <div key={i} className={`p-8 rounded-4xl border-2 transition-all ${step.status === 'active' ? 'bg-white border-indigo-600 shadow-2xl shadow-indigo-100' : 'bg-slate-50 border-slate-100 opacity-60'}`}>
             <div className="flex items-center gap-6">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${step.status === 'active' ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                 <step.icon className="w-6 h-6" />
@@ -33,8 +33,8 @@ export default function ContractWizard({ roomId, onSuccess, onCancel }: { roomId
       </div>
 
       <div className="flex items-center justify-center gap-4 pt-8">
-        <button onClick={onCancel} className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
-        <button onClick={onSuccess} className="px-12 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-3">
+        <button onClick={onCancel} className="px-8 py-4 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-50 transition-all active:scale-95">Cancel</button>
+        <button onClick={onSuccess} className="px-12 py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-3">
           Initialize Workflow <ArrowRight className="w-4 h-4" />
         </button>
       </div>

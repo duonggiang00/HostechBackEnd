@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Property\FloorController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomAssetController;
 use App\Http\Controllers\Api\Property\RoomController;
+use App\Http\Controllers\Api\Property\RoomTemplateController;
 use Illuminate\Support\Facades\Route;
 
 // Properties
@@ -24,6 +25,7 @@ Route::post('floors/{id}/upload-floor-plan', [FloorController::class, 'uploadIma
 Route::get('rooms/trash', [RoomController::class, 'trash']);
 Route::post('rooms/quick', [RoomController::class, 'quickCreate']);    // Tạo nhanh draft
 Route::post('rooms/quick-batch', [RoomController::class, 'quickCreateBatch']); // Tạo hàng loạt draft
+Route::post('rooms/create-from-template', [RoomController::class, 'createFromTemplate']);
 Route::get('rooms/drafts', [RoomController::class, 'drafts']);          // Danh sách draft
 Route::post('rooms/batch-delete', [RoomController::class, 'destroyBatch']); // Xóa nhiều
 Route::post('rooms/batch-restore', [RoomController::class, 'restoreBatch']); // Khôi phục nhiều
@@ -31,6 +33,7 @@ Route::post('rooms/batch-force-delete', [RoomController::class, 'forceDeleteBatc
 Route::post('rooms/batch-floor-plan', [RoomController::class, 'batchFloorPlan']); // Sửa floor plan nhiều phòng
 Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publish draft
 Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publish draft
+Route::get('rooms/{id}/availability', [RoomController::class, 'availability']); // Trạng thái thuê
 Route::put('rooms/{id}/floor-plan', [RoomController::class, 'setFloorPlan']);       // Gán floor plan
 Route::delete('rooms/{id}/floor-plan', [RoomController::class, 'removeFloorPlan']); // Xóa floor plan
 Route::apiResource('rooms', RoomController::class);
@@ -49,3 +52,7 @@ Route::apiResource('properties.rooms.assets', RoomAssetController::class)
     ->parameters([
         'assets' => 'asset',
     ]);
+
+// Room Templates
+Route::apiResource('room-templates', RoomTemplateController::class);
+Route::apiResource('properties.room-templates', RoomTemplateController::class)->shallow();

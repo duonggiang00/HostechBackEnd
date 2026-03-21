@@ -7,14 +7,14 @@ export default function OfflinePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0B] flex items-center justify-center p-6 text-center">
+    <div className="min-h-screen bg-slate-950 dark:bg-slate-950 flex items-center justify-center p-6 text-center">
       <div className="max-w-md w-full">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="w-24 h-24 bg-white/5 rounded-3xl border border-white/10 flex items-center justify-center mx-auto mb-8 shadow-2xl relative overflow-hidden"
         >
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 to-transparent" />
+          <div className="absolute inset-0 bg-linear-to-br from-rose-500/20 to-transparent" />
           <WifiOff className="w-10 h-10 text-rose-500 relative z-10" />
         </motion.div>
 
@@ -37,7 +37,7 @@ export default function OfflinePage() {
         >
           <button
             onClick={handleRetry}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-[#0A0A0B] font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10 italic uppercase tracking-wider"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-slate-950 font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10 italic uppercase tracking-wider"
           >
             <RefreshCcw className="w-4 h-4" />
             Retry Connection
@@ -52,7 +52,7 @@ export default function OfflinePage() {
           </button>
         </motion.div>
 
-        <p className="mt-12 text-[10px] font-bold text-slate-600 uppercase tracking-[0.3em]">
+        <p className="mt-12 text-xs font-bold text-slate-600 uppercase tracking-[0.3em]">
           Hostech V2 • Offline Support Enabled
         </p>
       </div>

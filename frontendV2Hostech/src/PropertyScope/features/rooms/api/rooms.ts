@@ -106,6 +106,18 @@ export const roomsApi = {
     return response.data.data as Room;
   },
 
+  quickCreateBatchRooms: async (data: { property_id: string; prefix?: string; count: number; start_number?: number; template_id?: string }) => {
+    const response = await apiClient.post('/rooms/quick-batch', data);
+    console.log('📡 API: POST /rooms/quick-batch (Batch Created):', response.data.data);
+    return response.data.data as Room[];
+  },
+
+  createRoomFromTemplate: async (data: { template_id: string; name: string; code: string; floor_id?: string }) => {
+    const response = await apiClient.post('/rooms/create-from-template', data);
+    console.log('📡 API: POST /rooms/create-from-template (Created):', response.data.data);
+    return response.data.data as Room;
+  },
+
   updateRoom: async (id: string, data: any) => {
     const response = await apiClient.put(`/rooms/${id}`, data);
     console.log(`📡 API: PUT /rooms/${id} (Updated):`, response.data.data);

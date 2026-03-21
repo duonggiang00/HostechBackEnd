@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 
 interface SuperAdminLayoutProps {
   children: ReactNode;
@@ -128,11 +129,15 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-800 rounded-full border border-slate-700">
-              <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-[10px] font-bold">
-                {user?.name?.[0]}
+              <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold">
+                {user?.full_name?.[0]}
               </div>
-              <span className="text-xs font-medium truncate max-w-[100px]">{user?.name}</span>
+              <span className="text-xs font-medium truncate max-w-[100px]">{user?.full_name}</span>
             </div>
+
+            <div className="h-6 w-px bg-slate-800 hidden md:block" />
+            
+            <ThemeToggle />
           </div>
         </header>
 

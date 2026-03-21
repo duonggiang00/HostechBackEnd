@@ -5,16 +5,13 @@ import {
   MoreVertical, 
   Search, 
   User, 
-  Clock, 
   CheckCheck,
-  Image as ImageIcon,
   Smile,
   Phone,
   Video,
-  X,
   MessageSquare
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import type { Message, Conversation } from '../types';
 
@@ -48,9 +45,9 @@ export default function MessagingCenter() {
   };
 
   return (
-    <div className="flex h-[750px] bg-slate-900/50 border border-white/5 rounded-[2.5rem] overflow-hidden backdrop-blur-xl">
+    <div className="flex h-[750px] bg-slate-900/50 border border-white/5 rounded-5xl overflow-hidden backdrop-blur-xl">
       {/* Sidebar - Conversations */}
-      <div className="w-80 border-r border-white/5 flex flex-col bg-white/[0.01]">
+      <div className="w-80 border-r border-white/5 flex flex-col bg-white/1">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-black uppercase italic text-white tracking-widest">Inboxes</h2>
@@ -76,7 +73,7 @@ export default function MessagingCenter() {
               className={`w-full p-4 rounded-3xl flex items-center gap-4 transition-all ${
                 selectedConversation === conv.id 
                   ? 'bg-indigo-500/10 border border-indigo-500/20' 
-                  : 'hover:bg-white/[0.03] border border-transparent'
+                  : 'hover:bg-white/3 border border-transparent'
               }`}
             >
               <div className="relative">
@@ -92,14 +89,14 @@ export default function MessagingCenter() {
                   <span className={`text-xs font-black uppercase truncate ${selectedConversation === conv.id ? 'text-white' : 'text-slate-300'}`}>
                     {conv.name}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap">{conv.lastTimestamp}</span>
+                  <span className="text-xs font-bold text-slate-500 whitespace-nowrap">{conv.lastTimestamp}</span>
                 </div>
-                <p className="text-[10px] font-bold text-slate-500 truncate leading-relaxed">
+                <p className="text-xs font-bold text-slate-500 truncate leading-relaxed">
                   {conv.lastMessage}
                 </p>
               </div>
               {conv.unreadCount > 0 && (
-                <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-[10px] font-black text-white">
+                <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center text-xs font-black text-white">
                   {conv.unreadCount}
                 </div>
               )}
@@ -109,7 +106,7 @@ export default function MessagingCenter() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white/[0.01]">
+      <div className="flex-1 flex flex-col bg-white/1">
         {selectedConversation ? (
           <>
             {/* Header */}
@@ -124,7 +121,7 @@ export default function MessagingCenter() {
                   </h3>
                   <div className="flex items-center gap-2">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Verified Agent Connected</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-tighter">Verified Agent Connected</span>
                   </div>
                 </div>
               </div>
@@ -144,9 +141,9 @@ export default function MessagingCenter() {
             {/* Messages */}
             <div 
               ref={scrollRef}
-              className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-gradient-to-b from-transparent to-indigo-500/[0.02]"
+              className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-linear-to-b from-transparent to-indigo-500/2"
             >
-              {messages.map((msg, idx) => (
+              {messages.map((msg) => (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -154,7 +151,7 @@ export default function MessagingCenter() {
                   className={`flex ${msg.senderId === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`flex gap-4 max-w-[70%] ${msg.senderId === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center border ${
+                    <div className={`w-8 h-8 rounded-xl shrink-0 flex items-center justify-center border ${
                       msg.senderId === 'user' 
                         ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400' 
                         : 'bg-slate-800 border-white/10 text-slate-400'
@@ -170,7 +167,7 @@ export default function MessagingCenter() {
                         <p className="text-xs font-bold leading-relaxed tracking-wide">{msg.content}</p>
                       </div>
                       <div className={`flex items-center gap-2 mt-2 ${msg.senderId === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <span className="text-[10px] font-black uppercase text-slate-600 tracking-tighter">{msg.timestamp}</span>
+                        <span className="text-xs font-black uppercase text-slate-600 tracking-tighter">{msg.timestamp}</span>
                         {msg.senderId === 'user' && (
                           <CheckCheck className={`w-3 h-3 ${msg.status === 'read' ? 'text-sky-400' : 'text-slate-600'}`} />
                         )}
@@ -213,7 +210,7 @@ export default function MessagingCenter() {
               <MessageSquare className="w-12 h-12 text-indigo-500" />
             </div>
             <h3 className="text-xl font-black uppercase italic text-white mb-2">Secure Comms Hub</h3>
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest max-w-sm leading-relaxed">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest max-w-sm leading-relaxed">
               Select a secure channel from the left to begin interacting with property administration and maintenance teams.
             </p>
           </div>

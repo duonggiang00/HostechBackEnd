@@ -100,11 +100,11 @@ export default function InvoicesPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Invoice</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tenant</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Invoice</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Tenant</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Date</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -134,7 +134,7 @@ export default function InvoicesPage() {
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-sm font-bold text-slate-900">{inv.tenant?.name || 'Unknown'}</p>
-                    <p className="text-[10px] text-slate-500 font-medium">Unit {inv.tenant?.room || 'N/A'}</p>
+                    <p className="text-xs text-slate-500 font-medium">Unit {inv.tenant?.room || 'N/A'}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm font-black text-slate-900">${inv.total?.toLocaleString() || 0}</span>
@@ -163,7 +163,7 @@ export default function InvoicesPage() {
         </div>
         
         <div className="p-6 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
-           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
              Showing {invoices.length} Invoices
            </p>
            <div className="flex gap-2">

@@ -146,25 +146,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 font-sans transition-colors">
       <div className="w-full max-w-md relative">
         {/* Background Decorative Elements */}
-        <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="bg-white rounded-[40px] shadow-2xl shadow-indigo-100/50 border border-slate-100 p-10 relative overflow-hidden backdrop-blur-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl shadow-indigo-100/50 dark:shadow-indigo-500/10 border border-slate-100 dark:border-slate-700 p-10 relative overflow-hidden backdrop-blur-sm transition-colors">
           {/* Progress Bar */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-50">
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 dark:bg-slate-700">
              <motion.div 
                initial={{ width: 0 }}
                animate={{ width: step === 'IDENTIFY' ? '33%' : step === 'PASSWORD' || step === 'OTP' ? '100%' : '66%' }}
-               className="h-full bg-indigo-600"
+               className="h-full bg-indigo-600 dark:bg-indigo-500"
              />
           </div>
 
           <div className="mb-10 text-center">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Hostech <span className="text-indigo-600">V2</span></h1>
-            <p className="text-slate-500 text-sm font-medium mt-1">Smart Living Architecture</p>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Hostech <span className="text-indigo-600 dark:text-indigo-400">V2</span></h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Smart Living Architecture</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -177,12 +177,12 @@ export default function LoginPage() {
                 className="space-y-6"
               >
                 <div className="space-y-2 text-center mb-8">
-                  <h2 className="text-xl font-bold text-slate-800">Welcome Back</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Enter your email or phone to continue</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Welcome Back</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Enter your email or phone to continue</p>
                 </div>
 
                 <div className="relative group">
-                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
                     <Mail className="w-5 h-5" />
                   </div>
                   <input
@@ -195,12 +195,12 @@ export default function LoginPage() {
                       }
                     }}
                     placeholder="Email or Phone Number"
-                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-3xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold placeholder:text-slate-300"
+                    className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/20">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span className="text-xs font-bold">{error}</span>
                   </div>
@@ -209,7 +209,7 @@ export default function LoginPage() {
                 <button
                   onClick={handleIdentify}
                   disabled={isLoading}
-                  className="w-full py-5 bg-slate-900 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
+                  className="w-full py-5 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-5 h-5" /></>}
                 </button>
@@ -226,18 +226,18 @@ export default function LoginPage() {
               >
                 <button 
                   onClick={() => setStep('IDENTIFY')}
-                  className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                  className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" /> Change Account
                 </button>
 
                 <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-slate-800">Administrative Login</h2>
-                  <p className="text-sm text-slate-500">Account: <span className="font-bold text-slate-900">{identifier}</span></p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Administrative Login</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Account: <span className="font-bold text-slate-900 dark:text-white">{identifier}</span></p>
                 </div>
 
                 <div className="relative group">
-                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-300 group-focus-within:text-indigo-500 transition-colors">
+                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
                     <Lock className="w-5 h-5" />
                   </div>
                   <input
@@ -250,12 +250,12 @@ export default function LoginPage() {
                       }
                     }}
                     placeholder="Security Password"
-                    className="w-full pl-14 pr-6 py-5 bg-slate-50 border-2 border-slate-50 rounded-3xl outline-none focus:border-indigo-100 focus:bg-white transition-all font-bold placeholder:text-slate-300"
+                    className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-center gap-2 text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/20">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span className="text-xs font-bold">{error}</span>
                   </div>
@@ -264,7 +264,7 @@ export default function LoginPage() {
                 <button
                   onClick={handlePasswordLogin}
                   disabled={isLoading}
-                  className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-slate-900 transition-all shadow-xl shadow-indigo-100 active:scale-[0.98] disabled:opacity-50"
+                  className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-slate-900 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-100 dark:shadow-none active:scale-[0.98] disabled:opacity-50"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In Securely'}
                 </button>
@@ -281,23 +281,23 @@ export default function LoginPage() {
               >
                 <button 
                   onClick={() => setStep('IDENTIFY')}
-                  className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 transition-colors"
+                  className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" /> Change Details
                 </button>
 
                 <div className="space-y-2 text-center">
-                  <h2 className="text-xl font-bold text-slate-800">Verification Code</h2>
-                  <p className="text-sm text-slate-500 leading-relaxed">
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Verification Code</h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     We've sent a 6-digit code to <br/>
-                    <span className="font-bold text-slate-900">{identifier}</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{identifier}</span>
                   </p>
                 </div>
 
                 <OTPInput onComplete={handleOtpComplete} disabled={isLoading} />
 
                 {error && (
-                  <div className="flex items-center gap-2 text-rose-500 bg-rose-50 p-4 rounded-2xl border border-rose-100">
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/20">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span className="text-xs font-bold">{error}</span>
                   </div>
@@ -307,7 +307,7 @@ export default function LoginPage() {
                    <button 
                      disabled={otpCooldown > 0}
                      onClick={() => startOtpCooldown(60)}
-                     className="text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:text-slate-300 text-indigo-600 hover:text-slate-900 transition-colors"
+                     className="text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:text-slate-300 dark:disabled:text-slate-600 text-indigo-600 dark:text-indigo-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                    >
                      <RefreshCw className={`w-4 h-4 ${otpCooldown > 0 ? '' : 'animate-spin-slow'}`} />
                      {otpCooldown > 0 ? `Resend OTP in ${otpCooldown}s` : 'Resend Code Now'}
@@ -318,7 +318,7 @@ export default function LoginPage() {
           </AnimatePresence>
         </div>
 
-        <div className="mt-12 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 space-y-1">
+        <div className="mt-12 text-center text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 space-y-1 transition-colors">
           <p>Bank-Level Security Protocols</p>
           <p>© 2026 Hostech Solutions Inc.</p>
         </div>

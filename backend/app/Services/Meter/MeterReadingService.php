@@ -53,15 +53,44 @@ class MeterReadingService
      */
     public function create(array $data): MeterReading
     {
+        $meterId = $data['meter_id'];
+        $readingValue = $data['reading_value'];
+
+        // Calculate consumption
+        $prev = MeterReading::where('meter_id', $meterId)
+            ->where('status', 'APPROVED')
+            ->orderBy('period_end', 'desc')
+            ->first();
+
+        $meter = \App\Models\Meter\Meter::find($meterId);
+        $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
+        
+        $data['consumption'] = max(0, $readingValue - $prevValue);
         $data['status'] = $data['status'] ?? 'PENDING';
         $data['submitted_at'] = now();
         $data['submitted_by_user_id'] = auth()->id();
+        $data['org_id'] = $data['org_id'] ?? ($meter ? $meter->org_id : null);
 
         $reading = MeterReading::create($data);
 
         $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
         return $reading;
+    }
+
+    /**
+     * Bulk create meter readings.
+     */
+    public function bulkStore(array $readings): array
+    {
+        $results = [];
+        \DB::transaction(function () use ($readings, &$results) {
+            foreach ($readings as $readingData) {
+                $results[] = $this->create($readingData);
+            }
+        });
+
+        return $results;
     }
 
     /**

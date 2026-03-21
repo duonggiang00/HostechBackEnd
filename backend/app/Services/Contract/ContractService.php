@@ -187,11 +187,46 @@ class ContractService
                 $contractData['join_code'] = $this->generateJoinCode();
             }
 
+            // --- TEMPLATE-BASED DEFAULTS ---
+            $roomId = $contractData['room_id'] ?? null;
+            $propertyId = $contractData['property_id'] ?? null;
+            $startDate = $contractData['start_date'] ?? null;
+            $endDate = $contractData['end_date'] ?? null;
+
+            // Check for overlap
+            if ($roomId && $startDate) {
+                $overlap = $this->checkOverlap($roomId, $startDate, $endDate);
+                if ($overlap) {
+                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vô thời hạn)");
+                    throw new \Exception("Phòng này đã có hợp đồng trùng lặp trong khoảng thời gian này ($overlapDate).");
+                }
+            }
+
+            $property = $propertyId ? \App\Models\Property\Property::find($propertyId) : null;
+            $room = $roomId ? \App\Models\Property\Room::find($roomId) : null;
+
+            if ($property) {
+                $contractData['billing_cycle'] = $contractData['billing_cycle'] ?? $property->default_billing_cycle ?? 'MONTHLY';
+                $contractData['due_day'] = $contractData['due_day'] ?? $property->default_due_day ?? 5;
+                $contractData['cutoff_day'] = $contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 30;
+                
+                // If rent_price not provided, use Room's base_price or Property default
+                if (empty($contractData['rent_price'])) {
+                    $contractData['rent_price'] = $room->base_price ?? 0;
+                }
+
+                // If deposit_amount not provided, calculate based on property's default months
+                if (empty($contractData['deposit_amount'])) {
+                    $months = $property->default_deposit_months ?? 1;
+                    $contractData['deposit_amount'] = (float) $contractData['rent_price'] * $months;
+                }
+            }
+            // -------------------------------
+
             // --- FINANCIAL CALCULATION ---
             $rentPrice = (float) ($contractData['rent_price'] ?? 0);
             $contractData['base_rent'] = $rentPrice;
 
-            $roomId = $contractData['room_id'] ?? null;
             $orgId = $contractData['org_id'];
             $fixedServicesFee = 0;
 
@@ -207,6 +242,15 @@ class ContractService
 
             $contractData['fixed_services_fee'] = $fixedServicesFee;
             $contractData['total_rent'] = $rentPrice + $fixedServicesFee;
+
+            // Calculate next_billing_date for the first time
+            $startDate = \Carbon\Carbon::parse($contractData['start_date']);
+            $monthsToAdd = match($contractData['billing_cycle'] ?? 'MONTHLY') {
+                'QUARTERLY' => 3,
+                'YEARLY' => 12,
+                default => 1
+            };
+            $contractData['next_billing_date'] = $startDate->copy()->addMonths($monthsToAdd)->format('Y-m-d');
             // -----------------------------
 
             $contract = Contract::create($contractData);
@@ -250,6 +294,26 @@ class ContractService
         }
 
         return DB::transaction(function () use ($contract, $data) {
+            // Kiểm tra trạng thái có cho phép sửa không
+            $allowedStatuses = array_map(fn($enum) => $enum->value, ContractStatus::allowEdit());
+            if (! in_array($contract->status, $allowedStatuses)) {
+                $statusLabel = ContractStatus::from($contract->status)->label();
+                throw new \Exception("Không thể sửa hợp đồng ở trạng thái {$statusLabel}.");
+            }
+
+            // Check for overlap if room or dates change
+            $roomId = $data['room_id'] ?? $contract->room_id;
+            $startDate = $data['start_date'] ?? $contract->start_date;
+            $endDate = $data['end_date'] ?? $contract->end_date;
+
+            if ($roomId && $startDate) {
+                $overlap = $this->checkOverlap($roomId, $startDate, $endDate, $contract->id);
+                if ($overlap) {
+                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vô thời hạn)");
+                    throw new \Exception("Phòng này đã có hợp đồng trùng lặp trong khoảng thời gian này ($overlapDate).");
+                }
+            }
+
             $contract->update($data);
 
             return $contract->refresh();
@@ -512,7 +576,17 @@ class ContractService
     private function createInitialInvoice(Contract $contract, User $tenant): Invoice
     {
         $periodStart = \Carbon\Carbon::parse($contract->start_date);
-        $periodEnd = $periodStart->copy()->addMonth()->subDay();
+        
+        // Next billing date is usually 1 cycle after start_date
+        $monthsToAdd = match($contract->billing_cycle) {
+            'QUARTERLY' => 3,
+            'YEARLY' => 12,
+            default => 1
+        };
+        
+        $nextBillingDate = $periodStart->copy()->addMonths($monthsToAdd);
+
+        $periodEnd = $periodStart->copy()->addMonths($monthsToAdd)->subDay();
         $dueDate = now()->addDays(3);
 
         $baseRent = (float) $contract->base_rent;
@@ -588,6 +662,154 @@ class ContractService
                 'Tự động huỷ do hợp đồng bị huỷ/xóa.'
             );
         }
+    }
+
+    /**
+     * Confirm Payment (Admin).
+     *
+     * Luồng:
+     * 1. Xác nhận thanh toán hóa đơn ban đầu.
+     * 2. Contract -> ACTIVE.
+     * 3. Room -> occupied.
+     */
+    public function confirmPayment(Contract $contract, User $performer): bool
+    {
+        $allowedStatuses = array_map(fn ($enum) => $enum->value, ContractStatus::allowConfirmPayment());
+        if (! in_array($contract->status, $allowedStatuses)) {
+            throw new \Exception('Chỉ có thể xác nhận thanh toán cho hợp đồng đang chờ thanh toán.');
+        }
+
+        return DB::transaction(function () use ($contract) {
+            // 1. Mark contract as ACTIVE
+            $contract->update([
+                'status' => ContractStatus::ACTIVE->value,
+                'activated_at' => now(),
+            ]);
+
+            // 2. Mark Room as OCCUPIED
+            if ($contract->room) {
+                $contract->room->update(['status' => 'occupied']);
+            }
+
+            return true;
+        });
+    }
+
+    /**
+     * Terminate Contract (Early Termination).
+     *
+     * Params:
+     * - termination_date (YYYY-MM-DD)
+     * - reason (string)
+     * - forfeit_deposit (bool)
+     * - refund_remaining_rent (bool)
+     */
+    public function terminate(Contract $contract, array $data): bool
+    {
+        if ($contract->status !== ContractStatus::ACTIVE->value) {
+            throw new \Exception('Chỉ có thể thanh lý hợp đồng đang hoạt động.');
+        }
+
+        return DB::transaction(function () use ($contract, $data) {
+            $terminationDate = $data['termination_date'] ?? now()->toDateString();
+            $forfeitDeposit = (bool) ($data['forfeit_deposit'] ?? false);
+            $refundRemainingRent = (bool) ($data['refund_remaining_rent'] ?? false);
+
+            $depositAmount = (float) $contract->deposit_amount;
+            $refundedAmount = 0;
+            $forfeitedAmount = 0;
+
+            if ($forfeitDeposit) {
+                $forfeitedAmount = $depositAmount;
+            } else {
+                $refundedAmount = $depositAmount;
+            }
+
+            // Optional: Calculate remaining rent refund logic could be more complex (pro-rated)
+            // For now, we update the status and amounts.
+            $contract->update([
+                'status' => \App\Enums\ContractStatus::ENDED->value,
+                'end_date' => $terminationDate,
+                'terminated_at' => now(),
+                'refunded_amount' => $refundedAmount,
+                'forfeited_amount' => $forfeitedAmount,
+                'meta' => array_merge($contract->meta ?? [], [
+                    'termination_details' => [
+                        'forfeit_deposit' => $forfeitDeposit,
+                        'refund_remaining_rent' => $refundRemainingRent,
+                        'original_end_date' => $contract->getOriginal('end_date'),
+                    ],
+                ]),
+            ]);
+
+            if ($contract->room) {
+                $contract->room->update(['status' => 'available']);
+            }
+
+            return true;
+        });
+    }
+
+    public function checkOverlap(string $roomId, string $startDate, ?string $endDate = null, ?string $excludeContractId = null): ?Contract
+    {
+        $query = Contract::where('room_id', $roomId)
+            ->whereIn('status', [
+                ContractStatus::ACTIVE->value,
+                ContractStatus::PENDING_SIGNATURE->value,
+                ContractStatus::PENDING_PAYMENT->value,
+            ]);
+
+        if ($excludeContractId) {
+            $query->where('id', '!=', $excludeContractId);
+        }
+
+        return $query->where(function ($q) use ($startDate, $endDate) {
+            $q->where('start_date', '<=', $endDate ?? '9999-12-31')
+              ->where(function ($inner) use ($startDate) {
+                  $inner->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $startDate);
+              });
+        })->first();
+    }
+
+    /**
+     * Get availability status of a room based on current active contracts.
+     */
+    public function getRoomAvailabilityStatus(string $roomId): array
+    {
+        $activeContract = Contract::where('room_id', $roomId)
+            ->whereIn('status', [ContractStatus::ACTIVE->value, ContractStatus::PENDING_SIGNATURE->value, ContractStatus::PENDING_PAYMENT->value])
+            ->orderBy('end_date', 'desc')
+            ->first();
+
+        if (! $activeContract) {
+            return ['status' => 'available'];
+        }
+
+        $now = now();
+        $endDate = $activeContract->end_date ? \Carbon\Carbon::parse($activeContract->end_date) : null;
+
+        if (! $endDate) {
+            return [
+                'status' => 'occupied',
+                'contract_id' => $activeContract->id,
+                'message' => 'Đang ở (Vô thời hạn)',
+            ];
+        }
+
+        $daysLeft = (int) $now->diffInDays($endDate, false);
+
+        if ($daysLeft < 0) {
+            return ['status' => 'available'];
+        }
+
+        return [
+            'status' => $daysLeft <= 30 ? 'expiring' : 'occupied',
+            'days_left' => $daysLeft,
+            'end_date' => $activeContract->end_date,
+            'contract_id' => $activeContract->id,
+            'message' => $daysLeft <= 30 ? "Sắp trống (còn {$daysLeft} ngày)" : "Đang ở (đến {$activeContract->end_date})",
+        ];
     }
 
     private function generateJoinCode(): string

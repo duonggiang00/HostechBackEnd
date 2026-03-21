@@ -113,7 +113,9 @@ const SortableTreeNode = ({
       <div 
         onClick={handleSelect}
         className={`flex items-center group px-3 py-2 rounded-xl cursor-pointer transition-all ${
-          isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'hover:bg-slate-50 text-slate-600'
+          isSelected 
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20 dark:shadow-none' 
+            : 'hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300'
         }`}
         style={{ paddingLeft: `${depth * 1.25 + 0.75}rem` }}
       >
@@ -121,7 +123,7 @@ const SortableTreeNode = ({
           <button 
             {...attributes} 
             {...listeners}
-            className="p-1 -ml-1 opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+            className="p-1 -ml-1 opacity-0 group-hover:opacity-40 hover:opacity-100! transition-opacity cursor-grab active:cursor-grabbing"
           >
             <GripVertical className="w-3.5 h-3.5" />
           </button>
@@ -129,7 +131,7 @@ const SortableTreeNode = ({
           {node.children && node.children.length > 0 ? (
             <ChevronRight 
               onClick={handleToggle}
-              className={`w-4 h-4 transition-transform duration-200 shrink-0 hover:bg-black/10 rounded-md ${isExpanded ? 'rotate-90' : ''}`} 
+              className={`w-4 h-4 transition-transform duration-200 shrink-0 hover:bg-black/10 dark:hover:bg-white/10 rounded-md ${isExpanded ? 'rotate-90' : ''}`} 
             />
           ) : (
              <div className="w-4 h-4 shrink-0" />
@@ -143,8 +145,8 @@ const SortableTreeNode = ({
           
           {node.status && (
             <div className={`w-2 h-2 rounded-full shrink-0 ml-2 ${
-              node.status === 'available' ? 'bg-emerald-400' : 
-              node.status === 'occupied' ? 'bg-indigo-400' : 'bg-amber-400'
+              node.status === 'available' ? 'bg-emerald-500 dark:bg-emerald-400' : 
+              node.status === 'occupied' ? 'bg-indigo-500 dark:bg-indigo-400' : 'bg-amber-500 dark:bg-amber-400'
             }`} />
           )}
         </div>
@@ -157,12 +159,12 @@ const SortableTreeNode = ({
                 if (node.type === 'property') onAddFloor?.(node);
                 if (node.type === 'floor') onAddRoom?.(node);
               }}
-              className="p-1 hover:bg-black/5 rounded-md transition-colors"
+              className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
           )}
-          <button className="p-1 hover:bg-black/5 rounded-md transition-colors">
+          <button className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-md transition-colors">
             <MoreVertical className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -290,7 +292,7 @@ export default function PropertyTreeView() {
     <div className="space-y-1">
       <div className="px-4 py-2 flex items-center justify-between mb-2">
         <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Navigator</h3>
-        <button className="p-1.5 bg-slate-100 text-slate-500 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+        <button className="p-1.5 bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 transition-all shadow-sm">
           <Plus className="w-4 h-4" />
         </button>
       </div>

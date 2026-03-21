@@ -45,7 +45,7 @@ export default function AuditLogPage() {
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/20 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+            <tr className="bg-slate-50/50 text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
               <th className="px-8 py-5">Actor / Module</th>
               <th className="px-8 py-5">Action</th>
               <th className="px-8 py-5">Item ID</th>
@@ -65,13 +65,13 @@ export default function AuditLogPage() {
                       <p className="text-sm font-bold text-slate-900">{log.causer_name || 'System'}</p>
                       <div className="flex items-center gap-1.5 mt-1">
                         <Building className="w-3 h-3 text-slate-300" />
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">{log.subject_type || log.log_name}</span>
+                        <span className="text-xs font-black uppercase text-slate-400 tracking-tighter">{log.subject_type || log.log_name}</span>
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-8 py-6">
-                  <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                  <span className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest ${
                     log.event === 'created' ? 'bg-emerald-50 text-emerald-600' :
                     log.event === 'updated' ? 'bg-amber-50 text-amber-600' :
                     'bg-rose-50 text-rose-600'
@@ -169,13 +169,13 @@ export default function AuditLogPage() {
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Old Values</p>
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Old Values</p>
                     <pre className="text-xs font-mono font-bold text-slate-600 overflow-x-auto whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.properties?.old, null, 2) || '// No original data'}
                     </pre>
                   </div>
                   <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100">
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-4">New Attributes</p>
+                    <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-4">New Attributes</p>
                     <pre className="text-xs font-mono font-bold text-indigo-900 overflow-x-auto whitespace-pre-wrap">
                       {JSON.stringify(selectedLog.properties?.attributes, null, 2) || JSON.stringify(selectedLog.properties, null, 2)}
                     </pre>

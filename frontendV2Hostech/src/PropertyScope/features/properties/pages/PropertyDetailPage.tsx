@@ -1,65 +1,68 @@
 import { useParams } from 'react-router-dom';
-import { useProperty } from '../hooks/useProperty';
-import { useScopeStore } from '@/shared/stores/useScopeStore';
+import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { PropertyHeader } from '../components/PropertyHeader';
 import { PropertyOverview } from '../components/PropertyOverview';
 import { PropertyBillingPolicy } from '../components/PropertyBillingPolicy';
-import { PropertyBankAccounts } from '../components/PropertyBankAccounts';
+import { PropertyTemplateConfig } from '../components/PropertyTemplateConfig';
+import { PropertyFloorsList } from '../components/PropertyFloorsList';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 import { motion } from 'framer-motion';
 
 export default function PropertyDetailPage() {
-  const { propertyId: urlPropertyId } = useParams<{ propertyId: string }>();
-  const { propertyId: scopePropertyId } = useScopeStore();
-  const propertyId = urlPropertyId || scopePropertyId || undefined;
-  
-  const { data: property, isLoading, error } = useProperty(propertyId);
+  const { propertyId } = useParams<{ propertyId: string }>();
+  const { data: property, isLoading } = usePropertyDetail(propertyId);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-20 min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-bold animate-pulse text-sm">Đang tải thông tin tòa nhà...</p>
+      <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+        <Skeleton className="h-[200px] w-full rounded-[2.5rem]" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-3xl" />
+          ))}
         </div>
+        <Skeleton className="h-[400px] w-full rounded-[2.5rem]" />
       </div>
     );
   }
 
-  if (error || !property) {
+  if (!property) {
     return (
-      <div className="text-center py-20 px-6">
-        <div className="bg-red-50 dark:bg-red-500/10 text-red-600 p-8 rounded-3xl max-w-lg mx-auto border border-red-100 dark:border-red-900/30">
-          <h2 className="text-xl font-black mb-2">Không tìm thấy thông tin</h2>
-          <p className="text-slate-500 dark:text-slate-400">Vui lòng kiểm tra lại ID tòa nhà hoặc quyền truy cập của bạn.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center p-20 min-h-[60vh]">
+         <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-10 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-xl text-center max-w-md">
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Tòa nhà không tồn tại</h2>
+            <p className="text-slate-500 dark:text-slate-400 font-medium">Chúng tôi không thể tìm thấy thông tin tòa nhà bạn yêu cầu. Vui lòng kiểm tra lại ID hoặc liên hệ quản trị viên.</p>
+         </div>
       </div>
     );
   }
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto pb-20"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="p-8 space-y-8 max-w-[1600px] mx-auto pb-20"
     >
       <PropertyHeader property={property} />
-      
-      <div className="space-y-8">
+
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        className="space-y-8"
+      >
+        {/* Row 1: Key Stats */}
         <PropertyOverview property={property} />
-        
-        <div className="grid grid-cols-1 gap-8">
-          <PropertyBillingPolicy property={property} />
-          <PropertyBankAccounts property={property} />
-        </div>
-        
-        {/* Placeholder for Note/Assigned Staff */}
-        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-100 dark:border-slate-800 shadow-sm">
-          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4">Ghi chú quản lý</h3>
-          <p className="text-slate-500 dark:text-slate-400 leading-relaxed italic">
-            {property.note || "Chưa có ghi chú nào cho tòa nhà này."}
-          </p>
-        </div>
-      </div>
+
+        {/* Row 2: Default Config & Services */}
+        <PropertyTemplateConfig property={property} />
+
+        {/* Row 3: Billing Policies */}
+        <PropertyBillingPolicy property={property} />
+
+        {/* Row 4: Floors Overview */}
+        <PropertyFloorsList property={property} />
+      </motion.div>
     </motion.div>
   );
 }

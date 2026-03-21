@@ -33,6 +33,8 @@ class MeterResource extends JsonResource
             'meta' => $this->meta,
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
+            'latest_reading' => $this->latestReading?->reading_value,
+            'last_read_at' => $this->latestReading?->period_end ? $this->latestReading?->period_end->format('Y-m-d') : null,
             'room' => new RoomResource($this->whenLoaded('room')),
         ];
     }

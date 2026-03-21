@@ -70,7 +70,7 @@ export default function ManagementAnalytics() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
-            className="p-8 rounded-[2.5rem] bg-white/5 border border-white/10 relative overflow-hidden group hover:border-white/20 transition-all"
+            className="p-8 rounded-5xl bg-white/5 border border-white/10 relative overflow-hidden group hover:border-white/20 transition-all"
           >
             <div className={`absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity`}>
               <kpi.icon className="w-24 h-24" />
@@ -80,12 +80,12 @@ export default function ManagementAnalytics() {
               <div className={`w-10 h-10 rounded-xl bg-${kpi.color}-500/10 border border-${kpi.color}-500/20 flex items-center justify-center text-${kpi.color}-400`}>
                 <kpi.icon className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-black uppercase text-slate-500 tracking-[0.2em]">{kpi.label}</span>
+              <span className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">{kpi.label}</span>
             </div>
 
             <div className="flex items-end justify-between">
               <h4 className="text-4xl font-black text-white tracking-tighter italic uppercase truncate max-w-[70%]">{kpi.value}</h4>
-              <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-${kpi.color}-500/10 text-${kpi.color}-400 border border-${kpi.color}-500/20`}>
+              <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-${kpi.color}-500/10 text-${kpi.color}-400 border border-${kpi.color}-500/20`}>
                 {kpi.trend.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : (kpi.trend.startsWith('-') ? <TrendingDown className="w-3 h-3" /> : <BarChart3 className="w-3 h-3" />)}
                 {kpi.trend}
               </div>
@@ -97,13 +97,13 @@ export default function ManagementAnalytics() {
       {/* Main Charts Mockup */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
         {/* Occupancy Chart Mock */}
-        <div className="p-8 rounded-[3rem] bg-white/5 border border-white/10 backdrop-blur-xl">
+        <div className="p-8 rounded-6xl bg-white/5 border border-white/10 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-10">
             <div>
               <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Occupancy Trends</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Growth over the last 6 months</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Growth over the last 6 months</p>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">
+            <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">
               <Calendar className="w-3 h-3" />
               Last 6M
             </button>
@@ -117,24 +117,24 @@ export default function ManagementAnalytics() {
                     initial={{ height: 0 }}
                     animate={{ height: `${height}%` }}
                     transition={{ delay: idx * 0.1, duration: 1 }}
-                    className={`w-full rounded-t-2xl relative transition-all duration-500 bg-gradient-to-t from-emerald-500 to-emerald-400 group-hover:from-white group-hover:to-emerald-400`}
+                    className={`w-full rounded-t-2xl relative transition-all duration-500 bg-linear-to-t from-emerald-500 to-emerald-400 group-hover:from-white group-hover:to-emerald-400`}
                   />
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black text-white bg-[#0A0A0B] px-2 py-1 rounded border border-white/10">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-black text-white bg-[#0A0A0B] px-2 py-1 rounded border border-white/10">
                     {height}%
                   </div>
                 </div>
-                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest italic">{['OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'][idx]}</span>
+                <span className="text-xs font-black text-slate-600 uppercase tracking-widest italic">{['OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'][idx]}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Maintenance Breakdown Mock */}
-        <div className="p-8 rounded-[3rem] bg-white/5 border border-white/10 backdrop-blur-xl">
+        <div className="p-8 rounded-6xl bg-white/5 border border-white/10 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Task Efficiency</h3>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Maintenance resolution metrics</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Maintenance resolution metrics</p>
             </div>
           </div>
 
@@ -149,11 +149,11 @@ export default function ManagementAnalytics() {
                 <div className="flex justify-between items-end mb-3">
                   <div>
                     <span className="text-xs font-black text-white uppercase italic tracking-wider block">{item.label}</span>
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{item.count} Tasks completed</span>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{item.count} Tasks completed</span>
                   </div>
                   <div className="text-right">
                     <span className={`text-xs font-black text-${item.color}-400 italic uppercase tracking-wider block`}>{item.avg} Avg</span>
-                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">MTTR Report</span>
+                    <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">MTTR Report</span>
                   </div>
                 </div>
                 <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
@@ -171,7 +171,7 @@ export default function ManagementAnalytics() {
       </div>
 
       {/* Recommendations Feed */}
-      <div className="mt-12 p-8 rounded-[3rem] bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between">
+      <div className="mt-12 p-8 rounded-6xl bg-indigo-500/5 border border-indigo-500/10 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
             <BarChart3 className="w-8 h-8" />
@@ -181,7 +181,7 @@ export default function ManagementAnalytics() {
             <p className="text-sm text-indigo-200/50 font-medium">Based on current trends, occupancy will hit 98% by May. Consider adjusting rates for new contracts.</p>
           </div>
         </div>
-        <button className="flex items-center gap-2 px-8 py-5 rounded-[2rem] bg-white text-[#0A0A0B] font-black italic uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all">
+        <button className="flex items-center gap-2 px-8 py-5 rounded-4xl bg-white text-slate-950 font-black italic uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all">
           View Detailed PDF
           <ArrowUpRight className="w-5 h-5" />
         </button>

@@ -10,6 +10,8 @@ Route::post('contracts/{contract}/accept-signature', [ContractController::class,
 Route::post('contracts/{contract}/reject-signature', [ContractController::class, 'rejectSignature']);
 Route::get('contracts/{contract}/available-rooms', [ContractController::class, 'availableRooms']);
 Route::post('contracts/{contract}/room-transfer-request', [ContractController::class, 'roomTransferRequest']);
+Route::post('contracts/{contract}/confirm-payment', [ContractController::class, 'confirmPayment']);
+Route::post('contracts/{contract}/terminate', [ContractController::class, 'terminate']);
 
 Route::get('contracts/trash', [ContractController::class, 'trash']);
 Route::apiResource('contracts', ContractController::class);

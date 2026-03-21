@@ -24,7 +24,7 @@ class ContractStoreRequest extends FormRequest
             'billing_cycle' => ['nullable', 'string', 'in:MONTHLY,QUARTERLY'],
             'due_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:31'],
-            'rent_price' => ['required', 'numeric', 'min:0'],
+            'rent_price' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
 
             // Member validation

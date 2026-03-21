@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 export default function InvoiceGenerator() {
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-white/5 border border-white/10 rounded-[3rem] p-12 relative overflow-hidden">
+      <div className="bg-white/5 border border-white/10 rounded-6xl p-12 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32" />
         
         <div className="relative z-10 text-center space-y-6">
@@ -28,7 +28,7 @@ export default function InvoiceGenerator() {
           { title: 'Template Engine', desc: 'Apply custom branding to PDF', icon: Files },
           { title: 'Auto Tax', desc: 'Calculate VAT/GST by region', icon: Calculator },
         ].map((feat, i) => (
-          <div key={i} className="bg-white/5 border border-white/5 rounded-[2rem] p-8 hover:border-white/20 transition-all group">
+          <div key={i} className="bg-white/5 border border-white/5 rounded-4xl p-8 hover:border-white/20 transition-all group">
              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors">
                <feat.icon className="w-5 h-5 text-emerald-500" />
              </div>

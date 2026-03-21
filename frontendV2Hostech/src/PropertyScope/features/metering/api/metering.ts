@@ -130,6 +130,12 @@ export const meteringApi = {
     return response;
   },
 
+  bulkCreateReadings: async (propertyId: string, readings: any[]) => {
+    const response = await apiClient.post(`/properties/${propertyId}/meters/bulk-readings`, { readings });
+    console.log(`📡 API: POST bulk readings:`, response.data);
+    return response.data.data || response.data;
+  },
+
   // Legacy method
   addReading: async (meterId: string, reading_value: number, reading_date: string, photo?: File) => {
     const formData = new FormData();
