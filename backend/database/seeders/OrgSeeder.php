@@ -6,6 +6,7 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
+use App\Models\Handover\HandoverMeterSnapshot;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Org\Org;
@@ -465,6 +466,14 @@ class OrgSeeder extends Seeder
         'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
     ]);
 
+    // Create IN Handover
+    $this->createHandoverForContract($contract, 'IN', $startDate);
+
+    // Create OUT Handover if ENDED
+    if ($status === 'ENDED') {
+        $this->createHandoverForContract($contract, 'OUT', $endDate);
+    }
+    
     $numMembers = rand(2, 3);
     for ($i = 0; $i < $numMembers; $i++) {
         // Dynamically create a tenant user for each contract member
@@ -605,5 +614,53 @@ class OrgSeeder extends Seeder
     }
 
     return $contract;
+}
+
+/**
+ * Create Handover, Items and Meter Snapshots for a contract
+ */
+private function createHandoverForContract($contract, $type, $date)
+{
+    $handover = Handover::create([
+        'id' => \Illuminate\Support\Str::uuid()->toString(),
+        'org_id' => $contract->org_id,
+        'contract_id' => $contract->id,
+        'room_id' => $contract->room_id,
+        'type' => $type,
+        'status' => 'COMPLETED',
+        'confirmed_at' => $date,
+        'confirmed_by_user_id' => $contract->created_by_user_id,
+        'locked_at' => $date,
+        'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
+    ]);
+
+    // Create Handover Items from Room Assets
+    $assets = $contract->room->assets;
+    foreach ($assets as $index => $asset) {
+        HandoverItem::create([
+            'id' => \Illuminate\Support\Str::uuid()->toString(),
+            'org_id' => $contract->org_id,
+            'handover_id' => $handover->id,
+            'room_asset_id' => $asset->id,
+            'name' => $asset->name,
+            'status' => 'GOOD',
+            'sort_order' => $index,
+        ]);
+    }
+
+    // Create Handover Meter Snapshots from Room Meters
+    $meters = $contract->room->meters;
+    foreach ($meters as $meter) {
+        $baseReading = 100; // Mock base
+        $readingValue = $type === 'IN' ? $baseReading : $baseReading + rand(50, 200);
+
+        HandoverMeterSnapshot::create([
+            'id' => \Illuminate\Support\Str::uuid()->toString(),
+            'org_id' => $contract->org_id,
+            'handover_id' => $handover->id,
+            'meter_id' => $meter->id,
+            'reading_value' => $readingValue,
+        ]);
+    }
 }
 }
