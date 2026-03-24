@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
     Info, Calendar, Users, History, DollarSign, Package, Zap,
-    FilePenLine, X, ImageIcon, Trash2, Maximize2, ChevronLeft, RefreshCw
+    FilePenLine, X, ImageIcon, Trash2, Maximize2, ChevronLeft, RefreshCw, Ticket
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import ServiceManager from './ServiceManager';
 import RoomImageGallery from './RoomImageGallery';
 import LeaseManager from '@/PropertyScope/features/contracts/components/LeaseManager';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
+import RoomTicketsTab from '@/PropertyScope/features/tickets/components/RoomTicketsTab';
 import type { Room } from '../types';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
@@ -35,7 +36,7 @@ export default function RoomDetailContent({
   isFullPage = false
 }: RoomDetailContentProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'info' | 'lifecycle' | 'price' | 'assets' | 'utilities' | 'lease' | 'services' | 'images' | 'billing'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'lifecycle' | 'price' | 'assets' | 'utilities' | 'lease' | 'services' | 'images' | 'billing' | 'tickets'>('info');
   const { deleteRoom, restoreRoom } = useRoomActions();
 
   const formattedPrice = useMemo(() => formatCurrency(room.base_price || 0), [room.base_price]);
@@ -124,6 +125,7 @@ export default function RoomDetailContent({
           { id: 'services', label: 'Dịch vụ', icon: Zap },
           { id: 'images', label: 'Ảnh', icon: ImageIcon },
           { id: 'lifecycle', label: 'Lịch sử', icon: History },
+          { id: 'tickets', label: 'Sự cố', icon: Ticket },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -319,6 +321,14 @@ export default function RoomDetailContent({
                 roomId={room.id}
                 data={room.invoices}
                 isLoading={isLoading}
+              />
+            </motion.div>
+          )}
+          {activeTab === 'tickets' && (
+            <motion.div key="tickets" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <RoomTicketsTab
+                propertyId={propertyId!}
+                roomId={room.id}
               />
             </motion.div>
           )}
