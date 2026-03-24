@@ -5,5 +5,5 @@ export const ticketsNav = (propertyId: string): NavItem => ({
   id: 'tickets',
   icon: Ticket,
   label: 'Sự cố',
-  path: `/property/${propertyId}/tickets`,
+  path: `/properties/${propertyId}/tickets`,
 });

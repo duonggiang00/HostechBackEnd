@@ -43,6 +43,7 @@ class UserController extends Controller
             }),
             'email',
             'is_active',
+            AllowedFilter::exact('property_id', 'properties.id'),
         ];
 
         $paginator = $this->service->paginate($allowed, $perPage, $search, null, $request->boolean('with_trashed'));
@@ -67,6 +68,7 @@ class UserController extends Controller
             }),
             'email',
             'is_active',
+            AllowedFilter::exact('property_id', 'properties.id'),
         ];
 
         $paginator = $this->service->paginateTrash($allowed, $perPage, $search);

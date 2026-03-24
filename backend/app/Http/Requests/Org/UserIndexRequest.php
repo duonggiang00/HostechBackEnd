@@ -11,6 +11,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam filter[role] string Lọc theo vai trò (ADMIN, OWNER, MANAGER, STAFF, TENANT). Example: OWNER
  * @queryParam filter[email] string Lọc chính xác theo email.
  * @queryParam filter[is_active] boolean Lọc theo trạng thái hoạt động. Example: true
+ * @queryParam filter[property_id] string Lọc theo ID của cơ sở (Property). Example: 9db71234-5678-90ab-cdef-1234567890ab
  * @queryParam sort string Sắp xếp kết quả (full_name, email, created_at, prefixed with - for DESC). Example: -created_at
  * @queryParam with_trashed boolean Bao gồm các bản ghi đã xóa. Example: true
  */
@@ -39,6 +40,7 @@ class UserIndexRequest extends FormRequest
             'filter.role' => ['nullable', 'string', 'in:ADMIN,MANAGER,STAFF,TENANT'],
             'filter.email' => ['nullable', 'string'],
             'filter.is_active' => ['nullable', 'boolean'],
+            'filter.property_id' => ['nullable', 'string', 'uuid'],
             'sort' => ['nullable', 'string', 'in:full_name,email,created_at,-full_name,-email,-created_at'],
         ];
     }

@@ -5,5 +5,5 @@ export const billingNav = (propertyId: string): NavItem => ({
   id: 'billing',
   icon: CreditCard,
   label: 'Hóa đơn',
-  path: `/property/${propertyId}/billing`,
+  path: `/properties/${propertyId}/billing`,
 });

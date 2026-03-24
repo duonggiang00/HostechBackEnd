@@ -42,7 +42,6 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
     { id: 'property-detail', icon: Building2, label: 'Properties', path: `/properties/${propertyId}/detail` },
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: `/properties/${propertyId}/dashboard`, exact: true },
     { id: 'meters', icon: Gauge, label: 'Đồng hồ', path: `/properties/${propertyId}/meters` },
     { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },

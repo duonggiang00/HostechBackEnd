@@ -5,5 +5,5 @@ export const roomNav = (propertyId: string): NavItem => ({
   id: 'rooms',
   icon: Home,
   label: 'Phòng',
-  path: `/property/${propertyId}/rooms`,
+  path: `/properties/${propertyId}/rooms`,
 });
