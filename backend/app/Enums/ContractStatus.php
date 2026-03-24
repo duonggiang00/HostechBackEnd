@@ -9,6 +9,7 @@ enum ContractStatus: string
     case PENDING_PAYMENT = 'PENDING_PAYMENT';
     case ACTIVE = 'ACTIVE';
     case ENDED = 'ENDED';
+    case TERMINATED = 'TERMINATED';
     case CANCELLED = 'CANCELLED';
 
     /**
@@ -51,6 +52,7 @@ enum ContractStatus: string
             self::PENDING_PAYMENT => 'Chờ thanh toán',
             self::ACTIVE => 'Đang hiệu lực',
             self::ENDED => 'Đã kết thúc',
+            self::TERMINATED => 'Đã thanh lý',
             self::CANCELLED => 'Đã huỷ',
         };
     }

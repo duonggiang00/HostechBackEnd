@@ -591,6 +591,39 @@ export default function MeterDetailPage() {
                 </div>
               </div>
 
+              {/* Dynamic Usage Calculation Preview */}
+              <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Chỉ số cũ</p>
+                    <p className="text-lg font-bold text-slate-700 dark:text-slate-300">
+                      {readings.length > 0 ? readings[0].reading_value?.toLocaleString('vi-VN') : (meter.base_reading?.toLocaleString('vi-VN') || '0')}
+                    </p>
+                  </div>
+                  <div className="text-slate-300 dark:text-slate-600 hidden sm:block">
+                    <ArrowLeft className="w-5 h-5 rotate-180" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Chỉ số mới</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white">
+                      {formData.reading_value || '0'}
+                    </p>
+                  </div>
+                  <div className="h-8 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Mức sử dụng dự kiến</p>
+                    <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">
+                      {(() => {
+                        const current = parseInt(formData.reading_value) || 0;
+                        const previous = readings.length > 0 ? (readings[0].reading_value || 0) : (meter.base_reading || 0);
+                        const diff = current - previous;
+                        return (diff > 0 ? `+${diff.toLocaleString('vi-VN')}` : diff.toLocaleString('vi-VN')) + (meter.type === 'ELECTRIC' ? ' kWh' : ' m³');
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 mt-4">
                 <button
                   type="submit"
@@ -629,7 +662,8 @@ export default function MeterDetailPage() {
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 transition-colors">
                       <tr>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thời gian</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Chỉ số</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Chỉ số</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Mức sử sử dụng</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
                         <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                       </tr>
@@ -651,10 +685,17 @@ export default function MeterDetailPage() {
                               </p>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <p className="font-semibold text-slate-900 dark:text-white transition-colors">
+                          <td className="px-6 py-4 text-right">
+                            <p className="font-bold text-slate-900 dark:text-white transition-colors">
                               {reading.reading_value?.toLocaleString('vi-VN') || '0'}
                             </p>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400">
+                              {reading.consumption !== undefined 
+                                ? `+${reading.consumption.toLocaleString('vi-VN')} ${meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}`
+                                : '-'}
+                            </span>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">

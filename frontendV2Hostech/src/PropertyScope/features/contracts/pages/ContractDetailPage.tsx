@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
-  AlertCircle, CheckCircle2, History 
+  AlertCircle, CheckCircle2, History, XCircle
 } from 'lucide-react';
 import { useContract } from '../hooks/useContracts';
+import { TerminateContractModal } from '../components/TerminateContractModal';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
@@ -21,6 +23,7 @@ export default function ContractDetailPage() {
   const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
   const navigate = useNavigate();
   const { data: contract, isLoading, error } = useContract(contractId);
+  const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
   
   const handleBack = () => {
     navigate(`/properties/${propertyId}/contracts`);
@@ -106,6 +109,15 @@ export default function ContractDetailPage() {
             >
               <Edit3 className="w-4 h-4" />
               <span>Chỉnh sửa</span>
+            </button>
+          )}
+          {contract.status === 'ACTIVE' && (
+            <button 
+              onClick={() => setIsTerminateModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-3.5 bg-rose-600 dark:bg-rose-500 text-white rounded-2xl font-bold text-sm hover:bg-rose-700 dark:hover:bg-rose-600 transition-all shadow-lg shadow-rose-100 dark:shadow-none ring-4 ring-rose-50 dark:ring-rose-500/20"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>Thanh lý hợp đồng</span>
             </button>
           )}
         </div>
@@ -355,6 +367,14 @@ export default function ContractDetailPage() {
               </div>
             </div>
 
+            <button
+              onClick={() => setIsTerminateModalOpen(true)}
+              className="w-full bg-red-600 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200 dark:shadow-none"
+            >
+              <XCircle className="w-4 h-4" />
+              Chấm dứt hợp đồng
+            </button>
+
             <button className="w-full bg-slate-900 dark:bg-slate-700 text-white py-4 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 dark:hover:bg-slate-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200 dark:shadow-none">
               <History className="w-4 h-4" />
               Lịch sử thay đổi
@@ -362,6 +382,13 @@ export default function ContractDetailPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* Modals */}
+      <TerminateContractModal
+        isOpen={isTerminateModalOpen}
+        onClose={() => setIsTerminateModalOpen(false)}
+        contract={contract}
+      />
     </div>
   );
 }

@@ -1,2 +1,0 @@
-﻿src/features/rooms/components/QuickRoomManager.tsx(2,16): error TS6133: 'X' is declared but its value is never read.
-src/hooks/useProfile.ts(3,30): error TS2307: Cannot find module '@/stores/useAuthStore' or its corresponding type declarations.

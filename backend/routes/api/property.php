@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('properties/trash', [PropertyController::class, 'trash']);
 Route::apiResource('properties', PropertyController::class);
 Route::post('properties/{id}/restore', [PropertyController::class, 'restore']);
+Route::post('properties/{id}/trigger-billing', [PropertyController::class, 'triggerBilling']);
 Route::delete('properties/{id}/force', [PropertyController::class, 'forceDelete']);
 
 // Floors

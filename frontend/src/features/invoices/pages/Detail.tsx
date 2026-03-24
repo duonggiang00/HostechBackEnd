@@ -2,11 +2,10 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router";
 import {
-    Descriptions, Tag, Button, Spin, Alert, Table,
+    Descriptions, Tag, Button, Spin, Alert, Table, Modal,
     Form, Input, InputNumber, Select, Popconfirm, notification, Divider, Typography
 } from "antd";
 import { ArrowLeft, Edit, Plus, Trash2 } from "lucide-react";
-
 const { Title } = Typography;
 import { getInvoiceById, addInvoiceItem, removeInvoiceItem, issueInvoice, payInvoice } from "../api/invoiceApi";
 import {
@@ -64,15 +63,28 @@ const InvoiceDetail = () => {
         onError: (e: any) => notification.error({ message: "Lỗi phát hành", description: e.message }),
     });
 
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [paymentForm] = Form.useForm();
+
     const payMutation = useMutation({
-        mutationFn: () => payInvoice(id!),
+        mutationFn: (values?: any) => payInvoice(id!, values),
         onSuccess: () => {
-            notification.success({ message: "Xác nhận thanh toán thành công" });
+            notification.success({ message: "Ghi nhận thanh toán thành công" });
             queryClient.invalidateQueries({ queryKey: ["invoice", id] });
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
+            setShowPaymentModal(false);
+            paymentForm.resetFields();
         },
         onError: (e: any) => notification.error({ message: "Lỗi thanh toán", description: e.message }),
     });
+
+    const onRecordPayment = (values: any) => {
+        payMutation.mutate({
+            amount: Number(values.amount),
+            payment_method: values.payment_method,
+            note: values.note
+        });
+    };
 
     const onAddItem = (values: any) => {
         const result = InvoiceItemSchema.safeParse({
@@ -103,7 +115,6 @@ const InvoiceDetail = () => {
         );
     }
 
-    // Khóa thêm/xóa dòng khi hóa đơn đã được kóa
     const isLocked = invoice?.status === InvoiceStatusEnum.PAID || invoice?.status === InvoiceStatusEnum.CANCELLED;
 
     const itemColumns = [
@@ -146,6 +157,52 @@ const InvoiceDetail = () => {
 
     return (
         <div className="flex flex-col gap-5 p-5">
+            {/* Payment Modal */}
+            <Modal
+                title="Ghi nhận thanh toán"
+                open={showPaymentModal}
+                onCancel={() => setShowPaymentModal(false)}
+                onOk={() => paymentForm.submit()}
+                confirmLoading={payMutation.isPending}
+            >
+                <div className="mb-4 text-sm text-gray-600">
+                    <p>Khách đang còn nợ: <span className="font-bold text-red-600">{(invoice?.debt || 0).toLocaleString()} VNĐ</span></p>
+                    <p>Nhập số tiền khách thực tế đã thanh toán lần này.</p>
+                </div>
+                <Form
+                    form={paymentForm}
+                    layout="vertical"
+                    onFinish={onRecordPayment}
+                >
+                    <Form.Item
+                        name="amount"
+                        label="Số tiền (VNĐ)"
+                        rules={[{ required: true, message: "Vui lòng nhập số tiền" }]}
+                    >
+                        <InputNumber
+                            className="w-full"
+                            min={0}
+                            max={invoice?.debt || 0}
+                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ''))}
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        name="payment_method"
+                        label="Phương thức thanh toán"
+                        rules={[{ required: true }]}
+                    >
+                        <Select options={[
+                            { label: "Chuyển khoản", value: "transfer" },
+                            { label: "Tiền mặt", value: "cash" },
+                        ]} />
+                    </Form.Item>
+                    <Form.Item name="note" label="Ghi chú (Tùy chọn)">
+                        <Input.TextArea rows={2} placeholder="Vd: Khách chuyển khoản VCB" />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -157,14 +214,21 @@ const InvoiceDetail = () => {
                 <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
                     <div className="flex gap-2">
                         {invoice?.status === InvoiceStatusEnum.DRAFT && (
-                            <Popconfirm title="Phát hành hóa đơn này cho khách thê?" onConfirm={() => issueMutation.mutate()}>
+                            <Popconfirm title="Phát hành hóa đơn này cho khách thuê?" onConfirm={() => issueMutation.mutate()}>
                                 <Button type="primary" loading={issueMutation.isPending}>Phát hành / Gửi</Button>
                             </Popconfirm>
                         )}
                         {(invoice?.status === InvoiceStatusEnum.ISSUED || invoice?.status === InvoiceStatusEnum.PARTIAL || invoice?.status === InvoiceStatusEnum.OVERDUE) && (
-                            <Popconfirm title="Xác nhận khách đã thanh toán toàn bộ hóa đơn này?" onConfirm={() => payMutation.mutate()}>
-                                <Button type="primary" loading={payMutation.isPending}>Xác nhận thanh toán</Button>
-                            </Popconfirm>
+                            <Button type="primary" onClick={() => {
+                                paymentForm.setFieldsValue({
+                                    amount: invoice?.debt || 0,
+                                    payment_method: 'transfer',
+                                    note: ''
+                                });
+                                setShowPaymentModal(true);
+                            }}>
+                                Ghi nhận thanh toán
+                            </Button>
                         )}
                         <Button 
                             icon={<Edit size={15} />} 
@@ -197,11 +261,11 @@ const InvoiceDetail = () => {
                         <span className="font-bold">{invoice?.total_amount.toLocaleString()} VNĐ</span>
                     </Descriptions.Item>
                     <Descriptions.Item label="Đã thanh toán">
-                        <span className="text-green-600 font-semibold">{invoice?.paid_amount.toLocaleString()} VNĐ</span>
+                        <span className="text-green-600 font-semibold">{(invoice?.paid_amount || 0).toLocaleString()} VNĐ</span>
                     </Descriptions.Item>
                     <Descriptions.Item label="Còn nợ">
                         <span className={`font-bold ${(invoice?.debt ?? 0) > 0 ? "text-red-500" : "text-green-600"}`}>
-                            {invoice?.debt.toLocaleString()} VNĐ
+                            {(invoice?.debt || 0).toLocaleString()} VNĐ
                         </span>
                     </Descriptions.Item>
                     <Descriptions.Item label="Phát hành bởi">{invoice?.issued_by?.full_name ?? "—"}</Descriptions.Item>

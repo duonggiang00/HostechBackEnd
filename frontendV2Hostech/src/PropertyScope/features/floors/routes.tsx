@@ -1,10 +1,8 @@
-import { Route } from 'react-router-dom';
-import FloorsPage from './pages/FloorsPage';
-import FloorPlanPage from './pages/FloorPlanPage';
+import type { RouteObject } from 'react-router-dom';
 
-export const floorRoutes = (
-  <>
-    <Route path="floors" element={<FloorsPage />} />
-    <Route path="floors/:floorId" element={<FloorPlanPage />} />
-  </>
-);
+export const floorRoutes: RouteObject[] = [
+  {
+    path: 'floors',
+    element: <div className="p-8">Floors Management (Coming Soon)</div>,
+  },
+];

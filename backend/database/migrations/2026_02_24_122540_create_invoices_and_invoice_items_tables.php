@@ -32,6 +32,7 @@ return new class extends Migration
             $table->foreignUuid('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignUuid('issued_by_user_id')->nullable()->constrained('users')->nullOnDelete();
 
+            $table->boolean('is_termination')->default(false);
             $table->timestamp('issued_at')->nullable();
             $table->timestamp('cancelled_at')->nullable();
             $table->timestamps();

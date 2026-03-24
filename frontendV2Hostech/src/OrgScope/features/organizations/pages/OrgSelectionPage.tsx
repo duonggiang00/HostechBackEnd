@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { Building, ArrowRight, Loader2, ShieldCheck, Globe } from 'lucide-react';
@@ -16,8 +17,21 @@ export default function OrgSelectionPage() {
     ? organizations 
     : organizations.filter(org => org.id === user?.org_id);
 
+  // Auto-redirect if only one organization exists and user is not Admin
+  useEffect(() => {
+    if (!isLoading && user?.role !== 'Admin' && displayOrgs.length === 1) {
+      handleOrgClick(displayOrgs[0].id);
+    }
+  }, [isLoading, displayOrgs, user?.role]);
+
   const handleOrgClick = (orgId: string) => {
-    // For Managers and Staff, if they only have ONE property, jump straight to it.
+    // 1. For Admin, go to specific organization properties
+    if (user?.role === 'Admin') {
+      navigate(`/org/organizations/${orgId}/properties`);
+      return;
+    }
+
+    // 2. For Managers and Staff, if they only have ONE property, jump straight to it.
     if (user?.role === 'Manager' || user?.role === 'Staff') {
       const assigned = user.properties || [];
       if (assigned.length === 1) {
@@ -26,7 +40,7 @@ export default function OrgSelectionPage() {
       }
     }
     
-    // Default: go to property selection list
+    // 3. Default: go to property selection list
     navigate('/org/properties');
   };
 

@@ -128,10 +128,16 @@ class DormantTenantAccessTest extends TestCase
         ]);
         $this->assertDatabaseHas('contracts', [
             'id' => $contract->id,
-            'status' => 'ACTIVE',
+            'status' => 'PENDING_PAYMENT',
         ]);
 
-        // Attempt to fetch rooms now (Should be unlocked)
+        // Verify Initial Invoice was created
+        $this->assertDatabaseHas('invoices', [
+            'contract_id' => $contract->id,
+            // 'type' column doesn't exist, we check just existence here.
+        ]);
+
+        // Attempt to fetch rooms now (Should be unlocked even in PENDING_PAYMENT state)
         $responseRooms = $this->actingAs($tenant)->getJson('/api/rooms');
         $responseRooms->assertStatus(200)
             ->assertJsonCount(1, 'data')

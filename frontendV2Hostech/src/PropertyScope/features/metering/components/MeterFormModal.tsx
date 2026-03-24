@@ -225,7 +225,7 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
             </label>
             <input
               type="number"
-              step="0.01"
+              step="0.001"
               value={baseReading}
               onChange={(e) => {
                 setBaseReading(e.target.value);

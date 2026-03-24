@@ -6,6 +6,8 @@ use App\Enums\ContractStatus;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Invoice\InvoiceStatusHistory;
+use App\Models\Invoice\Payment;
+use App\Models\Property\Property;
 use App\Models\Property\Room;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -586,6 +588,47 @@ class InvoiceService
     }
 
     /**
+     * Tạo hóa đơn thanh lý hợp đồng.
+     *
+     * Tạo Invoice + Items trong transaction, tự động phát hành (ISSUED),
+     * ghi lịch sử trạng thái.
+     */
+    public function createTerminationInvoice(array $invoiceData, array $itemsData): Invoice
+    {
+        return DB::transaction(function () use ($invoiceData, $itemsData) {
+            // 1. Tạo invoice với status DRAFT tạm thời
+            $invoiceData['status'] = 'DRAFT';
+            $invoice = Invoice::create($invoiceData);
+
+            // 2. Tạo các dòng chi tiết (items)
+            $totalAmount = 0;
+            foreach ($itemsData as $item) {
+                $item['org_id'] = $invoiceData['org_id'];
+                $created = $invoice->items()->create($item);
+                $totalAmount += $created->amount;
+            }
+
+            // 3. Cập nhật tổng tiền
+            $invoice->update(['total_amount' => $totalAmount]);
+
+            // 4. Nếu bằng 0 thì chuyển luôn thành PAID
+            $finalStatus = $totalAmount <= 0 ? 'PAID' : 'ISSUED';
+            
+            $invoice->update([
+                'status' => $finalStatus,
+                'issue_date' => now(),
+                'issued_at' => now(),
+                'issued_by_user_id' => $invoiceData['created_by_user_id'] ?? null,
+                'paid_amount' => $finalStatus === 'PAID' ? $totalAmount : 0,
+            ]);
+
+            $this->recordStatusHistory($invoice, 'DRAFT', $finalStatus, 'Hóa đơn thanh lý hợp đồng ghi nhận các khoản chưa thanh toán cuối cùng.');
+
+            return $invoice->load('items');
+        });
+    }
+
+    /**
      * Hook: Kích hoạt hợp đồng khi Initial Invoice được thanh toán.
      *
      * Kiểm tra `snapshot.is_initial` để xác định hóa đơn ban đầu.
@@ -611,5 +654,147 @@ class InvoiceService
             'status' => ContractStatus::ACTIVE->value,
             'signed_at' => now(),
         ]);
+    }
+    // ║  PAYMENT OPERATIONS                                     ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Record a payment for an invoice.
+     */
+    public function recordPayment(Invoice $invoice, array $data): Payment
+    {
+        return DB::transaction(function () use ($invoice, $data) {
+            $payment = $invoice->payments()->create([
+                'org_id' => $invoice->org_id,
+                'property_id' => $invoice->property_id,
+                'payer_user_id' => $data['payer_user_id'] ?? null,
+                'received_by_user_id' => $data['received_by_user_id'] ?? request()->user()?->id,
+                'method' => $data['method'] ?? 'CASH',
+                'amount' => $data['amount'],
+                'reference' => $data['reference'] ?? null,
+                'received_at' => $data['received_at'] ?? now(),
+                'status' => 'APPROVED',
+                'note' => $data['note'] ?? null,
+            ]);
+
+            $invoice->increment('paid_amount', $data['amount']);
+            $invoice->refresh();
+            
+            // Update Status
+            $newStatus = $invoice->paid_amount >= $invoice->total_amount ? 'PAID' : 'PARTIALLY_PAID';
+            if ($invoice->status !== $newStatus) {
+                $oldStatus = $invoice->status;
+                $invoice->update(['status' => $newStatus]);
+                $this->recordStatusHistory($invoice, $oldStatus, $newStatus, 'Ghi nhận thanh toán');
+            }
+
+            return $payment;
+        });
+    }
+
+    /**
+     * Trigger monthly billing for a property.
+     * Generates invoices for all rooms with ACTIVE contracts.
+     */
+    public function createMonthlyInvoicesForProperty(Property $property, array $options = []): int
+    {
+        $count = 0;
+        $contracts = $property->contracts()
+            ->where('status', \App\Enums\ContractStatus::ACTIVE->value)
+            ->get();
+
+        $billingDate = $options['billing_date'] ?? now()->toDateString();
+
+        foreach ($contracts as $contract) {
+            try {
+                $result = $this->generateForContract($contract, $billingDate);
+                if ($result['is_new']) {
+                    $count++;
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to generate invoice for contract {$contract->id}: " . $e->getMessage());
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Generate an invoice for a specific contract for a given billing month.
+     */
+    public function generateForContract(\App\Models\Contract\Contract $contract, string $billingDate): array
+    {
+        return DB::transaction(function () use ($contract, $billingDate) {
+            $billingDateObj = \Carbon\Carbon::parse($billingDate);
+            $periodStart = $billingDateObj->copy()->startOfMonth();
+            $periodEnd = $billingDateObj->copy()->endOfMonth();
+
+            // Check if an invoice already exists for this period
+            $existing = Invoice::where('contract_id', $contract->id)
+                ->where('period_start', $periodStart->toDateString())
+                ->where('period_end', $periodEnd->toDateString())
+                ->whereIn('status', ['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID'])
+                ->first();
+
+            if ($existing) {
+                return ['invoice' => $existing, 'is_new' => false];
+            }
+
+            // Create Invoice
+            $invoice = Invoice::create([
+                'org_id' => $contract->org_id,
+                'property_id' => $contract->property_id,
+                'room_id' => $contract->room_id,
+                'contract_id' => $contract->id,
+                'status' => 'DRAFT',
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'due_date' => $billingDateObj->copy()->addDays($contract->property->default_due_day ?? 5),
+                'total_amount' => 0,
+                'created_by_user_id' => request()->user()?->id,
+            ]);
+
+            $totalAmount = 0;
+
+            // 1. Rent Item
+            if ($contract->rent_price > 0) {
+                $rentItem = $invoice->items()->create([
+                    'org_id' => $contract->org_id,
+                    'type' => 'RENT',
+                    'name' => 'Tiền phòng',
+                    'description' => 'Tiền phòng tháng ' . $billingDateObj->format('m/Y'),
+                    'quantity' => 1,
+                    'unit_price' => $contract->rent_price,
+                    'amount' => $contract->rent_price,
+                ]);
+                $totalAmount += $rentItem->amount;
+            }
+
+            // 2. Fixed Services
+            if ($contract->fixed_services_fee > 0) {
+                 $serviceItem = $invoice->items()->create([
+                    'org_id' => $contract->org_id,
+                    'type' => 'SERVICE',
+                    'name' => 'Phí dịch vụ cố định',
+                    'description' => 'Phí dịch vụ tháng ' . $billingDateObj->format('m/Y'),
+                    'quantity' => 1,
+                    'unit_price' => $contract->fixed_services_fee,
+                    'amount' => $contract->fixed_services_fee,
+                ]);
+                $totalAmount += $serviceItem->amount;
+            }
+
+            $invoice->update([
+                'total_amount' => $totalAmount,
+                'status' => 'ISSUED',
+                'issue_date' => now(),
+                'issued_at' => now(),
+                'issued_by_user_id' => request()->user()?->id,
+            ]);
+
+            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn tháng tự động tạo.');
+
+            return ['invoice' => $invoice->load('items'), 'is_new' => true];
+        });
     }
 }

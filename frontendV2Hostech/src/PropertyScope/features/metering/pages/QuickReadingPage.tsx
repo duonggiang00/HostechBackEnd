@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
-import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar } from 'lucide-react';
+import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -52,15 +52,15 @@ export default function QuickReadingPage() {
   }, [meters]);
 
   const handleReadingChange = (meterId: string, value: string) => {
-    // Only allow numbers
-    if (value && !/^\d+$/.test(value)) return;
+    // allow numbers and decimal point
+    if (value && !/^\d*\.?\d*$/.test(value)) return;
     setReadings(prev => ({ ...prev, [meterId]: value }));
   };
 
   const calculateConsumption = (meter: Meter, newValue: string) => {
     if (!newValue) return 0;
     const prev = meter.last_reading ?? meter.base_reading ?? 0;
-    const current = parseInt(newValue, 10);
+    const current = parseFloat(newValue);
     return Math.max(0, current - prev);
   };
 
@@ -69,7 +69,7 @@ export default function QuickReadingPage() {
     const payload = Object.entries(readings)
       .map(([meterId, value]) => ({
         meter_id: meterId,
-        reading_value: parseInt(value as string, 10),
+        reading_value: parseFloat(value as string),
         period_start: periodStart,
         period_end: periodEnd,
       }))
@@ -128,18 +128,34 @@ export default function QuickReadingPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-3">
+      {/* Progress Floating Bar */}
+      {!isLoading && meters.length > 0 && (
+        <div className="sticky top-4 z-40 mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-white/10 p-4 rounded-2xl shadow-xl flex items-center gap-4 transition-all animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="flex-1">
+            <div className="flex justify-between text-sm font-bold mb-1.5">
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Tiến độ chốt số</span>
+              <span className="text-indigo-600 dark:text-indigo-400">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
+            </div>
+            <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-indigo-600 transition-all duration-500 ease-out shadow-[0_0_12px_rgba(79,70,229,0.4)]"
+                style={{ width: `${(Object.keys(readings).length / meters.length) * 100}%` }}
+              />
+            </div>
+          </div>
+          <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-white/10 mx-2" />
           <button
             onClick={handleSave}
             disabled={isSubmitting || Object.keys(readings).length === 0}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-95"
+            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2 whitespace-nowrap"
           >
             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-            Lưu chỉ số ({Object.keys(readings).length})
+            Lưu ngay
           </button>
         </div>
-      </div>
+      )}
 
       {/* Settings Card */}
       <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-sm">
@@ -153,6 +169,7 @@ export default function QuickReadingPage() {
             <input
               type="date"
               value={periodStart}
+              max={format(new Date(), 'yyyy-MM-dd')}
               onChange={(e) => setPeriodStart(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
             />
@@ -162,6 +179,7 @@ export default function QuickReadingPage() {
             <input
               type="date"
               value={periodEnd}
+              max={format(new Date(), 'yyyy-MM-dd')}
               onChange={(e) => setPeriodEnd(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
             />
@@ -195,10 +213,20 @@ export default function QuickReadingPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {Object.entries(rooms).map(([roomName, roomMeters]) => (
                   <div key={roomName} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
+                    <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center text-sm">
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {roomName}
                       </span>
+                      {roomMeters.every(m => readings[m.id]) ? (
+                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Hoàn tất
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800/50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          {roomMeters.filter(m => readings[m.id]).length}/{roomMeters.length} Đã nhập
+                        </span>
+                      )}
                     </div>
                     <div className="p-2">
                       {roomMeters.map(meter => {
@@ -246,12 +274,25 @@ export default function QuickReadingPage() {
                               />
                             </div>
 
-                            {/* Consumption */}
-                            <div className="w-24 shrink-0 text-right">
+                            {/* Consumption & Trend */}
+                            <div className="w-32 shrink-0 text-right">
                               <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Tiêu thụ</p>
-                              <p className={`font-bold ${consumption > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                                {currentValue ? consumption.toLocaleString('vi-VN') : '-'}
-                              </p>
+                              <div className="flex items-center justify-end gap-2">
+                                <p className={`font-bold ${consumption > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
+                                  {currentValue ? consumption.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : '-'}
+                                </p>
+                                {currentValue && (
+                                  <div className={`p-1 rounded-full ${
+                                    consumption > 0 ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400' : 
+                                    consumption === 0 ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500' :
+                                    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                  }`}>
+                                    {consumption > 0 ? <TrendingUp className="w-3 h-3" /> : 
+                                     consumption === 0 ? <Minus className="w-3 h-3" /> : 
+                                     <TrendingDown className="w-3 h-3" />}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

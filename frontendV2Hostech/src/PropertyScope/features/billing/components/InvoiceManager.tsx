@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { 
   FileText, 
   CheckCircle2, 
   Clock, 
   AlertCircle, 
   ChevronRight,
-  DollarSign
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 import type { Invoice } from '@/PropertyScope/features/rooms/types';
+import { RecordPaymentModal } from './RecordPaymentModal';
 
 interface InvoiceManagerProps {
   roomId: string;
@@ -15,6 +18,8 @@ interface InvoiceManagerProps {
 }
 
 export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerProps) {
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-12 transition-colors">
@@ -105,9 +110,23 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
                 <Clock className="w-3 h-3" />
                 Period: {new Date(invoice.period_start).toLocaleDateString()} - {new Date(invoice.period_end).toLocaleDateString()}
               </div>
-              <div className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 font-black text-xs uppercase tracking-widest group-hover:gap-2 transition-all">
-                View Details
-                <ChevronRight className="w-3 h-3" />
+              <div className="flex items-center gap-3">
+                {invoice.status === 'issued' && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedInvoice(invoice);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs rounded-lg transition-colors"
+                  >
+                    <CreditCard className="w-3 h-3" />
+                    Thanh toán
+                  </button>
+                )}
+                <div className="flex items-center gap-1 text-slate-600 dark:text-slate-400 font-black text-xs uppercase tracking-widest group-hover:text-indigo-600 dark:group-hover:text-indigo-400 group-hover:gap-2 transition-all">
+                  Chi tiết
+                  <ChevronRight className="w-3 h-3" />
+                </div>
               </div>
             </div>
           </div>
@@ -118,6 +137,14 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
         <DollarSign className="w-5 h-5 group-hover:scale-110 transition-transform" />
         Generate Custom Invoice
       </button>
+
+      {selectedInvoice && (
+        <RecordPaymentModal 
+          isOpen={true} 
+          invoice={selectedInvoice} 
+          onClose={() => setSelectedInvoice(null)} 
+        />
+      )}
     </div>
   );
 }

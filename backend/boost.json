@@ -1,8 +1,0 @@
-{
-    "agents": [
-        "copilot"
-    ],
-    "herd_mcp": false,
-    "mcp": true,
-    "sail": false
-}

@@ -145,6 +145,15 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/{id}/terminate */
+  const terminateContract = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.terminateContract(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      invalidateContracts();
+    },
+  });
+
   return {
     createContract,
     updateContract,
@@ -154,5 +163,6 @@ export const useContractActions = () => {
     acceptSignature,
     rejectSignature,
     requestRoomTransfer,
+    terminateContract,
   };
 };

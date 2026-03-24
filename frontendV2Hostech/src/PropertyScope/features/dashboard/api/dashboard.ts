@@ -11,4 +11,12 @@ export const dashboardApi = {
 
     return response.data.data;
   },
+
+  generateMonthlyInvoices: async (propertyId: string, month?: string): Promise<any> => {
+    const response = await apiClient.post('invoices/generate', {
+      property_id: propertyId,
+      execution_date: month ? `${month}-01` : undefined,
+    });
+    return response.data;
+  },
 };

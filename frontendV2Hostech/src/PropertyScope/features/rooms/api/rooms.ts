@@ -106,7 +106,7 @@ export const roomsApi = {
     return response.data.data as Room;
   },
 
-  quickCreateBatchRooms: async (data: { property_id: string; prefix?: string; count: number; start_number?: number; template_id?: string }) => {
+  quickCreateBatchRooms: async (data: { property_id: string; prefix?: string; count: number; start_number?: number; template_id?: string; floor_id?: string }) => {
     const response = await apiClient.post('/rooms/quick-batch', data);
     console.log('📡 API: POST /rooms/quick-batch (Batch Created):', response.data.data);
     return response.data.data as Room[];

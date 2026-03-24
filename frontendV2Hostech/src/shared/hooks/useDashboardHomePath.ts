@@ -17,8 +17,11 @@ export function useDashboardHomePath(propertyId?: string): string {
     case 'Admin':
       return '/system/dashboard';
     case 'Owner':
-    case 'Manager':
       return '/org/dashboard';
+    case 'Manager':
+      return propertyId
+        ? `/properties/${propertyId}/dashboard`
+        : '/org/properties';
     case 'Staff':
       return propertyId
         ? `/properties/${propertyId}/dashboard`

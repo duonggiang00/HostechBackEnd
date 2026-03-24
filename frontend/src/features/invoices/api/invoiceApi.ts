@@ -98,3 +98,9 @@ export const getInvoicesByProperty = async (propertyId: string): Promise<Invoice
     const res = await Api.get(`properties/${propertyId}/invoices`);
     return res.data?.data ?? res.data;
 };
+
+// Trigger tạo hóa đơn tự động hàng loạt
+export const generateInvoices = async (data: { execution_date: string; }): Promise<{ message: string; data: any; }> => {
+    const res = await Api.post("invoices/generate", data);
+    return res.data;
+};

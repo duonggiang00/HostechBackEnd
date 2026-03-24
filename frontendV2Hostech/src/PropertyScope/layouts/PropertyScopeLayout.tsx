@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useParams, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { useParams } from 'react-router-dom';
+import type { UserProperty } from '@/shared/features/auth/types';
 import { 
   Building2, 
   DoorOpen, 
@@ -15,7 +15,8 @@ import {
   Home,
   Gauge,
   User,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -34,6 +35,14 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const dashboardPath = useDashboardHomePath(propertyId);
 
+  // Security Check: If Staff/Manager, ensure they have access to this propertyId
+  if (user && (user.role === 'Staff' || user.role === 'Manager') && propertyId) {
+    const hasAccess = user.properties?.some((p: UserProperty) => p.id === propertyId);
+    if (!hasAccess) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+  }
+
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
     { id: 'property-detail', icon: Building2, label: 'Properties', path: `/properties/${propertyId}/detail` },
@@ -42,6 +51,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
     { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
+    { id: 'templates', icon: Settings, label: 'Mẫu thiết lập', path: `/properties/${propertyId}/templates` },
   ];
 
   const SidebarContent = () => (

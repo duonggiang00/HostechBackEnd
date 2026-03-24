@@ -42,9 +42,9 @@ class PropertyPolicy implements RbacModuleProvider
         }
 
         if ($user->hasRole('Tenant')) {
-            // Tenant chỉ được xem chi tiết Tòa nhà nếu đang có Contract ACTIVE tại đó
+            // Tenant chỉ được xem chi tiết Tòa nhà nếu đang có Contract ACTIVE hoặc PENDING_PAYMENT tại đó
             return \App\Models\Contract\Contract::where('property_id', $property->id)
-                ->where('status', 'ACTIVE')
+                ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
                 ->whereHas('members', function ($q) use ($user) {
                     $q->where('user_id', $user->id)->where('status', 'APPROVED');
                 })

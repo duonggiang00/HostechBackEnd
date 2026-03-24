@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Home, Tag, Users, Maximize2, DollarSign, FileText, Check, Loader2, 
   Settings, Image as ImageIcon, Zap, ShieldAlert, X, FileSignature
@@ -10,6 +10,23 @@ import { toast } from 'react-hot-toast';
 import MediaDropzone from '@/shared/features/media/components/MediaDropzone';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
 import { formatNumber, parseNumber } from '@/lib/utils';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
+
+const roomSchema = z.object({
+  name: z.string().min(1, 'Tên phòng không được để trống'),
+  code: z.string().min(1, 'Mã phòng không được để trống'),
+  type: z.enum(['standard', 'studio', 'duplex', 'penthouse']),
+  capacity: z.number().min(1, 'Sức chứa phải ít nhất là 1'),
+  area: z.number().positive('Diện tích phải lớn hơn 0'),
+  base_price: z.number().min(0, 'Giá không được âm'),
+  description: z.string().optional()
+});
+
+type RoomFormValues = z.infer<typeof roomSchema>;
 
 interface RoomFormProps {
   initialData?: Room | null;
@@ -19,14 +36,53 @@ interface RoomFormProps {
   floorId?: string | null;
 }
 
-const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
-
 export default function RoomForm({ initialData, onSuccess, onCancel, propertyId, floorId }: RoomFormProps) {
   const { createRoom, updateRoom, publishRoom } = useRoomActions();
   const { data: property } = usePropertyDetail(propertyId);
   const { data: floor } = useFloorDetail(floorId || undefined);
   const { data: rooms = [] } = useRooms({ property_id: propertyId, floor_id: floorId || undefined });
   
+  // React Hook Form
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    setError,
+    clearErrors,
+    formState: { errors },
+    getValues
+  } = useForm<RoomFormValues>({
+    resolver: zodResolver(roomSchema),
+    defaultValues: {
+      name: initialData?.name ?? '',
+      code: initialData?.code ?? '',
+      type: (initialData?.type as typeof ROOM_TYPES[number]) ?? 'standard',
+      capacity: initialData?.capacity ?? 2,
+      area: initialData?.area ?? 25,
+      base_price: initialData?.base_price ?? 0,
+      description: initialData?.description ?? '',
+    }
+  });
+
+  const isEditing = !!initialData?.id;
+  const currentArea = watch('area');
+  const currentBasePrice = watch('base_price');
+  const currentType = watch('type');
+
+  // Related states for complex UI
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [servicePrices, setServicePrices] = useState<Record<string, number>>({});
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+
+  // If initialData changes or components mount, handle `code` logic if skipped in zod
+  useEffect(() => {
+    if (!isEditing) {
+      // clear code errors if empty because it might evaluate dynamically, but schema enforces it
+    }
+  }, [isEditing]);
+
   // Optimized Limit Calculations
   const areaLimits = useMemo(() => {
     const buildingArea = Number(property?.area || 0);
@@ -49,66 +105,41 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     };
   }, [property, floor, rooms, initialData?.id]);
 
-  const isEditing = !!initialData?.id;
-
-  const [formData, setFormData] = useState({
-    name: initialData?.name ?? '',
-    code: initialData?.code ?? '',
-    type: initialData?.type ?? 'standard',
-    capacity: initialData?.capacity ?? 2,
-    area: initialData?.area ?? 25,
-    base_price: initialData?.base_price ?? 0,
-    description: initialData?.description ?? '',
-  });
-
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
-  const [servicePrices, setServicePrices] = useState<Record<string, number>>({});
-  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = 'Tên phòng không được để trống';
-    if (!isEditing && !formData.code.trim()) newErrors.code = 'Mã phòng không được để trống';
-    
-    // Basic area checks
-    if (formData.area <= 0) newErrors.area = 'Diện tích phải lớn hơn 0';
-    
-    // Building/Floor Area Validation
+  const validateCustomRules = (data: RoomFormValues) => {
+    let isValid = true;
     const { buildingArea, effectiveLimit, otherRoomsArea, sharedArea, isUsingFloorLimit } = areaLimits;
 
     // Rule 1: Individual Room Area <= Building Total Area
-    if (buildingArea > 0 && formData.area > buildingArea) {
-      newErrors.area = `Diện tích phòng vượt quá tổng diện tích tòa nhà (${buildingArea} m²)`;
+    if (buildingArea > 0 && data.area > buildingArea) {
+      setError('area', { message: `Diện tích vượt quá tổng tòa nhà (${buildingArea} m²)` });
+      isValid = false;
     }
 
-    // Rule 2: Sum of rooms on floor <= Floor Area (or Building Area if floor area not defined)
+    // Rule 2: Sum of rooms on floor <= Floor Area
     if (effectiveLimit > 0) {
-      const totalArea = otherRoomsArea + formData.area + sharedArea;
-      
+      const totalArea = otherRoomsArea + data.area + sharedArea;
       if (totalArea > effectiveLimit) {
         const limitType = isUsingFloorLimit ? 'tầng' : 'tòa nhà';
-        newErrors.area = `Tổng diện tích sử dụng (${totalArea} m²) vượt quá giới hạn ${limitType} (${effectiveLimit} m²). Bao gồm các phòng và ${sharedArea} m² diện tích chung.`;
+        setError('area', { message: `Tổng DT (${totalArea} m²) vượt giới hạn ${limitType} (${effectiveLimit} m²). Tính cả ${sharedArea} m² DT chung.` });
+        isValid = false;
       }
-    } else if (formData.area > 500) {
-      newErrors.area = 'Diện tích có vẻ quá lớn (>500 m²)';
+    } else if (data.area > 500) {
+      setError('area', { message: 'Diện tích có vẻ quá lớn (>500 m²)' });
+      isValid = false;
     }
 
-    if (formData.capacity <= 0) newErrors.capacity = 'Sức chứa phải ít nhất là 1';
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return isValid;
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!validateForm()) {
-      toast.error('Vui lòng sửa các lỗi trước khi gửi');
+  const onSubmit = (data: RoomFormValues) => {
+    if (!validateCustomRules(data)) {
+      toast.error('Vui lòng sửa các lỗi diện tích trước khi gửi');
       return;
     }
 
     const basePayload = {
-      ...formData,
-      base_price: formData.base_price > 0 ? formData.base_price : undefined,
+      ...data,
+      base_price: data.base_price > 0 ? data.base_price : undefined,
       property_id: propertyId,
       floor_id: floorId || undefined,
     };
@@ -122,15 +153,14 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
             onSuccess?.();
           },
           onError: (err: any) => {
-            const msg = err?.response?.data?.message || 'Cập nhật thất bại';
-            toast.error(msg);
+            toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
           },
         }
       );
     } else {
       const payload: CreateRoomPayload = {
         ...basePayload,
-        code: formData.code,
+        code: data.code,
         media_ids: [],
       };
       createRoom.mutate(payload, {
@@ -142,8 +172,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
           onSuccess?.();
         },
         onError: (err: any) => {
-          const msg = err?.response?.data?.message || 'Tạo phòng thất bại';
-          toast.error(msg);
+          toast.error(err?.response?.data?.message || 'Tạo phòng thất bại');
         },
       });
     }
@@ -151,11 +180,13 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
 
   const handlePublish = () => {
     if (!initialData?.id) return;
+    const currentBasePriceValue = getValues('base_price');
+    const currentCodeValue = getValues('code');
     publishRoom.mutate(
       {
         id: initialData.id,
-        base_price: formData.base_price || undefined,
-        code: formData.code || undefined,
+        base_price: currentBasePriceValue || undefined,
+        code: currentCodeValue || undefined,
       },
       {
         onSuccess: () => {
@@ -170,7 +201,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
   const isMutating = createRoom.isPending || updateRoom.isPending || publishRoom.isPending;
 
   return (
-    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-8">
       
       {/* ─── Main Content (Basic Info, Media, Pricing) ─── */}
       <div className="md:col-span-2 space-y-6">
@@ -191,18 +222,14 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                   <Home className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
-                  value={formData.name}
-                  onChange={(e) => {
-                    setFormData({ ...formData, name: e.target.value });
-                    if (errors.name) setErrors(p => ({ ...p, name: '' }));
-                  }}
+                  {...register('name')}
                   className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
                     errors.name ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                   placeholder="e.g. Phòng 101"
                 />
               </div>
-              {errors.name && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.name}</p>}
+              {errors.name && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.name.message}</p>}
             </div>
 
             {/* Code */}
@@ -213,18 +240,14 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                   <Tag className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
                 <input
-                  value={formData.code}
-                  onChange={(e) => {
-                    setFormData({ ...formData, code: e.target.value });
-                    if (errors.code) setErrors(p => ({ ...p, code: '' }));
-                  }}
+                  {...register('code')}
                   className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
                     errors.code ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500 ring-rose-500/20 shadow-[0_0_0_2px_rgba(244,63,94,0.1)]' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
                   }`}
                   placeholder="P101"
                 />
               </div>
-              {errors.code && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.code}</p>}
+              {errors.code && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.code.message}</p>}
             </div>
           </div>
 
@@ -236,20 +259,25 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Users className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
-                <input
-                  type="text"
-                  value={formatNumber(formData.capacity)}
-                  onChange={(e) => {
-                    const val = parseNumber(e.target.value);
-                    setFormData({ ...formData, capacity: val === '' ? 0 : Number(val) });
-                    if (errors.capacity) setErrors(p => ({ ...p, capacity: '' }));
-                  }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
-                    errors.capacity ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
-                  }`}
+                <Controller
+                  name="capacity"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      value={formatNumber(field.value)}
+                      onChange={(e) => {
+                        const val = parseNumber(e.target.value);
+                        field.onChange(val === '' ? 0 : Number(val));
+                      }}
+                      className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                        errors.capacity ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
+                      }`}
+                    />
+                  )}
                 />
               </div>
-              {errors.capacity && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.capacity}</p>}
+              {errors.capacity && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.capacity.message}</p>}
             </div>
 
             {/* Area */}
@@ -259,20 +287,26 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                   <Maximize2 className="w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-500 transition-colors" />
                 </div>
-                <input
-                  type="text"
-                  value={formatNumber(formData.area)}
-                  onChange={(e) => {
-                    const val = parseNumber(e.target.value);
-                    setFormData({ ...formData, area: val === '' ? 0 : Number(val) });
-                    if (errors.area) setErrors(p => ({ ...p, area: '' }));
-                  }}
-                  className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
-                    errors.area ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
-                  }`}
+                <Controller
+                  name="area"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      type="text"
+                      value={formatNumber(field.value)}
+                      onChange={(e) => {
+                        const val = parseNumber(e.target.value);
+                        field.onChange(val === '' ? 0 : Number(val));
+                        clearErrors('area');
+                      }}
+                      className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none transition-all font-medium dark:text-white ${
+                        errors.area ? 'border-rose-300 dark:border-rose-500/50' : 'border-slate-100 dark:border-slate-800 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20'
+                      }`}
+                    />
+                  )}
                 />
               </div>
-              {errors.area && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.area}</p>}
+              {errors.area && <p className="text-xs text-rose-500 font-medium ml-1 flex items-center gap-1"><ShieldAlert className="w-3 h-3"/>{errors.area.message}</p>}
             </div>
           </div>
         </section>
@@ -292,25 +326,31 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
               </div>
               <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
                 <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {formData.base_price === 0 ? 'Tự động tính' : ''}
+                  {currentBasePrice === 0 ? 'Tự động tính' : ''}
                 </span>
               </div>
-              <input
-                type="text"
-                value={formData.base_price === 0 ? '' : formatNumber(formData.base_price)}
-                onChange={(e) => {
-                  const val = parseNumber(e.target.value);
-                  setFormData({ ...formData, base_price: val === '' ? 0 : Number(val) });
-                }}
-                placeholder={property?.default_rent_price_per_m2 ? `Mặc định: ${formatNumber(property.default_rent_price_per_m2)}đ/m²` : "Để trống để tự động tính"}
-                className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-emerald-950/10 border rounded-2xl outline-none transition-all font-medium text-lg dark:text-emerald-400 ${
-                   formData.base_price === 0 ? 'border-amber-200 dark:border-amber-500/20' : 'border-slate-100 dark:border-emerald-500/20 focus:border-emerald-500'
-                }`}
+              <Controller
+                name="base_price"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    type="text"
+                    value={field.value === 0 ? '' : formatNumber(field.value)}
+                    onChange={(e) => {
+                      const val = parseNumber(e.target.value);
+                      field.onChange(val === '' ? 0 : Number(val));
+                    }}
+                    placeholder={property?.default_rent_price_per_m2 ? `Mặc định: ${formatNumber(property.default_rent_price_per_m2)}đ/m²` : "Để trống để tự động tính"}
+                    className={`w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-emerald-950/10 border rounded-2xl outline-none transition-all font-medium text-lg dark:text-emerald-400 ${
+                       field.value === 0 ? 'border-amber-200 dark:border-amber-500/20' : 'border-slate-100 dark:border-emerald-500/20 focus:border-emerald-500'
+                    }`}
+                  />
+                )}
               />
             </div>
-            {formData.base_price === 0 && property?.default_rent_price_per_m2 && (
+            {currentBasePrice === 0 && property?.default_rent_price_per_m2 && (
               <p className="text-xs text-amber-600 dark:text-amber-400 ml-1 mt-1 font-medium">
-                Sẽ được tự động tính: {formatNumber(formData.area * property.default_rent_price_per_m2)}đ (theo {formatNumber(property.default_rent_price_per_m2)}đ/m²)
+                Sẽ được tự động tính: {formatNumber(currentArea * property.default_rent_price_per_m2)}đ (theo {formatNumber(property.default_rent_price_per_m2)}đ/m²)
               </p>
             )}
           </div>
@@ -399,9 +439,9 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, type }))}
+                  onClick={() => setValue('type', type)}
                   className={`px-4 py-3 text-sm font-bold rounded-xl transition-all border capitalize ${
-                    formData.type === type
+                    currentType === type
                       ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'
                       : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm'
                   }`}
@@ -421,9 +461,8 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
           </div>
 
           <textarea
+            {...register('description')}
             rows={5}
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="w-full p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-sm font-medium resize-none leading-relaxed dark:text-white"
             placeholder="Chi tiết phòng, hướng nhìn, nội thất và các quy định riêng cho phòng này..."
           />

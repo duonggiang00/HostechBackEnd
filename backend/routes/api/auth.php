@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\TwoFactorAuthenticationController;
+use App\Http\Controllers\Api\Org\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,9 +14,19 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth:sanctum'])->prefix('user/mfa')->group(function () {
+// Current User Profile
+Route::get('auth/me', [ProfileController::class, 'show']);
+
+// MFA Management
+Route::prefix('user/mfa')->group(function () {
     Route::get('setup', [TwoFactorAuthenticationController::class, 'setup']);
     Route::post('initialize', [TwoFactorAuthenticationController::class, 'initialize']);
     Route::post('enable', [TwoFactorAuthenticationController::class, 'enable']);
     Route::delete('disable', [TwoFactorAuthenticationController::class, 'disable']);
+});
+
+// Logout (Overriding Fortify to support Sanctum tokens)
+Route::post('auth/logout', function (\Illuminate\Http\Request $request) {
+    $request->user()->currentAccessToken()->delete();
+    return response()->json(['message' => 'Logged out successfully'], 200);
 });

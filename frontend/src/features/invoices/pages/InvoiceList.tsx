@@ -11,10 +11,13 @@ import {
   Space,
   Badge,
   Typography,
+  Modal,
+  Form,
+  DatePicker
 } from "antd";
 import { Plus, Eye, Edit, Trash2, FileX, Filter, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router";
-import { getInvoices, deleteInvoice } from "../api/invoiceApi";
+import { getInvoices, deleteInvoice, generateInvoices } from "../api/invoiceApi";
 import type { InvoiceFilters } from "../api/invoiceApi";
 import {
   InvoiceStatusLabels,
@@ -167,8 +170,42 @@ const InvoiceList = () => {
     },
   ];
 
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [generateForm] = Form.useForm();
+
+  const generateMutation = useMutation({
+    mutationFn: (values: any) => generateInvoices({
+        execution_date: values.execution_date?.format("YYYY-MM-DD"),
+    }),
+    onSuccess: (data) => {
+      notification.success({ message: "Thành công", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setShowGenerateModal(false);
+      generateForm.resetFields();
+    },
+    onError: (e: any) => notification.error({ message: "Lỗi", description: e.message }),
+  });
+
   return (
     <div className="flex flex-col gap-4">
+      <Modal
+        title="Tạo hóa đơn tự động"
+        open={showGenerateModal}
+        onCancel={() => setShowGenerateModal(false)}
+        onOk={() => generateForm.submit()}
+        confirmLoading={generateMutation.isPending}
+        okText="Bắt đầu tạo"
+      >
+        <div className="mb-4 text-sm text-gray-600">
+          Hệ thống sẽ tự động quét tất cả các hợp đồng đang hoạt động, chốt điện/nước và tạo hóa đơn tiền thuê + dịch vụ cho tháng hiện tại.
+        </div>
+        <Form form={generateForm} layout="vertical" onFinish={(v) => generateMutation.mutate(v)}>
+          <Form.Item name="execution_date" label="Ngày tính cước" tooltip="Để trống sẽ dùng ngày hôm nay">
+            <DatePicker className="w-full" format="DD/MM/YYYY" placeholder="Chọn ngày (tùy chọn)" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -189,11 +226,20 @@ const InvoiceList = () => {
           <RoleGuard allowedRoles={["Owner", "Manager"]} fallback={null}>
             <Button
               type="primary"
+              ghost
+              icon={<RefreshCw size={16} />}
+              onClick={() => setShowGenerateModal(true)}
+              className="rounded-xl h-[40px] px-4 font-medium"
+            >
+              Chạy tự động (Billing)
+            </Button>
+            <Button
+              type="primary"
               icon={<Plus size={18} />}
               onClick={() => navigate("/manage/invoices/create")}
               className="bg-blue-600 hover:bg-blue-700 rounded-xl h-[40px] px-5 shadow-md shadow-blue-500/20 font-medium flex items-center gap-2 border-none"
             >
-              Tạo hóa đơn
+              Tạo thủ công
             </Button>
           </RoleGuard>
         </Space>

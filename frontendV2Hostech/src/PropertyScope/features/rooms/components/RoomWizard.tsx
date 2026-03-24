@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MediaDropzone from '@/shared/features/media/components/MediaDropzone';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
 import { mediaApi } from '@/shared/features/media/api/media';
+import { RoomTemplateSelector } from './RoomTemplateSelector';
+import type { RoomTemplate } from '@/PropertyScope/features/templates/types';
 
 interface RoomWizardProps {
   initialData?: Room | null;
@@ -73,7 +75,39 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     { type: 'WATER', code: '', initial_reading: 0 },
   ]);
 
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>();
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleTemplateSelect = (template: RoomTemplate) => {
+    setSelectedTemplateId(template.id);
+    setFormData(prev => ({
+      ...prev,
+      type: (template.room_type as any) || 'standard',
+      capacity: template.capacity || 1,
+      area: template.area || 0,
+      base_price: template.base_price,
+      description: template.description || '',
+    }));
+    
+    // Also pre-select services if template has them
+    if (template.services && template.services.length > 0) {
+      setSelectedServices(template.services.map((s: any) => typeof s === 'string' ? s : s.id));
+    }
+
+    // Pre-fill assets if template has them
+    if (template.assets && template.assets.length > 0) {
+      setAssets(template.assets.map((a: any) => ({
+        name: a.name,
+        serial: '',
+        condition: 'new',
+        purchased_at: '',
+        warranty_end: '',
+        note: a.note || ''
+      })));
+    }
+
+    toast.success(`Đã áp dụng mẫu: ${template.name}`);
+  };
 
   // Optimized Limit Calculations (Same as RoomForm)
   const areaLimits = useMemo(() => {
@@ -247,7 +281,16 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
               {activeStep === 0 && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   {/* Left: Form */}
-                  <div className="lg:col-span-8 space-y-8">
+                  <div className="lg:col-span-8 space-y-10">
+                    {/* Template Selector */}
+                    <div className="pb-8 border-b border-slate-100">
+                      <RoomTemplateSelector 
+                        propertyId={propertyId} 
+                        onSelect={handleTemplateSelect}
+                        selectedId={selectedTemplateId}
+                      />
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-3">
                         <label className="text-sm font-black text-slate-700 uppercase tracking-tight ml-1">Tên phòng</label>

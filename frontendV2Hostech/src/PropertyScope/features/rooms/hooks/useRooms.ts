@@ -275,3 +275,27 @@ export const useRoomActions = () => {
     addPriceHistory,
   };
 };
+
+/**
+ * Bulk create rooms using backend API
+ */
+export const useBulkCreateRooms = (propertyId: string) => {
+  const queryClient = useQueryClient();
+  const bulkCreateRooms = useMutation({
+    mutationFn: (data: { 
+      property_id: string; 
+      prefix?: string; 
+      count: number; 
+      start_number?: number; 
+      template_id?: string;
+      floor_id?: string;
+    }) => roomsApi.quickCreateBatchRooms(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ROOMS_KEY, propertyId] });
+      queryClient.invalidateQueries({ queryKey: [DRAFTS_KEY, propertyId] });
+    },
+  });
+
+  return { bulkCreateRooms, isPending: bulkCreateRooms.isPending };
+};
+

@@ -38,7 +38,8 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000, // Matches SANCTUM_STATEFUL_DOMAINS in backend
+    port: 3000, 
+    strictPort: true, // Prevents shifting to other ports if 3000 is busy
     proxy: {
       "/api": {
         target: "http://127.0.0.1:8000",

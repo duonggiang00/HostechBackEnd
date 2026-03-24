@@ -28,13 +28,11 @@ class PropertyService
                 // Let's modify so Tenant sees: Properties they currently rent, OR Properties that have AT LEAST ONE 'available' room.
                 $query->where(function ($q) use ($user) {
                     $q->whereHas('contracts', function ($sq) use ($user) {
-                        $sq->where('status', 'ACTIVE')
+                        $sq->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
                             ->whereHas('members', function ($ssq) use ($user) {
                                 $ssq->where('user_id', $user->id)
                                     ->where('status', 'APPROVED');
                             });
-                    })->orWhereHas('rooms', function ($sq) {
-                        $sq->where('status', 'available');
                     });
                 });
             } elseif ($user->hasRole(['Manager', 'Staff'])) {

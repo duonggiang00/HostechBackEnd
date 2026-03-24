@@ -138,4 +138,32 @@ class PropertyController extends Controller
 
         return response()->noContent();
     }
+
+    /**
+     * Chốt tiền tháng (Trigger Monthly Billing)
+     *
+     * Tạo hóa đơn cho tất cả các phòng có hợp đồng đang hoạt động trong tòa nhà.
+     */
+    public function triggerBilling(Request $request, string $id, \App\Services\Invoice\InvoiceService $invoiceService)
+    {
+        $property = $this->service->find($id) ?? abort(404, 'Property not found');
+
+        $this->authorize('update', $property);
+
+        $validated = $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'], // e.g., "2024-10"
+        ]);
+
+        $options = [];
+        if (isset($validated['month'])) {
+            $options['billing_date'] = \Carbon\Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+        }
+
+        $count = $invoiceService->createMonthlyInvoicesForProperty($property, $options);
+
+        return response()->json([
+            'message' => "Đã khởi tạo {$count} hóa đơn cho tòa nhà: {$property->name}",
+            'count' => $count
+        ]);
+    }
 }

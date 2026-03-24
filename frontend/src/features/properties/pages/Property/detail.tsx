@@ -15,7 +15,11 @@ import {
   Banknote,
   X,
 } from "lucide-react";
-import { useProperty, useDeleteProperty } from "../../hooks/useProperties";
+import {
+  useProperty,
+  useDeleteProperty,
+  useGenerateMonthlyInvoicesProperty,
+} from "../../hooks/useProperties";
 import { usePermission } from "../../../../shared/hooks/usePermission";
 import Floors from "../Floors/Floors";
 import { useTokenStore } from "../../../auth/stores/authStore";
@@ -30,6 +34,7 @@ const DetailProperty = () => {
   console.log("[DEBUG] DetailProperty - property data:", property);
 
   const deleteMutation = useDeleteProperty();
+  const triggerBillingMutation = useGenerateMonthlyInvoicesProperty();
 
   const [activeTab, setActiveTab] = useState("overview");
 
@@ -262,6 +267,24 @@ const DetailProperty = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {can("update", "properties") && !isLoading && (
+              <Popconfirm
+                title="Chốt tiền tháng"
+                description="Hệ thống sẽ dựa trên chỉ số điện nước đã chốt và dịch vụ để tạo hóa đơn cho tháng hiện tại. Bạn có chắc chắn?"
+                okText="Đồng ý"
+                cancelText="Hủy"
+                onConfirm={() => id && triggerBillingMutation.mutate({ id })}
+              >
+                <Button
+                  type="primary"
+                  icon={<Banknote size={16} />}
+                  loading={triggerBillingMutation.isPending}
+                  className="bg-indigo-600 shadow-sm"
+                >
+                  Chốt tiền tháng
+                </Button>
+              </Popconfirm>
+            )}
             {can("update", "properties") && !isLoading && (
               <Button
                 type="text"

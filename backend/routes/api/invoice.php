@@ -6,13 +6,17 @@ use Illuminate\Support\Facades\Route;
 
 // Invoices
 Route::get('properties/{property_id}/invoices', [InvoiceController::class, 'indexByProperty']);
+Route::post('properties/{property_id}/invoices/generate-monthly', [InvoiceController::class, 'generateMonthlyForProperty']);
 Route::get('properties/{property_id}/floors/{floor_id}/invoices', [InvoiceController::class, 'indexByFloor']);
 
 // SoftDeletes: Thùng rác, Khôi phục, Xóa vĩnh viễn
 Route::get('invoices/trash', [InvoiceController::class, 'trash']);
 Route::apiResource('invoices', InvoiceController::class);
+Route::post('invoices/generate-monthly', [InvoiceController::class, 'generateMonthly']);
 Route::put('invoices/{id}/issue', [InvoiceController::class, 'issue']);
 Route::put('invoices/{id}/pay', [InvoiceController::class, 'pay']);
+Route::post('invoices/{id}/record-payment', [InvoiceController::class, 'recordPayment']);
+Route::put('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
 Route::put('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
 Route::post('invoices/{id}/restore', [InvoiceController::class, 'restore']);
 Route::delete('invoices/{id}/force', [InvoiceController::class, 'forceDelete']);

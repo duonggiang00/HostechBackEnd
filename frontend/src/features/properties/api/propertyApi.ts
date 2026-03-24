@@ -59,6 +59,14 @@ export const updateProperty = async (
   return res.data?.data ?? res.data;
 };
 
+export const generateMonthlyInvoicesForProperty = async (
+  propertyId: string,
+  data?: { billing_date?: string },
+): Promise<{ message: string; count: number }> => {
+  const res = await Api.post(`properties/${propertyId}/invoices/generate-monthly`, data || {});
+  return res.data;
+};
+
 export const deleteProperty = async (id: string): Promise<void> => {
   await Api.delete(`properties/${id}`);
 };

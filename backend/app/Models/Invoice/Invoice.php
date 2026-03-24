@@ -38,6 +38,7 @@ class Invoice extends Model
         'created_by_user_id',
         'issued_by_user_id',
         'issued_at',
+        'is_termination',
         'cancelled_at',
     ];
 
@@ -99,5 +100,10 @@ class Invoice extends Model
     public function adjustments()
     {
         return $this->hasMany(InvoiceAdjustment::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 }

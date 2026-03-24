@@ -14,6 +14,10 @@ class LogoutResponse implements LogoutResponseContract
      */
     public function toResponse($request): JsonResponse
     {
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+        }
+
         return response()->json([
             'message' => 'Logged out successfully',
         ], 200);

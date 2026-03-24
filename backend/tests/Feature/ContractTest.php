@@ -1,5 +1,9 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
@@ -123,7 +127,7 @@ test('user cannot create contract for another org', function () {
     $contract2 = Contract::factory()->create(['org_id' => $org2->id, 'property_id' => $property2->id, 'room_id' => $room2->id]);
 
     getJson("/api/contracts/{$contract2->id}")
-        ->assertStatus(403);
+        ->assertStatus(404);
 });
 
 test('can list contracts with filters', function () {

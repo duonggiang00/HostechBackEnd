@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { dashboardApi } from '../api/dashboard';
 
 export const useDashboard = (propertyId: string | undefined) => {
@@ -10,5 +10,13 @@ export const useDashboard = (propertyId: string | undefined) => {
     },
     enabled: !!propertyId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useGenerateMonthlyBilling = () => {
+  return useMutation({
+    mutationFn: ({ propertyId, month }: { propertyId: string; month?: string }) => {
+      return dashboardApi.generateMonthlyInvoices(propertyId, month);
+    },
   });
 };

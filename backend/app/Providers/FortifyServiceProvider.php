@@ -11,6 +11,8 @@ use App\Http\Responses\Auth\RegisterResponse;
 use App\Http\Responses\Auth\TwoFactorChallengeResponse;
 use App\Http\Responses\Auth\TwoFactorLoginResponse;
 use App\Models\Org\User;
+use App\Http\Responses\Auth\LogoutResponse;
+use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ServiceProvider;
 use App\Actions\Fortify\RedirectIfTwoFactorAuthenticatable;
@@ -31,6 +33,7 @@ class FortifyServiceProvider extends ServiceProvider
     {
         // Bind custom response classes
         $this->app->singleton(LoginResponseContract::class, LoginResponse::class);
+        $this->app->singleton(LogoutResponseContract::class, LogoutResponse::class);
         $this->app->singleton(RegisterResponseContract::class, RegisterResponse::class);
         $this->app->singleton(TwoFactorChallengeResponseContract::class, TwoFactorChallengeResponse::class);
         $this->app->singleton(TwoFactorLoginResponseContract::class, TwoFactorLoginResponse::class);

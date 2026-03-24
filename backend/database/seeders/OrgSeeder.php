@@ -15,6 +15,7 @@ use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
+use App\Models\Property\RoomTemplate;
 use App\Models\Service\Service;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
@@ -208,6 +209,14 @@ class OrgSeeder extends Seeder
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
+                    // Create 1-3 Room templates for this property
+                    $templateCount = rand(1, 3);
+                    $templates = RoomTemplate::factory($templateCount)->create([
+                        'org_id' => $org->id,
+                        'property_id' => $property->id,
+                    ]);
+                    $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</>");
+
                     // Create floors
                     $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
 
@@ -230,24 +239,17 @@ class OrgSeeder extends Seeder
 
                         $remainingArea = $availableArea;
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
-                            $isLast = ($j === $roomsOnFloor - 1);
-                            if ($isLast) {
-                                $roomArea = $remainingArea;
-                            } else {
-                                // Fair distribution with a bit of randomness
-                                $avg = $remainingArea / ($roomsOnFloor - $j);
-                                $roomArea = rand(2000, $avg * 100) / 100;
-                            }
-                            
-                            $roomArea = max(20, round($roomArea, 2));
-                            $remainingArea -= $roomArea;
+                            // Pick a random template
+                            $template = $templates->random();
                             
                             Room::factory()->create([
                                 'org_id' => $org->id,
                                 'property_id' => $property->id,
                                 'floor_id' => $floor->id,
-                                'area' => $roomArea,
-                                'base_price' => $roomArea * 125000,
+                                'type' => $template->room_type,
+                                'area' => $template->area,
+                                'capacity' => $template->capacity,
+                                'base_price' => $template->base_price,
                                 'floor_number' => $i,
                             ]);
                         }
@@ -413,6 +415,7 @@ class OrgSeeder extends Seeder
     $this->command->line('✅ Bất động sản: <fg=cyan>'.Property::count().'</>');
     $this->command->line('✅ Tầng: <fg=cyan>'.Floor::count().'</>');
     $this->command->line('✅ Phòng: <fg=cyan>'.Room::count().'</>');
+    $this->command->line('✅ Room Templates: <fg=cyan>'.RoomTemplate::count().'</>');
 
     // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
     $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
@@ -438,6 +441,8 @@ class OrgSeeder extends Seeder
         ->sum('service_rates.price');
 
     $baseRent = $room->base_price ?: 5000000;
+    $property = $room->property;
+    $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
     
     $contract = Contract::factory()->create([
         'org_id' => $room->org_id,
@@ -448,10 +453,15 @@ class OrgSeeder extends Seeder
         'end_date' => $endDate,
         'terminated_at' => $status === 'ENDED' ? $endDate : null,
         'created_by_user_id' => $ownerId,
-        'rent_price' => $baseRent, // Keep for backward compatibility if needed
+        'rent_price' => $baseRent,
         'base_rent' => $baseRent,
         'fixed_services_fee' => $fixedServicesFee,
         'total_rent' => $baseRent + $fixedServicesFee,
+        'deposit_amount' => $depositAmount,
+        'deposit_status' => $status === 'ACTIVE' ? \App\Enums\DepositStatus::HELD : \App\Enums\DepositStatus::REFUNDED,
+        'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
+        'due_day' => $property->default_due_day ?? 5,
+        'cutoff_day' => $property->default_cutoff_day ?? 30,
         'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
     ]);
 

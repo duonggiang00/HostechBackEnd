@@ -3,11 +3,13 @@ import { propertiesApi } from '../api/properties';
 import type { Property } from '../types';
 import toast from 'react-hot-toast';
 import { isUuid } from '@/lib/utils';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export type { Property };
 
 export const useProperties = (params?: Record<string, any>) => {
   const orgId = params?.['filter[org_id]'] || params?.orgId;
+  const { user } = useAuthStore();
 
   return useQuery({
     queryKey: ['properties', orgId, params],
@@ -16,6 +18,18 @@ export const useProperties = (params?: Record<string, any>) => {
       ...params,
     }),
     enabled: isUuid(orgId),
+    select: (data) => {
+      // If data is structured as { data: Property[], ... }
+      const propertiesList = Array.isArray(data) ? data : (data as any)?.data || [];
+      
+      // Filter if user is Manager or Staff
+      if (user && (user.role === 'Manager' || user.role === 'Staff')) {
+        const allowedPropertyIds = user.properties?.map(p => p.id) || [];
+        return propertiesList.filter((p: Property) => allowedPropertyIds.includes(p.id));
+      }
+      
+      return propertiesList;
+    }
   });
 };
 

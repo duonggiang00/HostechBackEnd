@@ -125,6 +125,63 @@ class InvoiceController extends Controller
     // ╠═══════════════════════════════════════════════════════╣
 
     /**
+     * Kích hoạt tạo hóa đơn định kỳ
+     *
+     * Tạo hóa đơn tự động cho các hợp đồng đang hoạt động trong tháng chỉ định.
+     */
+    public function generateMonthly(Request $request, \App\Services\Invoice\RecurringBillingService $recurringBillingService): JsonResponse
+    {
+        $this->authorize('create', Invoice::class);
+
+        $validated = $request->validate([
+            'org_id' => ['required', 'uuid'],
+            'month'  => ['required', 'date_format:Y-m'], // e.g. "2024-10"
+        ]);
+
+        $user = $request->user();
+        if (! $user->hasRole('Admin') && $user->org_id !== $validated['org_id']) {
+            abort(403, 'Unauthorized to run billing for this organization.');
+        }
+
+        $periodMonth = \Carbon\Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+
+        $results = $recurringBillingService->generateMonthlyInvoices($validated['org_id'], $periodMonth);
+
+        return response()->json([
+            'message' => 'Invoice generation completed',
+            'data'    => $results,
+        ], 200);
+    }
+
+    /**
+     * Kích hoạt tạo hóa đơn định kỳ cho cụ thể 1 tòa nhà
+     */
+    public function generateMonthlyForProperty(Request $request, string $property_id, \App\Services\Invoice\InvoiceService $invoiceService): JsonResponse
+    {
+        $this->authorize('create', Invoice::class);
+
+        $property = \App\Models\Property\Property::findOrFail($property_id);
+        
+        $user = $request->user();
+        if (! $user->hasRole('Admin') && $user->org_id !== $property->org_id) {
+            abort(403, 'Unauthorized to run billing for this organization.');
+        }
+
+        $validated = $request->validate([
+            'billing_date' => ['nullable', 'date'],
+        ]);
+
+        $count = $invoiceService->createMonthlyInvoicesForProperty($property, [
+            'billing_date' => $validated['billing_date'] ?? now()->toDateString(),
+        ]);
+
+        return response()->json([
+            'message' => 'Đã chốt tiền tháng cho tòa nhà.',
+            'count'   => $count,
+        ], 200);
+    }
+
+    /**
      * Tạo hóa đơn mới
      *
      * Tạo hóa đơn kèm danh sách items chi tiết (tiền phòng, điện, nước, dịch vụ...).
@@ -242,6 +299,38 @@ class InvoiceController extends Controller
         $updated = $this->service->payInvoice($invoice, $request->input('note'));
 
         return new InvoiceResource($updated);
+    }
+
+    /**
+     * Ghi nhận thanh toán (Partial or Full)
+     *
+     * Ghi nhận một giao dịch thanh toán cho hóa đơn.
+     * Tự động chuyển trạng thái sang PAID hoặc PARTIALLY_PAID.
+     */
+    public function recordPayment(Request $request, string $id): JsonResponse
+    {
+        $invoice = $this->service->find($id);
+        if (!$invoice) {
+            abort(404, 'Invoice Not Found');
+        }
+
+        $this->authorize('update', $invoice);
+
+        $validated = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'method' => ['required', 'string'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'received_at' => ['nullable', 'date'],
+            'note' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $payment = $this->service->recordPayment($invoice, $validated);
+
+        return response()->json([
+            'message' => 'Thanh toán đã được ghi nhận thành công.',
+            'data' => $payment,
+            'invoice' => new InvoiceResource($invoice->fresh())
+        ], 201);
     }
 
     /**

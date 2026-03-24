@@ -1,5 +1,9 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Invoice\Invoice;

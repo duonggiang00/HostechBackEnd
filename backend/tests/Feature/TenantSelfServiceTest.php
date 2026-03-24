@@ -99,11 +99,10 @@ class TenantSelfServiceTest extends TestCase
 
     public function test_non_member_tenant_cannot_add_to_others_contract()
     {
-        [, , , , $contract] = $this->setupActiveContract();
+        [$org, , , , $contract] = $this->setupActiveContract();
 
         // Tenant khác cùng Org
-        $otherOrg = Org::create(['name' => 'Other Org']);
-        $stranger = User::factory()->create(['org_id' => $otherOrg->id, 'full_name' => 'Stranger']);
+        $stranger = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Stranger']);
         $stranger->assignRole('Tenant');
 
         $response = $this->actingAs($stranger)->postJson('/api/contracts/'.$contract->id.'/members', [

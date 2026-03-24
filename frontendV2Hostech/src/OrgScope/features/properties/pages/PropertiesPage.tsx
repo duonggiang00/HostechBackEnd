@@ -4,9 +4,13 @@ import { Plus, Search, Filter, Loader2, DollarSign, Users, Activity, LogIn } fro
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useDashboard } from '@/adminSystem/features/dashboard/hooks/useDashboard';
 import { motion } from 'framer-motion';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export default function PropertiesPage() {
-  const { orgId } = useParams<{ orgId: string }>();
+  const { user } = useAuthStore();
+  const { orgId: orgIdParam } = useParams<{ orgId: string }>();
+  const orgId = orgIdParam || user?.org_id;
+  
   const navigate = useNavigate();
   const { data: properties, isLoading: isPropsLoading, error: propsError } = useProperties({ 'filter[org_id]': orgId });
   const { data: dashboard, isLoading: isDashLoading } = useDashboard();
@@ -109,13 +113,13 @@ export default function PropertiesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {properties?.map((prop) => (
+        {properties?.map((prop: any) => (
           <PropertyCard 
             key={prop.id}
             {...prop}
             roomCount={prop.roomCount || 0}
             staffCount={prop.staffCount || 0}
-            onClick={() => navigate(`/properties/${prop.id}/floors`)}
+            onClick={() => navigate(`/properties/${prop.id}/dashboard`)}
           />
         ))}
 

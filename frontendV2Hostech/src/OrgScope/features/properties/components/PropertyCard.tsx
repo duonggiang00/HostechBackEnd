@@ -1,4 +1,4 @@
-import { Building2, MapPin, Users, ChevronRight } from 'lucide-react';
+import { Building2, MapPin, Users, ChevronRight, DoorOpen } from 'lucide-react';
 
 interface PropertyCardProps {
   name: string;
@@ -78,4 +78,3 @@ export default function PropertyCard({
   );
 }
 
-import { DoorOpen } from 'lucide-react';

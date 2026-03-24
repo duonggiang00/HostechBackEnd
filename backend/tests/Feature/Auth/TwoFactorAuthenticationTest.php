@@ -20,10 +20,10 @@ class TwoFactorAuthenticationTest extends TestCase
      */
     public function test_two_factor_endpoints_are_accessible(): void
     {
-        // This test checks that the 2FA endpoints are registered
-        $response = $this->getJson('/api/auth/user/two-factor-secret-key');
+        // This test checks that the custom MFA endpoints are registered and protected
+        $response = $this->getJson('/api/user/mfa/setup');
 
-        // Should return 401 (unauthenticated) not 404 (not found)
-        $this->assertTrue(in_array($response->status(), [401, 403]));
+        // Should return 401 (unauthenticated) because it requires Sanctum token
+        $this->assertEquals(401, $response->status());
     }
 }

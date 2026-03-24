@@ -24,6 +24,7 @@ import {
   deleteRoom,
   restoreRoom,
   forceDeleteRoom,
+  generateMonthlyInvoicesForProperty,
 } from "../api/propertyApi";
 import {
   getMeters,
@@ -100,6 +101,20 @@ export const useDeletedProperties = () =>
     staleTime: 1000 * 30,
   });
 
+export const useGenerateMonthlyInvoicesProperty = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: { billing_date?: string } }) =>
+      generateMonthlyInvoicesForProperty(id, data),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.invoices?.all || ["invoices"] });
+      notification.success({ message: res.message || "Đã chốt tiền tháng cho tòa nhà" });
+    },
+    onError: (err: any) => {
+      notification.error({ message: err?.response?.data?.message ?? "Lỗi chốt tiền tháng" });
+    },
+  });
+};
 
 // ───── Floors ─────
 

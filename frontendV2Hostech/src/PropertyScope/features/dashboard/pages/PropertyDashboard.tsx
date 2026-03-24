@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom';
-import { useDashboard } from '../hooks/useDashboard';
+import { useState } from 'react';
+import { useDashboard, useGenerateMonthlyBilling } from '../hooks/useDashboard';
 import { StatCard } from '../components/StatCard';
 import { RevenueTrend } from '../components/RevenueTrend';
 import { OccupancyGauge } from '../components/OccupancyGauge';
@@ -9,13 +10,40 @@ import {
   DoorOpen, 
   Receipt, 
   TrendingUp,
-  LayoutDashboard
+  LayoutDashboard,
+  CalendarCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 export default function PropertyDashboard() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const { data: dashboard, isLoading } = useDashboard(propertyId);
+  const { data: dashboard, isLoading, refetch } = useDashboard(propertyId);
+  const generateMonthlyMutation = useGenerateMonthlyBilling();
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateBilling = async () => {
+    if (!propertyId) {
+      toast.error('Property ID is missing');
+      return;
+    }
+    
+    // Get current YYYY-MM
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    
+    if (window.confirm(`Xác nhận tạo hóa đơn gốc tự động cho tháng ${currentMonth}?`)) {
+      setIsGenerating(true);
+      try {
+        await generateMonthlyMutation.mutateAsync({ propertyId, month: currentMonth });
+        toast.success(`Đã tạo hóa đơn định kỳ cho tháng ${currentMonth} thành công!`);
+        refetch();
+      } catch (error: any) {
+        toast.error(error.message || 'Lỗi khi tạo hóa đơn');
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+  };
 
   if (isLoading) {
     return (
@@ -43,6 +71,18 @@ export default function PropertyDashboard() {
         </div>
         
         <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+          <button 
+            onClick={handleGenerateBilling}
+            disabled={isGenerating}
+            className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'} text-white shadow-sm rounded-xl text-xs font-bold transition-all`}
+          >
+            {isGenerating ? (
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <CalendarCheck className="w-4 h-4" />
+            )}
+            Chạy hóa đơn định kỳ
+          </button>
           <button className="px-4 py-2 bg-white dark:bg-slate-700 shadow-sm rounded-xl text-xs font-bold text-slate-800 dark:text-white">30 ngày qua</button>
           <button className="px-4 py-2 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 transition-colors">Quý trước</button>
         </div>

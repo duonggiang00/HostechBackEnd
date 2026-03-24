@@ -1,5 +1,9 @@
 <?php
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
 use App\Models\Contract\Contract;
 use App\Models\Org\Org;
 use App\Models\Org\User;
@@ -276,14 +280,14 @@ test('[Owner] xem chi tiết ticket kèm events và costs', function () {
         ->assertJsonFragment(['amount' => 150000.0]);
 });
 
-test('[Owner] không xem được ticket của org khác (403)', function () {
+test('[Owner] không xem được ticket của org khác (404)', function () {
     $ctx1 = makeOrgWithRole('Owner');
     $ctx2 = makeOrgWithRole('Owner');
     $ticket = makeTicket($ctx2);
 
     actingAs($ctx1['user']);
 
-    getJson("/api/tickets/{$ticket->id}")->assertStatus(403);
+    getJson("/api/tickets/{$ticket->id}")->assertStatus(404);
 });
 
 test('[Tenant] không xem được ticket của người khác (403)', function () {
@@ -603,14 +607,14 @@ test('[Staff] không được xóa ticket (403)', function () {
     deleteJson("/api/tickets/{$ticket->id}")->assertStatus(403);
 });
 
-test('[Owner] không xóa được ticket của org khác (403)', function () {
+test('[Owner] không xóa được ticket của org khác (404)', function () {
     $ctx1 = makeOrgWithRole('Owner');
     $ctx2 = makeOrgWithRole('Owner');
     $ticket = makeTicket($ctx2);
 
     actingAs($ctx1['user']);
 
-    deleteJson("/api/tickets/{$ticket->id}")->assertStatus(403);
+    deleteJson("/api/tickets/{$ticket->id}")->assertStatus(404);
 });
 
 // ═══════════════════════════════════════════════════════

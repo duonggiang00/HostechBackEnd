@@ -331,7 +331,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
 
         $meter = \App\Models\Meter\Meter::create([
-            'org_id' => $org->id, 'room_id' => $room->id,
+            'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-001',
         ]);
 
@@ -354,7 +354,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
 
         $meter = \App\Models\Meter\Meter::create([
-            'org_id' => $org->id, 'room_id' => $room->id,
+            'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'WATER', 'code' => 'W-001',
         ]);
 
@@ -380,7 +380,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
 
         $meter = \App\Models\Meter\Meter::create([
-            'org_id' => $org->id, 'room_id' => $room->id,
+            'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-002',
         ]);
 
@@ -401,7 +401,7 @@ class HandoverTest extends TestCase
         $tenant = $this->makeApprovedTenant($org, $contract);
 
         $meter = \App\Models\Meter\Meter::create([
-            'org_id' => $org->id, 'room_id' => $room->id,
+            'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-003',
         ]);
 

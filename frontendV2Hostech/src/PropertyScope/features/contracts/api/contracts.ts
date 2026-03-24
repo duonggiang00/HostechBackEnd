@@ -102,5 +102,10 @@ export const contractsApi = {
   requestRoomTransfer: async (id: string, data: any) => {
     const response = await apiClient.post(`/contracts/${id}/room-transfer`, data);
     return response.data;
+  },
+
+  terminateContract: async (id: string, data: { termination_date?: string, reason?: string, forfeit_deposit?: boolean, refund_remaining_rent?: boolean }) => {
+    const response = await apiClient.post(`/contracts/${id}/terminate`, data);
+    return response.data;
   }
 };
