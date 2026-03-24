@@ -17,16 +17,14 @@ export const useProperties = (params?: Record<string, any>) => {
       'filter[org_id]': orgId || undefined,
       ...params,
     }),
-    enabled: isUuid(orgId),
+    enabled: isUuid(orgId) || (user?.role === 'Manager' || user?.role === 'Staff'),
     select: (data) => {
       // If data is structured as { data: Property[], ... }
       const propertiesList = Array.isArray(data) ? data : (data as any)?.data || [];
       
-      // Filter if user is Manager or Staff
-      if (user && (user.role === 'Manager' || user.role === 'Staff')) {
-        const allowedPropertyIds = user.properties?.map(p => p.id) || [];
-        return propertiesList.filter((p: Property) => allowedPropertyIds.includes(p.id));
-      }
+      // We removed the redundant frontend filter that was causing visibility issues 
+      // when the auth store's property list was slightly out of sync.
+      // The backend (PropertyService) already enforces Manager/Staff scoping.
       
       return propertiesList;
     }

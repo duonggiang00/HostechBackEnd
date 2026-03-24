@@ -14,6 +14,7 @@ class PropertyResource extends JsonResource
             'name' => $this->name,
             'address' => $this->address,
             'area' => $this->area ? (float) $this->area : null,
+            'shared_area' => $this->shared_area ? (float) $this->shared_area : null,
             'note' => $this->note,
             'use_floors' => (bool) $this->use_floors,
             'default_billing_cycle' => $this->default_billing_cycle,

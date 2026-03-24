@@ -51,6 +51,9 @@ import TenantRequestsPage from '@/Tenant/features/requests/pages/TenantRequestsP
 import TenantMessagingPage from '@/Tenant/features/messaging/pages/TenantMessagingPage';
 import TenantBillingPage from '@/Tenant/features/billing/pages/TenantBillingPage';
 
+import SelectionLayout from '@/shared/layouts/SelectionLayout';
+import PropertySelectionPage from '@/shared/features/properties/pages/PropertySelectionPage';
+
 /**
  * 1. ProtectedRoute: Checks if user is logged in, and if they hold an allowed role.
  */
@@ -111,9 +114,9 @@ const RootRedirect = () => {
       }
       
       // 2. If user has multiple properties or no specific assignment (but has an org),
-      // navigate to property list in Org Scope to select one.
+      // navigate to the neutral property selection layout.
       if (user.org_id) {
-         return <Navigate to="/org/properties" replace />;
+         return <Navigate to="/select-property" replace />;
       }
 
       // Fallback
@@ -152,7 +155,28 @@ export default function AppRoutes() {
         {/* --- Root Entry Point: handles role routing --- */}
         <Route path="/" element={<RootRedirect />} />
         <Route path="/admin" element={<Navigate to="/" replace />} />
-        <Route path="/org-select" element={<ProtectedRoute><OrgSelectionPage /></ProtectedRoute>} />
+        <Route 
+          path="/org-select" 
+          element={
+            <ProtectedRoute>
+              <SelectionLayout title="Select Organization" subtitle="Choose the workspace you want to manage today">
+                <OrgSelectionPage />
+              </SelectionLayout>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* --- Property Selection (Intermediate/Neutral Scope) --- */}
+        <Route 
+          path="/select-property" 
+          element={
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
+              <SelectionLayout title="Select Property" subtitle="Choose a property to start managing your daily operations">
+                <PropertySelectionPage />
+              </SelectionLayout>
+            </ProtectedRoute>
+          } 
+        />
 
         {/* --- Super Admin Portal (Legacy/Specialized) --- */}
         <Route 
@@ -188,24 +212,24 @@ export default function AppRoutes() {
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
-        {/* 2. Organization Scope Layout — Owner & Manager (and Staff optionally for lists) */}
+        {/* 2. Organization Scope Layout — Owner & Admin ONLY (Managers/Staff use Selection Scope) */}
         <Route 
           path="/org"
           element={
-            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner']}>
               <OrgScopeLayout><Outlet /></OrgScopeLayout>
             </ProtectedRoute>
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><FinanceDashboard /></ProtectedRoute>} />
+          <Route path="dashboard" element={<FinanceDashboard />} />
           <Route path="organizations/:orgId/properties" element={<ProtectedRoute allowedRoles={['Admin']}><PropertiesPage /></ProtectedRoute>} />
           <Route path="properties" element={<PropertiesPage />} />
-          <Route path="properties/add" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><PropertyForm /></ProtectedRoute>} />
-          <Route path="properties/:id/edit" element={<ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}><PropertyForm /></ProtectedRoute>} />
-          <Route path="staff" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><StaffPage /></ProtectedRoute>} />
-          <Route path="finance" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><FinanceDashboard /></ProtectedRoute>} />
-          <Route path="invoices" element={<ProtectedRoute allowedRoles={['Admin', 'Owner']}><InvoicesPage /></ProtectedRoute>} />
+          <Route path="properties/add" element={<PropertyForm />} />
+          <Route path="properties/:id/edit" element={<PropertyForm />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="finance" element={<FinanceDashboard />} />
+          <Route path="invoices" element={<InvoicesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

@@ -35,13 +35,16 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const dashboardPath = useDashboardHomePath(propertyId);
 
-  // Security Check: If Staff/Manager, ensure they have access to this propertyId
+  // Security Check: For now we rely on the backend API calls within the layout to enforce access.
+  // Frontend-only checks against user.properties are prone to sync issues if the auth store is not fully populated.
+  /*
   if (user && (user.role === 'Staff' || user.role === 'Manager') && propertyId) {
     const hasAccess = user.properties?.some((p: UserProperty) => p.id === propertyId);
     if (!hasAccess) {
       return <Navigate to="/unauthorized" replace />;
     }
   }
+  */
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },

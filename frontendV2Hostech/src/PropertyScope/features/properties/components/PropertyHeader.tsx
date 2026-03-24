@@ -93,12 +93,12 @@ export function PropertyHeader({ property }: PropertyHeaderProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-sm hover:border-indigo-300 dark:hover:border-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm group/btn">
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-xs hover:border-indigo-300 dark:hover:border-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm group/btn whitespace-nowrap">
               <FileEdit className="w-4 h-4 group-hover/btn:scale-120 transition-transform" />
               Chỉnh sửa
             </button>
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-200 dark:shadow-none group/action">
-              <Layers className="w-4 h-4 group-action:rotate-12 transition-transform" />
+            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-indigo-200 dark:shadow-none group/action whitespace-nowrap">
+              <Layers className="w-4 h-4 group-hover/action:rotate-12 transition-transform" />
               Sơ đồ tầng
             </button>
           </div>

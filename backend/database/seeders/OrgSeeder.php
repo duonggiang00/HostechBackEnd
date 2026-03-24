@@ -188,8 +188,8 @@ class OrgSeeder extends Seeder
             Property::factory(rand(2, 3))
                 ->state(['org_id' => $org->id])
                 ->sequence(fn ($sequence) => [
-                    'area' => rand(60, 90),
-                    'shared_area' => rand(5, 10), // Assuming there is a shared_area column or meta
+                    'area' => rand(70, 200),
+                    'shared_area' => rand(7, 20), // ~10% shared area
                 ])
                 ->create()
                 ->each(function (Property $property, $index) use ($org, $serviceIds) {
@@ -212,9 +212,12 @@ class OrgSeeder extends Seeder
 
                     // Create 1-3 Room templates for this property
                     $templateCount = rand(1, 3);
+                    $availableAreaPerFloor = $property->area - ($property->shared_area ?? 5);
                     $templates = RoomTemplate::factory($templateCount)->create([
                         'org_id' => $org->id,
                         'property_id' => $property->id,
+                        // Realistic Vietnamese room sizes: 15-50m2, mostly 20-30m2
+                        'area' => fn() => min(rand(15, 30), $availableAreaPerFloor),
                     ]);
                     $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</>");
 
@@ -232,27 +235,38 @@ class OrgSeeder extends Seeder
                             'sort_order' => $i,
                         ]);
 
-                        $availableArea = $property->area - ($property->shared_area ?? 5);
-                        $roomsOnFloor = floor($availableArea / 20);
-                        if ($roomsOnFloor < 1) $roomsOnFloor = 1;
-
-                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng");
+                        $availableArea = $property->area - ($property->shared_area ?? 0);
+                        // Realistic room count based on area (min 15m2 per room)
+                        $maxRoomsByArea = max(1, floor($availableArea / 15));
+                        $roomsOnFloor = rand(max(1, floor($maxRoomsByArea / 2)), min(6, $maxRoomsByArea)); 
+                        
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích khả dụng: {$availableArea}m2)");
 
                         $remainingArea = $availableArea;
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
                             // Pick a random template
                             $template = $templates->random();
                             
+                            // Ensure each room leaves enough area for remaining rooms (min 15m2 each)
+                            $minAreaForOthers = ($roomsOnFloor - $j - 1) * 15;
+                            $maxAllowedForThis = $remainingArea - $minAreaForOthers;
+                            
+                            $roomArea = min($template->area, $maxAllowedForThis);
+                            if ($roomArea < 15) $roomArea = 15;
+                            if ($roomArea > $remainingArea) $roomArea = $remainingArea;
+
                             Room::factory()->create([
                                 'org_id' => $org->id,
                                 'property_id' => $property->id,
                                 'floor_id' => $floor->id,
                                 'type' => $template->room_type,
-                                'area' => $template->area,
+                                'area' => $roomArea,
                                 'capacity' => $template->capacity,
                                 'base_price' => $template->base_price,
                                 'floor_number' => $i,
                             ]);
+
+                            $remainingArea -= $roomArea;
                         }
                     }
 
