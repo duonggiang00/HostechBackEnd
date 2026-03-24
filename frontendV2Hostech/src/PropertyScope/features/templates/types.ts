@@ -43,6 +43,8 @@ export interface CreateRoomTemplatePayload {
   area?: number;
   capacity?: number;
   description?: string;
+  services?: string[];
+  assets?: { name: string; condition: string; note: string }[];
 }
 
 export interface CreateServiceTemplatePayload {

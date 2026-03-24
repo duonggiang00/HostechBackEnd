@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { 
-  X, Box, Maximize2, Coins, Plus, Trash2, Users, Zap, Gauge, Check, Loader2
+  X, Box, Maximize2, Coins, Plus, Trash2, Users, Zap, Gauge, Check, Loader2, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { RoomTemplate, RoomTemplateAsset, RoomTemplateMeter } from '../../types';
@@ -95,7 +95,7 @@ export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, i
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl dark:shadow-black/50 w-full max-w-2xl overflow-hidden border border-transparent dark:border-white/10"
+        className="relative bg-white dark:bg-slate-800 rounded-[3rem] shadow-2xl dark:shadow-black/50 w-full max-w-4xl overflow-hidden border border-transparent dark:border-white/10"
       >
         {/* Header */}
         <div className="px-10 pt-10 pb-6 flex items-center justify-between border-b border-slate-50 dark:border-slate-700/50">
@@ -132,78 +132,118 @@ export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, i
                 exit={{ opacity: 0, x: 20 }}
                 className="space-y-8"
               >
-                {/* Name */}
-                <div className="space-y-3">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Tên biểu mẫu</label>
-                  <div className="relative group">
-                    <Box className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                    <input
-                      autoFocus
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Ví dụ: Căn hộ Studio cao cấp"
-                      className={`w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all ${
-                        errors.name ? 'border-rose-500/50 ring-4 ring-rose-500/5' : 'border-slate-100 dark:border-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5'
-                      }`}
-                    />
-                  </div>
-                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                  <div className="lg:col-span-8 space-y-8">
+                    {/* Name */}
+                    <div className="space-y-3">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Tên biểu mẫu</label>
+                      <div className="relative group">
+                        <Box className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                        <input
+                          autoFocus
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          placeholder="Ví dụ: Căn hộ Studio cao cấp"
+                          className={`w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border rounded-2xl outline-none font-bold text-slate-900 dark:text-white transition-all ${
+                            errors.name ? 'border-rose-500/50 ring-4 ring-rose-500/5' : 'border-slate-100 dark:border-slate-700 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5'
+                          }`}
+                        />
+                      </div>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Type */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Loại phòng</label>
-                    <div className="bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
-                      <select
-                        value={formData.room_type}
-                        onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
-                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white capitalize focus:border-indigo-500"
-                      >
-                        {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Type */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Loại phòng</label>
+                        <div className="bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
+                          <select
+                            value={formData.room_type}
+                            onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
+                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white capitalize focus:border-indigo-500"
+                          >
+                            {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Price */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Giá thuê mặc định</label>
+                        <div className="relative group">
+                          <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                          <input
+                            value={formatNumber(formData.base_price)}
+                            onChange={(e) => setFormData({ ...formData, base_price: Number(parseNumber(e.target.value)) || 0 })}
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-emerald-600 dark:text-emerald-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      {/* Area */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Diện tích (m²)</label>
+                        <div className="relative group">
+                          <Maximize2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
+                          <input
+                            type="number"
+                            value={formData.area}
+                            onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) || 0 })}
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Capacity */}
+                      <div className="space-y-3">
+                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Sức chứa tối đa</label>
+                        <div className="relative group">
+                          <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
+                          <input
+                            type="number"
+                            value={formData.capacity}
+                            onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) || 0 })}
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white focus:border-indigo-500"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Price */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Giá thuê mặc định</label>
-                    <div className="relative group">
-                      <Coins className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
-                      <input
-                        value={formatNumber(formData.base_price)}
-                        onChange={(e) => setFormData({ ...formData, base_price: Number(parseNumber(e.target.value)) || 0 })}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-emerald-600 dark:text-emerald-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Area */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Diện tích (m²)</label>
-                    <div className="relative group">
-                      <Maximize2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
-                      <input
-                        type="number"
-                        value={formData.area}
-                        onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) || 0 })}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white focus:border-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Capacity */}
-                  <div className="space-y-3">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Sức chứa tối đa</label>
-                    <div className="relative group">
-                      <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-400" />
-                      <input
-                        type="number"
-                        value={formData.capacity}
-                        onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) || 0 })}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white focus:border-indigo-500"
-                      />
+                  {/* Sidebar Regulation */}
+                  <div className="lg:col-span-4">
+                    <div className="bg-indigo-50 shadow-sm border border-indigo-100 rounded-[32px] p-6 space-y-6 sticky top-0">
+                      <div className="flex items-center gap-3 text-indigo-600">
+                        <ShieldAlert className="w-5 h-5" />
+                        <h4 className="font-black text-xs uppercase tracking-wider">Quy định diện tích</h4>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">1</div>
+                          <p className="text-[11px] font-bold text-slate-600 leading-relaxed">Phòng tối thiểu <span className="text-indigo-600">10 m²</span>.</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-black text-indigo-600 shrink-0">2</div>
+                          <div className="space-y-3">
+                            <p className="text-[11px] font-bold text-slate-600">Số người ở tối đa:</p>
+                            <div className="grid grid-cols-1 gap-1.5 opacity-80">
+                              {[
+                                { area: '10-20 m²', max: '2' },
+                                { area: '20-30 m²', max: '3' },
+                                { area: '30-60 m²', max: '5' },
+                                { area: 'Trên 60 m²', max: '6' },
+                              ].map((rule, i) => (
+                                <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-white border border-indigo-50">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase">{rule.area}</span>
+                                  <span className="text-[10px] font-black text-indigo-600 uppercase">{rule.max} người</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

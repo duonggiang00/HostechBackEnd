@@ -36,7 +36,7 @@ const STEPS = [
 ];
 
 export default function RoomWizard({ initialData, onSuccess, onCancel, propertyId, floorId }: RoomWizardProps) {
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeStep, setActiveStep] = useState<number>(0);
   const { createRoom } = useRoomActions();
   const { data: property } = usePropertyDetail(propertyId);
   const { data: floors = [] } = useFloors(propertyId);
@@ -109,7 +109,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     toast.success(`Đã áp dụng mẫu: ${template.name}`);
   };
 
-  // Optimized Limit Calculations (Same as RoomForm)
   const areaLimits = useMemo(() => {
     const buildingArea = Number(property?.area || 0);
     const floorArea = Number(floor?.area || 0);
@@ -127,7 +126,8 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       otherRoomsArea,
       sharedArea,
       effectiveLimit: floorArea > 0 ? floorArea : buildingArea,
-      isUsingFloorLimit: floorArea > 0
+      isUsingFloorLimit: floorArea > 0,
+      remainingArea: (floorArea > 0 ? floorArea : buildingArea) - sharedArea - otherRoomsArea
     };
   }, [property, floor, rooms, initialData?.id]);
 
@@ -279,7 +279,38 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
               transition={{ duration: 0.3 }}
             >
               {activeStep === 0 && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                <div className="space-y-10">
+                  {/* ─── Area Context Banner ─── */}
+                  <div className="bg-slate-900/5 backdrop-blur-xl border border-slate-200/60 rounded-[40px] p-8 shadow-inner-white">
+                    <div className="flex items-center gap-3 text-slate-800 mb-8">
+                      <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-slate-100">
+                        <ShieldAlert className="w-5 h-5 text-indigo-500" />
+                      </div>
+                      <h3 className="font-black text-sm uppercase tracking-[0.1em]">Bối cảnh diện tích tòa nhà</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                      <div className="p-6 bg-white/60 rounded-[28px] border border-white/80 shadow-sm transition-all hover:bg-white">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tổng diện tích</p>
+                        <p className="text-2xl font-black text-slate-900 tabular-nums">{formatNumber(areaLimits.buildingArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
+                      </div>
+                      <div className="p-6 bg-white/60 rounded-[28px] border border-white/80 shadow-sm transition-all hover:bg-white">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Diện tích chung</p>
+                        <p className="text-2xl font-black text-slate-900 tabular-nums">{formatNumber(areaLimits.sharedArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
+                      </div>
+                      <div className="p-6 bg-white/60 rounded-[28px] border border-white/80 shadow-sm transition-all hover:bg-white">
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">DT phòng {areaLimits.isUsingFloorLimit ? '(Tầng)' : '(Tòa)'}</p>
+                        <p className="text-2xl font-black text-slate-900 tabular-nums">{formatNumber(areaLimits.otherRoomsArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
+                      </div>
+                      <div className="group p-6 bg-indigo-600 rounded-[28px] shadow-xl shadow-indigo-600/20 border border-indigo-500/30 transition-all hover:scale-[1.02] active:scale-95 cursor-default relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-white/20 transition-all" />
+                        <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-2 relative z-10">Khả dụng còn lại</p>
+                        <p className="text-2xl font-black text-white tabular-nums relative z-10">{formatNumber(areaLimits.remainingArea)}<span className="text-sm font-bold opacity-60 ml-1">m²</span></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
                   {/* Left: Form */}
                   <div className="lg:col-span-8 space-y-10">
                     {/* Template Selector */}
@@ -460,7 +491,8 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
               {activeStep === 1 && (
                 <div className="space-y-8">

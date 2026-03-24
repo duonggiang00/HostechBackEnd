@@ -36,7 +36,7 @@ const SelectTrigger = React.forwardRef<HTMLButtonElement, any>(({ className, chi
     <button
       ref={ref}
       className={cn(
-        "flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-12 w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm hover:shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50",
         className
       )}
       onClick={() => context?.setOpen(!context.open)}
@@ -61,7 +61,7 @@ const SelectContent = ({ children, className }: any) => {
 
   return (
     <div className={cn(
-      "absolute z-50 mt-2 w-full min-w-[12rem] overflow-hidden rounded-2xl border border-slate-100 bg-white p-1 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200", 
+      "absolute z-50 mt-2 w-full min-w-[12rem] overflow-hidden rounded-2xl border border-slate-100 bg-white p-1 text-slate-900 shadow-2xl animate-in fade-in zoom-in-95 duration-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50", 
       className
     )}>
       <div className="p-1 space-y-1">{children}</div>
@@ -76,8 +76,8 @@ const SelectItem = ({ children, className, value, ...props }: any) => {
   return (
     <div 
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-xl py-2.5 pl-3 pr-9 text-sm font-bold outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50",
-        isSelected && "bg-indigo-50 text-indigo-600",
+        "relative flex w-full cursor-pointer select-none items-center rounded-xl py-2.5 pl-3 pr-9 text-sm font-bold outline-none transition-colors hover:bg-slate-50 focus:bg-slate-50 dark:hover:bg-slate-900 dark:focus:bg-slate-900",
+        isSelected && "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-400",
         className
       )} 
       onClick={() => {

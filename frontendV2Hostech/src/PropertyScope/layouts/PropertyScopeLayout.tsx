@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink, useParams, Navigate } from 'react-router-dom';
+import { NavLink, useParams } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import type { UserProperty } from '@/shared/features/auth/types';
 import { 
   Building2, 
   DoorOpen, 
@@ -35,17 +34,6 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const dashboardPath = useDashboardHomePath(propertyId);
 
-  // Security Check: For now we rely on the backend API calls within the layout to enforce access.
-  // Frontend-only checks against user.properties are prone to sync issues if the auth store is not fully populated.
-  /*
-  if (user && (user.role === 'Staff' || user.role === 'Manager') && propertyId) {
-    const hasAccess = user.properties?.some((p: UserProperty) => p.id === propertyId);
-    if (!hasAccess) {
-      return <Navigate to="/unauthorized" replace />;
-    }
-  }
-  */
-
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
     { id: 'property-detail', icon: Building2, label: 'Properties', path: `/properties/${propertyId}/detail` },
@@ -54,7 +42,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
     { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
-    { id: 'templates', icon: Settings, label: 'Mẫu thiết lập', path: `/properties/${propertyId}/templates` },
+    { id: 'templates', icon: Settings, label: 'Thiết lập tòa nhà', path: `/properties/${propertyId}/templates` },
   ];
 
   const SidebarContent = () => (
@@ -181,7 +169,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Property Management</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Quản lý tòa nhà</h2>
             <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 hidden xl:block" />
             <div className="min-w-0">
               <div className="lg:hidden">
@@ -195,7 +183,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Global search..."
+                placeholder="Tìm kiếm nhanh..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>

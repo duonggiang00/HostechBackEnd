@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Zap } from 'lucide-react';
+import { Plus, Edit2, Trash2, Zap, ArrowLeft } from 'lucide-react';
 import { useRoomTemplates, useRoomTemplateActions } from '../hooks/useTemplates';
-import { RoomTemplateModal } from './RoomTemplateModal';
+import { RoomTemplateWizard } from './RoomTemplateWizard';
 import { BulkRoomCreateModal } from '../../rooms/components/BulkRoomCreateModal';
 import type { RoomTemplate } from '../types';
 
@@ -12,18 +12,18 @@ interface RoomTemplateListProps {
 export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const { data: templates = [], isLoading } = useRoomTemplates(propertyId);
   const { deleteTemplate } = useRoomTemplateActions(propertyId);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate | null>(null);
 
   const handleEdit = (template: RoomTemplate) => {
     setSelectedTemplate(template);
-    setIsModalOpen(true);
+    setShowWizard(true);
   };
 
   const handleCreate = () => {
     setSelectedTemplate(null);
-    setIsModalOpen(true);
+    setShowWizard(true);
   };
 
   const handleBulkCreate = (template: RoomTemplate) => {
@@ -39,6 +39,33 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
 
   if (isLoading) {
     return <div className="p-8 text-center text-slate-500">Đang tải dữ liệu...</div>;
+  }
+
+  if (showWizard) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowWizard(false)}
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-500" />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              {selectedTemplate ? 'Cập nhật mẫu phòng' : 'Tạo mẫu phòng mới'}
+            </h2>
+          </div>
+        </div>
+        
+        <RoomTemplateWizard 
+          propertyId={propertyId}
+          initialData={selectedTemplate}
+          onSuccess={() => setShowWizard(false)}
+          onCancel={() => setShowWizard(false)}
+        />
+      </div>
+    );
   }
 
   return (
@@ -140,13 +167,6 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
           </div>
         )}
       </div>
-
-      <RoomTemplateModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        propertyId={propertyId}
-        template={selectedTemplate}
-      />
 
       <BulkRoomCreateModal
         isOpen={isBulkModalOpen}
