@@ -15,13 +15,15 @@ import {
   Gauge,
   User,
   FileText,
-  Settings
+  Settings,
+  Ticket
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
 import { useDashboardHomePath } from '@/shared/hooks/useDashboardHomePath';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
+import { useTickets } from '../features/tickets/hooks/useTickets';
 
 interface PropertyScopeLayoutProps {
   children: ReactNode;
@@ -34,6 +36,9 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const dashboardPath = useDashboardHomePath(propertyId);
 
+  const { data: openTicketsData } = useTickets({ property_id: propertyId, status: 'OPEN', per_page: 1 });
+  const openCount = openTicketsData?.meta.total || 0;
+
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
     { id: 'property-detail', icon: Building2, label: 'Properties', path: `/properties/${propertyId}/detail` },
@@ -42,6 +47,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
     { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
+    { id: 'tickets', icon: Ticket, label: 'Sự cố & Yêu cầu', path: `/properties/${propertyId}/tickets`, badge: openCount > 0 ? openCount : undefined },
     { id: 'templates', icon: Settings, label: 'Thiết lập tòa nhà', path: `/properties/${propertyId}/templates` },
   ];
 
@@ -85,8 +91,13 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
                 : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent'
             }`}
           >
-            <item.icon className="w-4 h-4" />
-            {item.label}
+            <item.icon className="w-4 h-4 shrink-0" />
+            <span className="flex-1 truncate">{item.label}</span>
+            {item.badge && (
+              <span className="px-2 py-0.5 text-[10px] font-black bg-rose-500 text-white rounded-full shrink-0 shadow-sm shadow-rose-200 dark:shadow-none">
+                {item.badge}
+              </span>
+            )}
           </NavLink>
         )) : (
           <div className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500 italic">No property selected</div>
