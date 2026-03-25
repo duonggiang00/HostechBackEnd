@@ -11,7 +11,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { 
     setAuth, 
-    setLoginMode, 
     isLoading, 
     setLoading, 
     error, 
@@ -47,27 +46,13 @@ export default function LoginPage() {
   const handleIdentify = () => {
     if (!validateIdentifier()) return;
     
+    // Unify flow: Everyone goes to password step first.
+    // The backend will determine if MFA is needed after password verification.
     setLoading(true);
-    // Simulate API call to check user type
     setTimeout(() => {
       setLoading(false);
-      // Admin/Owner/Manager/Staff -> Password
-      // Tenant -> OTP (Default behavior for demo)
-      const isStaffOrAdmin = identifier.includes('admin') || 
-                            identifier.includes('owner') || 
-                            identifier.includes('manager') || 
-                            identifier.includes('staff') ||
-                            identifier === 'admin@example.com';
-
-      if (isStaffOrAdmin) {
-        setLoginMode('password');
-        setStep('PASSWORD');
-      } else {
-        setLoginMode('otp');
-        setStep('OTP');
-        startOtpCooldown(60);
-      }
-    }, 800);
+      setStep('PASSWORD');
+    }, 400);
   };
 
   const handlePasswordLogin = async () => {
@@ -80,37 +65,28 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      // Step 1: Login — get lean user + token
       const data = await authApi.login({
         email: identifier,
         password: password,
       });
 
+      // Check if MFA is required
+      if (data.two_factor) {
+        setStep('OTP');
+        setLoading(false);
+        startOtpCooldown(60);
+        return;
+      }
+
       const { token } = data;
       if (!token) throw new Error('No token returned from login');
 
-      // Step 2: Store token temporarily so axios interceptor can use it for /auth/me
-      useAuthStore.getState().setAuth(
-        {
-          id: data.user.id,
-          full_name: data.user.full_name,
-          email: data.user.email,
-          phone: data.user.phone,
-          role: data.user.role,
-          org_id: data.user.org_id,
-          properties: [], // will be filled by fetchMe
-          roles: data.user.roles ?? [],
-        },
-        token,
-      );
-
-      // Step 3: Fetch full user context (role, org_id, properties[] for Manager/Staff)
+      // Fetch full user context
       const fullUser = await authApi.getMe();
-
-      // Step 4: Replace store with full user data
+      
+      // Store full user data
       useAuthStore.getState().setAuth(fullUser, token);
 
-      // Step 6: Navigate to root, where RootRedirect will dynamically route user based on their specific role
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
@@ -123,26 +99,31 @@ export default function LoginPage() {
     }
   };
 
-  const handleOtpComplete = (otp: string) => {
+  const handleOtpComplete = async (code: string) => {
     setLoading(true);
-    setTimeout(() => {
-      if (otp === '123456') { // Mock valid OTP
-        const user = {
-          id: 'tenant-01',
-          full_name: 'Alex Johnson',
-          email: identifier,
-          role: 'Tenant' as const,
-          org_id: null,
-          properties: [],
-          permissions: [],
-        };
-        setAuth(user, 'mock-tenant-token');
-        navigate('/app');
-      } else {
-        setError('Invalid OTP code. Please try again.');
-        setLoading(false);
-      }
-    }, 1500);
+    setError(null);
+
+    try {
+      // Call standard Fortify 2FA challenge endpoint
+      const data = await authApi.loginChallenge({ code });
+      
+      const { token } = data;
+      if (!token) throw new Error('No token returned from MFA');
+
+      // Fetch full user context and set auth
+      const fullUser = await authApi.getMe();
+      setAuth(fullUser, token);
+      
+      navigate('/');
+    } catch (err: any) {
+      console.error('MFA error:', err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        'Mã xác thực không hợp lệ hoặc đã hết hạn.';
+      setError(errorMessage);
+      setLoading(false);
+    }
   };
 
   return (

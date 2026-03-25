@@ -11,12 +11,16 @@ export const authApi = {
     return response.data;
   },
 
-  verifyOTP: async (data: { email?: string; phone?: string; otp: string }) => {
-    const response = await apiClient.post('/auth/otp/verify', data);
+  loginChallenge: async (data: { code: string; recovery_code?: string }) => {
+    const response = await apiClient.post('/auth/two-factor-challenge', data);
     return response.data;
   },
 
   resendOTP: async (data: { email?: string; phone?: string }) => {
+    // Note: Standard Fortify doesn't have a direct "resend" endpoint for login MFA.
+    // However, if the project has a custom one, we use it. 
+    // For now, mirroring the existing interface but pointing to a placeholder or 
+    // documenting that it might need a custom backend route.
     const response = await apiClient.post('/auth/otp/request', data);
     return response.data;
   },
