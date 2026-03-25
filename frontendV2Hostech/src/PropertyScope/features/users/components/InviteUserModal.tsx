@@ -41,7 +41,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop */}
+        {/* Nền làm mờ */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -50,14 +50,14 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         />
 
-        {/* Modal */}
+        {/* Nội dung Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700"
         >
-          {/* Header */}
+          {/* Tiêu đề Modal */}
           <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -76,10 +76,10 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
             </button>
           </div>
 
-          {/* Form */}
+          {/* Form nhập liệu */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="space-y-4">
-              {/* Email Input */}
+              {/* Nhập Email */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Email người nhận</label>
                 <div className="relative">
@@ -95,11 +95,11 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                 </div>
               </div>
 
-              {/* Role Selection */}
+              {/* Chọn vai trò */}
               <div className="space-y-3 pt-2">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Vai trò (Role)</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Tenant Role */}
+                  {/* Khách thuê */}
                   <label className={`relative cursor-pointer rounded-2xl border-2 p-4 transition-all ${
                     roleName === 'Tenant' 
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' 
@@ -123,7 +123,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                     </div>
                   </label>
 
-                  {/* Staff Role */}
+                  {/* Nhân viên */}
                   <label className={`relative cursor-pointer rounded-2xl border-2 p-4 transition-all ${
                     roleName === 'Staff' 
                       ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' 
@@ -150,7 +150,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Nút hành động */}
             <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
               <button
                 type="button"

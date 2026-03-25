@@ -45,8 +45,7 @@ export default function CreateUserPage() {
       await createUserMutation.mutateAsync({
         ...formData,
         org_id: user?.org_id, 
-        // Note: For managers/staff, the backend often auto-assigns the property if creating a tenant.
-        // We pass properties_scope here as an extra parameter just in case the backend UserService supports it.
+        // Gắn properties_scope để user mới thuộc về tòa nhà hiện tại
         properties_scope: [propertyId],
       });
       toast.success('Thêm người dùng thành công!');
@@ -79,7 +78,7 @@ export default function CreateUserPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Form Info */}
+          {/* Thông tin Form chính */}
           <div className="lg:col-span-2 space-y-6">
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -177,7 +176,7 @@ export default function CreateUserPage() {
             </motion.div>
           </div>
 
-          {/* Right Sidebar */}
+          {/* Cột Phân quyền bên phải */}
           <div className="space-y-6">
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -238,7 +237,7 @@ export default function CreateUserPage() {
               </div>
             </motion.div>
 
-            {/* Submit Button */}
+            {/* Nút Submit */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

@@ -38,7 +38,7 @@ export default function PropertyUsersPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-700">
-      {/* Header Section */}
+      {/* Tiêu đề trang */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -75,15 +75,15 @@ export default function PropertyUsersPage() {
         </div>
       </div>
 
-      {/* Main Content Card */}
+      {/* Nội dung chính */}
       <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         
-        {/* Toolbar: Tabs & Search */}
+        {/* Thanh công cụ: Tabs & Tìm kiếm */}
         <div className="border-b border-slate-100 dark:border-slate-700/50 p-4 lg:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           
-          {/* Tabs */}
+          {/* Tabs chuyển đổi */}
           <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto custom-scrollbar relative">
-            {/* Animated Tab Background Indicator */}
+            {/* Hiệu ứng trượt Tab */}
             <motion.div
               layoutId="active-tab-indicator-users"
               className="absolute inset-y-1.5 bg-white dark:bg-slate-800 rounded-xl shadow-sm z-0"
@@ -115,7 +115,7 @@ export default function PropertyUsersPage() {
             </button>
           </div>
 
-          {/* Search Box */}
+          {/* Ô tìm kiếm */}
           <div className="relative w-full md:w-80 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
             <input 
@@ -128,7 +128,7 @@ export default function PropertyUsersPage() {
           </div>
         </div>
 
-        {/* Dynamic Content */}
+        {/* Nội dung hiển thị theo Tab */}
         <div className="p-0">
           <AnimatePresence mode="wait">
             {activeTab === 'active' && (

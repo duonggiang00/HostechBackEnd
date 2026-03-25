@@ -1,30 +1,33 @@
 import apiClient from '@/shared/api/client';
-import type { PropertyUser, UserInvitation } from '../types';
+import type { PropertyUser, UserInvitation, PaginatedResponse } from '../types';
 
 export const usersApi = {
-  getUsers: async (): Promise<PropertyUser[]> => {
-    // Fetch users for the current org/property. 
-    // The X-Org-Id and X-Property-Id headers are automatically injected by apiClient interceptor based on the URL.
+  getUsers: async (params?: Record<string, any>): Promise<PaginatedResponse<PropertyUser>> => {
+    // Lấy danh sách người dùng (Interceptor tự động gắp X-Property-Id)
     const response = await apiClient.get('/users', {
       params: {
-        per_page: 100,
+        page: params?.page || 1,
+        per_page: params?.per_page || 15,
+        search: params?.search || '',
+        ...params,
       }
     });
-    return response.data.data;
+    return response.data;
   },
 
-  getInvitations: async (): Promise<UserInvitation[]> => {
+  getInvitations: async (params?: Record<string, any>): Promise<PaginatedResponse<UserInvitation>> => {
     const response = await apiClient.get('/invitations', {
       params: {
-        per_page: 100,
+        page: params?.page || 1,
+        per_page: params?.per_page || 15,
+        ...params,
       }
     });
-    return response.data.data;
+    return response.data;
   },
 
   inviteUser: async (data: { email: string; role_name: string; properties_scope: string[] }) => {
-    // properties_scope is required for Manager role inviting Staff/Tenant
-    // org_id is also usually appended by the server if logged in as Owner/Manager
+    // Truyền properties_scope để gắn user vào đúng tòa nhà
     const response = await apiClient.post('/invitations', data);
     return response.data.data;
   },
