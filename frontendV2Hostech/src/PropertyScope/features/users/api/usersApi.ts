@@ -12,6 +12,7 @@ export const usersApi = {
         ...params,
       }
     });
+    console.log('📡 API: GET /users - Data:', response.data);
     return response.data;
   },
 
@@ -23,6 +24,7 @@ export const usersApi = {
         ...params,
       }
     });
+    console.log('📡 API: GET /invitations - Data:', response.data);
     return response.data;
   },
 
@@ -39,6 +41,7 @@ export const usersApi = {
 
   getUser: async (id: string): Promise<PropertyUser> => {
     const response = await apiClient.get(`/users/${id}`);
+    console.log(`📡 API: GET /users/${id} detail:`, response.data.data);
     return response.data.data;
   },
 
