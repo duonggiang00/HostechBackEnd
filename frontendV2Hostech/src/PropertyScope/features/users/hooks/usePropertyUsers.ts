@@ -35,11 +35,28 @@ export function usePropertyUsers(params?: Record<string, any>) {
     },
   });
 
+  const updateUserMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: Partial<any> }) => usersApi.updateUser(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['property-users'] });
+      queryClient.invalidateQueries({ queryKey: ['property-user', id] });
+    },
+  });
+
   return {
     usersQuery,
     invitationsQuery,
     inviteMutation,
     createUserMutation,
+    updateUserMutation,
     revokeMutation,
   };
+}
+
+export function useUser(id?: string) {
+  return useQuery({
+    queryKey: ['property-user', id],
+    queryFn: () => usersApi.getUser(id!),
+    enabled: !!id,
+  });
 }

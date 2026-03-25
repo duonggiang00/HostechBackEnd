@@ -46,6 +46,7 @@ const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts
 const ContractDetailPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractDetailPage'));
 const PropertyUsersPage = lazy(() => import('@/PropertyScope/features/users/pages/PropertyUsersPage'));
 const CreateUserPage = lazy(() => import('@/PropertyScope/features/users/pages/CreateUserPage'));
+const UserDetailPage = lazy(() => import('@/PropertyScope/features/users/pages/UserDetailPage'));
 const TicketListPage = lazy(() => import('@/PropertyScope/features/tickets/pages/TicketListPage'));
 
 // Tenant Pages
@@ -267,6 +268,7 @@ export default function AppRoutes() {
           <Route path="tickets" element={<TicketListPage />} />
           <Route path="users" element={<PropertyUsersPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
+          <Route path="users/:userId" element={<UserDetailPage />} />
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

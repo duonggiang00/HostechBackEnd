@@ -37,6 +37,16 @@ export const usersApi = {
     return response.data.data;
   },
 
+  getUser: async (id: string): Promise<PropertyUser> => {
+    const response = await apiClient.get(`/users/${id}`);
+    return response.data.data;
+  },
+
+  updateUser: async (id: string, data: Partial<PropertyUser>) => {
+    const response = await apiClient.put(`/users/${id}`, data);
+    return response.data.data;
+  },
+
   revokeInvitation: async (id: string) => {
     const response = await apiClient.delete(`/invitations/${id}`);
     return response.data;
