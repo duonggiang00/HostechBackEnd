@@ -42,6 +42,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
     { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
+    { id: 'users', icon: User, label: 'Cư dân/Nhân sự', path: `/properties/${propertyId}/users` },
     { id: 'templates', icon: Settings, label: 'Thiết lập tòa nhà', path: `/properties/${propertyId}/templates` },
   ];
 
