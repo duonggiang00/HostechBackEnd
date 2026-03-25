@@ -174,6 +174,110 @@ class PaymentService
     }
 
     /**
+     * Tạo Payment ở trạng thái PENDING cho luồng VNPay.
+     *
+     * Khác với create():
+     * - status = PENDING (chưa thu tiền, chờ VNPay callback)
+     * - Chưa gạch nợ hóa đơn (đợi IPN webhook xác nhận)
+     * - Chưa ghi sổ cái
+     *
+     * Các allocations được lưu sẵn để khi IPN về chỉ cần approve.
+     */
+    public function createPending(array $data, User $user): Payment
+    {
+        $allocations = $data['allocations'] ?? [];
+
+        // Validate: Tổng allocations phải bằng payment.amount
+        $totalAllocated = collect($allocations)->sum('amount');
+        if (abs($totalAllocated - $data['amount']) > 0.01) {
+            abort(422, "Tổng số tiền phân bổ ({$totalAllocated}) phải bằng số tiền thanh toán ({$data['amount']}).");
+        }
+
+        return DB::transaction(function () use ($data, $allocations, $user) {
+            // 1. Tạo Payment với status PENDING
+            $payment = Payment::create([
+                'org_id'              => $data['org_id'],
+                'property_id'         => $data['property_id'] ?? null,
+                'payer_user_id'       => $data['payer_user_id'] ?? null,
+                'received_by_user_id' => $user->id,
+                'method'              => $data['method'],
+                'amount'              => $data['amount'],
+                'reference'           => $data['reference'] ?? null,
+                'received_at'         => null,   // Sẽ cập nhật khi IPN về
+                'status'              => 'PENDING',
+                'note'                => $data['note'] ?? null,
+                'meta'                => $data['meta'] ?? null,
+            ]);
+
+            // 2. Lưu allocations (chưa gạch nợ — chỉ là placeholder)
+            foreach ($allocations as $alloc) {
+                $invoice = Invoice::find($alloc['invoice_id']);
+
+                if (! $invoice || (string) $invoice->org_id !== (string) $data['org_id']) {
+                    abort(422, "Hóa đơn {$alloc['invoice_id']} không hợp lệ hoặc không thuộc tổ chức này.");
+                }
+
+                PaymentAllocation::create([
+                    'org_id'     => $data['org_id'],
+                    'payment_id' => $payment->id,
+                    'invoice_id' => $invoice->id,
+                    'amount'     => $alloc['amount'],
+                ]);
+            }
+
+            return $payment->load(['property', 'allocations.invoice']);
+        });
+    }
+
+    /**
+     * Approve Payment PENDING sau khi VNPay IPN xác nhận thành công.
+     *
+     * Quy trình:
+     * 1. Đổi status → APPROVED, ghi received_at, approved_by
+     * 2. Gạch nợ từng hóa đơn theo allocations đã lưu sẵn
+     * 3. Ghi bút toán sổ cái
+     *
+     * @param  Payment   $payment  Payment đang PENDING
+     * @param  User|null $approver User duyệt (thường là receivedBy)
+     */
+    public function approvePending(Payment $payment, ?User $approver = null): Payment
+    {
+        if ($payment->status !== 'PENDING') {
+            abort(422, 'Chỉ có thể approve giao dịch đang PENDING.');
+        }
+
+        return DB::transaction(function () use ($payment, $approver) {
+            // 1. Approve Payment
+            $payment->update([
+                'status'              => 'APPROVED',
+                'received_at'         => now(),
+                'approved_by_user_id' => $approver?->id,
+                'approved_at'         => now(),
+            ]);
+
+            // 2. Gạch nợ từng hóa đơn
+            foreach ($payment->allocations()->with('invoice')->get() as $alloc) {
+                $invoice = $alloc->invoice;
+                if (! $invoice) {
+                    continue;
+                }
+
+                $newPaidAmount = (float) $invoice->paid_amount + (float) $alloc->amount;
+                $invoice->update(['paid_amount' => $newPaidAmount]);
+
+                if ($newPaidAmount >= (float) $invoice->total_amount) {
+                    $this->invoiceService->payInvoice($invoice, "Thanh toán VNPay qua Payment #{$payment->id}");
+                }
+            }
+
+            // 3. Ghi sổ cái
+            $this->ledgerService->recordPayment($payment);
+
+            return $payment->load(['property', 'allocations.invoice', 'receipt']);
+        });
+    }
+
+    /**
      * Hủy giao dịch thanh toán (Soft delete) + Hoàn tác gạch nợ các hóa đơn.
      */
     public function void(Payment $payment): bool

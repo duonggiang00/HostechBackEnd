@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\Finance\CashflowController;
 use App\Http\Controllers\Api\Finance\LedgerController;
 use App\Http\Controllers\Api\Finance\PaymentController;
+use App\Http\Controllers\Api\Finance\VNPayController;
 use Illuminate\Support\Facades\Route;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -30,4 +32,17 @@ Route::prefix('finance')->group(function () {
     // ── Cashflow (Dòng tiền thực tế In/Out) ───────────────────
     Route::get('cashflow', [CashflowController::class, 'index']);
     Route::post('cashflow', [CashflowController::class, 'store']);
+
+    // ── VNPay (routes có auth) ────────────────────────────────
+    Route::prefix('vnpay')->group(function () {
+        // Tạo giao dịch PENDING + URL thanh toán VNPay
+        Route::post('create',  [VNPayController::class, 'createPayment']);
+        // Return URL: verify sau khi browser redirect về
+        Route::get('return',   [VNPayController::class, 'handleReturn']);
+        // Xác minh trạng thái từ DB (frontend gọi sau redirect)
+        Route::get('verify',   [VNPayController::class, 'verifyReturn']);
+    });
 });
+
+
+
