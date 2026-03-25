@@ -1,17 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '../api/usersApi';
 
-export function usePropertyUsers() {
+export function usePropertyUsers(params?: Record<string, any>) {
   const queryClient = useQueryClient();
 
   const usersQuery = useQuery({
-    queryKey: ['property-users'],
-    queryFn: () => usersApi.getUsers(),
+    queryKey: ['property-users', params],
+    queryFn: () => usersApi.getUsers(params),
   });
 
   const invitationsQuery = useQuery({
-    queryKey: ['property-invitations'],
-    queryFn: () => usersApi.getInvitations(),
+    queryKey: ['property-invitations', params],
+    queryFn: () => usersApi.getInvitations(params),
   });
 
   const inviteMutation = useMutation({

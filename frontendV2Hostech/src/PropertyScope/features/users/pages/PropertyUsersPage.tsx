@@ -12,10 +12,16 @@ export default function PropertyUsersPage() {
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
 
-  const { usersQuery, invitationsQuery, revokeMutation } = usePropertyUsers();
+  // Use server-side pagination
+  const { usersQuery, invitationsQuery, revokeMutation } = usePropertyUsers({
+    page,
+    per_page: 15,
+    search: searchQuery, // could be debounced
+  });
 
   const handleRevoke = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn thu hồi lời mời này?')) return;
@@ -27,14 +33,15 @@ export default function PropertyUsersPage() {
     }
   };
 
-  const filteredUsers = usersQuery.data?.filter(user => 
-    user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  // Dữ liệu từ API trả về đã có dạng PaginatedResponse { data, meta }
+  const usersList = usersQuery.data?.data || [];
+  const invitationsList = invitationsQuery.data?.data || [];
+  const usersMeta = usersQuery.data?.meta;
+  const invitationsMeta = invitationsQuery.data?.meta;
 
-  const filteredInvitations = invitationsQuery.data?.filter(inv => 
-    inv.email.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
 
   return (
     <div className="space-y-6 lg:space-y-8 animate-in fade-in duration-700">
@@ -96,22 +103,22 @@ export default function PropertyUsersPage() {
             />
             
             <button
-              onClick={() => setActiveTab('active')}
+              onClick={() => { setActiveTab('active'); setPage(1); }}
               className={`relative z-10 flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                 activeTab === 'active' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
               <Users className="w-4 h-4" />
-              Đang hoạt động ({usersQuery.data?.length || 0})
+              Đang hoạt động ({usersMeta?.total || '--'})
             </button>
             <button
-              onClick={() => setActiveTab('pending')}
+              onClick={() => { setActiveTab('pending'); setPage(1); }}
               className={`relative z-10 flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                 activeTab === 'pending' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
               <Clock className="w-4 h-4" />
-              Chờ xác nhận ({invitationsQuery.data?.length || 0})
+              Chờ xác nhận ({invitationsMeta?.total || '--'})
             </button>
           </div>
 
@@ -142,19 +149,20 @@ export default function PropertyUsersPage() {
               >
                 {usersQuery.isLoading ? (
                   <div className="p-12 flex justify-center"><div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" /></div>
-                ) : filteredUsers.length > 0 ? (
-                  <table className="w-full text-left whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Người dùng</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Trạng thái</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {filteredUsers.map(user => (
-                        <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
+                ) : usersList.length > 0 ? (
+                  <>
+                    <table className="w-full text-left whitespace-nowrap">
+                      <thead>
+                        <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Người dùng</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Trạng thái</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {usersList.map(user => (
+                          <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold">
@@ -193,6 +201,30 @@ export default function PropertyUsersPage() {
                       ))}
                     </tbody>
                   </table>
+                  {usersMeta && usersMeta.last_page > 1 && (
+                    <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Hiển thị {usersMeta.from} tới {usersMeta.to} trong {usersMeta.total} kết quả
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handlePageChange(usersMeta.current_page - 1)}
+                          disabled={usersMeta.current_page === 1}
+                          className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Trước
+                        </button>
+                        <button 
+                          onClick={() => handlePageChange(usersMeta.current_page + 1)}
+                          disabled={usersMeta.current_page === usersMeta.last_page}
+                          className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Sau
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
                 ) : (
                   <div className="p-12 text-center text-slate-500">
                      <Users className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
@@ -213,19 +245,20 @@ export default function PropertyUsersPage() {
               >
                   {invitationsQuery.isLoading ? (
                   <div className="p-12 flex justify-center"><div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" /></div>
-                ) : filteredInvitations.length > 0 ? (
-                  <table className="w-full text-left whitespace-nowrap">
-                    <thead>
-                      <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Email nhận</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Ngày gửi</th>
-                        <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                      {filteredInvitations.map(inv => (
-                        <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
+                ) : invitationsList.length > 0 ? (
+                  <>
+                    <table className="w-full text-left whitespace-nowrap">
+                      <thead>
+                        <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Email nhận</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Ngày gửi</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {invitationsList.map(inv => (
+                          <tr key={inv.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors group">
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 dark:text-orange-400 font-bold border border-orange-100 dark:border-orange-800/50">
@@ -269,6 +302,30 @@ export default function PropertyUsersPage() {
                       ))}
                     </tbody>
                   </table>
+                  {invitationsMeta && invitationsMeta.last_page > 1 && (
+                    <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/30 dark:bg-slate-800/30">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Hiển thị {invitationsMeta.from} tới {invitationsMeta.to} trong {invitationsMeta.total} kết quả
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handlePageChange(invitationsMeta.current_page - 1)}
+                          disabled={invitationsMeta.current_page === 1}
+                          className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Trước
+                        </button>
+                        <button 
+                          onClick={() => handlePageChange(invitationsMeta.current_page + 1)}
+                          disabled={invitationsMeta.current_page === invitationsMeta.last_page}
+                          className="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          Sau
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
                 ) : (
                   <div className="p-12 text-center text-slate-500">
                      <Mail className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
