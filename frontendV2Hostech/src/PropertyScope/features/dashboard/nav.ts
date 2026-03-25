@@ -5,5 +5,5 @@ export const dashboardNav = (propertyId: string): NavItem => ({
   id: 'dashboard',
   icon: LayoutDashboard,
   label: 'Bảng điều khiển',
-  path: `/property/${propertyId}/dashboard`,
+  path: `/properties/${propertyId}/dashboard`,
 });

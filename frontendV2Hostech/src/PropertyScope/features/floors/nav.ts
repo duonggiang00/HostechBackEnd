@@ -5,5 +5,5 @@ export const floorNav = (propertyId: string): NavItem => ({
   id: 'floors',
   icon: Layers,
   label: 'Tầng',
-  path: `/property/${propertyId}/floors`,
+  path: `/properties/${propertyId}/floors`,
 });

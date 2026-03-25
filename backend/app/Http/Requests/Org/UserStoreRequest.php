@@ -21,6 +21,8 @@ class UserStoreRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'mfa_enabled' => ['nullable', 'boolean'],
+            'properties_scope' => ['nullable', 'array'],
+            'properties_scope.*' => ['uuid', 'exists:properties,id'],
         ];
     }
 }

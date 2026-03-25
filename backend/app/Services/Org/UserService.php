@@ -77,7 +77,17 @@ class UserService
             unset($data['password'], $data['password_confirmation']);
         }
 
-        return User::create($data);
+        $user = User::create($data);
+
+        if (isset($data['role'])) {
+            $user->assignRole($data['role']);
+        }
+
+        if (isset($data['properties_scope']) && is_array($data['properties_scope'])) {
+            $user->properties()->sync($data['properties_scope']);
+        }
+
+        return $user;
     }
 
     public function update(string $id, array $data, User $performer): ?User
@@ -104,6 +114,14 @@ class UserService
         }
 
         $user->update($data);
+
+        if (isset($data['role'])) {
+            $user->syncRoles([$data['role']]);
+        }
+
+        if (isset($data['properties_scope']) && is_array($data['properties_scope'])) {
+            $user->properties()->sync($data['properties_scope']);
+        }
 
         return $user;
     }

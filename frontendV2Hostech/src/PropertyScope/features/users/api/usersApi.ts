@@ -14,7 +14,7 @@ export const usersApi = {
   },
 
   getInvitations: async (): Promise<UserInvitation[]> => {
-    const response = await apiClient.get('/user-invitations', {
+    const response = await apiClient.get('/invitations', {
       params: {
         per_page: 100,
       }
@@ -25,7 +25,7 @@ export const usersApi = {
   inviteUser: async (data: { email: string; role_name: string; properties_scope: string[] }) => {
     // properties_scope is required for Manager role inviting Staff/Tenant
     // org_id is also usually appended by the server if logged in as Owner/Manager
-    const response = await apiClient.post('/user-invitations', data);
+    const response = await apiClient.post('/invitations', data);
     return response.data.data;
   },
 
@@ -35,7 +35,7 @@ export const usersApi = {
   },
 
   revokeInvitation: async (id: string) => {
-    const response = await apiClient.delete(`/user-invitations/${id}`);
+    const response = await apiClient.delete(`/invitations/${id}`);
     return response.data;
   }
 };
