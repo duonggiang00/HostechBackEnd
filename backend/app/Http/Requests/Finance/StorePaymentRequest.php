@@ -37,6 +37,10 @@ class StorePaymentRequest extends FormRequest
             'allocations'              => ['required', 'array', 'min:1'],
             'allocations.*.invoice_id' => ['required', 'uuid', 'exists:invoices,id'],
             'allocations.*.amount'     => ['required', 'numeric', 'min:0.01'],
+
+            // Dành cho VNPay
+            'bank_code'                => ['nullable', 'string', 'max:20'],
+            'meta'                     => ['nullable', 'array'],
         ];
     }
 
