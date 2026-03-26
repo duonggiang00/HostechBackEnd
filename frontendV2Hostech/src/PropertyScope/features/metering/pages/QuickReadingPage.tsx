@@ -9,13 +9,15 @@ export default function QuickReadingPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
 
+  // Fetch ALL active meters for the property (without pagination for quick reading)
   const { meters: metersData, isLoading } = useMeters(propertyId!, {
     filters: { is_active: true },
-    perPage: 1000
+    perPage: 1000, // Fetch up to 1000 meters at once
+    page: 1,
   });
 
-  // Extract array of meters safely
-  const meters = (Array.isArray(metersData) ? metersData : (metersData as any)?.data) || [] as Meter[];
+  // Extract array of meters from paginated response
+  const meters = (Array.isArray(metersData) ? metersData : metersData) || [] as Meter[];
   const { bulkCreateReadings } = useMeterActions(propertyId!);
 
   // Default to this month
@@ -26,7 +28,7 @@ export default function QuickReadingPage() {
   const [readings, setReadings] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Grouping meters by Floor -> Room
+  // Grouping meters by Floor -> Room with proper sorting
   const groupedMeters = useMemo(() => {
     if (!meters || meters.length === 0) return {};
     
@@ -37,7 +39,6 @@ export default function QuickReadingPage() {
 
     meters.forEach((meter: Meter) => {
       const room = meter.room;
-      // Some nested objects might be structured differently based on relationships
       const floorName = (room as any)?.floor?.name || (room as any)?.floor_name || NO_FLOOR;
       const roomName = room?.name || NO_ROOM;
 
@@ -47,8 +48,25 @@ export default function QuickReadingPage() {
       groups[floorName][roomName].push(meter);
     });
 
-    // Sort the floors and rooms if needed (optional embellishment)
-    return groups;
+    // Sort floors numerically (1, 2, 3, 4...)
+    const sortedFloors: Record<string, Record<string, Meter[]>> = {};
+    const floorKeys = Object.keys(groups).sort((a, b) => {
+      // Extract numbers from floor names like "Tầng 1", "Tầng 2", etc.
+      const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
+      const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
+      
+      // "Chưa phân tầng" (unassigned) goes to the end
+      if (isNaN(aNum) || a === NO_FLOOR) return 1;
+      if (isNaN(bNum) || b === NO_FLOOR) return -1;
+      
+      return aNum - bNum;
+    });
+
+    floorKeys.forEach(floor => {
+      sortedFloors[floor] = groups[floor];
+    });
+
+    return sortedFloors;
   }, [meters]);
 
   const handleReadingChange = (meterId: string, value: string) => {
@@ -59,7 +77,8 @@ export default function QuickReadingPage() {
 
   const calculateConsumption = (meter: Meter, newValue: string) => {
     if (!newValue) return 0;
-    const prev = meter.last_reading ?? meter.base_reading ?? 0;
+    // Use latest_reading from the meter (most recent reading)
+    const prev = (meter as any).latest_reading ?? meter.base_reading ?? 0;
     const current = parseFloat(newValue);
     return Math.max(0, current - prev);
   };
@@ -84,7 +103,7 @@ export default function QuickReadingPage() {
     let hasError = false;
     for (const item of payload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
-      const prevReading = meter?.last_reading ?? meter?.base_reading ?? 0;
+      const prevReading = (meter as any)?.latest_reading ?? meter?.base_reading ?? 0;
       if (item.reading_value < prevReading) {
         toast.error(`Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`);
         hasError = true;

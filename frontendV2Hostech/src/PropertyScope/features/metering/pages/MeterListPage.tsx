@@ -109,7 +109,7 @@ export default function MeterListPage() {
   }, [appliedFilters]);
 
   // Fetch meters with applied filters (React Query handles caching automatically)
-  const { meters, isLoading } = useMeters(propertyId, {
+  const { meters, pagination, isLoading } = useMeters(propertyId, {
     filters: filterObject,
     search: debouncedSearch,
     page,
@@ -128,9 +128,10 @@ export default function MeterListPage() {
     });
   }, [meters]);
 
-  // Calculate pagination info
-  const totalItems = Array.isArray(meters) && meters.length > 0 ? meters.length : 0;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  // Use pagination data from API
+  const totalItems = pagination?.total || 0;
+  const totalPages = pagination?.last_page || 1;
+  const currentPage = pagination?.current_page || page;
 
   // Handlers
   const handleApplyFilters = () => {

@@ -14,15 +14,17 @@ export function useMeters(propertyId?: string | null, options: {
 } = {}) {
   const metersQuery = useQuery({
     queryKey: ['meters', propertyId, options.filters, options.search, options.page, options.perPage],
-    queryFn: () => {
-      if (!propertyId) return [];
-      return meteringApi.getMeters(propertyId, options.filters, options.search, options.page, options.perPage);
+    queryFn: async () => {
+      if (!propertyId) return { data: [], pagination: { total: 0, current_page: 1, last_page: 1, per_page: 15 } };
+      const response = await meteringApi.getMeters(propertyId, options.filters, options.search, options.page, options.perPage);
+      return response;
     },
     enabled: options.enabled !== undefined ? options.enabled && !!propertyId : !!propertyId,
   });
 
   return {
-    meters: metersQuery.data || [],
+    meters: metersQuery.data?.data || [],
+    pagination: metersQuery.data?.pagination || { total: 0, current_page: 1, last_page: 1, per_page: 15 },
     isLoading: metersQuery.isLoading,
     error: metersQuery.error,
   };

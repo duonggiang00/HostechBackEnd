@@ -6,6 +6,7 @@ use App\Models\Meter\Meter;
 use App\Models\Property\Room;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -36,7 +37,8 @@ class MeterService
             ])
             ->allowedSorts(['installed_at', 'code', 'type', 'created_at'])
             ->defaultSort('-created_at')
-            ->allowedIncludes(['room', 'room.property', 'room.floor']);
+            ->allowedIncludes(['room', 'room.property', 'room.floor'])
+            ->with(['latestApprovedReading']); // Eager load approved readings for "số cũ" display
         
         // Apply manual filters if provided
         foreach ($filters as $key => $value) {
@@ -115,17 +117,17 @@ class MeterService
             });
         }
         
-        $meters = $query->with('latestReading')->get();
+        $meters = $query->with('latestApprovedReading')->get();
         
         $totalElectric = 0;
         $totalWater = 0;
         
         foreach ($meters as $meter) {
-            if ($meter->latestReading && $meter->latestReading->reading_value) {
+            if ($meter->latestApprovedReading && $meter->latestApprovedReading->reading_value) {
                 if ($meter->type === 'ELECTRIC') {
-                    $totalElectric += $meter->latestReading->reading_value;
+                    $totalElectric += $meter->latestApprovedReading->reading_value;
                 } else {
-                    $totalWater += $meter->latestReading->reading_value;
+                    $totalWater += $meter->latestApprovedReading->reading_value;
                 }
             }
         }
@@ -146,16 +148,27 @@ class MeterService
      */
     public function create(array $data): Meter
     {
-        $user = request()->user();
+        return DB::transaction(function () use ($data) {
+            $user = request()->user();
 
-        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
-            $data['org_id'] = $user->org_id;
-        } elseif (! isset($data['org_id']) && isset($data['room_id'])) {
-            $room = Room::find($data['room_id']);
-            $data['org_id'] = $room?->org_id;
-        }
+            // Set org_id from user or from room
+            if ($user && ! $user->hasRole('Admin') && $user->org_id) {
+                $data['org_id'] = $user->org_id;
+            } elseif (! isset($data['org_id']) && isset($data['room_id'])) {
+                $room = Room::find($data['room_id']);
+                $data['org_id'] = $room?->org_id;
+            }
 
-        return Meter::create($data);
+            // Set property_id from room if room_id provided
+            if (isset($data['room_id'])) {
+                $room = Room::find($data['room_id']);
+                if ($room) {
+                    $data['property_id'] = $room->property_id;
+                }
+            }
+
+            return Meter::create($data);
+        });
     }
 
     /**
@@ -163,9 +176,11 @@ class MeterService
      */
     public function update(Meter $meter, array $data): Meter
     {
-        $meter->update($data);
+        return DB::transaction(function () use ($meter, $data) {
+            $meter->update($data);
 
-        return $meter;
+            return $meter->fresh();
+        });
     }
 
     /**
@@ -175,7 +190,9 @@ class MeterService
      */
     public function delete(Meter $meter)
     {
-        return $meter->delete();
+        return DB::transaction(function () use ($meter) {
+            return $meter->delete();
+        });
     }
 
     /**
@@ -233,8 +250,8 @@ class MeterService
             return false;
         }
 
-        \DB::transaction(function () use ($oldMaster, $newMaster) {
-            $latestReadingValue = $oldMaster->latestReading?->reading_value ?? $oldMaster->base_reading;
+        DB::transaction(function () use ($oldMaster, $newMaster) {
+            $latestReadingValue = $oldMaster->latestApprovedReading?->reading_value ?? $oldMaster->base_reading;
 
             // Mark old as not master
             $oldMaster->update(['is_master' => false]);

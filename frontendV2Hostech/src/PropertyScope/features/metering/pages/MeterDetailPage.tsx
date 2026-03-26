@@ -72,6 +72,13 @@ export default function MeterDetailPage() {
         // Alternative format { readings: [...] }
         readingsList = response.readings;
         total = response.readings.length;
+      } else if (typeof response === 'object' && response !== null) {
+        // Could be paginated format without explicit 'data' wrapper
+        const dataField = Object.keys(response).find(key => Array.isArray(response[key as keyof typeof response]));
+        if (dataField) {
+          readingsList = response[dataField as keyof typeof response] as MeterReading[];
+          total = readingsList.length;
+        }
       }
       
       console.log('✅ Processed readings:', readingsList.length, 'Total:', total);

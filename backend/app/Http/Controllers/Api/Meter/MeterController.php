@@ -112,7 +112,7 @@ class MeterController extends Controller
     {
         $this->authorize('view', $meter);
 
-        return new MeterResource($meter->load(['room.property', 'room.floor', 'latestReading']));
+        return new MeterResource($meter->load(['room.property', 'room.floor', 'latestApprovedReading']));
     }
 
     /**
@@ -156,6 +156,9 @@ class MeterController extends Controller
 
         $stats = $this->service->getStatistics($filters, $propertyId);
 
-        return response()->json($stats);
+        return response()->json([
+            'data' => $stats,
+            'message' => 'Meter statistics retrieved successfully',
+        ]);
     }
 }

@@ -20,7 +20,7 @@ class Meter extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'room_id', 'property_id', 'service_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
+        'org_id', 'room_id', 'property_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
     ];
 
     protected function casts(): array
@@ -61,5 +61,12 @@ class Meter extends Model
     public function latestReading()
     {
         return $this->hasOne(MeterReading::class)->latestOfMany();
+    }
+
+    public function latestApprovedReading()
+    {
+        return $this->hasOne(MeterReading::class)
+            ->where('status', 'APPROVED')
+            ->latest('period_end');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -53,29 +54,31 @@ class MeterReadingService
      */
     public function create(array $data): MeterReading
     {
-        $meterId = $data['meter_id'];
-        $readingValue = $data['reading_value'];
+        return DB::transaction(function () use ($data) {
+            $meterId = $data['meter_id'];
+            $readingValue = $data['reading_value'];
 
-        // Calculate consumption
-        $prev = MeterReading::where('meter_id', $meterId)
-            ->where('status', 'APPROVED')
-            ->orderBy('period_end', 'desc')
-            ->first();
+            // Calculate consumption
+            $prev = MeterReading::where('meter_id', $meterId)
+                ->where('status', 'APPROVED')
+                ->orderBy('period_end', 'desc')
+                ->first();
 
-        $meter = \App\Models\Meter\Meter::find($meterId);
-        $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
-        
-        $data['consumption'] = max(0, $readingValue - $prevValue);
-        $data['status'] = $data['status'] ?? 'PENDING';
-        $data['submitted_at'] = now();
-        $data['submitted_by_user_id'] = auth()->id();
-        $data['org_id'] = $data['org_id'] ?? ($meter ? $meter->org_id : null);
+            $meter = \App\Models\Meter\Meter::find($meterId);
+            $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
+            
+            $data['consumption'] = max(0, $readingValue - $prevValue);
+            $data['status'] = $data['status'] ?? 'PENDING';
+            $data['submitted_at'] = now();
+            $data['submitted_by_user_id'] = auth()->id();
+            $data['org_id'] = $data['org_id'] ?? ($meter ? $meter->org_id : null);
 
-        $reading = MeterReading::create($data);
+            $reading = MeterReading::create($data);
 
-        $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
+            $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
-        return $reading;
+            return $reading->fresh(['meter', 'submittedBy', 'approvedBy']);
+        });
     }
 
     /**
@@ -83,14 +86,13 @@ class MeterReadingService
      */
     public function bulkStore(array $readings): array
     {
-        $results = [];
-        \DB::transaction(function () use ($readings, &$results) {
+        return DB::transaction(function () use ($readings) {
+            $results = [];
             foreach ($readings as $readingData) {
                 $results[] = $this->create($readingData);
             }
+            return $results;
         });
-
-        return $results;
     }
 
     /**
@@ -98,24 +100,26 @@ class MeterReadingService
      */
     public function update(MeterReading $reading, array $data): MeterReading
     {
-        $isBecameApproved = isset($data['status']) && $data['status'] === 'APPROVED' && $reading->status !== 'APPROVED';
+        return DB::transaction(function () use ($reading, $data) {
+            $isBecameApproved = isset($data['status']) && $data['status'] === 'APPROVED' && $reading->status !== 'APPROVED';
 
-        if ($isBecameApproved) {
-            $data['approved_at'] = now();
-            $data['approved_by_user_id'] = auth()->id();
-        }
+            if ($isBecameApproved) {
+                $data['approved_at'] = now();
+                $data['approved_by_user_id'] = auth()->id();
+            }
 
-        $reading->update($data);
+            $reading->update($data);
 
-        if ($isBecameApproved) {
-            $this->aggregateToMaster($reading);
-        }
+            if ($isBecameApproved) {
+                $this->aggregateToMaster($reading);
+            }
 
-        if (isset($data['proof_media_ids'])) {
-            $this->attachProofs($reading, $data['proof_media_ids']);
-        }
+            if (isset($data['proof_media_ids'])) {
+                $this->attachProofs($reading, $data['proof_media_ids']);
+            }
 
-        return $reading;
+            return $reading->fresh(['meter', 'submittedBy', 'approvedBy']);
+        });
     }
 
     /**
