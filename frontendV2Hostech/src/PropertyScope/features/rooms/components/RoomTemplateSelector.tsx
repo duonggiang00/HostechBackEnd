@@ -1,5 +1,6 @@
 import { useRoomTemplates } from '../../templates/hooks/useTemplates';
 import { Layout, Zap, Users, Maximize2, DollarSign } from 'lucide-react';
+import { formatNumber } from '@/lib/utils';
 import type { RoomTemplate } from '../../templates/types';
 
 interface RoomTemplateSelectorProps {
@@ -41,15 +42,15 @@ export function RoomTemplateSelector({ propertyId, onSelect, selectedId }: RoomT
             <div className="flex flex-wrap gap-3 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
               <div className="flex items-center gap-1">
                 <Maximize2 className="w-3 h-3" />
-                {template.area}m²
+                {formatNumber(template.area)}m²
               </div>
               <div className="flex items-center gap-1">
                 <Users className="w-3 h-3" />
-                {template.capacity}
+                {formatNumber(template.capacity)}
               </div>
               <div className="flex items-center gap-1 text-emerald-600">
                 <DollarSign className="w-3 h-3" />
-                {Intl.NumberFormat('vi-VN').format(template.base_price)}
+                {formatNumber(template.base_price)}
               </div>
             </div>
           </button>

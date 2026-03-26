@@ -38,7 +38,7 @@ export const StatCard = ({ label, value, icon: Icon, trend, color }: StatCardPro
             <div className={`mt-2 flex items-center gap-1 text-xs font-bold ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
               <span>{trend.isUp ? '↑' : '↓'}</span>
               <span>{trend.value}%</span>
-              <span className="text-slate-400 font-medium ml-1">vs last month</span>
+              <span className="text-slate-400 font-medium ml-1">so với tháng trước</span>
             </div>
           )}
         </div>

@@ -3,10 +3,10 @@ import { NavLink } from 'react-router-dom';
 
 export default function TenantNav() {
   const navItems = [
-    { icon: Home, label: 'Home', path: '/app/dashboard' },
-    { icon: ClipboardList, label: 'Requests', path: '/app/requests' },
-    { icon: CreditCard, label: 'Billing', path: '/app/billing' },
-    { icon: User, label: 'Profile', path: '/app/profile' },
+    { icon: Home, label: 'Trang chủ', path: '/app/dashboard' },
+    { icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
+    { icon: CreditCard, label: 'Hóa đơn', path: '/app/billing' },
+    { icon: User, label: 'Cá nhân', path: '/app/profile' },
   ];
 
   return (

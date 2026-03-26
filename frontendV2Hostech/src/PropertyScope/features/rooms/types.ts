@@ -121,7 +121,17 @@ export interface Room {
   status_histories?: RoomStatusHistory[];
   invoices?: Invoice[];
   images?: RoomImage[];
-  room_services?: any[];
+  room_services?: Array<{
+    id: string;
+    quantity: number;
+    service?: {
+      id: string;
+      name: string;
+      current_price: number;
+      unit: string;
+      calc_mode: string;
+    };
+  }>;
   floor_plan_node?: RoomFloorPlanNode | null;
   deleted_at?: string | null;
   // UI consistency helpers
@@ -172,6 +182,7 @@ export interface CreateRoomPayload {
   base_price?: number;
   description?: string;
   media_ids?: string[];
+  service_ids?: string[];
 }
 export interface RoomTemplateAsset {
   id?: string;

@@ -45,22 +45,22 @@ export const OccupancyGauge = ({ percentage }: OccupancyGaugeProps) => {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-4xl font-black text-slate-900 dark:text-white">{percentage}%</span>
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Full</span>
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Lấp đầy</span>
         </div>
       </div>
       
       <div className="mt-8 flex gap-6">
         <div className="text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Status</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</p>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Excellent</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Rất tốt</span>
           </div>
         </div>
         <div className="w-px h-8 bg-slate-100 dark:bg-slate-800" />
         <div className="text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Targets</p>
-          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">On Track</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Mục tiêu</p>
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Đúng tiến độ</p>
         </div>
       </div>
     </motion.div>

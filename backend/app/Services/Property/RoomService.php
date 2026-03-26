@@ -256,12 +256,13 @@ class RoomService
 
             $assetsData = $data['assets'] ?? null;
             $mediaIds = $data['media_ids'] ?? [];
+            $serviceIds = $data['service_ids'] ?? null;
 
             // Track old status & price for history
             $oldStatus = $room->status;
             $oldPrice = $room->base_price;
 
-            unset($data['assets'], $data['media_ids']);
+            unset($data['assets'], $data['media_ids'], $data['service_ids']);
 
             // Area validation
             $newArea = isset($data['area']) ? (float) $data['area'] : (float) $room->area;
@@ -274,6 +275,11 @@ class RoomService
             // Sync Media
             if (! empty($mediaIds)) {
                 $room->syncMediaAttachments($mediaIds, 'gallery');
+            }
+
+            // Sync Services
+            if (is_array($serviceIds)) {
+                $room->services()->sync($serviceIds);
             }
 
             // Sync Assets

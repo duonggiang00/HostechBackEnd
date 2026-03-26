@@ -35,7 +35,9 @@ export function PropertyFloorsList({ property }: PropertyFloorsListProps) {
               className="bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-3xl border border-slate-100 dark:border-slate-800/50 group hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-all flex flex-col gap-5 overflow-hidden relative"
             >
               <div className="flex items-center justify-between">
-                <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Tầng {floor.name}</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {floor.name.startsWith('Tầng') ? floor.name : `Tầng ${floor.name}`}
+                </span>
                 <span className="text-[10px] font-black px-2 py-1 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-400">{floor.rooms_count ?? 0} Phòng</span>
               </div>
 

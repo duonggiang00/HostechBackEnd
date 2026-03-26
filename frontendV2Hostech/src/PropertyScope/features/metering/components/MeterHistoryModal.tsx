@@ -38,7 +38,7 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-120 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
@@ -58,8 +58,8 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
                 {isElectric ? <Zap className="w-5 h-5" /> : <Droplets className="w-5 h-5" />}
               </div>
               <div>
-                <h2 className="text-xl font-black text-slate-900 dark:text-white leading-tight">Meter History</h2>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{meter.code} &middot; {meter.room?.name || 'Unit N/A'}</p>
+                <h2 className="text-xl font-black text-slate-900 dark:text-white leading-tight">Lịch sử chỉ số</h2>
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{meter.code} &middot; {meter.room?.name || 'Phòng không xác định'}</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
@@ -79,14 +79,14 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
                         months === m ? 'bg-white dark:bg-slate-600 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                       }`}
                     >
-                      {m} Months
+                      {m} Tháng
                     </button>
                   ))}
                 </div>
               </div>
               <div className="flex items-center gap-4 text-right">
                 <div>
-                  <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500">Avg Monthly</p>
+                  <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500">TB Hàng tháng</p>
                   <p className={`text-xl font-black ${themeText}`}>
                     {avgConsumption} <span className="text-xs">{unit}</span>
                   </p>
@@ -125,7 +125,7 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
                       contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                       labelStyle={{ color: '#64748B', fontWeight: 800, fontSize: '12px', marginBottom: '4px' }}
                       itemStyle={{ color: '#0F172A', fontWeight: 900, fontSize: '14px' }}
-                      formatter={(value: number) => [`${value} ${unit}`, 'Consumption']}
+                      formatter={(value: number) => [`${value} ${unit}`, 'Tiêu thụ']}
                     />
                     <ReferenceLine y={avgConsumption} stroke="#94A3B8" strokeDasharray="3 3" />
                     <Area 
@@ -135,13 +135,13 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
                       strokeWidth={3}
                       fillOpacity={1} 
                       fill="url(#colorConsump)" 
-                    />
+                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                   <CalendarDays className="w-8 h-8 mb-2 opacity-50" />
-                  <p className="text-sm font-bold">Not enough data to graph history.</p>
+                  <p className="text-sm font-bold">Không đủ dữ liệu để vẽ biểu đồ lịch sử.</p>
                 </div>
               )}
             </div>
@@ -151,9 +151,9 @@ export default function MeterHistoryModal({ meter, onClose }: MeterHistoryModalP
                 <table className="w-full text-left bg-white dark:bg-slate-800">
                   <thead className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700">
                     <tr>
-                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500">Date</th>
-                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 text-right">Reading</th>
-                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 text-right">Usage</th>
+                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500">Ngày</th>
+                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 text-right">Chỉ số</th>
+                      <th className="px-4 py-3 text-xs uppercase font-black tracking-widest text-slate-400 dark:text-slate-500 text-right">Tiêu thụ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">

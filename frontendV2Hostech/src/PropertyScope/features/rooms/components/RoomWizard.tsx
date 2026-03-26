@@ -209,6 +209,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       meters: meters.filter(m => m.code.trim()),
     };
 
+    setIsUploading(true);
     try {
       const room = await createRoom.mutateAsync(payload);
       
@@ -225,10 +226,13 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     } catch (error) {
       console.error('Submit failed:', error);
       toast.error('Có lỗi xảy ra khi tạo phòng');
+    } finally {
+      setIsUploading(false);
     }
   };
 
-  const isMutating = createRoom.isPending;
+  const [isUploading, setIsUploading] = useState(false);
+  const isMutating = createRoom.isPending || isUploading;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -286,7 +290,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                       <div className="p-2.5 bg-white rounded-2xl shadow-sm border border-slate-100">
                         <ShieldAlert className="w-5 h-5 text-indigo-500" />
                       </div>
-                      <h3 className="font-black text-sm uppercase tracking-[0.1em]">Bối cảnh diện tích tòa nhà</h3>
+                      <h3 className="font-black text-sm uppercase tracking-widest">Bối cảnh diện tích tòa nhà</h3>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

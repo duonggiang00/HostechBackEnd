@@ -8,7 +8,6 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      loginMode: 'password',
       isLoading: false,
       error: null,
       otpCooldown: 0,
@@ -16,7 +15,6 @@ export const useAuthStore = create<AuthState>()(
       updateUser: (user) => set((state) => ({ 
         user: state.user ? { ...state.user, ...user } : null 
       })),
-      setLoginMode: (mode) => set({ loginMode: mode, error: null }),
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       startOtpCooldown: (seconds) => set({ otpCooldown: seconds }),

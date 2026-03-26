@@ -33,8 +33,13 @@ class UserService
         // Apply Property-based scoping for Manager and Staff
         $currentUser = auth()->user();
         if ($currentUser && ! $currentUser->hasRole(['Admin', 'Owner'])) {
-            $query->whereHas('properties', function ($q) use ($currentUser) {
-                $q->whereIn('properties.id', $currentUser->properties()->pluck('properties.id'));
+            $managedPropertyIds = $currentUser->properties()->pluck('properties.id');
+            $query->where(function ($q) use ($managedPropertyIds) {
+                $q->whereHas('properties', function ($q2) use ($managedPropertyIds) {
+                    $q2->whereIn('properties.id', $managedPropertyIds);
+                })->orWhereHas('contractMembers.contract', function ($q2) use ($managedPropertyIds) {
+                    $q2->whereIn('contracts.property_id', $managedPropertyIds);
+                });
             });
         }
 
@@ -77,7 +82,17 @@ class UserService
             unset($data['password'], $data['password_confirmation']);
         }
 
-        return User::create($data);
+        $user = User::create($data);
+
+        if (isset($data['role'])) {
+            $user->assignRole($data['role']);
+        }
+
+        if (isset($data['properties_scope']) && is_array($data['properties_scope'])) {
+            $user->properties()->sync($data['properties_scope']);
+        }
+
+        return $user;
     }
 
     public function update(string $id, array $data, User $performer): ?User
@@ -104,6 +119,14 @@ class UserService
         }
 
         $user->update($data);
+
+        if (isset($data['role'])) {
+            $user->syncRoles([$data['role']]);
+        }
+
+        if (isset($data['properties_scope']) && is_array($data['properties_scope'])) {
+            $user->properties()->sync($data['properties_scope']);
+        }
 
         return $user;
     }

@@ -5,6 +5,7 @@ import { useFloors } from '../../floors/hooks/useFloors';
 import { useBulkCreateRooms } from '../hooks/useRooms';
 import type { RoomTemplate } from '../../templates/types';
 import { toast } from 'react-hot-toast';
+import { formatNumber } from '@/lib/utils';
 
 interface BulkRoomCreateModalProps {
   isOpen: boolean;
@@ -89,9 +90,9 @@ export function BulkRoomCreateModal({ isOpen, onClose, propertyId, template }: B
                   Đang sử dụng mẫu: <span className="font-bold underline">{template.name}</span>
                 </p>
                 <div className="mt-2 flex flex-wrap gap-4 text-xs text-indigo-600 dark:text-indigo-400">
-                  <span>• Diện tích: {template.area}m²</span>
-                  <span>• Giá: {Intl.NumberFormat('vi-VN').format(template.base_price)}đ</span>
-                  <span>• Sức chứa: {template.capacity} người</span>
+                  <span>• Diện tích: {formatNumber(template.area)}m²</span>
+                  <span>• Giá: {formatNumber(template.base_price)}đ</span>
+                  <span>• Sức chứa: {formatNumber(template.capacity)} người</span>
                 </div>
               </div>
 

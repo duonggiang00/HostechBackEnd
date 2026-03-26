@@ -14,13 +14,13 @@ export const RevenueTrend = ({ data }: RevenueTrendProps) => {
     >
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Revenue Performance</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Monthly revenue trends for the selected property</p>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">Hiệu suất doanh thu</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Xu hướng doanh thu hàng tháng của tài sản</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-indigo-500 rounded-full" />
-            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Revenue</span>
+            <span className="text-xs font-bold text-slate-600 dark:text-slate-300">Doanh thu</span>
           </div>
         </div>
       </div>

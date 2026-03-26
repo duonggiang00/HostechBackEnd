@@ -43,7 +43,15 @@ class UserController extends Controller
             }),
             'email',
             'is_active',
-            AllowedFilter::exact('property_id', 'properties.id'),
+            AllowedFilter::callback('property_id', function (Builder $query, $value) {
+                $query->where(function ($q) use ($value) {
+                    $q->whereHas('properties', function ($q2) use ($value) {
+                        $q2->where('properties.id', $value);
+                    })->orWhereHas('contractMembers.contract', function ($q2) use ($value) {
+                        $q2->where('contracts.property_id', $value);
+                    });
+                });
+            }),
         ];
 
         $paginator = $this->service->paginate($allowed, $perPage, $search, null, $request->boolean('with_trashed'));

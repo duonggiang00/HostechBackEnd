@@ -22,10 +22,10 @@ class FloorService
             ->withCount([
                 'rooms',
                 'rooms as vacant_rooms_count' => function ($query) {
-                    $query->whereIn('status', ['AVAILABLE', 'VACANT']);
+                    $query->whereIn('status', ['available', 'vacant']);
                 },
                 'rooms as occupied_rooms_count' => function ($query) {
-                    $query->whereIn('status', ['OCCUPIED', 'RENTED']);
+                    $query->whereIn('status', ['occupied', 'rented']);
                 },
             ]);
 

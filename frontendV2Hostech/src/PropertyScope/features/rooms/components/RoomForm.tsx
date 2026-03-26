@@ -13,6 +13,7 @@ import { formatNumber, parseNumber } from '@/lib/utils';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { mediaApi } from '@/shared/features/media/api/media';
 
 const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
 
@@ -72,16 +73,22 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
   const currentType = watch('type');
 
   // Related states for complex UI
-  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedServices, setSelectedServices] = useState<string[]>(
+    initialData?.room_services?.map(rs => rs.service?.id).filter(Boolean) as string[] ?? []
+  );
   const [servicePrices, setServicePrices] = useState<Record<string, number>>({});
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [existingMedia, setExistingMedia] = useState<any[]>(initialData?.images || []);
 
   // If initialData changes or components mount, handle `code` logic if skipped in zod
   useEffect(() => {
-    if (!isEditing) {
-      // clear code errors if empty because it might evaluate dynamically, but schema enforces it
+    if (initialData?.room_services) {
+        setSelectedServices(initialData.room_services.map(rs => rs.service?.id).filter(Boolean) as string[]);
     }
-  }, [isEditing]);
+    if (initialData?.images) {
+        setExistingMedia(initialData.images);
+    }
+  }, [initialData]);
 
   // Optimized Limit Calculations
   const areaLimits = useMemo(() => {
@@ -131,50 +138,69 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     return isValid;
   };
 
-  const onSubmit = (data: RoomFormValues) => {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const onSubmit = async (data: RoomFormValues) => {
     if (!validateCustomRules(data)) {
       toast.error('Vui lòng sửa các lỗi diện tích trước khi gửi');
       return;
     }
 
-    const basePayload = {
-      ...data,
-      base_price: data.base_price > 0 ? data.base_price : undefined,
-      property_id: propertyId,
-      floor_id: floorId || undefined,
-    };
+    setIsUploading(true);
+    try {
+      // 1. Upload media files if any
+      const mediaIds: string[] = [];
+      if (mediaFiles.length > 0) {
+        toast.loading(`Đang tải lên ${mediaFiles.length} ảnh...`, { id: 'media-upload' });
+        const uploadPromises = mediaFiles.map(file => 
+          mediaApi.uploadFile(file, `rooms/${propertyId}`)
+        );
+        const uploadResults = await Promise.all(uploadPromises);
+        mediaIds.push(...uploadResults.map(res => res.id));
+        toast.success('Tải ảnh lên thành công', { id: 'media-upload' });
+      }
 
-    if (isEditing && initialData?.id) {
-      updateRoom.mutate(
-        { id: initialData.id, ...basePayload },
-        {
+      const basePayload = {
+        ...data,
+        base_price: data.base_price > 0 ? data.base_price : undefined,
+        property_id: propertyId,
+        floor_id: floorId || undefined,
+        service_ids: selectedServices,
+        media_ids: mediaIds,
+      };
+
+      if (isEditing && initialData?.id) {
+        updateRoom.mutate(
+          { id: initialData.id, ...basePayload },
+          {
+            onSuccess: () => {
+              toast.success('Cập nhật phòng thành công');
+              onSuccess?.();
+            },
+            onError: (err: any) => {
+              toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+            },
+          }
+        );
+      } else {
+        const payload: CreateRoomPayload = {
+          ...basePayload,
+          code: data.code,
+        };
+        createRoom.mutate(payload, {
           onSuccess: () => {
-            toast.success('Cập nhật phòng thành công');
+            toast.success('Tạo phòng thành công');
             onSuccess?.();
           },
           onError: (err: any) => {
-            toast.error(err?.response?.data?.message || 'Cập nhật thất bại');
+            toast.error(err?.response?.data?.message || 'Tạo phòng thất bại');
           },
-        }
-      );
-    } else {
-      const payload: CreateRoomPayload = {
-        ...basePayload,
-        code: data.code,
-        media_ids: [],
-      };
-      createRoom.mutate(payload, {
-        onSuccess: () => {
-          toast.success('Tạo phòng thành công');
-          if (mediaFiles.length > 0) {
-            toast.success(`${mediaFiles.length} tệp phương tiện đã sẵn sàng (tải lên riêng)`);
-          }
-          onSuccess?.();
-        },
-        onError: (err: any) => {
-          toast.error(err?.response?.data?.message || 'Tạo phòng thất bại');
-        },
-      });
+        });
+      }
+    } catch (err: any) {
+      toast.error('Lỗi khi tải ảnh lên: ' + (err.message || 'Không xác định'), { id: 'media-upload' });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -198,7 +224,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     );
   };
 
-  const isMutating = createRoom.isPending || updateRoom.isPending || publishRoom.isPending;
+  const isMutating = createRoom.isPending || updateRoom.isPending || publishRoom.isPending || isUploading;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -383,41 +409,55 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
             <h2 className="font-bold text-slate-800 dark:text-white">Hình ảnh phòng</h2>
           </div>
 
-          <MediaDropzone onDrop={(files) => setMediaFiles(prev => [...prev, ...files])} maxFiles={10} />
-
-          {mediaFiles.length > 0 && (
-            <div className="space-y-4">
-              <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">
-                Đang chờ tải lên ({mediaFiles.length})
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {mediaFiles.map((file, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2 border border-slate-100 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-900/50">
-                    <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-800 overflow-hidden shrink-0">
-                      {file.type.startsWith('image/') ? (
-                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">{file.name}</p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMediaFiles(prev => prev.filter((_, idx) => idx !== i))}
-                      className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Existing Media */}
+            {existingMedia.map((img, i) => (
+              <div key={`existing-${i}`} className="relative group aspect-square rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 shadow-sm">
+                <img src={img.url} alt="" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <button 
+                     type="button"
+                     onClick={() => setExistingMedia(prev => prev.filter((_, idx) => idx !== i))}
+                     className="p-2 bg-rose-500 text-white rounded-xl active:scale-95 shadow-lg"
+                     title="Xóa ảnh hiện có"
+                   >
+                     <X className="w-4 h-4" />
+                   </button>
+                </div>
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 dark:bg-slate-800/90 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                  Hiện có
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+
+            {/* New Media Files */}
+            {mediaFiles.map((file, i) => (
+              <div key={`new-${i}`} className="relative group aspect-square rounded-2xl overflow-hidden border-2 border-dashed border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 dark:bg-indigo-950/20 shadow-sm">
+                {file.type.startsWith('image/') ? (
+                  <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-indigo-400">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <button 
+                     type="button"
+                     onClick={() => setMediaFiles(prev => prev.filter((_, idx) => idx !== i))}
+                     className="p-2 bg-rose-500 text-white rounded-xl active:scale-95 shadow-lg"
+                     title="Xóa ảnh mới chọn"
+                   >
+                     <X className="w-4 h-4" />
+                   </button>
+                </div>
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
+                  Mới
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <MediaDropzone onDrop={(files) => setMediaFiles(prev => [...prev, ...files])} maxFiles={10 - existingMedia.length} />
         </section>
 
       </div>

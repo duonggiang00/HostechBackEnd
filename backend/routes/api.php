@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\Finance\VNPayController;
 use App\Http\Controllers\Api\System\UserInvitationController;
 use Illuminate\Support\Facades\Route;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -16,6 +18,10 @@ use Illuminate\Support\Facades\Route;
 // --- Public API Routes ---
 Route::get('invitations/validate/{token}', [UserInvitationController::class, 'validateToken']);
 Route::post('invitations/accept/{token}', [UserInvitationController::class, 'accept']);
+
+// VNPay IPN Webhook (PUBLIC — không có auth, VNPay gọi server-to-server)
+Route::post('finance/vnpay/ipn', [VNPayController::class, 'handleIpn'])->name('vnpay.ipn');
+
 
 // --- Protected API Routes (Modularized) ---
 Route::middleware('auth:sanctum')->group(function () {

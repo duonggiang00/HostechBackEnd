@@ -11,8 +11,10 @@ export interface UserProperty {
 }
 
 export interface AuthResponse {
-  token: string;
-  user: {
+  two_factor?: boolean;
+  method?: string;
+  token?: string;
+  user?: {
     id: string;
     full_name: string;
     email: string;
@@ -50,13 +52,11 @@ export interface AuthState {
   user: AuthUser | null;
   token: string | null;
   isAuthenticated: boolean;
-  loginMode: 'password' | 'otp';
   isLoading: boolean;
   error: string | null;
   otpCooldown: number;
   setAuth: (user: AuthUser, token: string) => void;
   updateUser: (user: Partial<AuthUser>) => void;
-  setLoginMode: (mode: 'password' | 'otp') => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   startOtpCooldown: (seconds: number) => void;
