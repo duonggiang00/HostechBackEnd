@@ -15,7 +15,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
     <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans sm:max-w-md sm:mx-auto sm:border-x sm:border-slate-200 dark:sm:border-slate-700 shadow-xl overflow-hidden relative">
       <header className="h-16 px-6 flex items-center justify-between border-b border-slate-100 dark:border-slate-700/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md sticky top-0 z-40">
         <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight">
-          {user?.full_name?.split(' ')[0] || 'My Home'}
+          {user?.full_name?.split(' ')[0] || 'Nhà của tôi'}
         </h1>
         <div className="flex items-center gap-2">
            <ThemeToggle compact />

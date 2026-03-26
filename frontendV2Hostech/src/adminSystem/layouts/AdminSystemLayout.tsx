@@ -30,12 +30,12 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
 
   // Admin System Menu Items
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Global Dashboard', path: '/system/dashboard', exact: true },
-    ...(user?.role === 'Admin' ? [{ id: 'organizations', icon: LayersIcon, label: 'Organizations', path: '/system/organizations', exact: true }] : []),
-    { id: 'communication', icon: MessageSquare, label: 'Communication', path: '/system/communication' },
-    { id: 'audit', icon: HistoryIcon, label: 'Audit Logs', path: '/system/audit-logs' },
-    { id: 'sessions', icon: Shield, label: 'Security & Sessions', path: '/system/sessions' },
-    { id: 'settings', icon: Settings, label: 'Settings', path: '/system/settings' }
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển tổng', path: '/system/dashboard', exact: true },
+    ...(user?.role === 'Admin' ? [{ id: 'organizations', icon: LayersIcon, label: 'Danh sách tổ chức', path: '/system/organizations', exact: true }] : []),
+    { id: 'communication', icon: MessageSquare, label: 'Liên lạc & Thông báo', path: '/system/communication' },
+    { id: 'audit', icon: HistoryIcon, label: 'Nhật ký hệ thống', path: '/system/audit-logs' },
+    { id: 'sessions', icon: Shield, label: 'Bảo mật & Phiên làm', path: '/system/sessions' },
+    { id: 'settings', icon: Settings, label: 'Cài đặt hệ thống', path: '/system/settings' }
   ];
 
   const SidebarContent = () => (
@@ -67,8 +67,8 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
                 <Shield className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Organization</p>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Managed by system</p>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Tổ chức</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Quản lý bởi hệ thống</p>
               </div>
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
 
       <nav className="px-4 py-2 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 mt-2 px-3">
-           System Management
+           Quản trị hệ thống
         </div>
         
         {menuItems.map((item) => (
@@ -169,7 +169,7 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">System Administration</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Quản trị hệ thống</h2>
           </div>
           
           <div className="flex items-center gap-2 md:gap-4">
@@ -177,7 +177,7 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Global search..."
+                placeholder="Tìm kiếm hệ thống..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>

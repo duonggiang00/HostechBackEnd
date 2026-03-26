@@ -25,9 +25,9 @@ class FloorResource extends JsonResource
             'name' => $this->name,
             'floor_number' => $this->floor_number,
             'sort_order' => $this->sort_order,
-            'rooms_count' => $this->rooms_count ?? $this->whenCounted('rooms'),
-            'vacant_rooms_count' => $this->vacant_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['AVAILABLE', 'VACANT'])->count() : null),
-            'occupied_rooms_count' => $this->occupied_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['OCCUPIED', 'RENTED'])->count() : null),
+            'rooms_count' => $this->rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->count() : 0),
+            'vacant_rooms_count' => $this->vacant_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['available', 'vacant'])->count() : 0),
+            'occupied_rooms_count' => $this->occupied_rooms_count ?? ($this->relationLoaded('rooms') ? $this->rooms->whereIn('status', ['occupied', 'rented'])->count() : 0),
             'rooms' => RoomResource::collection($this->whenLoaded('rooms')),
             'floor_plan_image' => $this->whenLoaded('media', function () {
                 $media = $this->getFirstMedia('floor_plan');

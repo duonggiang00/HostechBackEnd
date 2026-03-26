@@ -51,12 +51,15 @@ class RoomUpdateRequest extends FormRequest
             'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
             'area' => ['nullable', 'numeric', 'min:0'],
             'floor_number' => ['nullable', 'integer'],
-            'capacity' => ['nullable', 'integer', 'min:1'],
+            'capacity' => ['sometimes', 'integer', 'min:1'],
             'base_price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],
             'description' => ['nullable', 'string'],
             'amenities' => ['nullable', 'json'],
             'utilities' => ['nullable', 'json'],
+
+            'service_ids' => ['nullable', 'array'],
+            'service_ids.*' => ['uuid', 'exists:services,uuid'],
 
             // Thêm các trường upload/relation
             'media_ids' => ['nullable', 'array'],

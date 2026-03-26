@@ -34,9 +34,9 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
         <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300 dark:text-slate-600 shadow-sm transition-colors">
           <FileText className="w-8 h-8" />
         </div>
-        <h4 className="text-lg font-black text-slate-900 dark:text-white mb-1 transition-colors">No Invoices Found</h4>
+        <h4 className="text-lg font-black text-slate-900 dark:text-white mb-1 transition-colors">Không tìm thấy hóa đơn</h4>
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mx-auto transition-colors">
-          No billing history detected for this unit. Invoices are generated automatically at the end of each cycle.
+          Không tìm thấy lịch sử thanh toán cho phòng này. Hóa đơn được tạo tự động vào cuối mỗi chu kỳ.
         </p>
       </div>
     );
@@ -46,11 +46,11 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
     <div className="space-y-6">
       <div className="flex justify-between items-end px-1 transition-colors">
         <div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-white transition-colors">Billing History</h3>
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 transition-colors">Recent Invoices</p>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white transition-colors">Lịch sử thanh toán</h3>
+          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 transition-colors">Hóa đơn gần đây</p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 transition-colors">Total Outstanding</p>
+          <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 transition-colors">Tổng còn nợ</p>
           <p className="text-lg font-black text-rose-600 dark:text-rose-400 transition-colors">
             {data.reduce((acc, inv) => acc + (inv.total_amount - inv.paid_amount), 0).toLocaleString()}₫
           </p>
@@ -71,10 +71,10 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
                 </div>
                 <div>
                   <h4 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    Invoice {new Date(invoice.issue_date).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' })}
+                    Hóa đơn tháng {new Date(invoice.issue_date).getMonth() + 1}/{new Date(invoice.issue_date).getFullYear()}
                   </h4>
                   <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5 transition-colors">
-                    Issued: {new Date(invoice.issue_date).toLocaleDateString()}
+                    Ngày gửi: {new Date(invoice.issue_date).toLocaleDateString('vi-VN')}
                   </p>
                 </div>
               </div>
@@ -86,21 +86,21 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
                 {invoice.status === 'paid' && <CheckCircle2 className="w-3 h-3" />}
                 {invoice.status === 'overdue' && <AlertCircle className="w-3 h-3" />}
                 {invoice.status === 'issued' && <Clock className="w-3 h-3" />}
-                {invoice.status}
+                {invoice.status === 'paid' ? 'Đã thanh toán' : invoice.status === 'overdue' ? 'Quá hạn' : 'Chưa thanh toán'}
               </div>
             </div>
 
             <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-100 dark:border-slate-600 transition-colors">
               <div>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Total Amount</p>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Tổng tiền</p>
                 <p className="text-sm font-black text-slate-900 dark:text-white transition-colors">{invoice.total_amount.toLocaleString()}₫</p>
               </div>
               <div>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Paid</p>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Đã trả</p>
                 <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 transition-colors">{invoice.paid_amount.toLocaleString()}₫</p>
               </div>
               <div>
-                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Remaining</p>
+                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Còn nợ</p>
                 <p className="text-sm font-black text-rose-600 dark:text-rose-400 transition-colors">{(invoice.total_amount - invoice.paid_amount).toLocaleString()}₫</p>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
             <div className="mt-4 flex items-center justify-between transition-colors">
               <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 italic">
                 <Clock className="w-3 h-3" />
-                Period: {new Date(invoice.period_start).toLocaleDateString()} - {new Date(invoice.period_end).toLocaleDateString()}
+                Kỳ hạn: {new Date(invoice.period_start).toLocaleDateString('vi-VN')} - {new Date(invoice.period_end).toLocaleDateString('vi-VN')}
               </div>
               <div className="flex items-center gap-3">
                 {invoice.status === 'issued' && (
@@ -135,7 +135,7 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
 
       <button className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group">
         <DollarSign className="w-5 h-5 group-hover:scale-110 transition-transform" />
-        Generate Custom Invoice
+        Tạo hóa đơn tùy chỉnh
       </button>
 
       {selectedInvoice && (

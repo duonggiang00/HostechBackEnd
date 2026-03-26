@@ -5,7 +5,6 @@ import {
   Building2, 
   DoorOpen, 
   Layers,
-  LayoutDashboard,
   Bell,
   Search,
   Menu,
@@ -41,13 +40,12 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const menuItems = [
     { id: 'home', icon: Home, label: 'Trang chủ', path: dashboardPath, exact: true },
-    { id: 'property-detail', icon: Building2, label: 'Properties', path: `/properties/${propertyId}/detail` },
-    { id: 'meters', icon: Gauge, label: 'Đồng hồ', path: `/properties/${propertyId}/meters` },
-    { id: 'floors', icon: Layers, label: 'Floors', path: `/properties/${propertyId}/floors` },
-    { id: 'rooms', icon: DoorOpen, label: 'Rooms', path: `/properties/${propertyId}/rooms` },
-    { id: 'contracts', icon: FileText, label: 'Contracts', path: `/properties/${propertyId}/contracts` },
+    { id: 'meters', icon: Gauge, label: 'Đồng hồ điện nước', path: `/properties/${propertyId}/meters` },
+    { id: 'floors', icon: Layers, label: 'Sơ đồ tầng', path: `/properties/${propertyId}/floors` },
+    { id: 'rooms', icon: DoorOpen, label: 'Quản lý phòng', path: `/properties/${propertyId}/rooms` },
+    { id: 'contracts', icon: FileText, label: 'Hợp đồng thuê', path: `/properties/${propertyId}/contracts` },
     { id: 'tickets', icon: Ticket, label: 'Sự cố & Yêu cầu', path: `/properties/${propertyId}/tickets`, badge: openCount > 0 ? openCount : undefined },
-    { id: 'users', icon: User, label: 'Cư dân/Nhân sự', path: `/properties/${propertyId}/users` },
+    { id: 'users', icon: User, label: 'Cư dân & Nhân sự', path: `/properties/${propertyId}/users` },
     { id: 'templates', icon: Settings, label: 'Thiết lập tòa nhà', path: `/properties/${propertyId}/templates` },
   ];
 
@@ -76,7 +74,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
       <nav className="px-4 py-2 space-y-1">
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 mt-2 px-3">
-           Property Scope
+           Phạm vi cơ sở
         </div>
         
         {propertyId ? menuItems.map((item) => (
@@ -100,7 +98,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             )}
           </NavLink>
         )) : (
-          <div className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500 italic">No property selected</div>
+          <div className="px-3 py-2 text-sm text-slate-400 dark:text-slate-500 italic">Chưa chọn cơ sở</div>
         )}
       </nav>
 

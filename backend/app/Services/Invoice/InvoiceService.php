@@ -663,34 +663,28 @@ class InvoiceService
      */
     public function recordPayment(Invoice $invoice, array $data): Payment
     {
-        return DB::transaction(function () use ($invoice, $data) {
-            $payment = $invoice->payments()->create([
-                'org_id' => $invoice->org_id,
-                'property_id' => $invoice->property_id,
-                'payer_user_id' => $data['payer_user_id'] ?? null,
-                'received_by_user_id' => $data['received_by_user_id'] ?? request()->user()?->id,
-                'method' => $data['method'] ?? 'CASH',
-                'amount' => $data['amount'],
-                'reference' => $data['reference'] ?? null,
-                'received_at' => $data['received_at'] ?? now(),
-                'status' => 'APPROVED',
-                'note' => $data['note'] ?? null,
-            ]);
+        /** @var \App\Services\Finance\PaymentService $paymentService */
+        $paymentService = app(\App\Services\Finance\PaymentService::class);
 
-            $invoice->increment('paid_amount', $data['amount']);
-            $invoice->refresh();
-            
-            // Update Status
-            $newStatus = $invoice->paid_amount >= $invoice->total_amount ? 'PAID' : 'PARTIALLY_PAID';
-            if ($invoice->status !== $newStatus) {
-                $oldStatus = $invoice->status;
-                $invoice->update(['status' => $newStatus]);
-                $this->recordStatusHistory($invoice, $oldStatus, $newStatus, 'Ghi nhận thanh toán');
-            }
+        $paymentData = [
+            'org_id' => $invoice->org_id,
+            'property_id' => $invoice->property_id,
+            'payer_user_id' => $data['payer_user_id'] ?? $invoice->payer_user_id ?? null,
+            'method' => $data['method'] ?? 'CASH',
+            'amount' => $data['amount'],
+            'reference' => $data['reference'] ?? null,
+            'received_at' => $data['received_at'] ?? now(),
+            'note' => $data['note'] ?? null,
+            'allocations' => [
+                ['invoice_id' => $invoice->id, 'amount' => $data['amount']]
+            ]
+        ];
 
-            return $payment;
-        });
+        $user = request()->user() ?: ($invoice->createdBy ?: \App\Models\Org\User::first());
+
+        return $paymentService->create($paymentData, $user);
     }
+
 
     /**
      * Trigger monthly billing for a property.

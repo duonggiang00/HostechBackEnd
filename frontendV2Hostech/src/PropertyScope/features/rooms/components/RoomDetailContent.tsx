@@ -16,7 +16,7 @@ import LeaseManager from '@/PropertyScope/features/contracts/components/LeaseMan
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import RoomTicketsTab from '@/PropertyScope/features/tickets/components/RoomTicketsTab';
 import type { Room } from '../types';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, formatNumber } from '@/lib/utils';
 
 interface RoomDetailContentProps {
   room: Room;
@@ -157,8 +157,8 @@ export default function RoomDetailContent({
                   <div className="p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-4xl border border-slate-100 dark:border-slate-700/60">
                       <p className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider mb-3">Diện tích & Sức chứa</p>
                       <div className="flex items-center justify-between">
-                          <span className="text-xl font-black text-slate-900 dark:text-white">{room.area} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">m²</span></span>
-                          <span className="text-xl font-black text-slate-900 dark:text-white">{room.capacity} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">chỗ</span></span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white">{formatNumber(room.area)} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">m²</span></span>
+                          <span className="text-xl font-black text-slate-900 dark:text-white">{formatNumber(room.capacity)} <span className="text-sm font-bold text-slate-400 dark:text-slate-500 lowercase">chỗ</span></span>
                       </div>
                   </div>
                   <div className="p-5 bg-slate-50 dark:bg-slate-800/40 backdrop-blur-sm rounded-4xl border border-slate-100 dark:border-slate-700/60">

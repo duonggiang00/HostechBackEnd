@@ -685,7 +685,7 @@ export default function RoomListPage() {
                       <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {room.name}
                       </span>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">{room.area} m² • {room.capacity} slots</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">{formatNumber(room.area)} m² • {formatNumber(room.capacity)} chỗ</span>
                     </div>
                   </td>
                   <td className="p-4">

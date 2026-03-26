@@ -35,7 +35,6 @@ import AuditLogPage from '@/adminSystem/features/auditLogs/pages/AuditLogPage';
 import SessionsPage from '@/adminSystem/features/sessions/pages/SessionsPage';
 import AdminCommunicationPage from '@/adminSystem/features/dashboard/pages/AdminCommunicationPage';
 import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
-import PropertyDashboard from '@/PropertyScope/features/dashboard/pages/PropertyDashboard';
 import OrgSelectionPage from '@/OrgScope/features/organizations/pages/OrgSelectionPage';
 import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
 import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
@@ -151,8 +150,8 @@ export default function AppRoutes() {
         <Route path="/setup-account/:token" element={<InvitationSetupPage />} />
         <Route path="/unauthorized" element={
           <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">Unauthorized Access</h1>
-            <p className="text-slate-500 text-center max-w-md">You do not have the required permissions to view this page. Please contact your administrator.</p>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Truy cập không hợp lệ</h1>
+            <p className="text-slate-500 text-center max-w-md">Bạn không có quyền truy cập trang này. Vui lòng liên hệ quản trị viên nếu bạn cho rằng đây là một sai sót.</p>
           </div>
         } />
 
@@ -163,7 +162,7 @@ export default function AppRoutes() {
           path="/org-select" 
           element={
             <ProtectedRoute>
-              <SelectionLayout title="Select Organization" subtitle="Choose the workspace you want to manage today">
+              <SelectionLayout title="Chọn tổ chức" subtitle="Chọn không gian làm việc bạn muốn quản lý hôm nay">
                 <OrgSelectionPage />
               </SelectionLayout>
             </ProtectedRoute>
@@ -175,7 +174,7 @@ export default function AppRoutes() {
           path="/select-property" 
           element={
             <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
-              <SelectionLayout title="Select Property" subtitle="Choose a property to start managing your daily operations">
+              <SelectionLayout title="Chọn cơ sở" subtitle="Hãy chọn một cơ sở để bắt đầu quản lý vận hành hàng ngày">
                 <PropertySelectionPage />
               </SelectionLayout>
             </ProtectedRoute>
@@ -247,8 +246,8 @@ export default function AppRoutes() {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<PropertyDashboard />} />
-          <Route path="detail" element={<PropertyDetailPage />} />
+          <Route path="dashboard" element={<PropertyDetailPage defaultTab="dashboard" />} />
+          <Route path="detail" element={<PropertyDetailPage defaultTab="info" />} />
           <Route path="floors" element={<FloorsPage />} />
           <Route path="floors/:floorId/rooms" element={<FloorPlanPage />} />
           <Route path="floors/:floorId/rooms/create" element={<RoomCreatePage />} />
@@ -289,7 +288,12 @@ export default function AppRoutes() {
           <Route path="requests" element={<TenantRequestsPage />} />
           <Route path="messages" element={<TenantMessagingPage />} />
           <Route path="billing" element={<TenantBillingPage />} />
-          <Route path="news" element={<div className="p-8 text-center text-slate-400">Announcements Coming Soon</div>} />
+          <Route path="news" element={
+            <div className="p-8 text-center text-slate-400">
+              <p className="text-lg font-bold">Thông báo</p>
+              <p className="text-sm">Tính năng đang được phát triển và sẽ sớm ra mắt.</p>
+            </div>
+          } />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

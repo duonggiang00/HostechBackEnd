@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/shared/api/client';
 import { useState } from 'react';
 
-import type { RoomContract } from '@/PropertyScope/features/rooms/types';
+import type { RoomContract } from '@/PropertyScope/features/contracts/types';
 
 interface LeaseManagerProps {
   roomId: string;
@@ -22,7 +22,7 @@ interface LeaseManagerProps {
 export default function LeaseManager({ roomId, data, isLoading: propIsLoading, onOpenWizard }: LeaseManagerProps) {
   // Only fetch if data is not provided by parent (e.g. from RoomDetailDrawer)
   const hasExternalData = Array.isArray(data);
-  const { data: fetchedContracts = [], isLoading: contractsLoading } = useContracts(roomId, { 
+  const { data: fetchedContracts = [], isLoading: contractsLoading } = useContracts({ room_id: roomId }, { 
     enabled: !hasExternalData && !!roomId 
   });
   
@@ -41,11 +41,11 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
       // Simulate e-signature API call
       await new Promise(resolve => setTimeout(resolve, 800));
       await apiClient.put(`/contracts/${contractId}`, { status: 'active' });
-      toast.success('Contract signed successfully! Room is now occupied.');
+      toast.success('Ký hợp đồng thành công! Phòng hiện đã có người thuê.');
       queryClient.invalidateQueries({ queryKey: ['contracts', roomId] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to sign contract');
+      toast.error(err.response?.data?.message || 'Không thể ký hợp đồng');
     } finally {
       setSigningId(null);
     }
@@ -66,12 +66,12 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-         <h3 className="text-xl font-black text-slate-900 dark:text-white">Lease Management</h3>
+         <h3 className="text-xl font-black text-slate-900 dark:text-white">Quản lý Hợp đồng</h3>
       </div>
       
       {sortedContracts.length > 0 ? (
         <div className="space-y-3">
-          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contract History</h4>
+          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Lịch sử hợp đồng</h4>
           {sortedContracts.map(contract => {
             const isExpanded = expandedId === contract.id;
             return (
@@ -91,10 +91,10 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-900 dark:text-slate-100">
-                        {contract.tenant?.name || contract.members?.find(m => m.is_primary)?.full_name || contract.members?.[0]?.full_name || 'New Tenant'}
+                        {contract.tenant?.name || contract.members?.find((m: any) => m.is_primary)?.full_name || contract.members?.[0]?.full_name || 'Khách thuê mới'}
                       </p>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        {contract.billing_cycle} cycle • {new Date(contract.start_date).toLocaleDateString()}
+                        Chu kỳ {contract.billing_cycle} • {new Date(contract.start_date).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
                   </div>
@@ -106,7 +106,7 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                     }`}>
                         {contract.status === 'active' && <CheckCircle2 className="w-3 h-3" />}
                         {contract.status === 'draft' && <Clock className="w-3 h-3" />}
-                        {contract.status}
+                        {contract.status === 'active' ? 'Đang hiệu lực' : contract.status === 'draft' ? 'Bản nháp' : contract.status}
                     </div>
                     <div className={`p-1 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-90 bg-slate-100 dark:bg-slate-700/50 text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-600'}`}>
                       <ChevronRight className="w-4 h-4" />
@@ -126,20 +126,20 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                       <div className="px-5 pb-5 pt-2 space-y-4 border-t border-slate-50 dark:border-slate-700/50">
                         <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50 dark:border-slate-700/50">
                            <div>
-                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Rent</p>
+                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tiền thuê tháng</p>
                                <p className="text-sm font-black text-slate-900 dark:text-white">{contract.monthly_rent.toLocaleString()}₫</p>
                            </div>
                            <div>
-                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Deposit</p>
+                               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tiền cọc</p>
                                <p className="text-sm font-black text-slate-900 dark:text-white">{contract.deposit_amount.toLocaleString()}₫</p>
                            </div>
                         </div>
 
                         {/* Members List */}
                         <div className="space-y-2">
-                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contract Members</p>
+                           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Thành viên hợp đồng</p>
                            <div className="grid grid-cols-1 gap-2">
-                             {contract.members?.map(member => (
+                             {contract.members?.map((member: any) => (
                                <div key={member.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-700/50">
                                  <div className="flex items-center gap-3">
                                    <div className={`w-2 h-2 rounded-full ${member.is_primary ? 'bg-indigo-500' : 'bg-slate-400'}`} />
@@ -151,7 +151,7 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                                  <div className="flex items-center gap-2">
                                    {member.is_primary && (
                                      <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-lg text-[8px] font-black uppercase tracking-tighter">
-                                       Primary
+                                       Chủ hợp đồng
                                      </span>
                                    )}
                                    <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter ${
@@ -179,7 +179,7 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                             ) : (
                               <FileSignature className="w-5 h-5 group-hover:scale-110 transition-transform" />
                             )}
-                            {signingId === contract.id ? 'Activating...' : 'Activate Legal Contract'}
+                            {signingId === contract.id ? 'Đang kích hoạt...' : 'Kích hoạt hợp đồng pháp lý'}
                           </button>
                         )}
                       </div>
@@ -195,26 +195,26 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
             <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300 dark:text-slate-600">
                 <FileWarning className="w-6 h-6" />
             </div>
-            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">No Active Contracts</p>
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Chưa có hợp đồng nào</p>
             <p className="text-xs text-slate-500 mt-1 max-w-[200px] mx-auto leading-relaxed">
-              This unit is not leased. Use the wizard below to create one.
+              Phòng này hiện đang trống. Sử dụng Wizard bên dưới để tạo hợp đồng mới.
             </p>
         </div>
       )}
 
       <div className="space-y-3 pt-2">
-        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Actions</h4>
+        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Thao tác</h4>
         <button onClick={onOpenWizard} className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl transition-all shadow-sm group">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl"><FilePenLine className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /></div>
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Contract Wizard</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Wizard Hợp đồng</span>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500 group-hover:translate-x-1 transition-all" />
         </button>
         <button className="w-full flex items-center justify-between p-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl transition-all shadow-sm group">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl"><QrCode className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /></div>
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">QR Enrollment</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Đăng ký qua QR</span>
           </div>
           <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500 group-hover:translate-x-1 transition-all" />
         </button>

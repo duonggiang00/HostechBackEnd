@@ -1,6 +1,3 @@
-import { useParams } from 'react-router-dom';
-import { useState } from 'react';
-import { useDashboard, useGenerateMonthlyBilling } from '../hooks/useDashboard';
 import { StatCard } from '../components/StatCard';
 import { RevenueTrend } from '../components/RevenueTrend';
 import { OccupancyGauge } from '../components/OccupancyGauge';
@@ -10,69 +7,34 @@ import {
   DoorOpen, 
   Receipt, 
   TrendingUp,
-  LayoutDashboard,
   CalendarCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 
-export default function PropertyDashboard() {
-  const { propertyId } = useParams<{ propertyId: string }>();
-  const { data: dashboard, isLoading, refetch } = useDashboard(propertyId);
-  const generateMonthlyMutation = useGenerateMonthlyBilling();
-  const [isGenerating, setIsGenerating] = useState(false);
+import type { PropertyDashboardData } from '../types';
 
-  const handleGenerateBilling = async () => {
-    if (!propertyId) {
-      toast.error('Property ID is missing');
-      return;
-    }
-    
-    // Get current YYYY-MM
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    
-    if (window.confirm(`Xác nhận tạo hóa đơn gốc tự động cho tháng ${currentMonth}?`)) {
-      setIsGenerating(true);
-      try {
-        await generateMonthlyMutation.mutateAsync({ propertyId, month: currentMonth });
-        toast.success(`Đã tạo hóa đơn định kỳ cho tháng ${currentMonth} thành công!`);
-        refetch();
-      } catch (error: any) {
-        toast.error(error.message || 'Lỗi khi tạo hóa đơn');
-      } finally {
-        setIsGenerating(false);
-      }
-    }
-  };
+interface PropertyDashboardViewProps {
+  dashboard: PropertyDashboardData;
+  isGenerating: boolean;
+  onGenerateBilling: () => Promise<void>;
+}
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-20">
-        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
+export function PropertyDashboardView({ 
+  dashboard, 
+  isGenerating, 
+  onGenerateBilling 
+}: PropertyDashboardViewProps) {
   if (!dashboard) return null;
 
   const { stats, revenueTrend } = dashboard;
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold mb-1">
-            <LayoutDashboard className="w-4 h-4" />
-            <span className="text-xs uppercase tracking-widest">Tổng quan tài sản</span>
-          </div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Bảng điều khiển</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Các chỉ số hiệu suất và thông tin chi tiết</p>
-        </div>
-        
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Active Actions Row */}
+      <div className="flex justify-end">
         <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
           <button 
-            onClick={handleGenerateBilling}
+            onClick={onGenerateBilling}
             disabled={isGenerating}
             className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'} text-white shadow-sm rounded-xl text-xs font-bold transition-all`}
           >

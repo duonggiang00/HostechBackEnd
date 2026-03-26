@@ -2,6 +2,7 @@ import { Edit2, Trash2, Box, Zap, Gauge, Users, Maximize2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { RoomTemplate } from '../../types';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
+import { formatNumber } from '@/lib/utils';
 
 interface RoomTemplateCardProps {
   template: RoomTemplate;
@@ -59,14 +60,14 @@ export function RoomTemplateCard({ template, onEdit, onDelete }: RoomTemplateCar
           <Maximize2 className="w-4 h-4 text-emerald-500" />
           <div>
             <p className="text-[9px] font-black text-slate-400 uppercase">Diện tích</p>
-            <p className="text-sm font-black text-slate-700 dark:text-slate-200">{template.area} m²</p>
+            <p className="text-sm font-black text-slate-700 dark:text-slate-200">{formatNumber(template.area)} m²</p>
           </div>
         </div>
         <div className="flex items-center gap-3 p-3 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
           <Users className="w-4 h-4 text-blue-500" />
           <div>
             <p className="text-[9px] font-black text-slate-400 uppercase">Sức chứa</p>
-            <p className="text-sm font-black text-slate-700 dark:text-slate-200">{template.capacity} người</p>
+            <p className="text-sm font-black text-slate-700 dark:text-slate-200">{formatNumber(template.capacity)} người</p>
           </div>
         </div>
       </div>
@@ -96,7 +97,7 @@ export function RoomTemplateCard({ template, onEdit, onDelete }: RoomTemplateCar
           <span className="text-[10px] font-black text-slate-400 uppercase">Giá thuê mẫu</span>
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">
-              {template.base_price?.toLocaleString()}
+              {formatNumber(template.base_price)}
             </span>
             <span className="text-[10px] font-bold text-slate-400 underline decoration-slate-300">đ/tháng</span>
           </div>

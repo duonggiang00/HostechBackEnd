@@ -10,7 +10,7 @@ import type { LoginStep } from '../types';
 export default function LoginPage() {
   const navigate = useNavigate();
   const { 
-    setAuth, 
+    // setAuth, // Removed unused
     isLoading, 
     setLoading, 
     error, 
@@ -78,13 +78,16 @@ export default function LoginPage() {
         return;
       }
 
-      const { token } = data;
+      const { token, user } = data;
       if (!token) throw new Error('No token returned from login');
 
-      // Fetch full user context
+      // Set initial auth so subsequent requests (like getMe) have the token in headers
+      useAuthStore.getState().setAuth({ ...user!, properties: [] } as any, token);
+
+      // Fetch full user context with all relations (Manager -> properties, etc.)
       const fullUser = await authApi.getMe();
       
-      // Store full user data
+      // Update with consolidated user data
       useAuthStore.getState().setAuth(fullUser, token);
 
       navigate('/');
@@ -107,12 +110,15 @@ export default function LoginPage() {
       // Call standard Fortify 2FA challenge endpoint
       const data = await authApi.loginChallenge({ code });
       
-      const { token } = data;
+      const { token, user } = data;
       if (!token) throw new Error('No token returned from MFA');
+
+      // Set initial auth for interceptor
+      useAuthStore.getState().setAuth({ ...user!, properties: [] } as any, token);
 
       // Fetch full user context and set auth
       const fullUser = await authApi.getMe();
-      setAuth(fullUser, token);
+      useAuthStore.getState().setAuth(fullUser, token);
       
       navigate('/');
     } catch (err: any) {

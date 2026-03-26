@@ -103,4 +103,12 @@ class User extends Authenticatable implements HasMedia
         return $this->belongsToMany(\App\Models\Property\Property::class, 'property_user')
             ->withTimestamps();
     }
+
+    /**
+     * Contracts where the user is a member (Tenant)
+     */
+    public function contractMembers()
+    {
+        return $this->hasMany(\App\Models\Contract\ContractMember::class, 'user_id');
+    }
 }

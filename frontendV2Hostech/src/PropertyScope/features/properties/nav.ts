@@ -5,5 +5,5 @@ export const propertyNav = (propertyId: string): NavItem => ({
   id: 'properties',
   icon: Building2,
   label: 'Bất động sản',
-  path: `/properties/${propertyId}/detail`,
+  path: `/properties/${propertyId}/dashboard`,
 });

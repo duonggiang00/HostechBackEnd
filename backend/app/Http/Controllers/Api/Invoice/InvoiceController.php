@@ -26,7 +26,11 @@ use Illuminate\Validation\Rule;
 #[Group('Quản lý Hóa đơn')]
 class InvoiceController extends Controller
 {
-    public function __construct(protected InvoiceService $service) {}
+    public function __construct(
+        protected InvoiceService $service,
+        protected \App\Services\Finance\PaymentService $paymentService
+    ) {}
+
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  LIST / READ ENDPOINTS                                ║
@@ -283,7 +287,7 @@ class InvoiceController extends Controller
      * Chuyển trạng thái hóa đơn sang PAID.
      * Chỉ áp dụng cho hóa đơn ISSUED hoặc PENDING.
      */
-    public function pay(Request $request, string $id): InvoiceResource
+    public function pay(Request $request, string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
         if (! $invoice) {
@@ -292,14 +296,36 @@ class InvoiceController extends Controller
 
         $this->authorize('update', $invoice);
 
-        if (! in_array($invoice->status, ['ISSUED', 'PENDING'])) {
-            abort(422, 'Chỉ có thể thanh toán hóa đơn ở trạng thái Đã phát hành (ISSUED) hoặc Chờ thanh toán (PENDING).');
-        }
+        // Lấy dữ liệu thanh toán từ request hoặc mặc định thanh toán hết bằng tiền mặt
+        $amount = $request->input('amount') ?? ($invoice->total_amount - ($invoice->paid_amount ?? 0));
+        $method = $request->input('payment_method') ?? ($request->input('method') ?? 'CASH');
+        
+        // Chuẩn hóa phương thức (frontend có thể gửi 'transfer', 'cash')
+        $method = strtoupper($method);
+        if ($method === 'TRANSFER') $method = 'BANK_TRANSFER';
 
-        $updated = $this->service->payInvoice($invoice, $request->input('note'));
+        $paymentData = [
+            'org_id' => $invoice->org_id,
+            'property_id' => $invoice->property_id,
+            'payer_user_id' => $invoice->payer_user_id,
+            'method' => $method,
+            'amount' => $amount,
+            'note' => $request->input('note'),
+            'received_at' => now(),
+            'allocations' => [
+                ['invoice_id' => $invoice->id, 'amount' => $amount]
+            ]
+        ];
 
-        return new InvoiceResource($updated);
+        $payment = $this->paymentService->create($paymentData, $request->user());
+
+        return response()->json([
+            'message' => 'Thanh toán đã được ghi nhận thành công.',
+            'data' => $payment,
+            'invoice' => new InvoiceResource($invoice->fresh())
+        ], 200);
     }
+
 
     /**
      * Ghi nhận thanh toán (Partial or Full)
@@ -322,15 +348,25 @@ class InvoiceController extends Controller
             'reference' => ['nullable', 'string', 'max:255'],
             'received_at' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:1000'],
+            'payer_user_id' => ['nullable', 'uuid', 'exists:users,id'],
         ]);
 
-        $payment = $this->service->recordPayment($invoice, $validated);
+        $paymentData = array_merge($validated, [
+            'org_id' => $invoice->org_id,
+            'property_id' => $invoice->property_id,
+            'allocations' => [
+                ['invoice_id' => $invoice->id, 'amount' => $validated['amount']]
+            ]
+        ]);
+
+        $payment = $this->paymentService->create($paymentData, $request->user());
 
         return response()->json([
             'message' => 'Thanh toán đã được ghi nhận thành công.',
             'data' => $payment,
             'invoice' => new InvoiceResource($invoice->fresh())
         ], 201);
+
     }
 
     /**

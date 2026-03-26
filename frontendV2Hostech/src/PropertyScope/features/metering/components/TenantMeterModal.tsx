@@ -35,17 +35,17 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
     const uploaded = await uploadFile(file, 'meters');
     if (uploaded) {
       setPhotoUrl(uploaded.url);
-      toast.success('Photo uploaded successfully');
+      toast.success('Tải ảnh lên thành công');
     }
   };
 
   const handleSubmit = async () => {
     if (!reading || isNaN(Number(reading))) {
-      toast.error('Please enter a valid reading value');
+      toast.error('Vui lòng nhập chỉ số hợp lệ');
       return;
     }
     if (!photoUrl) {
-      toast.error('Please upload a photo of the meter');
+      toast.error('Vui lòng tải lên ảnh đồng hồ');
       return;
     }
 
@@ -97,8 +97,8 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
             {/* Header */}
             <div className="p-8 pb-4 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Submit Reading</h2>
-                <p className="text-xs font-medium text-slate-500 mt-1">Self-service meter reporting</p>
+                <h2 className="text-2xl font-black text-white italic uppercase tracking-tight">Gửi chỉ số</h2>
+                <p className="text-xs font-medium text-slate-500 mt-1">Tự báo cáo chỉ số điện nước</p>
               </div>
               <button 
                 onClick={handleClose}
@@ -114,8 +114,8 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                   <div className="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mb-6">
                     <CheckCircle2 className="w-10 h-10" />
                   </div>
-                  <h3 className="text-xl font-black text-white italic uppercase tracking-wider mb-2">Reading Submitted</h3>
-                  <p className="text-sm text-slate-400 max-w-xs">Your reading has been recorded and is pending property manager approval.</p>
+                  <h3 className="text-xl font-black text-white italic uppercase tracking-wider mb-2">Đã gửi chỉ số</h3>
+                  <p className="text-sm text-slate-400 max-w-xs">Chỉ số của bạn đã được ghi nhận và đang chờ quản lý phê duyệt.</p>
                 </div>
               ) : (
                 <div className="space-y-8">
@@ -129,7 +129,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                       }`}
                     >
                       <Zap className="w-8 h-8 mb-3" />
-                      <span className="text-sm font-black uppercase tracking-widest">Electric</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Điện</span>
                     </button>
                     <button
                       onClick={() => setMeterType('WATER')}
@@ -140,16 +140,16 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                       }`}
                     >
                       <Droplets className="w-8 h-8 mb-3" />
-                      <span className="text-sm font-black uppercase tracking-widest">Water</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Nước</span>
                     </button>
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-xs font-black uppercase text-slate-500 tracking-widest pl-1">Meter Value</label>
+                    <label className="text-xs font-black uppercase text-slate-500 tracking-widest pl-1">Chỉ số đồng hồ</label>
                     <div className="relative">
                       <input
                         type="number"
-                        placeholder="e.g. 1405"
+                        placeholder="Ví dụ: 1405"
                         value={reading}
                         onChange={(e) => setReading(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-2xl p-6 text-2xl font-black text-white outline-none focus:border-emerald-500/50 transition-all font-mono"
@@ -161,7 +161,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                   </div>
 
                   <div className="space-y-3">
-                    <label className="text-xs font-black uppercase text-slate-500 tracking-widest pl-1">Photo Evidence</label>
+                    <label className="text-xs font-black uppercase text-slate-500 tracking-widest pl-1">Ảnh minh chứng</label>
                     
                     <input 
                       type="file" 
@@ -179,7 +179,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                             onClick={() => setPhotoUrl(null)}
                             className="px-4 py-2 bg-rose-500 text-white font-bold rounded-xl text-xs"
                           >
-                            Remove Photo
+                            Gỡ ảnh
                           </button>
                         </div>
                       </div>
@@ -193,7 +193,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                               <div className="absolute bottom-0 left-0 bg-indigo-500/20 h-full transition-all" style={{ width: `${progress}%` }} />
                             )}
                             {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
-                            <span className="text-xs font-bold uppercase tracking-widest z-10">{isUploading ? 'Uploading...' : 'Take Photo'}</span>
+                            <span className="text-xs font-bold uppercase tracking-widest z-10">{isUploading ? 'Đang tải...' : 'Chụp ảnh'}</span>
                          </button>
                       </div>
                     )}
@@ -211,7 +211,7 @@ export default function TenantMeterModal({ isOpen, onClose }: TenantMeterModalPr
                   className="w-full px-8 py-5 bg-indigo-600 text-white font-black italic uppercase tracking-wider rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-indigo-600/20 disabled:grayscale disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                  {isSubmitting ? 'Submitting...' : 'Upload Reading'}
+                  {isSubmitting ? 'Đang gửi...' : 'Gửi chỉ số'}
                 </button>
               </div>
             )}

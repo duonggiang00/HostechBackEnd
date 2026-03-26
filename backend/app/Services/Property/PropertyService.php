@@ -15,9 +15,18 @@ class PropertyService
         
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
-            ->allowedIncludes(['floors', 'rooms'])
+            ->allowedIncludes(['floors', 'rooms', 'defaultServices'])
             ->defaultSort('name')
-            ->withCount(['floors', 'rooms']);
+            ->withCount([
+                'floors', 
+                'rooms',
+                'rooms as occupied_rooms_count' => function ($q) {
+                    $q->whereIn('status', ['occupied', 'rented']);
+                },
+                'rooms as vacant_rooms_count' => function ($q) {
+                    $q->whereIn('status', ['available', 'vacant']);
+                }
+            ]);
 
         /** @var \App\Models\Org\User $user */
         $user = $performer ?: auth()->user();
@@ -68,14 +77,29 @@ class PropertyService
 
     public function find(string $id, bool $loadRelations = false): ?Property
     {
-        $property = Property::withCount(['floors', 'rooms'])->find($id);
+        $property = Property::withCount([
+            'floors', 
+            'rooms',
+            'rooms as occupied_rooms_count' => function ($q) {
+                $q->whereIn('status', ['occupied', 'rented']);
+            },
+            'rooms as vacant_rooms_count' => function ($q) {
+                $q->whereIn('status', ['available', 'vacant']);
+            }
+        ])->find($id);
 
         if ($property && $loadRelations) {
-            if ($property->floors()->exists()) {
-                $property->load(['floors.rooms']);
-            } else {
-                $property->load('rooms');
-            }
+            $property->load(['floors' => function ($query) {
+                $query->withCount([
+                    'rooms',
+                    'rooms as vacant_rooms_count' => function ($q) {
+                        $q->whereIn('status', ['available', 'vacant']);
+                    },
+                    'rooms as occupied_rooms_count' => function ($q) {
+                        $q->whereIn('status', ['occupied', 'rented']);
+                    },
+                ])->orderBy('sort_order');
+            }]);
         }
 
         return $property;

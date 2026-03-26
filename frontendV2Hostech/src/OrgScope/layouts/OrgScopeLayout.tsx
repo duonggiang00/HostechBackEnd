@@ -29,11 +29,11 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
-    { id: 'properties', icon: Building2, label: 'Properties', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Staff', path: '/org/staff', roles: ['Admin', 'Owner'] },
-    { id: 'finance', icon: BarChart3, label: 'Finance', path: '/org/finance', roles: ['Admin', 'Owner'] },
-    { id: 'invoices', icon: Receipt, label: 'Invoices', path: '/org/invoices', roles: ['Admin', 'Owner'] },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
+    { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
+    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Admin', 'Owner'] },
+    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner'] },
+    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner'] },
   ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
 
   const SidebarContent = () => (
@@ -65,8 +65,8 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
                 <Shield className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Organization</p>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Managed by system</p>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Tổ chức</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Quản lý bởi hệ thống</p>
               </div>
             </div>
           </div>
@@ -75,7 +75,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
 
       <nav className="px-4 py-2 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
         <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 mt-2 px-3">
-           Organization Scope
+           Phạm vi tổ chức
         </div>
         
         {menuItems.map((item) => (
@@ -167,7 +167,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Organization Portal</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Cổng thông tin tổ chức</h2>
             <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 hidden xl:block" />
             <div className="min-w-0">
               <PropertySwitcher />
@@ -179,7 +179,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
                 type="text" 
-                placeholder="Global search..."
+                placeholder="Tìm kiếm hệ thống..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>

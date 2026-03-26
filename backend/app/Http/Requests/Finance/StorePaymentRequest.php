@@ -26,7 +26,9 @@ class StorePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'org_id'                   => ['required', 'uuid', 'exists:orgs,id'],
             'property_id'              => ['nullable', 'uuid', 'exists:properties,id'],
+
             'payer_user_id'            => ['nullable', 'uuid', 'exists:users,id'],
             'method'                   => ['required', 'string', 'in:CASH,TRANSFER,WALLET,QR'],
             'amount'                   => ['required', 'numeric', 'min:0.01'],
@@ -47,7 +49,9 @@ class StorePaymentRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'org_id'                   => 'ID tổ chức',
             'method'                   => 'Phương thức thanh toán',
+
             'amount'                   => 'Số tiền thu',
             'received_at'              => 'Thời gian nhận tiền',
             'reference'                => 'Mã tham chiếu',

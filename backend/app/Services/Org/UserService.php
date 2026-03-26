@@ -33,8 +33,13 @@ class UserService
         // Apply Property-based scoping for Manager and Staff
         $currentUser = auth()->user();
         if ($currentUser && ! $currentUser->hasRole(['Admin', 'Owner'])) {
-            $query->whereHas('properties', function ($q) use ($currentUser) {
-                $q->whereIn('properties.id', $currentUser->properties()->pluck('properties.id'));
+            $managedPropertyIds = $currentUser->properties()->pluck('properties.id');
+            $query->where(function ($q) use ($managedPropertyIds) {
+                $q->whereHas('properties', function ($q2) use ($managedPropertyIds) {
+                    $q2->whereIn('properties.id', $managedPropertyIds);
+                })->orWhereHas('contractMembers.contract', function ($q2) use ($managedPropertyIds) {
+                    $q2->whereIn('contracts.property_id', $managedPropertyIds);
+                });
             });
         }
 
