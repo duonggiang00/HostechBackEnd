@@ -53,6 +53,8 @@ import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
 import TenantRequestsPage from '@/Tenant/features/requests/pages/TenantRequestsPage';
 import TenantMessagingPage from '@/Tenant/features/messaging/pages/TenantMessagingPage';
 import TenantBillingPage from '@/Tenant/features/billing/pages/TenantBillingPage';
+const TenantPendingContractsPage = lazy(() => import('@/Tenant/features/contracts/pages/PendingContractsPage'));
+const TenantContractDetailPage = lazy(() => import('@/Tenant/features/contracts/pages/TenantContractDetailPage'));
 
 import SelectionLayout from '@/shared/layouts/SelectionLayout';
 import PropertySelectionPage from '@/shared/features/properties/pages/PropertySelectionPage';
@@ -288,6 +290,8 @@ export default function AppRoutes() {
           <Route path="requests" element={<TenantRequestsPage />} />
           <Route path="messages" element={<TenantMessagingPage />} />
           <Route path="billing" element={<TenantBillingPage />} />
+          <Route path="contracts/pending" element={<TenantPendingContractsPage />} />
+          <Route path="contracts/:id" element={<TenantContractDetailPage />} />
           <Route path="news" element={
             <div className="p-8 text-center text-slate-400">
               <p className="text-lg font-bold">Thông báo</p>

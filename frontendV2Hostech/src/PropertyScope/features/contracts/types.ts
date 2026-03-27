@@ -140,3 +140,13 @@ export interface CreateContractPayload {
   members?: CreateContractMemberPayload[];
   meta?: Record<string, any>;
 }
+
+export interface ScanContractResponse {
+  tenant_name?: string;
+  rent_price?: number;
+  deposit_amount?: number;
+  start_date?: string;
+  billing_cycle?: string;
+  file_path?: string;
+}
+

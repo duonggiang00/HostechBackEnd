@@ -154,6 +154,11 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/scan */
+  const scanContract = useMutation({
+    mutationFn: (file: File) => contractsApi.scanContract(file),
+  });
+
   return {
     createContract,
     updateContract,
@@ -164,5 +169,6 @@ export const useContractActions = () => {
     rejectSignature,
     requestRoomTransfer,
     terminateContract,
+    scanContract,
   };
 };

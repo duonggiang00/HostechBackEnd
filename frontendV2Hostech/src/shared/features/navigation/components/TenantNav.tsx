@@ -1,9 +1,10 @@
-import { Home, ClipboardList, CreditCard, User } from 'lucide-react';
+import { Home, ClipboardList, CreditCard, User, FileSignature } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 export default function TenantNav() {
   const navItems = [
     { icon: Home, label: 'Trang chủ', path: '/app/dashboard' },
+    { icon: FileSignature, label: 'Hợp đồng', path: '/app/contracts/pending' },
     { icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
     { icon: CreditCard, label: 'Hóa đơn', path: '/app/billing' },
     { icon: User, label: 'Cá nhân', path: '/app/profile' },

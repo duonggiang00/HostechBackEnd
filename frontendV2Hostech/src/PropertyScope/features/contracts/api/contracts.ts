@@ -107,5 +107,17 @@ export const contractsApi = {
   terminateContract: async (id: string, data: { termination_date?: string, reason?: string, forfeit_deposit?: boolean, refund_remaining_rent?: boolean }) => {
     const response = await apiClient.post(`/contracts/${id}/terminate`, data);
     return response.data;
+  },
+
+  scanContract: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    // Optional: add template_id if needed in the future
+    const response = await apiClient.post('/contracts/scan', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data?.data;
   }
 };
