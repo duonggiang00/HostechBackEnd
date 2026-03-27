@@ -4,9 +4,11 @@ namespace App\Services\Meter;
 
 use App\Models\Meter\Meter;
 use App\Models\Property\Room;
+use App\Models\System\TemporaryUpload;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -149,7 +151,7 @@ class MeterService
     public function create(array $data): Meter
     {
         return DB::transaction(function () use ($data) {
-            $user = request()->user();
+            $user = auth()->user();
 
             // Set org_id from user or from room
             if ($user && ! $user->hasRole('Admin') && $user->org_id) {
@@ -167,7 +169,13 @@ class MeterService
                 }
             }
 
-            return Meter::create($data);
+            $meter = Meter::create($data);
+
+            if (isset($data['media_ids'])) {
+                $this->attachMedia($meter, $data['media_ids']);
+            }
+
+            return $meter;
         });
     }
 
@@ -178,6 +186,10 @@ class MeterService
     {
         return DB::transaction(function () use ($meter, $data) {
             $meter->update($data);
+
+            if (isset($data['media_ids'])) {
+                $this->attachMedia($meter, $data['media_ids']);
+            }
 
             return $meter->fresh();
         });
@@ -278,5 +290,27 @@ class MeterService
         }
 
         return $query->update(['base_reading' => 0]);
+    }
+
+    /**
+     * Attach media to a meter.
+     */
+    protected function attachMedia(Meter $meter, array $mediaIds): void
+    {
+        if (empty($mediaIds)) {
+            return;
+        }
+
+        $temporaryUploads = TemporaryUpload::whereIn('id', $mediaIds)->get();
+
+        foreach ($temporaryUploads as $tempUpload) {
+            $mediaPath = $tempUpload->getFirstMediaPath('default');
+
+            if ($mediaPath && file_exists($mediaPath)) {
+                $meter->addMedia($mediaPath)
+                    ->preservingOriginal()
+                    ->toMediaCollection('meter_attachments');
+            }
+        }
     }
 }

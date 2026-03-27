@@ -62,7 +62,7 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
               </div>
               <div className="mt-4 flex items-center gap-1.5 text-[11px] font-black uppercase bg-white/10 w-fit px-2 py-1 rounded-lg">
                 <TrendingUp className="w-3 h-3" />
-                Latest: {meter.last_reading_date || 'N/A'}
+                Latest: {meter.last_read_at || 'N/A'}
               </div>
             </div>
           </div>

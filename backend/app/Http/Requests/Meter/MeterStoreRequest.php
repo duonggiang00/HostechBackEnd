@@ -23,6 +23,7 @@ class MeterStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'org_id' => ['nullable', 'uuid', 'exists:orgs,id'],
             'room_id' => ['nullable', 'uuid', 'exists:rooms,id'],
             'code' => [
                 'required',
@@ -38,6 +39,8 @@ class MeterStoreRequest extends FormRequest
             'is_master' => ['boolean'],
             'base_reading' => ['nullable', 'numeric', 'min:0'],
             'meta' => ['nullable', 'array'],
+            'media_ids' => ['nullable', 'array'],
+            'media_ids.*' => ['uuid', 'exists:temporary_uploads,id'],
         ];
     }
 }

@@ -309,6 +309,26 @@ export default function MeterDetailPage() {
         return;
       }
 
+      // Check monotonicity against previous/next reading if available
+      const currentIndex = readings.findIndex(r => r.id === (editingReading as any).id);
+      if (currentIndex !== -1) {
+        // Readings are sorted by period_end desc in the list
+        if (currentIndex < readings.length - 1) {
+          const prevReading = readings[currentIndex + 1];
+          if (readingValue < prevReading.reading_value) {
+            setFormError(`Chỉ số mới (${readingValue}) không thể nhỏ hơn chỉ số cũ (${prevReading.reading_value})`);
+            return;
+          }
+        }
+        if (currentIndex > 0) {
+          const nextReading = readings[currentIndex - 1];
+          if (readingValue > nextReading.reading_value) {
+            setFormError(`Chỉ số mới (${readingValue}) không thể lớn hơn chỉ số của kỳ kế tiếp (${nextReading.reading_value})`);
+            return;
+          }
+        }
+      }
+
       console.log('📝 Updating reading:', {
         reading_id: editingReading.id,
         reading_value: readingValue,

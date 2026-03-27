@@ -36,6 +36,7 @@ export function PropertyDashboardView({
           <button 
             onClick={onGenerateBilling}
             disabled={isGenerating}
+            data-testid="generate-billing-btn"
             className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'} text-white shadow-sm rounded-xl text-xs font-bold transition-all`}
           >
             {isGenerating ? (
@@ -58,12 +59,14 @@ export function PropertyDashboardView({
           icon={Users} 
           color="indigo"
           trend={{ value: 12, isUp: true }}
+          testId="stat-tenants"
         />
         <StatCard 
           label="Tổng số phòng" 
           value={stats.totalRooms.toLocaleString('vi-VN')} 
           icon={DoorOpen} 
           color="emerald"
+          testId="stat-rooms"
         />
         <StatCard 
           label="Hóa đơn chưa thanh toán" 
@@ -71,6 +74,7 @@ export function PropertyDashboardView({
           icon={Receipt} 
           color="rose"
           trend={{ value: 5, isUp: false }}
+          testId="stat-unpaid"
         />
         <StatCard 
           label="Doanh thu tháng này" 
@@ -78,6 +82,7 @@ export function PropertyDashboardView({
           icon={TrendingUp} 
           color="amber"
           trend={{ value: 8, isUp: true }}
+          testId="stat-revenue"
         />
       </div>
 

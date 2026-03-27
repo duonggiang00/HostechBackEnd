@@ -11,16 +11,24 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Meter extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class Meter extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes, SystemLoggable;
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('meter_attachments');
+    }
 
     public $incrementing = false;
 
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'room_id', 'property_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
+        'org_id', 'room_id', 'property_id', 'service_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
     ];
 
     protected function casts(): array

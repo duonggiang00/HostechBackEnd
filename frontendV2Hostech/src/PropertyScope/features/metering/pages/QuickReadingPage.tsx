@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { echo } from '@/shared/utils/echo';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
 import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -8,6 +10,25 @@ import toast from 'react-hot-toast';
 export default function QuickReadingPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
+
+  // WebSocket Listener for real-time status updates
+  useEffect(() => {
+    if (!propertyId || !echo) return;
+
+    console.log('Subscribing to property channel:', `property.${propertyId}`);
+    const channel = echo.private(`property.${propertyId}`)
+      .listen('.App.Events.Meter.MeterReadingStatusChanged', (data: any) => {
+        toast.success(data.message, {
+          duration: 6000,
+          position: 'top-right',
+          icon: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+        });
+      });
+
+    return () => {
+      echo.leave(`property.${propertyId}`);
+    };
+  }, [propertyId]);
 
   // Fetch ALL active meters for the property (without pagination for quick reading)
   const { meters: metersData, isLoading } = useMeters(propertyId!, {
@@ -77,8 +98,8 @@ export default function QuickReadingPage() {
 
   const calculateConsumption = (meter: Meter, newValue: string) => {
     if (!newValue) return 0;
-    // Use latest_reading from the meter (most recent reading)
-    const prev = (meter as any).latest_reading ?? meter.base_reading ?? 0;
+    // Use latest_reading from the meter (most recent approved reading)
+    const prev = meter.latest_reading ?? (typeof meter.last_reading === 'number' ? meter.last_reading : meter.base_reading) ?? 0;
     const current = parseFloat(newValue);
     return Math.max(0, current - prev);
   };
@@ -103,7 +124,7 @@ export default function QuickReadingPage() {
     let hasError = false;
     for (const item of payload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
-      const prevReading = (meter as any)?.latest_reading ?? meter?.base_reading ?? 0;
+      const prevReading = meter?.last_reading ?? meter?.base_reading ?? 0;
       if (item.reading_value < prevReading) {
         toast.error(`Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`);
         hasError = true;
@@ -155,7 +176,7 @@ export default function QuickReadingPage() {
           <div className="flex-1">
             <div className="flex justify-between text-sm font-bold mb-1.5">
               <span className="text-slate-600 dark:text-slate-400 font-medium">Tiến độ chốt số</span>
-              <span className="text-indigo-600 dark:text-indigo-400">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
+              <span className="text-indigo-600 dark:text-indigo-400" data-testid="reading-progress-text">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
             </div>
             <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div 
@@ -185,23 +206,25 @@ export default function QuickReadingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Từ ngày</label>
-            <input
-              type="date"
-              value={periodStart}
-              max={format(new Date(), 'yyyy-MM-dd')}
-              onChange={(e) => setPeriodStart(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
-            />
+              <input
+                type="date"
+                value={periodStart}
+                data-testid="reading-period-start"
+                max={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setPeriodStart(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+              />
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Đến ngày</label>
-            <input
-              type="date"
-              value={periodEnd}
-              max={format(new Date(), 'yyyy-MM-dd')}
-              onChange={(e) => setPeriodEnd(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
-            />
+              <input
+                type="date"
+                value={periodEnd}
+                data-testid="reading-period-end"
+                max={format(new Date(), 'yyyy-MM-dd')}
+                onChange={(e) => setPeriodEnd(e.target.value)}
+                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+              />
           </div>
         </div>
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
@@ -250,7 +273,7 @@ export default function QuickReadingPage() {
                     <div className="p-2">
                       {roomMeters.map(meter => {
                         const isElectric = meter.type === 'ELECTRIC';
-                        const prevValue = meter.last_reading ?? meter.base_reading ?? 0;
+                        const prevValue = meter.latest_reading ?? (typeof meter.last_reading === 'number' ? meter.last_reading : meter.base_reading) ?? 0;
                         const currentValue = readings[meter.id] || '';
                         const consumption = calculateConsumption(meter, currentValue);
                         
@@ -272,7 +295,10 @@ export default function QuickReadingPage() {
                             {/* Old Reading */}
                             <div className="flex-1 min-w-[100px]">
                               <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Số cũ</p>
-                              <p className="font-semibold text-slate-700 dark:text-slate-300">
+                              <p 
+                                className="font-semibold text-slate-700 dark:text-slate-300"
+                                data-testid={`prev-reading-value-${meter.id}`}
+                              >
                                 {prevValue.toLocaleString('vi-VN')}
                                 <span className="text-xs text-slate-400 ml-1 font-normal">{isElectric ? 'kWh' : 'm³'}</span>
                               </p>
@@ -286,6 +312,7 @@ export default function QuickReadingPage() {
                                 inputMode="numeric"
                                 placeholder="Nhập số mới..."
                                 value={currentValue}
+                                data-testid={`meter-reading-input-${meter.id}`}
                                 onChange={(e) => handleReadingChange(meter.id, e.target.value)}
                                 className={`w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-900 dark:text-white placeholder:font-normal placeholder:text-slate-400
                                   ${currentValue && parseInt(currentValue, 10) < prevValue ? 'border-red-300 focus:border-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'}
@@ -296,20 +323,31 @@ export default function QuickReadingPage() {
                             {/* Consumption & Trend */}
                             <div className="w-32 shrink-0 text-right">
                               <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Tiêu thụ</p>
-                              <div className="flex items-center justify-end gap-2">
-                                <p className={`font-bold ${consumption > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}>
-                                  {currentValue ? consumption.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : '-'}
-                                </p>
-                                {currentValue && (
-                                  <div className={`p-1 rounded-full ${
-                                    consumption > 0 ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400' : 
-                                    consumption === 0 ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500' :
-                                    'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                                  }`}>
-                                    {consumption > 0 ? <TrendingUp className="w-3 h-3" /> : 
-                                     consumption === 0 ? <Minus className="w-3 h-3" /> : 
-                                     <TrendingDown className="w-3 h-3" />}
-                                  </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <div className="flex items-center justify-end gap-2">
+                                  <p 
+                                    className={`font-bold ${consumption > 500 ? 'text-orange-600 animate-pulse' : consumption > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+                                    data-testid={`consumption-value-${meter.id}`}
+                                  >
+                                    {currentValue ? consumption.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : '-'}
+                                  </p>
+                                  {currentValue && (
+                                    <div className={`p-1 rounded-full ${
+                                      consumption > 0 ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400' : 
+                                      consumption === 0 ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500' :
+                                      'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                    }`}>
+                                      {consumption > 0 ? <TrendingUp className="w-3 h-3" /> : 
+                                       consumption === 0 ? <Minus className="w-3 h-3" /> : 
+                                       <TrendingDown className="w-3 h-3" />}
+                                    </div>
+                                  )}
+                                </div>
+                                {consumption > 500 && (
+                                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Bất thường!
+                                  </span>
                                 )}
                               </div>
                             </div>

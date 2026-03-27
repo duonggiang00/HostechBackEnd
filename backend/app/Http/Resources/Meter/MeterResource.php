@@ -37,6 +37,13 @@ class MeterResource extends JsonResource
             'latest_reading' => $this->latestApprovedReading?->reading_value ?? $this->base_reading,
             'last_read_at' => $this->latestApprovedReading?->period_end ? $this->latestApprovedReading->period_end->format('Y-m-d') : null,
             'room' => new RoomResource($this->whenLoaded('room')),
+            'media' => $this->getMedia('meter_attachments')->map(fn($media) => [
+                'id' => $media->id,
+                'url' => $media->getFullUrl(),
+                'name' => $media->file_name,
+                'mime_type' => $media->mime_type,
+                'size' => $media->size,
+            ]),
         ];
     }
 }

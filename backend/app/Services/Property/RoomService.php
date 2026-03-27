@@ -33,12 +33,16 @@ class RoomService
 
         // Scoping Pattern: Membership-based for Tenant (Renters) OR they can see 'available' rooms
             if ($performer && $performer->hasRole('Tenant')) {
-                $query->whereHas('contracts', function ($sq) use ($performer) {
-                    $sq->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
-                        ->whereHas('members', function ($ssq) use ($performer) {
-                            $ssq->where('user_id', $performer->id);
-                        });
-                });
+                $myPropertyIds = \App\Models\Contract\Contract::query()
+                    ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
+                    ->whereHas('members', function ($q) use ($performer) {
+                        $q->where('user_id', $performer->id);
+                    })
+                    ->pluck('property_id')
+                    ->unique()
+                    ->toArray();
+
+                $query->whereIn('property_id', $myPropertyIds);
             } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
             $query->whereHas('property.managers', function ($q) use ($performer) {
                 $q->where('user_id', $performer->id);

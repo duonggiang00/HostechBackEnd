@@ -10,8 +10,6 @@ export interface Meter {
   base_reading?: number;
   meta?: Record<string, any>;
   last_reading?: number;
-  last_read_at?: string;
-  // Latest reading from API
   latest_reading?: number;
   last_read_at?: string;
   property_name?: string;
