@@ -15,11 +15,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Contract extends Model
+class Contract extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\ContractFactory> */
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
 
     public $incrementing = false;
 
@@ -51,6 +53,9 @@ class Contract extends Model
         'total_rent',
         'cycle_months',
         'created_by_user_id',
+        'document_path',
+        'document_type',
+        'scan_original_filename',
         'meta',
     ];
 
