@@ -588,16 +588,25 @@ class ContractService
         $baseRent = (float) $contract->base_rent;
         $depositAmount = (float) $contract->deposit_amount;
 
+        $desc = $monthsToAdd === 1 
+            ? 'Tiền phòng tháng đầu tiên' 
+            : 'Tiền phòng chu kỳ ' . $monthsToAdd . ' tháng đầu tiên';
+
         // Xây dựng danh sách items
         $items = [
             [
                 'type' => InvoiceItemType::RENT->value,
-                'description' => 'Tiền phòng tháng đầu tiên',
-                'quantity' => 1,
+                'description' => $desc,
+                'quantity' => $monthsToAdd,
                 'unit_price' => $baseRent,
-                'amount' => $baseRent,
+                'amount' => $baseRent * $monthsToAdd,
             ],
         ];
+
+        // Add rent tokens for future months covered by this initial payment
+        if ($monthsToAdd > 1) {
+            $contract->increment('rent_token_balance', $monthsToAdd - 1);
+        }
 
         // Thêm các dịch vụ cố định (fixed services)
         $roomServices = $this->serviceService->getRoomServices($contract->room_id, $contract->org_id);
