@@ -6,6 +6,7 @@ uses(RefreshDatabase::class);
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
@@ -45,7 +46,7 @@ test('admin can create contract', function () {
         'end_date' => now()->addYear()->toDateString(),
         'rent_price' => 5000000,
         'deposit_amount' => 5000000,
-        'billing_cycle' => 'MONTHLY',
+        'billing_cycle' => 2,
         'due_day' => 5,
         'cutoff_day' => 25,
         'members' => [
@@ -60,12 +61,13 @@ test('admin can create contract', function () {
 
     $response->assertStatus(201)
         ->assertJsonPath('data.rent_price', 5000000)
-        ->assertJsonPath('data.status', 'ACTIVE');
+        ->assertJsonPath('data.status', 'PENDING_SIGNATURE');
 
     assertDatabaseHas('contracts', [
         'org_id' => $org->id,
         'room_id' => $room->id,
         'rent_price' => 5000000,
+        'billing_cycle' => '2',
     ]);
 
     $contractId = $response->json('data.id');
@@ -75,6 +77,7 @@ test('admin can create contract', function () {
         'user_id' => $tenant->id,
         'role' => 'TENANT',
         'is_primary' => true,
+        'status' => 'PENDING',
     ]);
 });
 
@@ -258,6 +261,7 @@ test('manager can create contract', function () {
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $tenant = User::factory()->create(['org_id' => $org->id]);
 
     actingAs($manager);
 
@@ -267,7 +271,14 @@ test('manager can create contract', function () {
         'status' => 'ACTIVE',
         'rent_price' => 5000000,
         'start_date' => now()->toDateString(),
-    ])->assertStatus(201);
+        'members' => [
+            [
+                'user_id' => $tenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+            ],
+        ],
+    ])->assertStatus(201)->assertJsonPath('data.status', 'PENDING_SIGNATURE');
 });
 
 test('staff cannot create contract', function () {
@@ -380,9 +391,10 @@ test('unauthorized user cannot list contracts', function () {
     getJson('/api/contracts')->assertStatus(403);
 });
 
-test('admin can add member to contract without user account (decoupled)', function () {
+test('admin can add registered tenant account to contract members', function () {
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id]);
+    $roommate = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
 
@@ -393,22 +405,20 @@ test('admin can add member to contract without user account (decoupled)', functi
     actingAs($admin);
 
     $response = postJson("/api/contracts/{$contract->id}/members", [
-        'full_name' => 'Test Roommate',
-        'phone' => '0987654321',
-        'identity_number' => '123456789012',
+        'user_id' => $roommate->id,
         'role' => 'ROOMMATE',
         'is_primary' => false,
     ]);
 
     $response->assertStatus(201)
-        ->assertJsonPath('data.full_name', 'Test Roommate')
+        ->assertJsonPath('data.full_name', $roommate->full_name)
         ->assertJsonPath('data.role', 'ROOMMATE');
 
     assertDatabaseHas('contract_members', [
         'contract_id' => $contract->id,
-        'full_name' => 'Test Roommate',
-        'phone' => '0987654321',
-        'user_id' => null,
+        'full_name' => $roommate->full_name,
+        'phone' => $roommate->phone,
+        'user_id' => $roommate->id,
     ]);
 });
 
@@ -478,8 +488,10 @@ test('admin can mark contract member as left', function () {
 test('tenant can request to add roommate and it becomes PENDING', function () {
     $org = Org::factory()->create();
     $tenant = User::factory()->create(['org_id' => $org->id]);
+    $roommate = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
+    $roommate->assignRole($role);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
@@ -498,8 +510,7 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
     actingAs($tenant);
 
     $response = postJson("/api/contracts/{$contract->id}/members", [
-        'full_name' => 'Pending Roommate',
-        'phone' => '0987654321',
+        'user_id' => $roommate->id,
         'role' => 'ROOMMATE',
         'is_primary' => false,
     ]);
@@ -509,7 +520,8 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
 
     assertDatabaseHas('contract_members', [
         'contract_id' => $contract->id,
-        'full_name' => 'Pending Roommate',
+        'user_id' => $roommate->id,
+        'full_name' => $roommate->full_name,
         'status' => 'PENDING',
         'joined_at' => null,
     ]);
@@ -518,6 +530,7 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
 test('admin can approve pending roommate request', function () {
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id]);
+    $roommate = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
 
@@ -528,7 +541,8 @@ test('admin can approve pending roommate request', function () {
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,
-        'full_name' => 'Pending Roommate',
+        'user_id' => $roommate->id,
+        'full_name' => $roommate->full_name,
         'status' => 'PENDING',
         'joined_at' => null,
     ]);
@@ -548,8 +562,10 @@ test('admin can approve pending roommate request', function () {
 test('tenant cannot approve their own or other roommate requests', function () {
     $org = Org::factory()->create();
     $tenant = User::factory()->create(['org_id' => $org->id]);
+    $roommate = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Tenant']);
     $tenant->assignRole($role);
+    $roommate->assignRole($role);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
@@ -568,7 +584,8 @@ test('tenant cannot approve their own or other roommate requests', function () {
     $member = ContractMember::factory()->create([
         'org_id' => $org->id,
         'contract_id' => $contract->id,
-        'full_name' => 'Pending Roommate',
+        'user_id' => $roommate->id,
+        'full_name' => $roommate->full_name,
         'status' => 'PENDING',
         'joined_at' => null,
     ]);
@@ -577,4 +594,125 @@ test('tenant cannot approve their own or other roommate requests', function () {
 
     putJson("/api/contracts/{$contract->id}/members/{$member->id}/approve")
         ->assertStatus(403);
+});
+
+test('cannot create contract with cutoff day greater than 25', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $tenant = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    actingAs($admin);
+
+    postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addYear()->toDateString(),
+        'rent_price' => 5000000,
+        'deposit_amount' => 5000000,
+        'billing_cycle' => 1,
+        'due_day' => 5,
+        'cutoff_day' => 26,
+        'members' => [
+            [
+                'user_id' => $tenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+            ],
+        ],
+    ])->assertStatus(422)->assertJsonValidationErrors(['cutoff_day']);
+});
+
+test('initial invoice is created only after all contract members sign and tenant can view it', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $primaryTenant = User::factory()->create(['org_id' => $org->id]);
+    $roommate = User::factory()->create(['org_id' => $org->id]);
+
+    $adminRole = Role::firstOrCreate(['name' => 'Admin']);
+    $tenantRole = Role::firstOrCreate(['name' => 'Tenant']);
+    $admin->assignRole($adminRole);
+    $primaryTenant->assignRole($tenantRole);
+    $roommate->assignRole($tenantRole);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    actingAs($admin);
+
+    $response = postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'status' => 'ACTIVE',
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addYear()->toDateString(),
+        'rent_price' => 4000000,
+        'deposit_amount' => 2000000,
+        'billing_cycle' => 2,
+        'due_day' => 5,
+        'cutoff_day' => 25,
+        'members' => [
+            [
+                'user_id' => $primaryTenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+            ],
+            [
+                'user_id' => $roommate->id,
+                'role' => 'ROOMMATE',
+                'is_primary' => false,
+            ],
+        ],
+    ])->assertStatus(201)
+        ->assertJsonPath('data.status', 'PENDING_SIGNATURE');
+
+    $contractId = $response->json('data.id');
+
+    actingAs($primaryTenant);
+    postJson("/api/contracts/{$contractId}/accept-signature")
+        ->assertStatus(200);
+
+    assertDatabaseHas('contracts', [
+        'id' => $contractId,
+        'status' => 'PENDING_SIGNATURE',
+    ]);
+
+    $this->assertDatabaseCount('invoices', 0);
+    assertDatabaseHas('contract_members', [
+        'contract_id' => $contractId,
+        'user_id' => $primaryTenant->id,
+        'status' => 'APPROVED',
+    ]);
+    assertDatabaseHas('contract_members', [
+        'contract_id' => $contractId,
+        'user_id' => $roommate->id,
+        'status' => 'PENDING',
+    ]);
+
+    actingAs($roommate);
+    postJson("/api/contracts/{$contractId}/accept-signature")
+        ->assertStatus(200);
+
+    assertDatabaseHas('contracts', [
+        'id' => $contractId,
+        'status' => 'PENDING_PAYMENT',
+    ]);
+
+    $invoice = Invoice::query()
+        ->where('contract_id', $contractId)
+        ->latest('created_at')
+        ->first();
+
+    expect($invoice)->not->toBeNull();
+    expect(data_get($invoice?->snapshot, 'is_initial'))->toBeTrue();
+
+    actingAs($primaryTenant);
+    getJson('/api/invoices')
+        ->assertStatus(200)
+        ->assertJsonFragment(['id' => $invoice->id]);
 });

@@ -4,6 +4,7 @@ namespace App\Services\Meter;
 
 use App\Models\Meter\AdjustmentNote;
 use App\Models\Meter\MeterReading;
+use App\Models\Org\User;
 use App\Models\System\TemporaryUpload;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;

@@ -26,6 +26,7 @@ class ContractMemberResource extends JsonResource
             'status' => $this->status,
             'is_primary' => $this->is_primary,
             'joined_at' => $this->joined_at ? $this->joined_at->toIso8601String() : null,
+            'signed_at' => $this->signed_at ? $this->signed_at->toIso8601String() : null,
             'left_at' => $this->left_at ? $this->left_at->toIso8601String() : null,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),

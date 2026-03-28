@@ -17,7 +17,6 @@ Route::put('invoices/{id}/issue', [InvoiceController::class, 'issue']);
 Route::put('invoices/{id}/pay', [InvoiceController::class, 'pay']);
 Route::post('invoices/{id}/record-payment', [InvoiceController::class, 'recordPayment']);
 Route::put('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
-Route::put('invoices/{id}/cancel', [InvoiceController::class, 'cancel']);
 Route::post('invoices/{id}/restore', [InvoiceController::class, 'restore']);
 Route::delete('invoices/{id}/force', [InvoiceController::class, 'forceDelete']);
 

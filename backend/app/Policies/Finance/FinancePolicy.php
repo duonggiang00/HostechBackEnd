@@ -71,6 +71,10 @@ class FinancePolicy implements RbacModuleProvider
      */
     public function create(User $user): bool
     {
+        if ($user->hasRole('Tenant')) {
+            return true;
+        }
+
         return $user->hasPermissionTo('create Payment');
     }
 
