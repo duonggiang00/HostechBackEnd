@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
 import { Building2, ChevronDown, Check, Loader2, AlertCircle } from 'lucide-react';
@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function PropertySwitcher() {
   const { propertyId } = useParams<{ propertyId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const organizationId = user?.org_id;
 
@@ -77,7 +78,12 @@ export default function PropertySwitcher() {
                   <button
                     key={property.id}
                     onClick={() => {
-                      navigate(`/properties/${property.id}/dashboard`);
+                      if (propertyId && location.pathname.includes(`/properties/${propertyId}/`)) {
+                        const relativePath = location.pathname.split(`/properties/${propertyId}/`)[1] || 'dashboard';
+                        navigate(`/properties/${property.id}/${relativePath}`);
+                      } else {
+                        navigate(`/properties/${property.id}/dashboard`);
+                      }
                       setIsOpen(false);
                     }}
                     className={`w-full flex items-center justify-between px-3 py-3 rounded-xl transition-all ${

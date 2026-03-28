@@ -14,6 +14,7 @@ import {
   Gauge,
   User,
   FileText,
+  CreditCard,
   Settings,
   Ticket
 } from 'lucide-react';
@@ -44,6 +45,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     { id: 'floors', icon: Layers, label: 'Sơ đồ tầng', path: `/properties/${propertyId}/floors` },
     { id: 'rooms', icon: DoorOpen, label: 'Quản lý phòng', path: `/properties/${propertyId}/rooms` },
     { id: 'contracts', icon: FileText, label: 'Hợp đồng thuê', path: `/properties/${propertyId}/contracts` },
+    { id: 'billing', icon: CreditCard, label: 'Hóa đơn', path: `/properties/${propertyId}/billing` },
     { id: 'tickets', icon: Ticket, label: 'Sự cố & Yêu cầu', path: `/properties/${propertyId}/tickets`, badge: openCount > 0 ? openCount : undefined },
     { id: 'users', icon: User, label: 'Cư dân & Nhân sự', path: `/properties/${propertyId}/users` },
     { id: 'templates', icon: Settings, label: 'Thiết lập tòa nhà', path: `/properties/${propertyId}/templates` },

@@ -1,4 +1,5 @@
 import type { RoomContract } from '@/PropertyScope/features/contracts/types';
+import type { Invoice } from '../billing/types';
 
 
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'draft';
@@ -87,15 +88,6 @@ export interface RoomStatusHistory {
   created_at: string;
 }
 
-export interface Invoice {
-  id: string;
-  status: 'draft' | 'issued' | 'paid' | 'overdue' | 'cancelled';
-  total_amount: number;
-  paid_amount: number;
-  issue_date: string;
-  period_start: string;
-  period_end: string;
-}
 
 export interface Room {
   id: string;
