@@ -50,6 +50,7 @@ class Contract extends Model
         'fixed_services_fee',
         'total_rent',
         'cycle_months',
+        'rent_token_balance',
         'created_by_user_id',
         'meta',
     ];
@@ -70,6 +71,7 @@ class Contract extends Model
             'deposit_amount' => 'decimal:2',
             'refunded_amount' => 'decimal:2',
             'forfeited_amount' => 'decimal:2',
+            'rent_token_balance' => 'integer',
             'join_code_expires_at' => 'datetime',
             'join_code_revoked_at' => 'datetime',
             'signed_at' => 'datetime',
