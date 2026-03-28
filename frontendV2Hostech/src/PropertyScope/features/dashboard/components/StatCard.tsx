@@ -10,6 +10,7 @@ interface StatCardProps {
     isUp: boolean;
   };
   color: 'indigo' | 'emerald' | 'amber' | 'rose' | 'sky';
+  testId?: string;
 }
 
 const colorMap = {
@@ -20,11 +21,12 @@ const colorMap = {
   sky: 'bg-sky-50 text-sky-600 border-sky-100 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800/50',
 };
 
-export const StatCard = ({ label, value, icon: Icon, trend, color }: StatCardProps) => {
+export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: StatCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
+      data-testid={testId}
       className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
     >
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-current opacity-[0.03] rounded-full blur-2xl group-hover:scale-125 transition-transform" />

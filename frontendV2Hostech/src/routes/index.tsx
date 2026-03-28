@@ -24,6 +24,7 @@ import FloorPlanPage from '@/PropertyScope/features/floors/pages/FloorPlanPage';
 import { TemplatesPage } from '@/PropertyScope/features/templates/pages/TemplatesPage';
 import RoomListPage from '@/PropertyScope/features/rooms/pages/RoomListPage';
 import RoomCreatePage from '@/PropertyScope/features/rooms/pages/RoomCreatePage';
+import { PropertyInvoicesPage } from '@/PropertyScope/features/billing/pages/PropertyInvoicesPage';
 import RoomEditPage from '@/PropertyScope/features/rooms/pages/RoomEditPage';
 import RoomDetailPage from '@/PropertyScope/features/rooms/pages/RoomDetailPage';
 import { RoomTemplateCreatePage } from '@/PropertyScope/features/rooms/pages/RoomTemplateCreatePage';
@@ -266,6 +267,7 @@ export default function AppRoutes() {
           <Route path="contracts" element={<ContractListPage />} />
           <Route path="contracts/create" element={<ContractCreatePage />} />
           <Route path="contracts/:contractId" element={<ContractDetailPage />} />
+          <Route path="billing" element={<PropertyInvoicesPage />} />
           <Route path="tickets" element={<TicketListPage />} />
           <Route path="users" element={<PropertyUsersPage />} />
           <Route path="users/create" element={<CreateUserPage />} />

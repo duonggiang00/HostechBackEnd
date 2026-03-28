@@ -72,6 +72,13 @@ export default function MeterDetailPage() {
         // Alternative format { readings: [...] }
         readingsList = response.readings;
         total = response.readings.length;
+      } else if (typeof response === 'object' && response !== null) {
+        // Could be paginated format without explicit 'data' wrapper
+        const dataField = Object.keys(response).find(key => Array.isArray(response[key as keyof typeof response]));
+        if (dataField) {
+          readingsList = response[dataField as keyof typeof response] as MeterReading[];
+          total = readingsList.length;
+        }
       }
       
       console.log('✅ Processed readings:', readingsList.length, 'Total:', total);
@@ -300,6 +307,26 @@ export default function MeterDetailPage() {
       if (readingValue < 0) {
         setFormError('Chỉ số không được âm');
         return;
+      }
+
+      // Check monotonicity against previous/next reading if available
+      const currentIndex = readings.findIndex(r => r.id === (editingReading as any).id);
+      if (currentIndex !== -1) {
+        // Readings are sorted by period_end desc in the list
+        if (currentIndex < readings.length - 1) {
+          const prevReading = readings[currentIndex + 1];
+          if (readingValue < prevReading.reading_value) {
+            setFormError(`Chỉ số mới (${readingValue}) không thể nhỏ hơn chỉ số cũ (${prevReading.reading_value})`);
+            return;
+          }
+        }
+        if (currentIndex > 0) {
+          const nextReading = readings[currentIndex - 1];
+          if (readingValue > nextReading.reading_value) {
+            setFormError(`Chỉ số mới (${readingValue}) không thể lớn hơn chỉ số của kỳ kế tiếp (${nextReading.reading_value})`);
+            return;
+          }
+        }
       }
 
       console.log('📝 Updating reading:', {

@@ -41,6 +41,8 @@ class MeterUpdateRequest extends FormRequest
             'is_master' => ['boolean'],
             'base_reading' => ['nullable', 'numeric', 'min:0'],
             'meta' => ['nullable', 'array'],
+            'media_ids' => ['nullable', 'array'],
+            'media_ids.*' => ['uuid', 'exists:temporary_uploads,id'],
         ];
     }
 }

@@ -152,7 +152,7 @@ class ContractService
 
     public function find(string $id): ?Contract
     {
-        return Contract::with(['room', 'property', 'members.user', 'createdBy'])->find($id);
+        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices'])->find($id);
     }
 
     public function findTrashed(string $id): ?Contract
@@ -206,9 +206,11 @@ class ContractService
             $room = $roomId ? \App\Models\Property\Room::find($roomId) : null;
 
             if ($property) {
-                $contractData['billing_cycle'] = $contractData['billing_cycle'] ?? $property->default_billing_cycle ?? 'MONTHLY';
+                $contractData['billing_cycle'] = $this->normalizeBillingCycleValue(
+                    $contractData['billing_cycle'] ?? $property->default_billing_cycle ?? 1
+                );
                 $contractData['due_day'] = $contractData['due_day'] ?? $property->default_due_day ?? 5;
-                $contractData['cutoff_day'] = $contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 30;
+                $contractData['cutoff_day'] = min(($contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 25), 25);
                 
                 // If rent_price not provided, use Room's base_price or Property default
                 if (empty($contractData['rent_price'])) {
@@ -245,23 +247,24 @@ class ContractService
 
             // Calculate next_billing_date for the first time
             $startDate = \Carbon\Carbon::parse($contractData['start_date']);
-            $monthsToAdd = match($contractData['billing_cycle'] ?? 'MONTHLY') {
-                'QUARTERLY' => 3,
-                'YEARLY' => 12,
-                default => 1
-            };
+            $monthsToAdd = $this->resolveBillingCycleMonths($contractData['billing_cycle'] ?? 1);
             $contractData['next_billing_date'] = $startDate->copy()->addMonths($monthsToAdd)->format('Y-m-d');
             // -----------------------------
 
             $contract = Contract::create($contractData);
 
             $hasPendingTenant = false;
+            $primaryCount = collect($data['members'] ?? [])->where('is_primary', true)->count();
+
+            if ($primaryCount !== 1) {
+                throw new \Exception('Hợp đồng phải có đúng 1 người thuê chính.');
+            }
 
             if (isset($data['members']) && is_array($data['members'])) {
                 foreach ($data['members'] as $memberData) {
                     // Member có user_id → Tenant cần ký → status PENDING
                     // Member không có user_id → khai báo thủ công → status APPROVED
-                    $memberStatus = ! empty($memberData['user_id']) ? 'PENDING' : 'APPROVED';
+                    $memberStatus = 'PENDING';
 
                     if ($memberStatus === 'PENDING') {
                         $hasPendingTenant = true;
@@ -273,9 +276,8 @@ class ContractService
                 }
             }
 
-            // Nếu có Tenant chờ ký → chuyển contract sang PENDING_SIGNATURE
-            $currentStatus = $contract->status ?? ContractStatus::DRAFT;
-            if ($hasPendingTenant && $currentStatus === ContractStatus::DRAFT) {
+            // Hợp đồng có cư dân đã đăng ký luôn phải đi qua ký điện tử trước.
+            if ($hasPendingTenant) {
                 $contract->update(['status' => ContractStatus::PENDING_SIGNATURE]);
             }
 
@@ -310,6 +312,20 @@ class ContractService
                     $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vô thời hạn)");
                     throw new \Exception("Phòng này đã có hợp đồng trùng lặp trong khoảng thời gian này ($overlapDate).");
                 }
+            }
+
+            if (array_key_exists('billing_cycle', $data)) {
+                $data['billing_cycle'] = $this->normalizeBillingCycleValue($data['billing_cycle']);
+            }
+
+            if (array_key_exists('cutoff_day', $data)) {
+                $data['cutoff_day'] = min((int) $data['cutoff_day'], 25);
+            }
+
+            if (array_key_exists('start_date', $data) || array_key_exists('billing_cycle', $data)) {
+                $startDate = \Carbon\Carbon::parse($data['start_date'] ?? $contract->start_date);
+                $monthsToAdd = $this->resolveBillingCycleMonths($data['billing_cycle'] ?? $contract->billing_cycle);
+                $data['next_billing_date'] = $startDate->copy()->addMonths($monthsToAdd)->format('Y-m-d');
             }
 
             $contract->update($data);
@@ -384,15 +400,19 @@ class ContractService
             $member->update([
                 'status' => 'APPROVED',
                 'joined_at' => now(),
+                'signed_at' => now(),
             ]);
 
             // 2. Tạo Initial Invoice (tiền phòng + cọc)
-            if (in_array($contract->status, ContractStatus::allowAcceptSignature())) {
-                $this->createInitialInvoice($contract, $user);
+            if (in_array($contract->status, ContractStatus::allowAcceptSignature(), true) && $this->allSignersApproved($contract)) {
+                if (! $this->hasInitialInvoice($contract)) {
+                    $this->createInitialInvoice($contract, $user);
+                }
                 
                 // 3. Contract → PENDING_PAYMENT
                 $contract->update([
                     'status' => ContractStatus::PENDING_PAYMENT,
+                    'signed_at' => now(),
                 ]);
             }
 
@@ -488,34 +508,37 @@ class ContractService
     public function addMember(Contract $contract, array $memberData, ?User $performer = null): ContractMember
     {
         // 1. Resolve User Details
-        if (! empty($memberData['user_id']) && empty($memberData['full_name'])) {
-            $user = User::find($memberData['user_id']);
-            if ($user) {
-                $memberData['full_name'] = $user->full_name;
-                $memberData['phone'] = $memberData['phone'] ?? $user->phone;
-            }
+        if (empty($memberData['user_id'])) {
+            throw new \InvalidArgumentException('Chỉ được thêm cư dân đã có tài khoản vào hợp đồng.');
         }
+
+        $user = User::find($memberData['user_id']);
+        if (! $user) {
+            throw new \InvalidArgumentException('Không tìm thấy tài khoản cư dân.');
+        }
+
+        $memberData['full_name'] = $memberData['full_name'] ?? $user->full_name;
+        $memberData['phone'] = $memberData['phone'] ?? $user->phone;
+        $memberData['identity_number'] = $memberData['identity_number'] ?? $user->identity_number;
 
         // 2. Intelligent Status Mapping
         if (! isset($memberData['status'])) {
-            // If performer is Manager/Owner/Admin, approve immediately
-            if ($performer && ($performer->hasRole(['Admin', 'Owner', 'Manager', 'Staff']))) {
-                $memberData['status'] = 'APPROVED';
-            } else {
-                $memberData['status'] = 'PENDING';
-            }
+            $memberData['status'] = 'PENDING';
         }
 
         // 3. Date Handling
         $joinedAt = null;
+        $signedAt = null;
         if ($memberData['status'] === 'APPROVED') {
             $joinedAt = $memberData['joined_at'] ?? now();
+            $signedAt = $memberData['signed_at'] ?? now();
         }
 
         return ContractMember::create(array_merge($memberData, [
             'contract_id' => $contract->id,
             'org_id' => $contract->org_id,
             'joined_at' => $joinedAt,
+            'signed_at' => $signedAt,
         ]));
     }
 
@@ -574,11 +597,7 @@ class ContractService
         $periodStart = \Carbon\Carbon::parse($contract->start_date);
         
         // Next billing date is usually 1 cycle after start_date
-        $monthsToAdd = match($contract->billing_cycle) {
-            'QUARTERLY' => 3,
-            'YEARLY' => 12,
-            default => 1
-        };
+        $monthsToAdd = $this->resolveBillingCycleMonths($contract->billing_cycle);
         
         $nextBillingDate = $periodStart->copy()->addMonths($monthsToAdd);
 
@@ -588,16 +607,25 @@ class ContractService
         $baseRent = (float) $contract->base_rent;
         $depositAmount = (float) $contract->deposit_amount;
 
+        $desc = $monthsToAdd === 1 
+            ? 'Tiền phòng tháng đầu tiên' 
+            : 'Tiền phòng chu kỳ ' . $monthsToAdd . ' tháng đầu tiên';
+
         // Xây dựng danh sách items
         $items = [
             [
                 'type' => InvoiceItemType::RENT->value,
-                'description' => 'Tiền phòng tháng đầu tiên',
-                'quantity' => 1,
+                'description' => $desc,
+                'quantity' => $monthsToAdd,
                 'unit_price' => $baseRent,
-                'amount' => $baseRent,
+                'amount' => $baseRent * $monthsToAdd,
             ],
         ];
+
+        // Add rent tokens for future months covered by this initial payment
+        if ($monthsToAdd > 1) {
+            $contract->increment('rent_token_balance', $monthsToAdd - 1);
+        }
 
         // Thêm các dịch vụ cố định (fixed services)
         $roomServices = $this->serviceService->getRoomServices($contract->room_id, $contract->org_id);
@@ -858,5 +886,36 @@ class ContractService
     private function generateJoinCode(): string
     {
         return strtoupper(Str::random(8));
+    }
+
+    private function allSignersApproved(Contract $contract): bool
+    {
+        return ! $contract->members()
+            ->whereNull('left_at')
+            ->where('status', '!=', 'APPROVED')
+            ->exists();
+    }
+
+    private function hasInitialInvoice(Contract $contract): bool
+    {
+        return $contract->invoices()
+            ->where('snapshot->is_initial', true)
+            ->exists();
+    }
+
+    private function resolveBillingCycleMonths(string|int|null $billingCycle): int
+    {
+        return match ((string) $billingCycle) {
+            'MONTHLY' => 1,
+            'QUARTERLY' => 3,
+            'SEMI_ANNUALLY' => 6,
+            'YEARLY' => 12,
+            default => max(1, (int) $billingCycle),
+        };
+    }
+
+    private function normalizeBillingCycleValue(string|int|null $billingCycle): string
+    {
+        return (string) $this->resolveBillingCycleMonths($billingCycle);
     }
 }

@@ -56,7 +56,7 @@ class InvoiceService
 
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('contract', function ($q) use ($user) {
-                $q->where('status', 'ACTIVE')
+                $q->whereIn('status', [ContractStatus::ACTIVE->value, ContractStatus::PENDING_PAYMENT->value])
                     ->whereHas('members', function ($sq) use ($user) {
                         $sq->where('user_id', $user->id)
                             ->where('status', 'APPROVED');
@@ -171,7 +171,7 @@ class InvoiceService
 
         if ($user && $user->hasRole('Tenant')) {
             $query->whereHas('contract', function ($q) use ($user) {
-                $q->where('status', 'ACTIVE')
+                $q->whereIn('status', [ContractStatus::ACTIVE->value, ContractStatus::PENDING_PAYMENT->value])
                     ->whereHas('members', function ($sq) use ($user) {
                         $sq->where('user_id', $user->id)
                             ->where('status', 'APPROVED');

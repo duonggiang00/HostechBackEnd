@@ -23,7 +23,7 @@ export function RoomTemplateCreatePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['room-templates', propertyId] });
       toast.success('Đã tạo mẫu phòng thành công');
-      navigate(`/dashboard/properties/${propertyId}/rooms/templates`);
+      navigate(`/properties/${propertyId}/templates`);
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Không thể tạo mẫu phòng');
@@ -35,7 +35,7 @@ export function RoomTemplateCreatePage() {
   };
 
   const handleBack = () => {
-    navigate(`/dashboard/properties/${propertyId}/rooms/templates`);
+    navigate(`/properties/${propertyId}/templates`);
   };
 
   if (isPropertyLoading) {

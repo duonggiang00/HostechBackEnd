@@ -3,6 +3,7 @@ import type { UseQueryOptions } from '@tanstack/react-query';
 import { roomsApi } from '../api/rooms';
 import type { Room, RoomStatus, PriceHistory, RoomQueryParams, CreateRoomPayload } from '../types';
 import { isUuid } from '@/lib/utils';
+import toast from 'react-hot-toast';
 
 // Re-export types for backward compatibility if needed, or import directly from API
 export type { Room, RoomStatus, PriceHistory, CreateRoomPayload };
@@ -189,25 +190,49 @@ export const useRoomActions = () => {
   /** DELETE /api/rooms/{id} — soft delete */
   const deleteRoom = useMutation({
     mutationFn: (id: string) => roomsApi.deleteRoom(id),
-    onSuccess: () => invalidateRooms(),
+    onSuccess: () => {
+      invalidateRooms();
+      toast.success('Xóa phòng thành công');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Không thể xóa phòng');
+    }
   });
 
   /** POST /api/rooms/{id}/restore */
   const restoreRoom = useMutation({
     mutationFn: (id: string) => roomsApi.restoreRoom(id),
-    onSuccess: () => invalidateRooms(),
+    onSuccess: () => {
+      invalidateRooms();
+      toast.success('Khôi phục phòng thành công');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Không thể khôi phục phòng');
+    }
   });
 
   /** DELETE /api/rooms/{id}/force */
   const forceDeleteRoom = useMutation({
     mutationFn: (id: string) => roomsApi.forceDeleteRoom(id),
-    onSuccess: () => invalidateRooms(),
+    onSuccess: () => {
+      invalidateRooms();
+      toast.success('Đã xóa vĩnh viễn');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Lỗi khi xóa vĩnh viễn');
+    }
   });
 
   /** POST /api/rooms/batch-delete */
   const batchDeleteRooms = useMutation({
     mutationFn: (ids: string[]) => roomsApi.batchDeleteRooms(ids),
-    onSuccess: () => invalidateRooms(),
+    onSuccess: () => {
+      invalidateRooms();
+      toast.success('Đã xóa các phòng đã chọn');
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Lỗi khi xóa hàng loạt');
+    }
   });
 
   /** POST /api/rooms/batch-restore */

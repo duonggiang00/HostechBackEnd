@@ -11,9 +11,17 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Meter extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class Meter extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes, SystemLoggable;
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('meter_attachments');
+    }
 
     public $incrementing = false;
 
@@ -61,5 +69,12 @@ class Meter extends Model
     public function latestReading()
     {
         return $this->hasOne(MeterReading::class)->latestOfMany();
+    }
+
+    public function latestApprovedReading()
+    {
+        return $this->hasOne(MeterReading::class)
+            ->where('status', 'APPROVED')
+            ->latest('period_end');
     }
 }

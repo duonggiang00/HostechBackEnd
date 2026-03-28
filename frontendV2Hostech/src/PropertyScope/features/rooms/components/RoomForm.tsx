@@ -52,6 +52,7 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     setValue,
     setError,
     clearErrors,
+    reset,
     formState: { errors },
     getValues
   } = useForm<RoomFormValues>({
@@ -82,13 +83,25 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
 
   // If initialData changes or components mount, handle `code` logic if skipped in zod
   useEffect(() => {
-    if (initialData?.room_services) {
-        setSelectedServices(initialData.room_services.map(rs => rs.service?.id).filter(Boolean) as string[]);
+    if (initialData) {
+        reset({
+          name: initialData.name ?? '',
+          code: initialData.code ?? '',
+          type: (initialData.type as any) ?? 'standard',
+          capacity: initialData.capacity ?? 2,
+          area: initialData.area ?? 25,
+          base_price: initialData.base_price ?? 0,
+          description: initialData.description ?? '',
+        });
+
+        if (initialData.room_services) {
+            setSelectedServices(initialData.room_services.map(rs => rs.service?.id).filter(Boolean) as string[]);
+        }
+        if (initialData.images) {
+            setExistingMedia(initialData.images);
+        }
     }
-    if (initialData?.images) {
-        setExistingMedia(initialData.images);
-    }
-  }, [initialData]);
+  }, [initialData, reset]);
 
   // Optimized Limit Calculations
   const areaLimits = useMemo(() => {
@@ -160,13 +173,18 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
         toast.success('Tải ảnh lên thành công', { id: 'media-upload' });
       }
 
+      const allMediaIds = [
+        ...existingMedia.map(m => m.id).filter(Boolean),
+        ...mediaIds
+      ];
+
       const basePayload = {
         ...data,
         base_price: data.base_price > 0 ? data.base_price : undefined,
         property_id: propertyId,
         floor_id: floorId || undefined,
         service_ids: selectedServices,
-        media_ids: mediaIds,
+        media_ids: allMediaIds,
       };
 
       if (isEditing && initialData?.id) {

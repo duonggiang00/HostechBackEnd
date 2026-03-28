@@ -61,16 +61,33 @@ class RecurringBillingService
             $periodStart = $periodMonth->copy()->startOfMonth();
             $periodEnd = $periodMonth->copy()->endOfMonth();
 
-            // 1. Basic Rent
-            $items = [
-                [
+            $items = [];
+
+            // 1. Basic Rent via Token Logic
+            if ($contract->rent_token_balance > 0) {
+                // Consume 1 token for this month, no rent item added to invoice
+                $contract->decrement('rent_token_balance', 1);
+            } else {
+                // Balance is 0, need to charge rent based on billing cycle
+                $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
+                
+                $desc = $cycleMonths === 1 
+                    ? 'Tiền phòng tháng ' . $periodMonth->format('m/Y')
+                    : 'Tiền phòng chu kỳ ' . $cycleMonths . ' tháng';
+
+                $items[] = [
                     'type' => InvoiceItemType::RENT->value,
-                    'description' => 'Tiền phòng tháng ' . $periodMonth->format('m/Y'),
-                    'quantity' => 1,
+                    'description' => $desc,
+                    'quantity' => $cycleMonths,
                     'unit_price' => (float) $contract->base_rent,
-                    'amount' => (float) $contract->base_rent,
-                ],
-            ];
+                    'amount' => ((float) $contract->base_rent) * $cycleMonths,
+                ];
+
+                if ($cycleMonths > 1) {
+                    // Add purchased tokens minus 1 (because 1 is consumed for the current month)
+                    $contract->increment('rent_token_balance', $cycleMonths - 1);
+                }
+            }
 
             // 2. Fixed Services (WiFi, Trash, etc.)
             $roomServices = $this->serviceService->getRoomServices($contract->room_id, $contract->org_id);
@@ -254,5 +271,16 @@ class RecurringBillingService
         }
 
         return $profitData;
+    }
+
+    private function resolveBillingCycleMonths(string|int|null $billingCycle): int
+    {
+        return match ((string) $billingCycle) {
+            'MONTHLY' => 1,
+            'QUARTERLY' => 3,
+            'SEMI_ANNUALLY' => 6,
+            'YEARLY' => 12,
+            default => max(1, (int) $billingCycle),
+        };
     }
 }

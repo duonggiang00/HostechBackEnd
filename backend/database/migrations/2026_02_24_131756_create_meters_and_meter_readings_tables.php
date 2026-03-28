@@ -34,7 +34,7 @@ return new class extends Migration
             $table->date('period_start');
             $table->date('period_end');
             $table->bigInteger('reading_value');
-            $table->string('status', 20)->default('DRAFT')->comment('ENUM: DRAFT, SUBMITTED, APPROVED, LOCKED');
+            $table->string('status', 20)->default('DRAFT')->comment('ENUM: DRAFT, SUBMITTED, APPROVED, LOCKED, REJECTED');
             $table->foreignUuid('submitted_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('submitted_at')->nullable();
             $table->foreignUuid('approved_by_user_id')->nullable()->constrained('users')->nullOnDelete();

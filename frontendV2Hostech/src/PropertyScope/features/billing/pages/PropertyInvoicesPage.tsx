@@ -1,0 +1,217 @@
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { Plus, Search, Filter, FileText } from 'lucide-react';
+import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
+import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
+import { GenerateMonthlyModal } from '../components/GenerateMonthlyModal';
+import { InvoiceDetailPanel } from '../components/InvoiceDetailPanel';
+import type { InvoiceStatus } from '../types';
+import { AnimatePresence } from 'framer-motion';
+
+export function PropertyInvoicesPage() {
+  const { propertyId } = useParams<{ propertyId: string }>();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('');
+  const [page, setPage] = useState(1);
+  
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+
+  const { data, isLoading } = usePropertyInvoices(propertyId!, {
+    search: search || undefined,
+    status: statusFilter || undefined,
+    page,
+    per_page: 15,
+  });
+
+  const invoices = data?.data ?? [];
+  const meta = data?.meta;
+
+  const handleRowClick = (id: string) => setSelectedInvoiceId(id);
+
+  return (
+    <div className="flex-1 bg-slate-50 dark:bg-slate-900 w-full flex flex-col min-h-0 relative">
+      <div className="p-6 md:p-8 space-y-6">
+        
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Hóa đơn thanh toán</h1>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+              Quản lý toàn bộ hóa đơn thu phí của tòa nhà
+            </p>
+          </div>
+          
+          <button 
+            onClick={() => setIsGenerateModalOpen(true)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-500/20"
+          >
+            <Plus className="w-4 h-4" />
+            Tạo hóa đơn tháng
+          </button>
+        </div>
+
+        {/* Status bar / Insights placeholder */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-all duration-500"></div>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Tổng doanh thu kỳ này</p>
+            <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-2 relative z-10">--- ₫</h3>
+          </div>
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-all duration-500"></div>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Đã thu</p>
+            <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 relative z-10">--- ₫</h3>
+          </div>
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-rose-100 dark:group-hover:bg-rose-500/20 transition-all duration-500"></div>
+            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Dư nợ / Chưa thanh toán</p>
+            <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400 mt-2 relative z-10">--- ₫</h3>
+          </div>
+        </div>
+
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input 
+              type="text"
+              placeholder="Tìm kiếm hóa đơn, mã phòng..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            />
+          </div>
+          <div className="relative w-full sm:w-48">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+            >
+               <option value="">Tất cả trạng thái</option>
+               <option value="DRAFT">Nháp</option>
+               <option value="ISSUED">Đã phát hành</option>
+               <option value="PAID">Đã thanh toán</option>
+               <option value="OVERDUE">Quá hạn</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+          {isLoading ? (
+             <div className="flex justify-center py-20">
+               <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+             </div>
+          ) : invoices.length === 0 ? (
+             <div className="flex flex-col items-center justify-center py-24 text-center px-4">
+              <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mb-4">
+                 <FileText className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+              </div>
+              <p className="text-xl font-black text-slate-900 dark:text-white mb-2">Chưa có hóa đơn nào</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-sm">Danh sách hóa đơn trống hoặc không tìm thấy kết quả phù hợp với bộ lọc hiện tại.</p>
+            </div>
+          ) : (
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50">
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Phòng</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Kỳ thanh toán</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Tổng cộng</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Đã trả</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Còn nợ</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                   {invoices.map((inv) => (
+                      <tr 
+                        key={inv.id} 
+                        onClick={() => handleRowClick(inv.id)}
+                        className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                      >
+                         <td className="py-4 px-6">
+                            <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              {inv.room?.code ?? inv.room?.name ?? '—'}
+                            </span>
+                         </td>
+                         <td className="py-4 px-6">
+                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                               Tháng {new Date(inv.period_start).getMonth() + 1}/{new Date(inv.period_start).getFullYear()}
+                            </span>
+                            <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">
+                               {new Date(inv.period_start).toLocaleDateString('vi-VN')} - {new Date(inv.period_end).toLocaleDateString('vi-VN')}
+                            </div>
+                         </td>
+                         <td className="py-4 px-6">
+                            <span className="text-sm font-black text-slate-900 dark:text-white">
+                               {inv.total_amount.toLocaleString()} ₫
+                            </span>
+                         </td>
+                         <td className="py-4 px-6">
+                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                               {inv.paid_amount.toLocaleString()} ₫
+                            </span>
+                         </td>
+                         <td className="py-4 px-6">
+                           <span className={`text-sm font-black ${inv.debt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                             {inv.debt.toLocaleString()} ₫
+                           </span>
+                         </td>
+                         <td className="py-4 px-6">
+                            <InvoiceStatusBadge status={inv.status} />
+                         </td>
+                      </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+          )}
+          
+          {/* Pagination */}
+          {meta && meta.last_page > 1 && (
+             <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+               <span className="text-xs font-bold text-slate-500">
+                 Trang {meta.current_page} / {meta.last_page} ({meta.total} hóa đơn)
+               </span>
+               <div className="flex gap-1">
+                 <button 
+                   disabled={page === 1}
+                   onClick={() => setPage(p => p - 1)}
+                   className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-bold disabled:opacity-50"
+                 >
+                   Trước
+                 </button>
+                 <button 
+                   disabled={page === meta.last_page}
+                   onClick={() => setPage(p => p + 1)}
+                   className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-bold disabled:opacity-50"
+                 >
+                   Sau
+                 </button>
+               </div>
+             </div>
+          )}
+        </div>
+
+      </div>
+
+      <GenerateMonthlyModal 
+        propertyId={propertyId!}
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+      />
+
+      <AnimatePresence>
+        {selectedInvoiceId && (
+          <InvoiceDetailPanel 
+            invoiceId={selectedInvoiceId} 
+            onClose={() => setSelectedInvoiceId(null)} 
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}

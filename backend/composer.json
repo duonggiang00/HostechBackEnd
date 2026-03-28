@@ -14,6 +14,7 @@
         "doctrine/dbal": "^4.4",
         "laravel/fortify": "^1.34",
         "laravel/framework": "^12.0",
+        "laravel/reverb": "*",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpword": "^1.4",

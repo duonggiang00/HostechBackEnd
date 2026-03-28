@@ -31,6 +31,7 @@ class ContractMember extends Model
         'status',
         'is_primary',
         'joined_at',
+        'signed_at',
         'left_at',
     ];
 
@@ -39,6 +40,7 @@ class ContractMember extends Model
         return [
             'is_primary' => 'boolean',
             'joined_at' => 'datetime',
+            'signed_at' => 'datetime',
             'left_at' => 'datetime',
         ];
     }

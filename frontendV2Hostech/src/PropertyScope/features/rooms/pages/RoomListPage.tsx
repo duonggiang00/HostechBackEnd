@@ -13,7 +13,9 @@ import {
   Layers,
   LayoutGrid,
   History,
-  ArrowDownUp
+  ArrowDownUp,
+  Zap,
+  X
 } from 'lucide-react';
 import { useRooms, useRoomActions, useTrashRooms } from '../hooks/useRooms';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
@@ -22,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import type { RoomStatus } from '../types';
 import toast from 'react-hot-toast';
+import QuickRoomManager from '../components/QuickRoomManager';
 
 import { useDebounce } from '@/shared/hooks/useDebounce';
 
@@ -46,6 +49,7 @@ export default function RoomListPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
 
   // Helper to parse numbers safely from URL
   const getNumberParam = (key: string) => {
@@ -285,8 +289,11 @@ export default function RoomListPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95">
-            <Layers className="w-5 h-5" />
+          <button 
+            onClick={() => setIsQuickCreateOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95"
+          >
+            <Zap className="w-5 h-5 text-amber-500" />
             Tạo nhanh
           </button>
           <ActionButton 
@@ -816,6 +823,30 @@ export default function RoomListPage() {
            </div>
         </div>
       </div>
+      {/* Quick Room Manager Modal */}
+      {isQuickCreateOpen && propertyId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsQuickCreateOpen(false)} />
+          <div className="relative bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl w-full max-w-lg p-8 space-y-6 overflow-hidden border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Thêm nhanh phòng</h3>
+                <p className="text-xs text-slate-500 font-medium">Khởi tạo nhanh danh sách phòng dự thảo cho dự án</p>
+              </div>
+              <button onClick={() => setIsQuickCreateOpen(false)} className="p-2 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+            
+            <QuickRoomManager 
+              propertyId={propertyId} 
+              floorId={appliedFilters.floorId === 'all' ? '' : appliedFilters.floorId} 
+              onSuccess={() => setIsQuickCreateOpen(false)}
+              onCancel={() => setIsQuickCreateOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

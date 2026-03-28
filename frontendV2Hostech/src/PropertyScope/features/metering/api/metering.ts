@@ -4,19 +4,66 @@ import type { Meter, MeterReading } from '../types';
 export const meteringApi = {
   // Meter CRUD Operations
   getMeters: async (propertyId: string, filters?: Record<string, any>, search?: string, page: number = 1, perPage: number = 15) => {
-    const params = {
-      ...filters,
-      search,
+    // Format filters properly for Laravel's filter[] syntax
+    const params: Record<string, any> = {
       page,
       per_page: perPage,
       include: 'room', // Load room relationship
     };
+    
+    // Add filter parameters in bracket notation
+    if (filters && Object.keys(filters).length > 0) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          params[`filter[${key}]`] = value;
+        }
+      });
+    }
+    
+    if (search) {
+      params.search = search;
+    }
+    
+    console.log(`📡 Meter API Params:`, params);
     const response = await apiClient.get(`/properties/${propertyId}/meters`, { params });
     console.log(`📡 API Response:`, response.data);
-    // Handle both paginated and direct array responses
-    const data = Array.isArray(response.data) ? response.data : (response.data.data || response.data);
+    
+    // Return full response with pagination metadata
+    if (response.data && response.data.data && Array.isArray(response.data.data)) {
+      // Paginated response format
+      const paginatedResponse = {
+        data: response.data.data,
+        pagination: {
+          total: response.data.meta?.total || 0,
+          per_page: response.data.meta?.per_page || perPage,
+          current_page: response.data.meta?.current_page || page,
+          last_page: response.data.meta?.last_page || 1,
+          from: response.data.meta?.from || 1,
+          to: response.data.meta?.to || response.data.data.length,
+        },
+        links: response.data.links || {},
+      };
+      console.log(`📡 Paginated Response:`, paginatedResponse);
+      return paginatedResponse;
+    }
+    
+    // Fallback for direct array response
+    const data = Array.isArray(response.data) ? response.data : [];
     console.log(`📡 Extracted Meters (${data?.length || 0}):`, data);
-    return data;
+    
+    // Return as paginated format for consistency
+    return {
+      data,
+      pagination: {
+        total: data.length,
+        per_page: perPage,
+        current_page: page,
+        last_page: Math.ceil(data.length / perPage),
+        from: 1,
+        to: data.length,
+      },
+      links: {},
+    };
   },
 
   getMeter: async (meterId: string) => {
@@ -47,13 +94,26 @@ export const meteringApi = {
 
   // Meter Reading Operations
   getMeterReadings: async (meterId: string, page: number = 1, perPage: number = 20, filters?: Record<string, any>) => {
-    const params = {
+    // Ensure meter_id is properly included in the filter
+    const params: Record<string, any> = {
       page,
       per_page: perPage,
       sort: '-period_end',
       include: 'submittedBy,approvedBy',
-      ...filters,
+      // Always filter by meter_id to get the correct meter's readings
+      'filter[meter_id]': meterId,
     };
+    
+    // Add custom filters if provided
+    if (filters && Object.keys(filters).length > 0) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== '' && value !== null && value !== undefined) {
+          params[`filter[${key}]`] = value;
+        }
+      });
+    }
+    
+    console.log(`📡 Meter Readings API Params:`, params);
     const response = await apiClient.get(`/meters/${meterId}/readings`, { params });
     console.log(`📡 API: GET /meters/${meterId}/readings:`, response.data);
     return response.data.data || response.data;

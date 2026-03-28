@@ -4,12 +4,20 @@ namespace App\Services\Meter;
 
 use App\Models\Meter\AdjustmentNote;
 use App\Models\Meter\MeterReading;
+use App\Models\Org\User;
 use App\Models\System\TemporaryUpload;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class AdjustmentNoteService
 {
+    protected $meterReadingService;
+
+    public function __construct(MeterReadingService $meterReadingService)
+    {
+        $this->meterReadingService = $meterReadingService;
+    }
+
     /**
      * Get adjustment notes for a specific meter reading.
      */
@@ -79,9 +87,9 @@ class AdjustmentNoteService
                 'approved_at' => now(),
             ]);
 
-            // Hook 2: Overwrite original reading value
+            // Hook 2: Overwrite original reading value using service to trigger recalculation & cascade
             $reading = $note->meterReading;
-            $reading->update([
+            $this->meterReadingService->update($reading, [
                 'reading_value' => $note->after_value,
             ]);
 

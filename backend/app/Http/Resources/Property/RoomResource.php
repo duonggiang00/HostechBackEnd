@@ -127,8 +127,8 @@ class RoomResource extends JsonResource
                     'room_id' => $meter->room_id,
                     'code' => $meter->code,
                     'type' => $meter->type,
-                    'last_reading' => (float) ($meter->latestReading?->reading_value ?? 0),
-                    'last_reading_date' => $meter->latestReading?->period_end instanceof \Carbon\Carbon ? $meter->latestReading->period_end->format('Y-m-d') : ($meter->latestReading?->period_end ? \Carbon\Carbon::parse($meter->latestReading->period_end)->format('Y-m-d') : null),
+                    'last_reading' => (float) ($meter->latestApprovedReading?->reading_value ?? 0),
+                    'last_reading_date' => $meter->latestApprovedReading?->period_end instanceof \Carbon\Carbon ? $meter->latestApprovedReading->period_end->format('Y-m-d') : ($meter->latestApprovedReading?->period_end ? \Carbon\Carbon::parse($meter->latestApprovedReading->period_end)->format('Y-m-d') : null),
                 ]);
             }),
 
