@@ -54,6 +54,7 @@ import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
 import TenantRequestsPage from '@/Tenant/features/requests/pages/TenantRequestsPage';
 import TenantMessagingPage from '@/Tenant/features/messaging/pages/TenantMessagingPage';
 import TenantBillingPage from '@/Tenant/features/billing/pages/TenantBillingPage';
+const TenantVnpayReturnPage = lazy(() => import('@/Tenant/features/billing/pages/TenantVnpayReturnPage'));
 const TenantPendingContractsPage = lazy(() => import('@/Tenant/features/contracts/pages/PendingContractsPage'));
 const TenantContractDetailPage = lazy(() => import('@/Tenant/features/contracts/pages/TenantContractDetailPage'));
 
@@ -262,6 +263,7 @@ export default function AppRoutes() {
           <Route path="rooms/:roomId" element={<RoomDetailPage />} />
           <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
           <Route path="meters" element={<MeterListPage />} />
+          <Route path="meters/quick" element={<QuickReadingPage />} />
           <Route path="meters/quick-reading" element={<QuickReadingPage />} />
           <Route path="meters/:meterId" element={<MeterDetailPage />} />
           <Route path="contracts" element={<ContractListPage />} />
@@ -302,6 +304,17 @@ export default function AppRoutes() {
           } />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
+
+        <Route
+          path="/payment/vnpay/return"
+          element={
+            <ProtectedRoute allowedRoles={['Tenant']}>
+              <TenantLayout>
+                <TenantVnpayReturnPage />
+              </TenantLayout>
+            </ProtectedRoute>
+          }
+        />
 
         {/* --- Fallback Route --- */}
         <Route path="*" element={<RootRedirect />} />

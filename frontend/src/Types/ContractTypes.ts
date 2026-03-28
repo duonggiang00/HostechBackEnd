@@ -123,6 +123,7 @@ export interface Contract {
     rent_price: number;
     deposit_amount: number;
     billing_cycle: string;
+    billing_cycle_months?: number;
     due_day: string;
     cutoff_day: string;
     join_code: string;
@@ -156,9 +157,9 @@ export const ContractFormSchema = z.object({
     end_date: z.string().min(1, "Vui lòng chọn ngày kết thúc"),
     rent_price: z.number().min(0, "Giá thuê không được âm"),
     deposit_amount: z.number().min(0, "Tiền đặt cọc không được âm"),
-    billing_cycle: z.enum(["MONTHLY", "QUARTERLY", "YEARLY"]).default("MONTHLY"),
+    billing_cycle: z.number().int().min(1).max(12),
     due_day: z.number().min(1).max(31).or(z.string().transform(Number)),
-    cutoff_day: z.number().min(1).max(31).or(z.string().transform(Number)),
+    cutoff_day: z.number().min(1).max(25).or(z.string().transform(Number)),
     status: z.nativeEnum(ContractStatus).default(ContractStatus.DRAFT),
     members: z.array(ContractMemberSchema).optional(),
     services: z.array(ContractServiceSchema).optional(),

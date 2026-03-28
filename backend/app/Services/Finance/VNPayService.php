@@ -8,6 +8,35 @@ use Illuminate\Support\Str;
 
 class VNPayService
 {
+    public function isSandboxMode(): bool
+    {
+        return strtolower((string) config('vnpay.mode', 'sandbox')) === 'sandbox';
+    }
+
+    public function isConfigured(): bool
+    {
+        $tmnCode = strtoupper(trim((string) config('vnpay.tmn_code', '')));
+        $hashSecret = trim((string) config('vnpay.hash_secret', ''));
+
+        return $tmnCode !== '' && $tmnCode !== 'DEMO' && $hashSecret !== '';
+    }
+
+    public function shouldTrustReturnAsIpn(): bool
+    {
+        return (bool) config('vnpay.trust_return_as_ipn', false);
+    }
+
+    public function assertReadyForPayment(): void
+    {
+        if ($this->isConfigured()) {
+            return;
+        }
+
+        abort(
+            422,
+            'VNPay sandbox chưa được cấu hình đầy đủ. Hãy cập nhật VNPAY_TMN_CODE và VNPAY_HASH_SECRET trong backend/.env trước khi thanh toán.'
+        );
+    }
     // ╔═══════════════════════════════════════════════════════╗
     // ║  BUILD PAYMENT URL                                    ║
     // ╠═══════════════════════════════════════════════════════╣

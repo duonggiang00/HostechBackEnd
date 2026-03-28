@@ -1,13 +1,24 @@
 import { useContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { 
   FileSignature, ChevronRight, FilePenLine, QrCode, Loader2, CheckCircle2,
-  Clock, FileWarning
+  Clock, FileWarning, XCircle
 } from 'lucide-react';
+
+const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
+  if (value === 'MONTHLY') return 1;
+  if (value === 'QUARTERLY') return 3;
+  if (value === 'SEMI_ANNUALLY') return 6;
+  if (value === 'YEARLY') return 12;
+
+  const months = Number(value);
+  return Number.isFinite(months) && months > 0 ? months : 1;
+};
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/shared/api/client';
 import { useState } from 'react';
+import { TerminateContractModal } from '@/PropertyScope/features/contracts/components/TerminateContractModal';
 
 import type { RoomContract } from '@/PropertyScope/features/contracts/types';
 
@@ -34,6 +45,7 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [signingId, setSigningId] = useState<string | null>(null);
+  const [terminateContractData, setTerminateContractData] = useState<any>(null);
 
   const handleSignContract = async (contractId: string) => {
     try {
@@ -94,19 +106,19 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                         {contract.tenant?.name || contract.members?.find((m: any) => m.is_primary)?.full_name || contract.members?.[0]?.full_name || 'Khách thuê mới'}
                       </p>
                       <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        Chu kỳ {contract.billing_cycle} • {new Date(contract.start_date).toLocaleDateString('vi-VN')}
+                        Chu kỳ {normalizeBillingCycleMonths(contract.billing_cycle)} tháng • {new Date(contract.start_date).toLocaleDateString('vi-VN')}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shrink-0 ${
-                        contract.status === 'active' ? 'bg-emerald-600 dark:bg-emerald-500/20 text-white dark:text-emerald-400 shadow-sm shadow-emerald-200 dark:shadow-none' :
-                        contract.status === 'draft' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' :
+                        contract.status === 'ACTIVE' ? 'bg-emerald-600 dark:bg-emerald-500/20 text-white dark:text-emerald-400 shadow-sm shadow-emerald-200 dark:shadow-none' :
+                        (contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' :
                         'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
                     }`}>
-                        {contract.status === 'active' && <CheckCircle2 className="w-3 h-3" />}
-                        {contract.status === 'draft' && <Clock className="w-3 h-3" />}
-                        {contract.status === 'active' ? 'Đang hiệu lực' : contract.status === 'draft' ? 'Bản nháp' : contract.status}
+                        {contract.status === 'ACTIVE' && <CheckCircle2 className="w-3 h-3" />}
+                        {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && <Clock className="w-3 h-3" />}
+                        {contract.status === 'ACTIVE' ? 'Đang hiệu lực' : contract.status === 'DRAFT' ? 'Bản nháp' : contract.status === 'PENDING_SIGNATURE' ? 'Chờ chữ ký' : contract.status}
                     </div>
                     <div className={`p-1 rounded-lg transition-transform duration-300 ${isExpanded ? 'rotate-90 bg-slate-100 dark:bg-slate-700/50 text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-600'}`}>
                       <ChevronRight className="w-4 h-4" />
@@ -165,7 +177,7 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                            </div>
                         </div>
 
-                        {contract.status === 'draft' && (
+                        {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && (
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -180,6 +192,22 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
                               <FileSignature className="w-5 h-5 group-hover:scale-110 transition-transform" />
                             )}
                             {signingId === contract.id ? 'Đang kích hoạt...' : 'Kích hoạt hợp đồng pháp lý'}
+                          </button>
+                        )}
+                        {contract.status === 'ACTIVE' && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTerminateContractData({
+                                id: contract.id,
+                                rent_price: contract.monthly_rent || contract.rent_price,
+                                deposit_amount: contract.deposit_amount
+                              });
+                            }}
+                            className="w-full flex items-center justify-center gap-3 py-4 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-600 dark:hover:bg-rose-500 text-rose-600 dark:text-rose-400 hover:text-white dark:hover:text-white rounded-2xl text-sm font-black transition-all group"
+                          >
+                            <XCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            Thanh lý / Chấm dứt hợp đồng
                           </button>
                         )}
                       </div>
@@ -219,6 +247,16 @@ export default function LeaseManager({ roomId, data, isLoading: propIsLoading, o
           <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-500 group-hover:translate-x-1 transition-all" />
         </button>
       </div>
+
+      <AnimatePresence>
+        {terminateContractData && (
+          <TerminateContractModal
+            isOpen={!!terminateContractData}
+            onClose={() => setTerminateContractData(null)}
+            contract={terminateContractData}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

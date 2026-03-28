@@ -59,8 +59,10 @@ export const ContractFilterBar: React.FC<ContractFilterBarProps> = ({
               <SelectItem value="all" className="rounded-xl font-bold py-3 dark:text-slate-200 dark:hover:bg-slate-700">Tất cả trạng thái</SelectItem>
               <SelectItem value="DRAFT" className="rounded-xl font-bold py-3 dark:text-slate-200 dark:hover:bg-slate-700">Bản nháp</SelectItem>
               <SelectItem value="PENDING_SIGNATURE" className="rounded-xl font-bold py-3 text-amber-600 dark:text-amber-400 dark:hover:bg-slate-700">Chờ ký</SelectItem>
+              <SelectItem value="PENDING_PAYMENT" className="rounded-xl font-bold py-3 text-blue-600 dark:text-blue-400 dark:hover:bg-slate-700">Chờ thanh toán</SelectItem>
               <SelectItem value="ACTIVE" className="rounded-xl font-bold py-3 text-emerald-600 dark:text-emerald-400 dark:hover:bg-slate-700">Đang hiệu lực</SelectItem>
               <SelectItem value="ENDED" className="rounded-xl font-bold py-3 text-rose-600 dark:text-rose-400 dark:hover:bg-slate-700">Đã kết thúc</SelectItem>
+              <SelectItem value="TERMINATED" className="rounded-xl font-bold py-3 text-rose-600 dark:text-rose-400 dark:hover:bg-slate-700">Đã thanh lý</SelectItem>
               <SelectItem value="CANCELLED" className="rounded-xl font-bold py-3 text-slate-500 dark:text-slate-400 dark:hover:bg-slate-700">Đã huỷ</SelectItem>
             </SelectContent>
           </Select>

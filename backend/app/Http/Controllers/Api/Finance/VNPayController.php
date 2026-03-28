@@ -72,6 +72,8 @@ class VNPayController extends Controller
             abort(422, 'Phương thức phải là QR hoặc WALLET để thanh toán qua VNPay.');
         }
 
+        $this->vnpayService->assertReadyForPayment();
+
         // Tạo Payment với status PENDING (chưa thu được tiền)
         $payment = $this->paymentService->createPending($data, $user);
 
@@ -259,14 +261,54 @@ class VNPayController extends Controller
      */
     public function verifyReturn(Request $request): JsonResponse
     {
-        $txnRef = $request->query('txn_ref');
+        $txnRef = $request->query('txn_ref') ?: $request->query('vnp_TxnRef');
         if (! $txnRef) {
             return response()->json(['message' => 'txn_ref is required'], 422);
         }
 
-        $payment = Payment::with(['property', 'allocations.invoice'])->find($txnRef);
+        $payment = Payment::withTrashed()->with(['property', 'allocations.invoice'])->find($txnRef);
         if (! $payment) {
             return response()->json(['message' => 'Giao dịch không tồn tại.'], 404);
+        }
+
+        $params = $request->query();
+        $receivedHash = $request->query('vnp_SecureHash', '');
+        $hasSignedCallback = isset($params['vnp_TxnRef'], $params['vnp_SecureHash']);
+
+        if ($hasSignedCallback && $payment->provider_ref === null && $this->vnpayService->shouldTrustReturnAsIpn()) {
+            if (! $this->vnpayService->verifySignature($params, $receivedHash)) {
+                return response()->json(['message' => 'Chữ ký không hợp lệ.'], 400);
+            }
+
+            $data = $this->vnpayService->parseCallbackData($params);
+            if ($data['txn_ref'] !== $payment->id) {
+                return response()->json(['message' => 'Mã giao dịch VNPay không khớp với payment hiện tại.'], 422);
+            }
+
+            if (abs($data['amount'] - (float) $payment->amount) > 1) {
+                return response()->json(['message' => 'Số tiền VNPay trả về không khớp với payment.'], 422);
+            }
+
+            $payment->update([
+                'provider_ref'    => $data['transaction_no'],
+                'provider_status' => $data['success'] ? 'SUCCESS' : 'FAILED',
+                'webhook_payload' => $data['raw'],
+                'meta'            => array_merge($payment->meta ?? [], [
+                    'vnpay_bank_code'          => $data['bank_code'],
+                    'vnpay_transaction_status' => $data['transaction_status'],
+                    'vnpay_pay_date'           => $data['pay_date'],
+                ]),
+            ]);
+
+            if ($data['success']) {
+                $user = $payment->receivedBy ?? $payment->payer;
+                $this->paymentService->approvePending($payment, $user);
+            } elseif (! $payment->trashed()) {
+                $payment->update(['status' => 'REJECTED']);
+                $payment->delete();
+            }
+
+            $payment = Payment::withTrashed()->with(['property', 'allocations.invoice'])->find($payment->id);
         }
 
         return response()->json([

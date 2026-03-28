@@ -80,7 +80,7 @@ export const contractsApi = {
   },
 
   getMyPendingContracts: async () => {
-    const response = await apiClient.get('/contracts/my-pending-contracts');
+    const response = await apiClient.get('/contracts/my-pending');
     return (response.data?.data || response.data) as Contract[];
   },
 
@@ -100,7 +100,7 @@ export const contractsApi = {
   },
 
   requestRoomTransfer: async (id: string, data: any) => {
-    const response = await apiClient.post(`/contracts/${id}/room-transfer`, data);
+    const response = await apiClient.post(`/contracts/${id}/room-transfer-request`, data);
     return response.data;
   },
 

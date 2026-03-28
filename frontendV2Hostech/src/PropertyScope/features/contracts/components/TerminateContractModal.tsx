@@ -4,6 +4,7 @@ import { X, AlertCircle } from 'lucide-react';
 import { useContractActions } from '../hooks/useContracts';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface TerminateContractModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface TerminateContractModalProps {
 
 export function TerminateContractModal({ isOpen, onClose, contract }: TerminateContractModalProps) {
   const { terminateContract } = useContractActions();
+  const queryClient = useQueryClient();
   const [terminationDate, setTerminationDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [reason, setReason] = useState('');
   const [forfeitDeposit, setForfeitDeposit] = useState(false);
@@ -33,6 +35,7 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
       {
         onSuccess: () => {
           toast.success('Đã thanh lý hợp đồng thành công');
+          queryClient.invalidateQueries({ queryKey: ['rooms'] });
           onClose();
         },
         onError: (error: any) => {

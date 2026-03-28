@@ -1,219 +1,466 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useContract, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
-import { Loader2, ArrowLeft, FileText, Building2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ArrowLeft,
+  Building2,
+  Calendar,
+  CheckCircle,
+  CircleDollarSign,
+  Clock3,
+  CreditCard,
+  FileText,
+  Loader2,
+  Users,
+  XCircle,
+} from 'lucide-react';
+import { useContract, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+
+const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
+  if (value === 'MONTHLY') return 1;
+  if (value === 'QUARTERLY') return 3;
+  if (value === 'SEMI_ANNUALLY') return 6;
+  if (value === 'YEARLY') return 12;
+
+  const months = Number(value);
+  return Number.isFinite(months) && months > 0 ? months : 1;
+};
+
+const formatCurrencyVND = (value: number) =>
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
+
+const formatDate = (value?: string | null) => {
+  if (!value) return '---';
+  return new Date(value).toLocaleDateString('vi-VN');
+};
 
 export default function TenantContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { data: contract, isLoading } = useContract(id);
   const { acceptSignature, rejectSignature } = useContractActions();
+  const { createVnpayPayment } = useInvoice();
   const [showModal, setShowModal] = useState<'accept' | 'reject' | null>(null);
 
   if (isLoading) {
     return (
       <div className="flex h-[60vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
       </div>
     );
   }
 
   if (!contract) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh]">
-        <h3 className="text-lg font-bold">Không tìm thấy hợp đồng</h3>
-        <button onClick={() => navigate(-1)} className="mt-4 text-indigo-500">Quay lại</button>
+      <div className="flex h-[60vh] flex-col items-center justify-center">
+        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Không tìm thấy hợp đồng</h3>
+        <button onClick={() => navigate(-1)} className="mt-4 text-sm font-bold text-indigo-600 dark:text-indigo-300">
+          Quay lại
+        </button>
       </div>
     );
   }
 
-  const formatCurrencyVND = (value: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  const billingCycleMonths = normalizeBillingCycleMonths(contract.billing_cycle);
+  const cycleRentAmount = (contract.rent_price || 0) * billingCycleMonths;
+  const initialTotal = cycleRentAmount + (contract.deposit_amount || 0);
+  const initialInvoiceOutstanding = contract.initial_invoice
+    ? Math.max(0, (contract.initial_invoice.total_amount || 0) - (contract.initial_invoice.paid_amount || 0))
+    : 0;
 
   const handleAction = (action: 'accept' | 'reject') => {
     const mutation = action === 'accept' ? acceptSignature : rejectSignature;
+
     mutation.mutate(contract.id, {
       onSuccess: () => {
-        toast.success(action === 'accept' ? 'Đã ký hợp đồng thành công!' : 'Đã từ chối hợp đồng');
         setShowModal(null);
+
+        if (action === 'accept') {
+          toast.success('Đã ký hợp đồng thành công. Hệ thống đang cập nhật trạng thái thanh toán.');
+          return;
+        }
+
+        toast.success('Đã từ chối hợp đồng.');
         navigate('/app/contracts/pending', { replace: true });
       },
-      onError: (err: any) => {
-        toast.error(err?.response?.data?.message || `Có lỗi khi thực hiện thao tác.`);
-      }
+      onError: (error: any) => {
+        toast.error(error?.response?.data?.message || 'Có lỗi khi thực hiện thao tác.');
+      },
     });
   };
 
+  const handlePayInitialInvoice = () => {
+    if (!contract.initial_invoice) {
+      toast.error('Chưa có hóa đơn đầu kỳ để thanh toán.');
+      return;
+    }
+
+    if (!user?.id) {
+      toast.error('Không xác định được tài khoản thanh toán hiện tại.');
+      return;
+    }
+
+    if (!contract.org_id || !contract.property?.id) {
+      toast.error('Thiếu thông tin cơ sở hoặc tổ chức cho thanh toán.');
+      return;
+    }
+
+    if (initialInvoiceOutstanding <= 0) {
+      toast.error('Hóa đơn đầu kỳ không còn số dư cần thanh toán.');
+      return;
+    }
+
+    createVnpayPayment.mutate(
+      {
+        org_id: contract.org_id,
+        property_id: contract.property.id,
+        payer_user_id: user.id,
+        method: 'QR',
+        amount: initialInvoiceOutstanding,
+        note: `Thanh toán ${contract.initial_invoice.id}`,
+        allocations: [
+          {
+            invoice_id: contract.initial_invoice.id,
+            amount: initialInvoiceOutstanding,
+          },
+        ],
+      },
+      {
+        onSuccess: (response) => {
+          window.location.assign(response.payment_url);
+        },
+      },
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <header className="flex items-center gap-4 mb-8">
-        <button 
-          onClick={() => navigate(-1)}
-          className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm text-slate-500 hover:text-indigo-600 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Chi tiết Hợp Đồng</h1>
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-widest flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            ĐANG CHỜ KÝ
-          </p>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[2rem] p-6 sm:p-8 shadow-sm space-y-8 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none -translate-y-10 translate-x-10" />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 shrink-0">
-                <Building2 className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cơ sở / Phòng</p>
-                <p className="text-base font-black text-slate-900 dark:text-white leading-tight">
-                  {contract.property?.name}
-                </p>
-                <p className="text-sm font-bold text-slate-500 mt-1">{contract.room?.name}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
-                <Clock className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Thời hạn thuê</p>
-                <p className="text-sm font-black text-slate-700 dark:text-slate-300">
-                  {contract.start_date ? new Date(contract.start_date).toLocaleDateString('vi-VN') : '---'} 
-                  {' - '}
-                  {contract.end_date ? new Date(contract.end_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6 p-6 bg-slate-50/50 dark:bg-slate-900/50 rounded-3xl border border-slate-100 dark:border-slate-700/50">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Giá thuê định kỳ</p>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">
-                  {formatCurrencyVND(contract.rent_price || 0).replace('₫', '')}
-                </span>
-                <span className="text-sm font-black text-slate-500 uppercase">VNĐ / {contract.billing_cycle === 'MONTHLY' ? 'Tháng' : 'Quý'}</span>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700/50">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tiền cọc đảm bảo</p>
-              <span className="text-lg font-black text-slate-700 dark:text-slate-300">
-                {formatCurrencyVND(contract.deposit_amount || 0)}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* File Section */}
-        {contract.meta?.file_path && (
-          <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Tài liệu đính kèm</p>
-            <a 
-              href={contract.meta.file_path} 
-              target="_blank" 
-              rel="noreferrer"
-              className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl hover:border-indigo-400 transition-colors group"
+    <div className="space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
+        <div className="relative overflow-hidden rounded-[32px] bg-slate-950 p-7 text-white shadow-2xl shadow-slate-900/10 lg:p-8">
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.35),_transparent_65%)]" />
+          <div className="relative">
+            <button
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-white/20"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                    Ban_Hop_Dong_Thue.pdf
-                  </p>
-                  <p className="text-xs font-medium text-slate-500">Click để xem chi tiết</p>
-                </div>
-              </div>
-            </a>
+              <ArrowLeft className="h-4 w-4" />
+              Quay lại
+            </button>
+
+            <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-slate-400">Chi tiết hợp đồng</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight lg:text-4xl">
+              Kiểm tra kỹ nội dung trước khi ký điện tử.
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+              Sau khi hợp đồng được ký đầy đủ, hóa đơn đầu kỳ sẽ xuất hiện ngay tại đây để bạn tiếp tục thanh toán qua VNPay.
+            </p>
+
+            <div className="mt-7 inline-flex rounded-2xl bg-amber-500/15 px-4 py-2 text-sm font-black text-amber-300">
+              Trạng thái hiện tại: {contract.status === 'PENDING_PAYMENT' ? 'chờ thanh toán' : 'chờ ký điện tử'}
+            </div>
           </div>
-        )}
-
-      </div>
-
-      {/* Action Buttons */}
-      {contract.status === 'PENDING_SIGNATURE' && (
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-100 dark:border-slate-800 z-50 flex gap-4 sm:relative sm:bg-transparent sm:border-none sm:p-0">
-          <button 
-            onClick={() => setShowModal('reject')}
-            className="flex-1 py-4 px-6 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-[1.25rem] text-sm font-black uppercase tracking-widest hover:bg-slate-50 hover:border-rose-200 hover:text-rose-500 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-          >
-            Từ chối
-          </button>
-          <button 
-            onClick={() => setShowModal('accept')}
-            className="flex-[2] py-4 px-6 bg-indigo-600 text-white rounded-[1.25rem] text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none active:scale-[0.98] flex items-center justify-center gap-2"
-          >
-            <CheckCircle className="w-5 h-5" />
-            Ký Xác Nhận
-          </button>
         </div>
-      )}
 
-      {/* Confirmation Modal */}
+        <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Hành động chính</p>
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+            {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' : 'Chờ thanh toán'}
+          </h2>
+
+          <div className="mt-6 space-y-3">
+            {contract.status === 'PENDING_SIGNATURE' ? (
+              <>
+                <button
+                  onClick={() => setShowModal('accept')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                >
+                  <CheckCircle className="h-5 w-5" />
+                  Ký xác nhận hợp đồng
+                </button>
+                <button
+                  onClick={() => setShowModal('reject')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-rose-500 dark:hover:text-rose-300"
+                >
+                  <XCircle className="h-5 w-5" />
+                  Từ chối hợp đồng
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handlePayInitialInvoice}
+                  disabled={createVnpayPayment.isPending || initialInvoiceOutstanding <= 0}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                >
+                  {createVnpayPayment.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
+                  {createVnpayPayment.isPending ? 'Đang chuyển sang VNPay' : 'Thanh toán VNPay'}
+                </button>
+                <button
+                  onClick={() => navigate('/app/billing')}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+                >
+                  Xem tất cả hóa đơn
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="mt-6 rounded-[24px] bg-amber-50 p-5 dark:bg-amber-500/10">
+            <p className="text-sm font-black text-amber-800 dark:text-amber-200">Lưu ý nghiệp vụ</p>
+            <p className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
+              Hóa đơn đầu kỳ chỉ xuất hiện khi tất cả thành viên trong hợp đồng đã hoàn tất ký điện tử.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
+        <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Phòng thuê</p>
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                {contract.property?.name || 'Cơ sở'} - {contract.room?.name || 'Phòng'}
+              </h2>
+            </div>
+          </div>
+
+          <div className="mt-7 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Thời hạn thuê</p>
+              <p className="mt-3 flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
+                <Clock3 className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                {formatDate(contract.start_date)} - {contract.end_date ? formatDate(contract.end_date) : 'Vô thời hạn'}
+              </p>
+            </div>
+
+            <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Chu kỳ thanh toán</p>
+              <p className="mt-3 flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
+                <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                {billingCycleMonths} tháng
+              </p>
+            </div>
+          </div>
+
+          {contract.meta?.file_path && (
+            <div className="mt-7 rounded-[26px] border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70">
+              <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">File scan hợp đồng</p>
+              <a
+                href={contract.meta.file_path}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 transition-colors hover:border-indigo-300 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-indigo-500"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">
+                      {contract.meta.file_name || 'Ban_hop_dong_thue.pdf'}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">Mở để xem nội dung scan chi tiết</p>
+                  </div>
+                </div>
+                <span className="text-sm font-black text-indigo-600 dark:text-indigo-300">Xem file</span>
+              </a>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CircleDollarSign className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Giá thuê và thanh toán</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Chi tiết tiền ban đầu</h2>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Tiền thuê hàng tháng</p>
+                <p className="mt-2 text-xl font-black text-indigo-600 dark:text-indigo-300">
+                  {formatCurrencyVND(contract.rent_price || 0)}
+                </p>
+              </div>
+
+              <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Tiền thuê theo chu kỳ</p>
+                <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                  {formatCurrencyVND(contract.rent_price || 0)} x {billingCycleMonths} tháng = {formatCurrencyVND(cycleRentAmount)}
+                </p>
+              </div>
+
+              <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Tiền cọc</p>
+                <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                  {formatCurrencyVND(contract.deposit_amount || 0)}
+                </p>
+              </div>
+
+              <div className="rounded-[24px] bg-slate-950 p-5 text-white dark:bg-white dark:text-slate-950">
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-300 dark:text-slate-500">Tổng tiền ban đầu</p>
+                <p className="mt-2 text-xl font-black">{formatCurrencyVND(initialTotal)}</p>
+                <p className="mt-2 text-sm text-slate-300 dark:text-slate-600">
+                  Bao gồm tiền thuê phòng hàng tháng x số tháng + tiền cọc.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Thành viên hợp đồng</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Trạng thái ký điện tử</h2>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              {(contract.members || []).map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between gap-3 rounded-[24px] bg-slate-50 px-4 py-4 dark:bg-slate-800"
+                >
+                  <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white">
+                      {member.full_name}
+                      {member.is_primary ? ' (Người thuê chính)' : ''}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {member.signed_at ? `Đã ký lúc ${formatDate(member.signed_at)}` : 'Chưa ký điện tử'}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex rounded-xl px-3 py-1.5 text-xs font-black ${
+                      member.signed_at
+                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                    }`}
+                  >
+                    {member.signed_at ? 'Đã ký' : 'Chờ ký'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Thanh toán đầu kỳ</p>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Trạng thái hóa đơn</h2>
+
+            {contract.initial_invoice ? (
+              <div className="mt-5 rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+                <p className="text-sm font-black text-slate-900 dark:text-white">
+                  Số tiền cần thanh toán: {formatCurrencyVND(initialInvoiceOutstanding)}
+                </p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Hạn thanh toán: {formatDate(contract.initial_invoice.due_date)}
+                </p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                  Trạng thái hóa đơn: {contract.initial_invoice.status}
+                </p>
+                {contract.status === 'PENDING_PAYMENT' && initialInvoiceOutstanding > 0 && (
+                  <button
+                    onClick={handlePayInitialInvoice}
+                    disabled={createVnpayPayment.isPending}
+                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                  >
+                    {createVnpayPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    {createVnpayPayment.isPending ? 'Đang chuyển sang VNPay' : 'Thanh toán VNPay'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800">
+                <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
+                  Hóa đơn đầu kỳ sẽ được tạo sau khi tất cả thành viên trong hợp đồng hoàn tất ký điện tử.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
-              exit={{ opacity: 0 }} 
-              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm"
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm"
               onClick={() => setShowModal(null)}
             />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.95, y: 20 }} 
-              className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-2xl w-full max-w-sm relative z-10 text-center"
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              className="relative z-10 w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
             >
               {showModal === 'accept' ? (
                 <>
-                  <div className="w-20 h-20 bg-emerald-50 dark:bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500 mb-6">
-                    <CheckCircle className="w-10 h-10" />
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    <CheckCircle className="h-10 w-10" />
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Xác nhận ký tên</h3>
-                  <p className="text-sm font-bold text-slate-500 mb-8">Bằng việc xác nhận, bạn đồng ý với các điều khoản trong hợp đồng tài liệu đính kèm.</p>
+                  <h3 className="mt-6 text-center text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                    Xác nhận ký điện tử
+                  </h3>
+                  <p className="mt-3 text-center text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Bằng việc xác nhận, bạn đồng ý với các điều khoản trong hợp đồng và file scan đính kèm.
+                  </p>
                 </>
               ) : (
                 <>
-                  <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center mx-auto text-rose-500 mb-6">
-                    <XCircle className="w-10 h-10" />
+                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
+                    <XCircle className="h-10 w-10" />
                   </div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Từ chối hợp đồng</h3>
-                  <p className="text-sm font-bold text-slate-500 mb-8">Hành động này sẽ hủy yêu cầu ký tên hiện tại.</p>
+                  <h3 className="mt-6 text-center text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                    Từ chối hợp đồng
+                  </h3>
+                  <p className="mt-3 text-center text-sm leading-6 text-slate-600 dark:text-slate-300">
+                    Hành động này sẽ hủy yêu cầu ký hiện tại và cần ban quản lý xử lý lại hợp đồng.
+                  </p>
                 </>
               )}
-              
-              <div className="flex flex-col gap-3">
-                <button 
+
+              <div className="mt-8 space-y-3">
+                <button
                   disabled={acceptSignature.isPending || rejectSignature.isPending}
                   onClick={() => handleAction(showModal)}
-                  className={`w-full py-4 text-white text-sm font-black uppercase tracking-widest rounded-2xl transition-all ${showModal === 'accept' ? 'bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 dark:shadow-none' : 'bg-rose-500 hover:bg-rose-600 shadow-lg shadow-rose-100 dark:shadow-none'}`}
+                  className={`inline-flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black text-white transition-colors ${
+                    showModal === 'accept'
+                      ? 'bg-slate-950 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200'
+                      : 'bg-rose-600 hover:bg-rose-700'
+                  }`}
                 >
-                  {(acceptSignature.isPending || rejectSignature.isPending) ? (
-                    <Loader2 className="w-5 h-5 mx-auto animate-spin" />
-                  ) : 'Xác nhận'}
+                  {acceptSignature.isPending || rejectSignature.isPending ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    'Xác nhận'
+                  )}
                 </button>
-                <button 
+                <button
                   onClick={() => setShowModal(null)}
-                  className="w-full py-4 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-sm font-black uppercase tracking-widest rounded-2xl transition-all"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  Hủy bỏ
+                  Đóng
                 </button>
               </div>
             </motion.div>
