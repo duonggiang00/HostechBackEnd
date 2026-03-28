@@ -13,11 +13,12 @@ import {
 import type { ContractFormValues } from "../../../Types/ContractTypes";
 import Api from "../../../Api/Api"; // Used to fetch properties/rooms if not using hooks directly
 
-const billingCycleOptions = [
-  { label: "Hàng tháng", value: "MONTHLY" },
-  { label: "Hàng quý", value: "QUARTERLY" },
-  { label: "Hàng năm", value: "YEARLY" },
-];
+const billingCycleOptions = Array.from({ length: 12 }, (_, index) => {
+  const months = index + 1;
+  return { label: `${months} tháng`, value: months };
+});
+
+const formatCurrency = (value?: number) => `${(value || 0).toLocaleString()} VNĐ`;
 
 const CreateContract = () => {
   const [form] = Form.useForm();
@@ -28,7 +29,7 @@ const CreateContract = () => {
   // Draft form data to keep state between steps
   const [formData, setFormData] = useState<Partial<ContractFormValues>>({
     status: ContractStatus.DRAFT,
-    billing_cycle: "MONTHLY",
+    billing_cycle: 1,
   });
 
   // Mock fetching for demonstration. Recommend replacing with real hooks.
@@ -99,8 +100,9 @@ const CreateContract = () => {
           ...finalData,
           rent_price: Number(finalData.rent_price),
           deposit_amount: Number(finalData.deposit_amount),
+          billing_cycle: Number(finalData.billing_cycle) || 1,
           due_day: parseInt(finalData.due_day as any) || 5,
-          cutoff_day: parseInt(finalData.cutoff_day as any) || 28,
+          cutoff_day: parseInt(finalData.cutoff_day as any) || 25,
           members: [{
               full_name: finalData.tenant_name,
               phone: finalData.tenant_phone,
@@ -121,6 +123,12 @@ const CreateContract = () => {
       
       mutation.mutate(result.data);
   };
+
+  const billingCycleMonths = Number(form.getFieldValue("billing_cycle")) || 1;
+  const monthlyRent = Number(form.getFieldValue("rent_price")) || 0;
+  const depositAmount = Number(form.getFieldValue("deposit_amount")) || 0;
+  const recurringRentTotal = monthlyRent * billingCycleMonths;
+  const agreementGrandTotal = recurringRentTotal + depositAmount;
 
   const steps = [
     {
@@ -206,7 +214,7 @@ const CreateContract = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Form.Item
                 name="rent_price"
-                label="Giá thuê (VNĐ)"
+                label="Giá thuê 1 tháng (VNĐ)"
                 rules={[{ required: true, message: "Bắt buộc" }]}
               >
                 <InputNumber className="w-full" min={0}
@@ -246,7 +254,7 @@ const CreateContract = () => {
                 label="Ngày chốt điện nước"
                 rules={[{ required: true, message: "Bắt buộc" }]}
               >
-                <InputNumber min={1} max={31} className="w-full" placeholder="VD: 28" />
+                <InputNumber min={1} max={25} className="w-full" placeholder="VD: 25" />
               </Form.Item>
             </div>
           </div>
@@ -263,8 +271,11 @@ const CreateContract = () => {
                     <div className="font-medium text-slate-700">Tóm tắt:</div>
                     <ul className="list-disc pl-5 mt-2 space-y-1 text-sm text-slate-600">
                         <li><b>Người thuê:</b> {form.getFieldValue('tenant_name')} ({form.getFieldValue('tenant_phone')})</li>
-                        <li><b>Giá thuê:</b> {form.getFieldValue('rent_price')?.toLocaleString()} VNĐ</li>
-                        <li><b>Tiền cọc:</b> {form.getFieldValue('deposit_amount')?.toLocaleString()} VNĐ</li>
+                        <li><b>Tiền thuê hàng tháng:</b> {formatCurrency(monthlyRent)}</li>
+                        <li><b>Chu kỳ thanh toán:</b> {billingCycleMonths} tháng</li>
+                        <li><b>Tiền thuê chu kỳ này:</b> {formatCurrency(monthlyRent)} x {billingCycleMonths} = {formatCurrency(recurringRentTotal)}</li>
+                        <li><b>Tiền cọc:</b> {formatCurrency(depositAmount)}</li>
+                        <li><b>Tổng tiền ban đầu:</b> {formatCurrency(recurringRentTotal)} + {formatCurrency(depositAmount)} = {formatCurrency(agreementGrandTotal)}</li>
                         <li><b>Thời hạn:</b> {form.getFieldValue('start_date')} đến {form.getFieldValue('end_date')}</li>
                     </ul>
                 </Card>

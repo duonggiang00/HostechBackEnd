@@ -18,8 +18,10 @@ beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
     
     // Set mock config for VNPay so signature is predictable
+    config(['vnpay.mode' => 'sandbox']);
     config(['vnpay.tmn_code' => 'TESTTMN']);
     config(['vnpay.hash_secret' => 'TESTSECRETKEYDOINGTEST123456789']);
+    config(['vnpay.trust_return_as_ipn' => true]);
 });
 
 test('vnpay payment flow: create url -> ipn updates status -> invoice paid', function () {
@@ -124,5 +126,115 @@ test('vnpay payment flow: create url -> ipn updates status -> invoice paid', fun
     $verifyRes->assertJson([
         'success' => true,
         'provider_status' => 'SUCCESS'
+    ]);
+});
+
+test('vnpay sandbox local flow: verify endpoint can finalize payment from return params when ipn is unavailable', function () {
+    $org = Org::factory()->create();
+    $owner = User::factory()->create(['org_id' => $org->id]);
+    $owner->assignRole('Owner');
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $invoice = Invoice::factory()->create([
+        'org_id'       => $org->id,
+        'property_id'  => $property->id,
+        'status'       => 'ISSUED',
+        'total_amount' => 3250000,
+        'paid_amount'  => 0,
+    ]);
+
+    actingAs($owner);
+
+    $createRes = postJson('/api/finance/vnpay/create', [
+        'property_id'   => $property->id,
+        'payer_user_id' => $owner->id,
+        'method'        => 'QR',
+        'amount'        => 3250000,
+        'note'          => 'Thanh toan sandbox local',
+        'allocations'   => [
+            [
+                'invoice_id' => $invoice->id,
+                'amount'     => 3250000,
+            ],
+        ],
+    ]);
+
+    $createRes->assertStatus(201);
+    $paymentId = $createRes->json('data.id');
+
+    $params = [
+        'vnp_Version'           => '2.1.0',
+        'vnp_Command'           => 'pay',
+        'vnp_TmnCode'           => 'TESTTMN',
+        'vnp_Amount'            => 3250000 * 100,
+        'vnp_BankCode'          => 'NCB',
+        'vnp_BankTranNo'        => 'RETURN12345',
+        'vnp_CardType'          => 'ATM',
+        'vnp_PayDate'           => now()->format('YmdHis'),
+        'vnp_OrderInfo'         => 'Sandbox local return',
+        'vnp_TransactionNo'     => 'RETURN9999999',
+        'vnp_ResponseCode'      => '00',
+        'vnp_TransactionStatus' => '00',
+        'vnp_TxnRef'            => $paymentId,
+    ];
+
+    ksort($params);
+    $queryString = http_build_query($params);
+    $params['vnp_SecureHash'] = strtoupper(hash_hmac('sha512', $queryString, config('vnpay.hash_secret')));
+
+    $verifyRes = getJson('/api/finance/vnpay/verify?' . http_build_query($params));
+
+    $verifyRes->assertStatus(200);
+    $verifyRes->assertJson([
+        'payment_id' => $paymentId,
+        'success' => true,
+        'provider_status' => 'SUCCESS',
+    ]);
+
+    $payment = Payment::find($paymentId);
+    expect($payment)->not->toBeNull();
+    expect($payment->status)->toBe('APPROVED');
+    expect($payment->provider_ref)->toBe('RETURN9999999');
+
+    $invoice->refresh();
+    expect((float) $invoice->paid_amount)->toBe(3250000.0);
+    expect($invoice->status)->toBe('PAID');
+});
+
+test('vnpay create rejects placeholder sandbox config before redirecting user to gateway', function () {
+    config(['vnpay.tmn_code' => 'DEMO']);
+    config(['vnpay.hash_secret' => '']);
+
+    $org = Org::factory()->create();
+    $owner = User::factory()->create(['org_id' => $org->id]);
+    $owner->assignRole('Owner');
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $invoice = Invoice::factory()->create([
+        'org_id'       => $org->id,
+        'property_id'  => $property->id,
+        'status'       => 'ISSUED',
+        'total_amount' => 1000000,
+        'paid_amount'  => 0,
+    ]);
+
+    actingAs($owner);
+
+    $response = postJson('/api/finance/vnpay/create', [
+        'property_id'   => $property->id,
+        'payer_user_id' => $owner->id,
+        'method'        => 'QR',
+        'amount'        => 1000000,
+        'note'          => 'Thiếu cấu hình sandbox',
+        'allocations'   => [
+            [
+                'invoice_id' => $invoice->id,
+                'amount'     => 1000000,
+            ],
+        ],
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonFragment([
+        'message' => 'VNPay sandbox chưa được cấu hình đầy đủ. Hãy cập nhật VNPAY_TMN_CODE và VNPAY_HASH_SECRET trong backend/.env trước khi thanh toán.',
     ]);
 });

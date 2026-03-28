@@ -65,7 +65,7 @@ export const useContract = (id?: string) => {
 };
 
 /**
- * GET /api/contracts/my-pending-contracts
+ * GET /api/contracts/my-pending
  */
 export const useMyPendingContracts = () => {
   return useQuery({
@@ -123,6 +123,7 @@ export const useContractActions = () => {
     mutationFn: (id: string) => contractsApi.acceptSignature(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, id] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       invalidateContracts();
     },
   });
@@ -136,7 +137,7 @@ export const useContractActions = () => {
     },
   });
 
-  /** POST /api/contracts/{id}/room-transfer */
+  /** POST /api/contracts/{id}/room-transfer-request */
   const requestRoomTransfer = useMutation({
     mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.requestRoomTransfer(id, data),
     onSuccess: (_, variables) => {

@@ -10,12 +10,23 @@ import { TerminateContractModal } from '../components/TerminateContractModal';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
+const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
+  if (value === 'MONTHLY') return 1;
+  if (value === 'QUARTERLY') return 3;
+  if (value === 'SEMI_ANNUALLY') return 6;
+  if (value === 'YEARLY') return 12;
+
+  const months = Number(value);
+  return Number.isFinite(months) && months > 0 ? months : 1;
+};
+
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
   DRAFT: { label: 'Bản nháp', color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400', icon: FileText },
   PENDING_SIGNATURE: { label: 'Chờ ký', color: 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400', icon: Clock },
   PENDING_PAYMENT: { label: 'Chờ thanh toán', color: 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400', icon: DollarSign },
   ACTIVE: { label: 'Hiệu lực', color: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
   ENDED: { label: 'Đã kết thúc', color: 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400', icon: Shield },
+  TERMINATED: { label: 'Đã thanh lý', color: 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400', icon: XCircle },
   CANCELLED: { label: 'Đã hủy', color: 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500', icon: AlertCircle },
 };
 
@@ -66,7 +77,7 @@ export default function ContractDetailPage() {
   }
 
   const statusInfo = STATUS_MAP[contract.status as string] || STATUS_MAP.DRAFT;
-  const isOrdinalEditable = !['ACTIVE', 'ENDED'].includes(contract.status as string);
+  const isOrdinalEditable = !['ACTIVE', 'ENDED', 'TERMINATED'].includes(contract.status as string);
 
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden transition-colors">
@@ -201,12 +212,12 @@ export default function ContractDetailPage() {
                 />
                 <DetailItem 
                   label="Chu kỳ đóng tiền" 
-                  value={contract.billing_cycle === 'monthly' ? 'Hàng tháng' : contract.billing_cycle}
+                  value={`${contract.billing_cycle_months ?? normalizeBillingCycleMonths(contract.billing_cycle)} tháng`}
                   icon={<Clock className="w-4 h-4" />}
                 />
                 <DetailItem 
-                  label="Ngày chốt (Hàng tháng)" 
-                  value={`Ngày ${contract.due_day}`}
+                  label="Ngày chốt số" 
+                  value={`Ngày ${contract.cutoff_day}`}
                   icon={<CheckCircle2 className="w-4 h-4" />}
                 />
               </div>

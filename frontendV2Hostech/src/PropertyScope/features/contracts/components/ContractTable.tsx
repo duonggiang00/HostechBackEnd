@@ -53,6 +53,13 @@ const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
     dot: 'bg-red-400 dark:bg-red-500',
     border: 'border-red-200 dark:border-red-500/20',
   },
+  TERMINATED: {
+    label: 'Đã thanh lý',
+    bg: 'bg-red-50 dark:bg-red-500/10',
+    text: 'text-red-600 dark:text-red-400',
+    dot: 'bg-red-400 dark:bg-red-500',
+    border: 'border-red-200 dark:border-red-500/20',
+  },
   CANCELLED: {
     label: 'Đã huỷ',
     bg: 'bg-gray-50 dark:bg-gray-500/10',
@@ -161,6 +168,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
             <SelectItem value="PENDING_PAYMENT" className="rounded-md text-sm font-medium py-2 dark:text-slate-200 dark:hover:bg-slate-700">Chờ thanh toán</SelectItem>
             <SelectItem value="ACTIVE" className="rounded-md text-sm font-medium py-2 dark:text-slate-200 dark:hover:bg-slate-700">Hiệu lực</SelectItem>
             <SelectItem value="ENDED" className="rounded-md text-sm font-medium py-2 dark:text-slate-200 dark:hover:bg-slate-700">Đã kết thúc</SelectItem>
+            <SelectItem value="TERMINATED" className="rounded-md text-sm font-medium py-2 dark:text-slate-200 dark:hover:bg-slate-700">Đã thanh lý</SelectItem>
             <SelectItem value="CANCELLED" className="rounded-md text-sm font-medium py-2 dark:text-slate-200 dark:hover:bg-slate-700">Đã huỷ</SelectItem>
           </SelectContent>
         </Select>
@@ -322,7 +330,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {!['ACTIVE', 'ENDED'].includes(contract.status) && (
+                          {!['ACTIVE', 'ENDED', 'TERMINATED'].includes(contract.status) && (
                             <Button
                               variant="ghost"
                               size="sm"

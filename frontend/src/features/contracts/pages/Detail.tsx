@@ -77,7 +77,7 @@ const ContractDetail = () => {
                     <Descriptions.Item label="Ngày kết thúc">{contract?.end_date}</Descriptions.Item>
                     <Descriptions.Item label="Giá thuê">{contract?.rent_price?.toLocaleString()} VNĐ</Descriptions.Item>
                     <Descriptions.Item label="Tiền đặt cọc">{contract?.deposit_amount?.toLocaleString()} VNĐ</Descriptions.Item>
-                    <Descriptions.Item label="Kỳ thanh toán">{contract?.billing_cycle}</Descriptions.Item>
+                    <Descriptions.Item label="Kỳ thanh toán">{`${contract?.billing_cycle_months ?? Number(contract?.billing_cycle || 1)} tháng`}</Descriptions.Item>
                     <Descriptions.Item label="Ngày đến hạn">{contract?.due_day}</Descriptions.Item>
                     <Descriptions.Item label="Ngày chốt">{contract?.cutoff_day}</Descriptions.Item>
                     <RoleGuard allowedRoles={["Owner", "Manager"]}>

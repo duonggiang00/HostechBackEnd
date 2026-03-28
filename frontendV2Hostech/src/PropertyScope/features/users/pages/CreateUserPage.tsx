@@ -19,6 +19,8 @@ export default function CreateUserPage() {
     full_name: '',
     email: '',
     phone: '',
+    identity_number: '',
+    date_of_birth: '',
     password: '',
     password_confirmation: '',
     role: 'TENANT',
@@ -135,6 +137,29 @@ export default function CreateUserPage() {
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-semibold outline-none"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">CCCD</label>
+                  <input
+                    type="text"
+                    name="identity_number"
+                    value={formData.identity_number}
+                    onChange={handleChange}
+                    placeholder="012345678901"
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-semibold outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">NGÀY SINH</label>
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    value={formData.date_of_birth}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-2xl focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all text-sm font-semibold outline-none"
+                  />
                 </div>
 
                 {/* Password */}

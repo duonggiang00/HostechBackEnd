@@ -2,8 +2,8 @@ import type { Property } from '@/OrgScope/features/properties/types';
 import type { Room } from '@/PropertyScope/features/rooms/types';
 import type { User } from '@/shared/features/auth/types';
 
-export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'ENDED' | 'CANCELLED';
-export type ContractMemberStatus = 'pending' | 'active' | 'left';
+export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'ENDED' | 'TERMINATED' | 'CANCELLED';
+export type ContractMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'LEFT';
 
 export interface RoomContract {
   id: string;
@@ -12,7 +12,7 @@ export interface RoomContract {
   end_date: string;
   monthly_rent: number;
   deposit_amount: number;
-  billing_cycle?: 'monthly' | 'quarterly';
+  billing_cycle?: string | number;
   tenant?: {
     id: string;
     name: string;
@@ -38,6 +38,7 @@ export interface ContractMember {
   status: ContractMemberStatus;
   is_primary: boolean;
   joined_at: string | null;
+  signed_at: string | null;
   left_at: string | null;
   created_at: string;
   updated_at: string;
@@ -55,6 +56,7 @@ export interface Contract {
   start_date: string | null;
   end_date: string | null;
   billing_cycle: string;
+  billing_cycle_months?: number;
   due_day: number | null;
   cutoff_day: number | null;
   rent_price: number | null;
@@ -73,6 +75,13 @@ export interface Contract {
   cycle_months: number | null;
   created_by_user_id: string | null;
   meta: Record<string, any> | null;
+  initial_invoice?: {
+    id: string;
+    status: string;
+    total_amount: number;
+    paid_amount: number;
+    due_date: string | null;
+  } | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -117,8 +126,8 @@ export interface ContractListResponse {
 export type ContractMemberRole = 'TENANT' | 'ROOMMATE' | 'GUARANTOR';
 
 export interface CreateContractMemberPayload {
-  user_id?: string;
-  full_name: string;
+  user_id: string;
+  full_name?: string;
   phone?: string;
   identity_number?: string;
   role?: ContractMemberRole;
@@ -133,7 +142,7 @@ export interface CreateContractPayload {
   end_date?: string;
   rent_price?: number;
   deposit_amount?: number;
-  billing_cycle?: 'MONTHLY' | 'QUARTERLY';
+  billing_cycle?: number;
   due_day?: number;
   cutoff_day?: number;
   status?: ContractStatus;
@@ -146,7 +155,7 @@ export interface ScanContractResponse {
   rent_price?: number;
   deposit_amount?: number;
   start_date?: string;
-  billing_cycle?: string;
+  billing_cycle?: string | number;
   file_path?: string;
 }
 

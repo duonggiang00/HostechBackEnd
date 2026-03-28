@@ -11,12 +11,15 @@ use App\Models\Org\User;
 use App\Services\Invoice\InvoiceService;
 use App\Services\Service\ServiceService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
 {
+    protected ?bool $contractMembersHasSignedAtColumn = null;
+
     public function __construct(
         protected InvoiceService $invoiceService,
         protected ServiceService $serviceService,
@@ -397,11 +400,16 @@ class ContractService
 
         return DB::transaction(function () use ($contract, $member, $user) {
             // 1. Approve member
-            $member->update([
+            $memberUpdateData = [
                 'status' => 'APPROVED',
                 'joined_at' => now(),
-                'signed_at' => now(),
-            ]);
+            ];
+
+            if ($this->contractMembersHasSignedAtColumn()) {
+                $memberUpdateData['signed_at'] = now();
+            }
+
+            $member->update($memberUpdateData);
 
             // 2. Tạo Initial Invoice (tiền phòng + cọc)
             if (in_array($contract->status, ContractStatus::allowAcceptSignature(), true) && $this->allSignersApproved($contract)) {
@@ -531,15 +539,22 @@ class ContractService
         $signedAt = null;
         if ($memberData['status'] === 'APPROVED') {
             $joinedAt = $memberData['joined_at'] ?? now();
-            $signedAt = $memberData['signed_at'] ?? now();
+            if ($this->contractMembersHasSignedAtColumn()) {
+                $signedAt = $memberData['signed_at'] ?? now();
+            }
         }
 
-        return ContractMember::create(array_merge($memberData, [
+        $payload = array_merge($memberData, [
             'contract_id' => $contract->id,
             'org_id' => $contract->org_id,
             'joined_at' => $joinedAt,
-            'signed_at' => $signedAt,
-        ]));
+        ]);
+
+        if ($this->contractMembersHasSignedAtColumn()) {
+            $payload['signed_at'] = $signedAt;
+        }
+
+        return ContractMember::create($payload);
     }
 
     public function updateMember(string $contractId, string $memberId, array $data): ?ContractMember
@@ -917,5 +932,14 @@ class ContractService
     private function normalizeBillingCycleValue(string|int|null $billingCycle): string
     {
         return (string) $this->resolveBillingCycleMonths($billingCycle);
+    }
+
+    private function contractMembersHasSignedAtColumn(): bool
+    {
+        if ($this->contractMembersHasSignedAtColumn === null) {
+            $this->contractMembersHasSignedAtColumn = Schema::hasColumn('contract_members', 'signed_at');
+        }
+
+        return $this->contractMembersHasSignedAtColumn;
     }
 }

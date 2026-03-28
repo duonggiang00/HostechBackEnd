@@ -190,7 +190,7 @@ export default function MeterListPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => navigate(`/properties/${propertyId}/meters/quick-reading`)}
+            onClick={() => navigate(`/properties/${propertyId}/meters/quick`)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
           >
             <Zap className="w-5 h-5 text-yellow-500" />

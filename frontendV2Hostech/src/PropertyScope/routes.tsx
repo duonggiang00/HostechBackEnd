@@ -6,6 +6,9 @@ import { roomRoutes } from './features/rooms/routes';
 import { billingRoutes } from './features/billing/routes';
 import { templatesRoutes } from './features/templates/routes';
 import { ticketRoutes } from './features/tickets/routes';
+import { contractsRoutes } from './features/contracts/routes';
+import { meteringRoutes } from './features/metering/routes';
+import { usersRoutes } from './features/users/routes';
 
 export default function PropertyScopeRoutes() {
   const allRoutes = [
@@ -16,6 +19,9 @@ export default function PropertyScopeRoutes() {
     ...billingRoutes,
     ...templatesRoutes,
     ...ticketRoutes,
+    ...contractsRoutes,
+    ...meteringRoutes,
+    ...usersRoutes,
   ];
 
   return (

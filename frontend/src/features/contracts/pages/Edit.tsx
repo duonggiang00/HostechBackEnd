@@ -27,11 +27,10 @@ import type { ContractFormValues } from "../../../Types/ContractTypes";
 
 const mockTenants = [{ id: "t1", full_name: "Nguyễn Văn A", phone: "0901234567" }];
 
-const billingCycleOptions = [
-  { label: "Hàng tháng", value: "monthly" },
-  { label: "Hàng quý", value: "quarterly" },
-  { label: "Hàng năm", value: "yearly" },
-];
+const billingCycleOptions = Array.from({ length: 12 }, (_, index) => {
+  const months = index + 1;
+  return { label: `${months} tháng`, value: months };
+});
 
 const EditContract = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +60,7 @@ const EditContract = () => {
         end_date: contract.end_date,
         rent_price: contract.rent_price,
         deposit_amount: contract.deposit_amount,
-        billing_cycle: contract.billing_cycle,
+        billing_cycle: contract.billing_cycle_months ?? (Number(contract.billing_cycle) || 1),
         due_day: contract.due_day,
         cutoff_day: contract.cutoff_day,
       });
@@ -87,6 +86,9 @@ const EditContract = () => {
       ...values,
       rent_price: Number(values.rent_price),
       deposit_amount: Number(values.deposit_amount),
+      billing_cycle: Number(values.billing_cycle),
+      due_day: Number(values.due_day),
+      cutoff_day: Number(values.cutoff_day),
     });
     if (!result.success) {
       notification.error({ message: "Dữ liệu không hợp lệ" });
@@ -237,14 +239,14 @@ const EditContract = () => {
               label="Ngày đến hạn"
               rules={[{ required: true }]}
             >
-              <Input placeholder="VD: 5" />
+              <InputNumber min={1} max={31} className="w-full" placeholder="VD: 5" />
             </Form.Item>
             <Form.Item
               name="cutoff_day"
               label="Ngày chốt"
               rules={[{ required: true }]}
             >
-              <Input placeholder="VD: 28" />
+              <InputNumber min={1} max={25} className="w-full" placeholder="VD: 25" />
             </Form.Item>
           </div>
 

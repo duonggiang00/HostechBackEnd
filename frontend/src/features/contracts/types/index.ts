@@ -128,7 +128,7 @@ export const ContractFormSchema = z.object({
     end_date: z.string().min(1, "Vui lòng chọn ngày kết thúc"),
     rent_price: z.number().min(0, "Giá thuê không được âm"),
     deposit_amount: z.number().min(0, "Tiền đặt cọc không được âm"),
-    billing_cycle: z.string().min(1, "Vui lòng chọn kỳ thanh toán"),
+    billing_cycle: z.coerce.number().int().min(1).max(12),
     due_day: z.string().min(1, "Vui lòng nhập ngày đến hạn"),
     cutoff_day: z.string().min(1, "Vui lòng nhập ngày chốt"),
     status: z.nativeEnum(ContractStatus).default(ContractStatus.DRAFT),
