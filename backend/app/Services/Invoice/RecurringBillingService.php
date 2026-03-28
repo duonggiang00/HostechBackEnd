@@ -69,12 +69,7 @@ class RecurringBillingService
                 $contract->decrement('rent_token_balance', 1);
             } else {
                 // Balance is 0, need to charge rent based on billing cycle
-                $cycleMonths = match ($contract->billing_cycle) {
-                    'QUARTERLY' => 3,
-                    'SEMI_ANNUALLY' => 6,
-                    'YEARLY' => 12,
-                    default => 1,
-                };
+                $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
                 
                 $desc = $cycleMonths === 1 
                     ? 'Tiền phòng tháng ' . $periodMonth->format('m/Y')
@@ -276,5 +271,16 @@ class RecurringBillingService
         }
 
         return $profitData;
+    }
+
+    private function resolveBillingCycleMonths(string|int|null $billingCycle): int
+    {
+        return match ((string) $billingCycle) {
+            'MONTHLY' => 1,
+            'QUARTERLY' => 3,
+            'SEMI_ANNUALLY' => 6,
+            'YEARLY' => 12,
+            default => max(1, (int) $billingCycle),
+        };
     }
 }

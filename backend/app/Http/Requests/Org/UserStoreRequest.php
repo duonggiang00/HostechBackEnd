@@ -18,6 +18,8 @@ class UserStoreRequest extends FormRequest
             'role' => ['required', 'string', 'in:ADMIN,OWNER,MANAGER,STAFF,TENANT', 'max:20'],
             'full_name' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'identity_number' => ['nullable', 'string', 'max:20'],
+            'date_of_birth' => ['nullable', 'date'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'mfa_enabled' => ['nullable', 'boolean'],

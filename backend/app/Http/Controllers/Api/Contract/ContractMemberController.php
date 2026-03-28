@@ -7,7 +7,6 @@ use App\Http\Requests\Contract\ContractMemberIndexRequest;
 use App\Http\Requests\Contract\ContractMemberStoreRequest;
 use App\Http\Requests\Contract\ContractMemberUpdateRequest;
 use App\Http\Resources\Contract\ContractMemberResource;
-use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
@@ -51,7 +50,7 @@ class ContractMemberController extends Controller
             abort(404, 'Contract Not Found');
         }
 
-        $this->authorize('addMember', [Contract::class, $contract]);
+        $this->authorize('addMember', $contract);
 
         $member = $this->service->addMember($contract, $request->validated(), $request->user());
 
