@@ -29,7 +29,16 @@ interface FormErrors {
   tenants?: string;
   room_id?: string;
   start_date?: string;
+  end_date?: string;
   rent_price?: string;
+  due_day?: string;
+  cutoff_day?: string;
+}
+
+interface ContractWarning {
+  id: string;
+  title: string;
+  description: string;
 }
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
@@ -44,10 +53,78 @@ const normalizeBillingCycleMonths = (value: string | number | null | undefined):
 
 const formatBillingCycleLabel = (value: string | number | null | undefined): string => {
   const months = normalizeBillingCycleMonths(value);
-  return `${months} tháng`;
+  return `${months} thang`;
+};
+
+const formatDateInputValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getMinimumEndDate = (
+  startDate: string,
+  billingCycle: string | number | null | undefined,
+): string | null => {
+  if (!startDate) return null;
+
+  const [year, month, day] = startDate.split('-').map(Number);
+  if (!year || !month || !day) return null;
+
+  const nextDate = new Date(year, month - 1, day);
+  nextDate.setMonth(nextDate.getMonth() + normalizeBillingCycleMonths(billingCycle));
+
+  return formatDateInputValue(nextDate);
+};
+
+const getApiValidationErrors = (error: unknown): Partial<FormErrors> => {
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return {};
+  }
+
+  const responseData = (error as {
+    response?: {
+      data?: {
+        errors?: Record<string, string[]>;
+      };
+    };
+  }).response?.data;
+
+  const apiErrors = responseData?.errors;
+  if (!apiErrors) {
+    return {};
+  }
+
+  const fieldErrors: Partial<FormErrors> = {};
+
+  for (const [key, messages] of Object.entries(apiErrors)) {
+    const message = messages?.[0];
+    if (!message) continue;
+
+    if (key === 'members' || key.startsWith('members.')) {
+      fieldErrors.tenants ??= message;
+      continue;
+    }
+
+    if (key === 'room_id') fieldErrors.room_id = message;
+    if (key === 'start_date') fieldErrors.start_date = message;
+    if (key === 'end_date') fieldErrors.end_date = message;
+    if (key === 'rent_price') fieldErrors.rent_price = message;
+    if (key === 'due_day') fieldErrors.due_day = message;
+    if (key === 'cutoff_day') fieldErrors.cutoff_day = message;
+  }
+
+  return fieldErrors;
 };
 
 const getApiErrorMessage = (error: unknown): string | undefined => {
+  const validationErrors = getApiValidationErrors(error);
+  const firstValidationMessage = Object.values(validationErrors).find(Boolean);
+  if (firstValidationMessage) {
+    return firstValidationMessage;
+  }
+
   if (typeof error !== 'object' || error === null || !('response' in error)) {
     return undefined;
   }
@@ -140,6 +217,10 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
   const primaryTenant = useMemo(() => {
     return selectedTenants.find((tenant) => tenant.id === formData.primary_tenant_id) || selectedTenants[0] || null;
   }, [selectedTenants, formData.primary_tenant_id]);
+  const selectedRoom = useMemo(
+    () => allRooms.find((candidate) => candidate.id === selectedRoomId) || room || null,
+    [allRooms, room, selectedRoomId],
+  );
   const tenantMeta = usersQuery.data?.meta;
 
   const roomStatusLabel: Record<RoomStatus, string> = {
@@ -186,7 +267,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
   const blockedRoomIds = useMemo(() => {
     const contracts = propertyContractsResponse?.data ?? [];
-    const blockingStatuses = new Set(['DRAFT', 'PENDING_SIGNATURE', 'PENDING_PAYMENT', 'ACTIVE']);
+    const blockingStatuses = new Set(['PENDING_SIGNATURE', 'PENDING_PAYMENT', 'ACTIVE']);
     return new Set(
       contracts
         .filter((c) => c.room_id && blockingStatuses.has(c.status))
@@ -219,6 +300,25 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
   }, [tenantOptions]);
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const minimumEndDate = useMemo(
+    () => getMinimumEndDate(formData.start_date, formData.billing_cycle),
+    [formData.start_date, formData.billing_cycle],
+  );
+
+  useEffect(() => {
+    if (!minimumEndDate) return;
+
+    setFormData((prev) => {
+      if (!prev.end_date || prev.end_date >= minimumEndDate) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        end_date: minimumEndDate,
+      };
+    });
+  }, [minimumEndDate]);
 
   // ─── Validation ──────────────────────────────────────────────────────────────
 
@@ -227,34 +327,55 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
     if (currentStep === 1) {
       if (formData.selected_tenant_ids.length === 0) {
-        newErrors.tenants = 'Vui lòng chọn ít nhất 1 cư dân đã đăng ký tài khoản';
+        newErrors.tenants = 'Vui long chon it nhat 1 cu dan da dang ky tai khoan';
       } else if (!formData.primary_tenant_id || !formData.selected_tenant_ids.includes(formData.primary_tenant_id)) {
-        newErrors.tenants = 'Vui lòng chọn người thuê chính trong danh sách đã thêm';
+        newErrors.tenants = 'Vui long chon nguoi thue chinh trong danh sach da them';
       }
     }
 
     if (currentStep === 2) {
+      const normalizedRoomStatus = normalizeRoomStatus(selectedRoom?.status);
+
       if (!selectedRoomId) {
-        newErrors.room_id = 'Vui lòng chọn phòng trước khi tiếp tục';
+        newErrors.room_id = 'Vui long chon phong truoc khi tiep tuc';
+      } else if (normalizedRoomStatus === 'maintenance') {
+        newErrors.room_id = 'Phong dang bao tri, khong the tao hop dong moi';
       } else if (blockedRoomIds.has(selectedRoomId)) {
-        newErrors.room_id = 'Phòng này đã có hợp đồng, vui lòng chọn phòng khác';
+        newErrors.room_id = 'Phong nay dang co hop dong hieu luc, vui long chon phong khac';
       }
     }
 
     if (currentStep === 3) {
+      const rentPrice = Number(formData.rent_price);
+      const dueDay = Number(formData.due_day);
+      const cutoffDay = Number(formData.cutoff_day);
+
       if (!formData.start_date) {
-        newErrors.start_date = 'Vui lòng chọn ngày bắt đầu';
+        newErrors.start_date = 'Vui long chon ngay bat dau';
       }
-      if (formData.rent_price <= 0 && room?.base_price !== 0) {
-        newErrors.rent_price = 'Giá thuê phải lớn hơn 0';
+
+      if (formData.end_date && minimumEndDate && formData.end_date < minimumEndDate) {
+        newErrors.end_date = `Ngay ket thuc khong duoc nho hon ${minimumEndDate} theo chu ky thue`;
+      }
+
+      if (!Number.isFinite(rentPrice) || rentPrice <= 0) {
+        newErrors.rent_price = 'Gia thue phai lon hon 0';
+      }
+
+      if (!Number.isInteger(dueDay) || dueDay < 1 || dueDay > 31) {
+        newErrors.due_day = 'Han nop phai nam trong khoang 1-31';
+      }
+
+      if (!Number.isInteger(cutoffDay) || cutoffDay < 1 || cutoffDay > 25) {
+        newErrors.cutoff_day = 'Ngay chot so phai nam trong khoang 1-25';
+      } else if (!newErrors.due_day && cutoffDay > dueDay) {
+        newErrors.cutoff_day = 'Ngay chot so khong duoc sau han nop';
       }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  // ─── Navigation ──────────────────────────────────────────────────────────────
 
   const nextStep = () => {
     if (!validateStep(step)) return;
@@ -305,7 +426,27 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
         onSuccess?.();
       },
       onError: (error: unknown) => {
-        const message = getApiErrorMessage(error) || 'Có lỗi xảy ra khi tạo hợp đồng.';
+        const validationErrors = getApiValidationErrors(error);
+
+        if (Object.keys(validationErrors).length > 0) {
+          setErrors(validationErrors);
+
+          if (validationErrors.tenants) {
+            setStep(1);
+          } else if (validationErrors.room_id) {
+            setStep(2);
+          } else if (
+            validationErrors.start_date ||
+            validationErrors.end_date ||
+            validationErrors.rent_price ||
+            validationErrors.due_day ||
+            validationErrors.cutoff_day
+          ) {
+            setStep(3);
+          }
+        }
+
+        const message = getApiErrorMessage(error) || 'Co loi xay ra khi tao hop dong.';
         toast.error(message);
       },
     });
@@ -329,6 +470,56 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
   const depositAmount = Number(formData.deposit_amount) || 0;
   const recurringRentTotal = monthlyRent * billingCycleMonths;
   const agreementGrandTotal = recurringRentTotal + depositAmount;
+  const contractWarnings = useMemo<ContractWarning[]>(() => {
+    const warnings: ContractWarning[] = [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (formData.start_date && formData.start_date < todayString) {
+      warnings.push({
+        id: 'backdate',
+        title: 'Hop dong lui ngay',
+        description: 'Ngay bat dau dang o qua khu. He thong van cho tao de phuc vu nhap lieu backdate.',
+      });
+    }
+
+    if (depositAmount === 0) {
+      warnings.push({
+        id: 'deposit-zero',
+        title: 'Tien coc bang 0',
+        description: 'Hop dong nay khong thu tien coc ban dau. Hay chac chan day la chu dich cua ban.',
+      });
+    }
+
+    if (selectedRoom?.base_price && monthlyRent > 0) {
+      const listedPrice = Number(selectedRoom.base_price);
+      const deviation = listedPrice > 0 ? Math.abs(monthlyRent - listedPrice) / listedPrice : 0;
+
+      if (deviation >= 0.2) {
+        warnings.push({
+          id: 'price-gap',
+          title: 'Gia thue lech chuan',
+          description: `Gia thue dang lech khoang ${Math.round(deviation * 100)}% so voi gia niem yet cua phong.`,
+        });
+      }
+    }
+
+    if (selectedRoom?.capacity && selectedTenants.length > selectedRoom.capacity) {
+      warnings.push({
+        id: 'capacity',
+        title: 'Vuot suc chua phong',
+        description: `Dang co ${selectedTenants.length} nguoi ky cho phong suc chua ${selectedRoom.capacity} nguoi.`,
+      });
+    }
+
+    return warnings;
+  }, [depositAmount, formData.start_date, monthlyRent, selectedRoom, selectedTenants.length]);
 
   const updateTenantFilter = <K extends keyof typeof tenantFilters>(key: K, value: (typeof tenantFilters)[K]) => {
     setTenantFilters((prev) => {
@@ -710,21 +901,23 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                       {filteredRooms.map((r) => {
                         const isSelected = selectedRoomId === r.id;
-                        const floorName = r.floor?.name || r.floor_name || 'Chưa gắn tầng';
+                        const floorName = r.floor?.name || r.floor_name || 'Chua gan tang';
                         const normalizedStatus = normalizeRoomStatus(r.status);
                         const isBlocked = blockedRoomIds.has(r.id);
+                        const isMaintenance = normalizedStatus === 'maintenance';
+                        const isUnavailable = isBlocked || isMaintenance;
                         return (
                           <button
                             type="button"
                             key={r.id}
-                            disabled={isBlocked}
+                            disabled={isUnavailable}
                             onClick={() => {
                               setSelectedRoomId(r.id);
                               setErrors((prev) => ({ ...prev, room_id: undefined }));
                             }}
                             className={`text-left p-4 rounded-2xl border transition-all ${isSelected
                                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/15'
-                                : isBlocked
+                                : isUnavailable
                                   ? 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 opacity-60 cursor-not-allowed'
                                   : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300'
                               }`}
@@ -733,10 +926,12 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                               <div>
                                 <p className="text-sm font-black text-slate-900 dark:text-slate-100">{r.code || r.name}</p>
                                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                  {r.name} • {floorName}
+                                  {r.name} - {floorName}
                                 </p>
-                                {isBlocked ? (
-                                  <p className="text-[11px] font-bold text-rose-500 mt-1">Phòng đã có hợp đồng, không thể chọn</p>
+                                {isMaintenance ? (
+                                  <p className="text-[11px] font-bold text-amber-500 mt-1">Phong dang bao tri, tam thoi khong the chon</p>
+                                ) : isBlocked ? (
+                                  <p className="text-[11px] font-bold text-rose-500 mt-1">Phong dang co hop dong hieu luc, khong the chon</p>
                                 ) : null}
                               </div>
                               <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${roomStatusClass[normalizedStatus]}`}>
@@ -833,6 +1028,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                         }`}
                     />
                   </div>
+                  <FieldError message={errors.start_date} />
                 </div>
 
                 <div className="space-y-2 text-left">
@@ -845,9 +1041,16 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       type="date"
                       value={formData.end_date}
                       onChange={(e) => updateField('end_date', e.target.value)}
+                      min={minimumEndDate || formData.start_date}
                       className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-[1.25rem] outline-none focus:ring-4 focus:ring-indigo-50/30 dark:focus:ring-indigo-500/20 transition-all text-sm font-black shadow-sm"
                     />
                   </div>
+                  {minimumEndDate && (
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-2 ml-2 italic">
+                      * Toi thieu: {new Date(`${minimumEndDate}T00:00:00`).toLocaleDateString('vi-VN')} ({minimumEndDate})
+                    </p>
+                  )}
+                  <FieldError message={errors.end_date} />
                 </div>
               </div>
 
@@ -878,6 +1081,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       * Phòng này được cấu hình tự động tính giá theo diện tích ({room.area} m²)
                     </p>
                   )}
+                  <FieldError message={errors.rent_price} />
                 </div>
 
                 <div className="space-y-2 text-left">
@@ -930,6 +1134,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     onChange={(e) => updateField('due_day', Number(e.target.value))}
                     className="w-full px-5 py-4 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-[1.25rem] outline-none focus:ring-4 focus:ring-rose-50/50 dark:focus:ring-rose-500/20 transition-all text-sm font-black shadow-sm"
                   />
+                  <FieldError message={errors.due_day} />
                 </div>
 
                 <div className="space-y-2">
@@ -944,6 +1149,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     onChange={(e) => updateField('cutoff_day', Math.min(Number(e.target.value), 25))}
                     className="w-full px-5 py-4 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-[1.25rem] outline-none focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-700 transition-all text-sm font-black shadow-sm"
                   />
+                  <FieldError message={errors.cutoff_day} />
                 </div>
               </div>
             </motion.div>
@@ -967,6 +1173,29 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       <ShieldAlert className="w-3 h-3" /> Chế độ an toàn
                     </span>
                   </div>
+
+
+                  {contractWarnings.length > 0 && (
+                    <div className="rounded-3xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/70 dark:bg-amber-500/5 p-5 space-y-3 transition-colors">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                          <AlertCircle className="w-4 h-4" />
+                          <p className="text-xs font-black uppercase tracking-widest">Cac diem can luu y truoc khi tao</p>
+                        </div>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-300">
+                          {contractWarnings.length} warning
+                        </span>
+                      </div>
+                      <div className="space-y-3">
+                        {contractWarnings.map((warning) => (
+                          <div key={warning.id} className="rounded-2xl border border-amber-100 dark:border-amber-500/10 bg-white/70 dark:bg-slate-900/30 px-4 py-3">
+                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">{warning.title}</p>
+                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{warning.description}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-5xl p-10 space-y-8 shadow-xl shadow-slate-200/20 dark:shadow-none relative overflow-hidden group transition-colors">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full -translate-y-32 translate-x-32 blur-3xl pointer-events-none" />

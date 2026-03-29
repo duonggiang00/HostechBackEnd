@@ -1,5 +1,4 @@
 ﻿import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { 
   Building2, 
@@ -18,6 +17,7 @@ import PropertySwitcher from '@/OrgScope/features/properties/components/Property
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
+import SidebarDropdownSection from '@/shared/components/ui/SidebarDropdownSection';
 
 interface OrgScopeLayoutProps {
   children: ReactNode;
@@ -28,16 +28,35 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Báº£ng Ä‘iá»u khiá»ƒn', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
-    { id: 'properties', icon: Building2, label: 'Danh sÃ¡ch cÆ¡ sá»Ÿ', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'NhÃ¢n sá»± há»‡ thá»‘ng', path: '/org/staff', roles: ['Admin', 'Owner'] },
-    { id: 'finance', icon: BarChart3, label: 'TÃ i chÃ­nh tá»•ng quÃ¡t', path: '/org/finance', roles: ['Admin', 'Owner'] },
-    { id: 'invoices', icon: Receipt, label: 'Quáº£n lÃ½ hÃ³a Ä‘Æ¡n', path: '/org/invoices', roles: ['Admin', 'Owner'] },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
+    { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
+    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Admin', 'Owner'] },
+    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner'] },
+    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner'] },
   ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
 
-  const SidebarContent = () => (
+  const menuSections = [
+    {
+      id: 'overview',
+      label: 'Tổng quan',
+      defaultOpen: true,
+      items: menuItems.filter((item) => ['dashboard', 'properties'].includes(item.id)),
+    },
+    {
+      id: 'operations',
+      label: 'Điều hành',
+      items: menuItems.filter((item) => ['staff', 'invoices'].includes(item.id)),
+    },
+    {
+      id: 'analytics',
+      label: 'Báo cáo',
+      items: menuItems.filter((item) => item.id === 'finance'),
+    },
+  ].filter((section) => section.items.length > 0);
+
+  const renderSidebarContent = () => (
     <>
-      <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-slate-200/50 px-5 py-5 dark:border-slate-700/50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30">
             <Building2 className="w-6 h-6 text-white" />
@@ -54,7 +73,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
         </button>
       </div>
       
-      <div className="p-4">
+      <div className="px-4 py-3">
         {user?.role === 'Admin' ? (
           <OrgSwitcher />
         ) : (
@@ -72,30 +91,23 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
         )}
       </div>
 
-      <nav className="px-4 py-2 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
-        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 mt-2 px-3">
+      <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2 custom-scrollbar">
+        <div className="mb-3 mt-1 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
            Pháº¡m vi tá»• chá»©c
         </div>
-        
-        {menuItems.map((item) => (
-          <NavLink 
-            key={item.id}
-            to={item.path}
-            end={item.exact ?? false}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all ${
-              isActive && item.id !== 'back-to-dashboard'
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800' 
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent'
-            }`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </NavLink>
+
+        {menuSections.map((section) => (
+          <SidebarDropdownSection
+            key={section.id}
+            label={section.label}
+            items={section.items}
+            defaultOpen={section.defaultOpen}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+          />
         ))}
       </nav>
 
-      <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30">
+      <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 p-4 dark:border-slate-700/50 dark:bg-slate-800/30">
         <SidebarAccountMenu
           profilePath="/org/profile"
           userName={user?.full_name}
@@ -113,8 +125,8 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
       {/* Desktop Sidebar */}
-      <aside className="w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 hidden lg:flex flex-col sticky top-0 h-screen">
-        <SidebarContent />
+      <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:flex">
+        {renderSidebarContent()}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -133,9 +145,9 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-800 shadow-2xl z-50 lg:hidden flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white shadow-2xl dark:bg-slate-800 lg:hidden"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.aside>
           </>
         )}

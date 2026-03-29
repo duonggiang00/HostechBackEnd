@@ -13,6 +13,7 @@ use App\Services\Service\ServiceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -196,17 +197,37 @@ class ContractService
             $startDate = $contractData['start_date'] ?? null;
             $endDate = $contractData['end_date'] ?? null;
 
+            $property = $propertyId ? \App\Models\Property\Property::find($propertyId) : null;
+            $room = $roomId ? \App\Models\Property\Room::find($roomId) : null;
+
+            if ($property && $user?->org_id && $property->org_id !== $user->org_id) {
+                throw ValidationException::withMessages([
+                    'property_id' => 'Ban khong the tao hop dong ngoai to chuc hien tai.',
+                ]);
+            }
+
+            if ($property && $room && $room->property_id !== $property->id) {
+                throw ValidationException::withMessages([
+                    'room_id' => 'Phong khong thuoc bat dong san da chon.',
+                ]);
+            }
+
+            if ($room && $room->status === 'maintenance') {
+                throw ValidationException::withMessages([
+                    'room_id' => 'Phong dang bao tri, khong the tao hop dong moi.',
+                ]);
+            }
+
             // Check for overlap
             if ($roomId && $startDate) {
                 $overlap = $this->checkOverlap($roomId, $startDate, $endDate);
                 if ($overlap) {
-                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vô thời hạn)");
-                    throw new \Exception("Phòng này đã có hợp đồng trùng lặp trong khoảng thời gian này ($overlapDate).");
+                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vo thoi han)");
+                    throw ValidationException::withMessages([
+                        'room_id' => "Phong nay da co hop dong trung lap trong khoang thoi gian nay ($overlapDate).",
+                    ]);
                 }
             }
-
-            $property = $propertyId ? \App\Models\Property\Property::find($propertyId) : null;
-            $room = $roomId ? \App\Models\Property\Room::find($roomId) : null;
 
             if ($property) {
                 $contractData['billing_cycle'] = $this->normalizeBillingCycleValue(
@@ -227,6 +248,26 @@ class ContractService
                 }
             }
             // -------------------------------
+
+            if ((float) ($contractData['rent_price'] ?? 0) <= 0) {
+                throw ValidationException::withMessages([
+                    'rent_price' => 'Gia thue phai lon hon 0 sau khi ap dung mac dinh cua phong/toa nha.',
+                ]);
+            }
+
+            if (($contractData['cutoff_day'] ?? null) !== null
+                && ($contractData['due_day'] ?? null) !== null
+                && (int) $contractData['cutoff_day'] > (int) $contractData['due_day']) {
+                throw ValidationException::withMessages([
+                    'cutoff_day' => 'Ngay chot so khong duoc sau han nop.',
+                ]);
+            }
+
+            $this->ensureEndDateMeetsBillingCycle(
+                $contractData['start_date'] ?? null,
+                $contractData['end_date'] ?? null,
+                $contractData['billing_cycle'] ?? 1,
+            );
 
             // --- FINANCIAL CALCULATION ---
             $rentPrice = (float) ($contractData['rent_price'] ?? 0);
@@ -260,7 +301,9 @@ class ContractService
             $primaryCount = collect($data['members'] ?? [])->where('is_primary', true)->count();
 
             if ($primaryCount !== 1) {
-                throw new \Exception('Hợp đồng phải có đúng 1 người thuê chính.');
+                throw ValidationException::withMessages([
+                    'members' => 'Hop dong phai co dung 1 nguoi thue chinh.',
+                ]);
             }
 
             if (isset($data['members']) && is_array($data['members'])) {
@@ -330,6 +373,12 @@ class ContractService
                 $monthsToAdd = $this->resolveBillingCycleMonths($data['billing_cycle'] ?? $contract->billing_cycle);
                 $data['next_billing_date'] = $startDate->copy()->addMonths($monthsToAdd)->format('Y-m-d');
             }
+
+            $this->ensureEndDateMeetsBillingCycle(
+                $data['start_date'] ?? $contract->start_date,
+                array_key_exists('end_date', $data) ? $data['end_date'] : $contract->end_date,
+                $data['billing_cycle'] ?? $contract->billing_cycle,
+            );
 
             $contract->update($data);
 
@@ -932,6 +981,26 @@ class ContractService
     private function normalizeBillingCycleValue(string|int|null $billingCycle): string
     {
         return (string) $this->resolveBillingCycleMonths($billingCycle);
+    }
+
+    private function ensureEndDateMeetsBillingCycle(
+        ?string $startDate,
+        ?string $endDate,
+        string|int|null $billingCycle,
+    ): void {
+        if (! $startDate || ! $endDate) {
+            return;
+        }
+
+        $minimumEndDate = \Carbon\Carbon::parse($startDate)
+            ->addMonths($this->resolveBillingCycleMonths($billingCycle))
+            ->toDateString();
+
+        if (\Carbon\Carbon::parse($endDate)->lt(\Carbon\Carbon::parse($minimumEndDate))) {
+            throw ValidationException::withMessages([
+                'end_date' => "Ngay ket thuc khong duoc nho hon {$minimumEndDate} theo chu ky thue.",
+            ]);
+        }
     }
 
     private function contractMembersHasSignedAtColumn(): bool

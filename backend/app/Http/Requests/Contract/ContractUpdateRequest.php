@@ -3,8 +3,11 @@
 namespace App\Http\Requests\Contract;
 
 use App\Enums\ContractStatus;
+use App\Models\Contract\Contract;
+use App\Models\Property\Property;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class ContractUpdateRequest extends FormRequest
 {
@@ -28,14 +31,62 @@ class ContractUpdateRequest extends FormRequest
         ];
     }
 
-    public function attributes()
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $contractId = $this->route('id');
+            $contract = $contractId
+                ? Contract::query()->select(['id', 'property_id', 'start_date', 'end_date', 'billing_cycle'])->find($contractId)
+                : null;
+
+            $startDate = $this->input('start_date') ?? $contract?->start_date;
+            $endDate = array_key_exists('end_date', $this->all())
+                ? $this->input('end_date')
+                : $contract?->end_date;
+
+            if (! $startDate || ! $endDate) {
+                return;
+            }
+
+            $effectiveBillingCycle = $this->resolveBillingCycleMonths(
+                $this->input('billing_cycle')
+                ?? $contract?->billing_cycle
+                ?? Property::query()->whereKey($contract?->property_id)->value('default_billing_cycle')
+                ?? 1
+            );
+
+            $minimumEndDate = \Carbon\Carbon::parse($startDate)
+                ->addMonths($effectiveBillingCycle)
+                ->toDateString();
+
+            if (\Carbon\Carbon::parse($endDate)->lt(\Carbon\Carbon::parse($minimumEndDate))) {
+                $validator->errors()->add(
+                    'end_date',
+                    "Ngay ket thuc khong duoc nho hon {$minimumEndDate} theo chu ky thue."
+                );
+            }
+        });
+    }
+
+    public function attributes(): array
     {
         return [
-            'status' => 'Trạng thái',
-            'start_date' => 'Ngày bắt đầu',
-            'end_date' => 'Ngày kết thúc',
-            'rent_price' => 'Giá thuê',
-            'deposit_amount' => 'Tiền cọc',
+            'status' => 'Trang thai',
+            'start_date' => 'Ngay bat dau',
+            'end_date' => 'Ngay ket thuc',
+            'rent_price' => 'Gia thue',
+            'deposit_amount' => 'Tien coc',
         ];
+    }
+
+    private function resolveBillingCycleMonths(string|int|null $billingCycle): int
+    {
+        return match ((string) $billingCycle) {
+            'MONTHLY' => 1,
+            'QUARTERLY' => 3,
+            'SEMI_ANNUALLY' => 6,
+            'YEARLY' => 12,
+            default => max(1, (int) $billingCycle),
+        };
     }
 }

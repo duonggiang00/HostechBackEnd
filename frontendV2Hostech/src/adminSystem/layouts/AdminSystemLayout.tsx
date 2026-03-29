@@ -1,5 +1,4 @@
 ﻿import { useState, type ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { 
   LayoutDashboard, 
@@ -18,6 +17,7 @@ import OrgSwitcher from '@/adminSystem/features/organizations/components/OrgSwit
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
+import SidebarDropdownSection from '@/shared/components/ui/SidebarDropdownSection';
 
 interface AdminSystemLayoutProps {
   children: ReactNode;
@@ -27,19 +27,39 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
   const { user, logout } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Admin System Menu Items
-  const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Báº£ng Ä‘iá»u khiá»ƒn tá»•ng', path: '/system/dashboard', exact: true },
-    ...(user?.role === 'Admin' ? [{ id: 'organizations', icon: LayersIcon, label: 'Danh sÃ¡ch tá»• chá»©c', path: '/system/organizations', exact: true }] : []),
-    { id: 'communication', icon: MessageSquare, label: 'LiÃªn láº¡c & ThÃ´ng bÃ¡o', path: '/system/communication' },
-    { id: 'audit', icon: HistoryIcon, label: 'Nháº­t kÃ½ há»‡ thá»‘ng', path: '/system/audit-logs' },
-    { id: 'sessions', icon: Shield, label: 'Báº£o máº­t & PhiÃªn lÃ m', path: '/system/sessions' },
-    { id: 'settings', icon: Settings, label: 'CÃ i Ä‘áº·t há»‡ thá»‘ng', path: '/system/settings' }
-  ];
+  const menuSections = [
+    {
+      id: 'overview',
+      label: 'Tổng quan',
+      defaultOpen: true,
+      items: [
+        { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển tổng', path: '/system/dashboard', exact: true },
+        ...(user?.role === 'Admin'
+          ? [{ id: 'organizations', icon: LayersIcon, label: 'Danh sách tổ chức', path: '/system/organizations', exact: true }]
+          : []),
+      ],
+    },
+    {
+      id: 'operations',
+      label: 'Điều hành',
+      items: [
+        { id: 'communication', icon: MessageSquare, label: 'Liên lạc và thông báo', path: '/system/communication' },
+        { id: 'audit', icon: HistoryIcon, label: 'Nhật ký hệ thống', path: '/system/audit-logs' },
+      ],
+    },
+    {
+      id: 'security',
+      label: 'Bảo mật',
+      items: [
+        { id: 'sessions', icon: Shield, label: 'Bảo mật và phiên làm', path: '/system/sessions' },
+        { id: 'settings', icon: Settings, label: 'Cài đặt hệ thống', path: '/system/settings' },
+      ],
+    },
+  ].filter((section) => section.items.length > 0);
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <>
-      <div className="p-6 border-b border-slate-200/50 dark:border-slate-700/50 flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-slate-200/50 px-5 py-5 dark:border-slate-700/50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30">
             <Building2 className="w-6 h-6 text-white" />
@@ -56,7 +76,7 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
         </button>
       </div>
       
-      <div className="p-4">
+      <div className="px-4 py-3">
         {user?.role === 'Admin' ? (
           <OrgSwitcher />
         ) : (
@@ -74,30 +94,23 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
         )}
       </div>
 
-      <nav className="px-4 py-2 space-y-1 flex-1 overflow-y-auto custom-scrollbar">
-        <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 mt-2 px-3">
+      <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2 custom-scrollbar">
+        <div className="mb-3 mt-1 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
            Quáº£n trá»‹ há»‡ thá»‘ng
         </div>
-        
-        {menuItems.map((item) => (
-          <NavLink 
-            key={item.id}
-            to={item.path}
-            end={item.exact ?? false}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all ${
-              isActive 
-                ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800' 
-                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent'
-            }`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </NavLink>
+
+        {menuSections.map((section) => (
+          <SidebarDropdownSection
+            key={section.id}
+            label={section.label}
+            items={section.items}
+            defaultOpen={section.defaultOpen}
+            onNavigate={() => setIsMobileMenuOpen(false)}
+          />
         ))}
       </nav>
 
-      <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30">
+      <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 p-4 dark:border-slate-700/50 dark:bg-slate-800/30">
         <SidebarAccountMenu
           profilePath="/system/profile"
           userName={user?.full_name}
@@ -115,8 +128,8 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
       {/* Desktop Sidebar */}
-      <aside className="w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 hidden lg:flex flex-col sticky top-0 h-screen">
-        <SidebarContent />
+      <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:flex">
+        {renderSidebarContent()}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -135,9 +148,9 @@ export default function AdminSystemLayout({ children }: AdminSystemLayoutProps) 
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-800 shadow-2xl z-50 lg:hidden flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white shadow-2xl dark:bg-slate-800 lg:hidden"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.aside>
           </>
         )}
