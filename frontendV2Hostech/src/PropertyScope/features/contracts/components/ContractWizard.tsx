@@ -2,7 +2,7 @@ import { useState, useMemo, memo, useEffect } from 'react';
 import {
   UserPlus, Home, FileText, CheckCircle, ChevronRight, ChevronLeft,
   Search, Calendar, FileSignature, AlertCircle, Clock, ShieldAlert,
-  UploadCloud, FileUp, X, Loader2
+  Loader2
 } from 'lucide-react';
 import { useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
@@ -23,7 +23,7 @@ interface ContractWizardProps {
   onCancel: () => void;
 }
 
-type WizardStep = 1 | 2 | 3 | 4 | 5;
+type WizardStep = 1 | 2 | 3 | 4;
 
 interface FormErrors {
   tenants?: string;
@@ -47,6 +47,14 @@ const formatBillingCycleLabel = (value: string | number | null | undefined): str
   return `${months} tháng`;
 };
 
+const getApiErrorMessage = (error: unknown): string | undefined => {
+  if (typeof error !== 'object' || error === null || !('response' in error)) {
+    return undefined;
+  }
+
+  return (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+};
+
 const FieldError = ({ message }: { message?: string }) => {
   if (!message) return null;
   return (
@@ -63,8 +71,7 @@ const FieldError = ({ message }: { message?: string }) => {
 
 export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel }: ContractWizardProps) {
   const [step, setStep] = useState<WizardStep>(1);
-  const { createContract, scanContract } = useContractActions();
-  const [scanFile, setScanFile] = useState<File | null>(null);
+  const { createContract } = useContractActions();
   const [selectedRoomId, setSelectedRoomId] = useState(roomId || '');
   const [tenantFilters, setTenantFilters] = useState({
     search: '',
@@ -218,7 +225,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
   const validateStep = (currentStep: WizardStep): boolean => {
     const newErrors: FormErrors = {};
 
-    if (currentStep === 2) {
+    if (currentStep === 1) {
       if (formData.selected_tenant_ids.length === 0) {
         newErrors.tenants = 'Vui lòng chọn ít nhất 1 cư dân đã đăng ký tài khoản';
       } else if (!formData.primary_tenant_id || !formData.selected_tenant_ids.includes(formData.primary_tenant_id)) {
@@ -226,7 +233,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
       }
     }
 
-    if (currentStep === 3) {
+    if (currentStep === 2) {
       if (!selectedRoomId) {
         newErrors.room_id = 'Vui lòng chọn phòng trước khi tiếp tục';
       } else if (blockedRoomIds.has(selectedRoomId)) {
@@ -234,7 +241,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
       }
     }
 
-    if (currentStep === 4) {
+    if (currentStep === 3) {
       if (!formData.start_date) {
         newErrors.start_date = 'Vui lòng chọn ngày bắt đầu';
       }
@@ -251,7 +258,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
   const nextStep = () => {
     if (!validateStep(step)) return;
-    if (step < 5) setStep((s) => (s + 1) as WizardStep);
+    if (step < 4) setStep((s) => (s + 1) as WizardStep);
   };
 
   const prevStep = () => {
@@ -286,9 +293,9 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
       members,
       meta: formData.contract_file_path || formData.contract_file_name
         ? {
-            file_path: formData.contract_file_path || undefined,
-            file_name: formData.contract_file_name || undefined,
-          }
+          file_path: formData.contract_file_path || undefined,
+          file_name: formData.contract_file_name || undefined,
+        }
         : undefined,
     };
 
@@ -297,8 +304,8 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
         toast.success('Đã tạo hợp đồng và chuyển sang chờ cư dân ký điện tử!');
         onSuccess?.();
       },
-      onError: (error: any) => {
-        const message = error?.response?.data?.message || 'Có lỗi xảy ra khi tạo hợp đồng.';
+      onError: (error: unknown) => {
+        const message = getApiErrorMessage(error) || 'Có lỗi xảy ra khi tạo hợp đồng.';
         toast.error(message);
       },
     });
@@ -363,78 +370,75 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
     setErrors((prev) => ({ ...prev, tenants: undefined }));
   };
 
-// ─── Step Indicator (Memoized) ──────────────────────────────────────────────
+  // ─── Step Indicator (Memoized) ──────────────────────────────────────────────
 
-const StepIndicator = memo(({ step }: { step: WizardStep }) => {
-  const indicatorSteps = useMemo(() => [
-    { num: 1, label: 'Scan HĐ', icon: FileUp },
-    { num: 2, label: 'Khách', icon: UserPlus },
-    { num: 3, label: 'Phòng', icon: Home },
-    { num: 4, label: 'Điều khoản', icon: FileText },
-    { num: 5, label: 'Hoàn tất', icon: CheckCircle },
-  ], []);
+  const StepIndicator = memo(({ step }: { step: WizardStep }) => {
+    const indicatorSteps = useMemo(() => [
+      { num: 1, label: 'Khách', icon: UserPlus },
+      { num: 2, label: 'Phòng', icon: Home },
+      { num: 3, label: 'Điều khoản', icon: FileText },
+      { num: 4, label: 'Hoàn tất', icon: CheckCircle },
+    ], []);
 
-  return (
-    <div className="flex items-center justify-between relative mb-12 px-4 select-none">
-      <div className="absolute left-8 right-8 top-5 h-0.5 bg-slate-100/50 z-0" />
-      <motion.div
-        className="absolute left-8 top-5 h-0.5 bg-linear-to-r from-indigo-500 to-indigo-400 z-0"
-        initial={{ width: 0 }}
-        animate={{ width: `calc(${((step - 1) / 4) * 100}% - 16px)` }}
-        transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-      />
+    return (
+      <div className="flex items-center justify-between relative mb-12 px-4 select-none">
+        <div className="absolute left-8 right-8 top-5 h-0.5 bg-slate-100/50 z-0" />
+        <motion.div
+          className="absolute left-8 top-5 h-0.5 bg-linear-to-r from-indigo-500 to-indigo-400 z-0"
+          initial={{ width: 0 }}
+          animate={{ width: step === 1 ? 0 : `calc(${((step - 1) / 3) * 100}% - 16px)` }}
+          transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+        />
 
-      {indicatorSteps.map((s) => {
-        const isActive = step >= s.num;
-        const isCurrent = step === s.num;
+        {indicatorSteps.map((s) => {
+          const isActive = step >= s.num;
+          const isCurrent = step === s.num;
 
-        return (
-          <div key={s.num} className="relative z-10 flex flex-col items-center gap-3">
-            <motion.div
-              animate={{
-                scale: isCurrent ? 1.15 : 1,
-                backgroundColor: isActive ? '#4f46e5' : '#ffffff',
-                borderColor: isActive ? '#4f46e5' : '#f1f5f9',
-              }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all shadow-sm ${
-                isActive ? 'text-white' : 'text-slate-300'
-              } ${isCurrent ? 'shadow-lg shadow-indigo-100 ring-4 ring-indigo-500/10' : ''}`}
-            >
-              <s.icon className={`w-4 h-4 ${isCurrent ? 'animate-pulse' : ''}`} />
-            </motion.div>
-            <span
-              className={`text-xs font-black uppercase tracking-widest transition-colors duration-200 ${
-                isCurrent ? 'text-indigo-600' : isActive ? 'text-slate-600' : 'text-slate-300'
-              }`}
-            >
-              {s.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-});
+          return (
+            <div key={s.num} className="relative z-10 flex flex-col items-center gap-3">
+              <motion.div
+                animate={{
+                  scale: isCurrent ? 1.15 : 1,
+                  backgroundColor: isActive ? '#4f46e5' : '#ffffff',
+                  borderColor: isActive ? '#4f46e5' : '#f1f5f9',
+                }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all shadow-sm ${isActive ? 'text-white' : 'text-slate-300'
+                  } ${isCurrent ? 'shadow-lg shadow-indigo-100 ring-4 ring-indigo-500/10' : ''}`}
+              >
+                <s.icon className={`w-4 h-4 ${isCurrent ? 'animate-pulse' : ''}`} />
+              </motion.div>
+              <span
+                className={`text-xs font-black uppercase tracking-widest transition-colors duration-200 ${isCurrent ? 'text-indigo-600' : isActive ? 'text-slate-600' : 'text-slate-300'
+                  }`}
+              >
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  });
 
-StepIndicator.displayName = 'StepIndicator';
+  StepIndicator.displayName = 'StepIndicator';
 
   return (
     <div className="flex flex-col h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-5xl overflow-hidden shadow-2xl shadow-indigo-100/20 dark:shadow-none border border-white/40 dark:border-slate-800 p-6 md:p-10 relative transition-colors">
       {/* Decorative background elements */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-      
+
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-10">
           <div>
             <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase transition-colors">Tạo Hợp Đồng</h2>
             <div className="flex items-center gap-2 mt-1">
               <span className="px-2 py-0.5 bg-indigo-500 text-white text-[9px] font-black uppercase tracking-widest rounded-md">Bản nháp</span>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Bước {step} / 5</p>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Bước {step} / 4</p>
             </div>
           </div>
-          <motion.div 
+          <motion.div
             whileHover={{ scale: 1.02 }}
             className="hidden md:flex items-center gap-3 px-5 py-2.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-white dark:border-slate-700 shadow-sm transition-colors"
           >
@@ -455,8 +459,8 @@ StepIndicator.displayName = 'StepIndicator';
 
       <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar relative px-1">
         <AnimatePresence mode="wait">
-          {/* ─────── STEP 2 (KHÁCH) ─────── */}
-          {step === 2 && (
+          {/* Step 1: Tenants */}
+          {step === 1 && (
             <motion.div
               key="step1"
               initial={{ opacity: 0, x: 20 }}
@@ -566,11 +570,10 @@ StepIndicator.displayName = 'StepIndicator';
                           key={tenant.id}
                           type="button"
                           onClick={() => toggleTenantSelection(tenant)}
-                          className={`p-5 rounded-3xl border text-left transition-all ${
-                            isSelected
+                          className={`p-5 rounded-3xl border text-left transition-all ${isSelected
                               ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
                               : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div>
@@ -578,9 +581,8 @@ StepIndicator.displayName = 'StepIndicator';
                               <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1">{tenant.phone || 'Chưa có số điện thoại'}</p>
                               <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mt-1">CCCD: {tenant.identity_number || 'Chưa cập nhật'}</p>
                             </div>
-                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${
-                              isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
-                            }`}>
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
+                              }`}>
                               {isSelected ? 'Đã chọn' : 'Chọn'}
                             </span>
                           </div>
@@ -639,8 +641,8 @@ StepIndicator.displayName = 'StepIndicator';
             </motion.div>
           )}
 
-          {/* STEP 3 (PHÒNG) */}
-          {step === 3 && (
+          {/* Step 2: Room */}
+          {step === 2 && (
             <motion.div
               key="step2"
               initial={{ opacity: 0, x: 20 }}
@@ -720,13 +722,12 @@ StepIndicator.displayName = 'StepIndicator';
                               setSelectedRoomId(r.id);
                               setErrors((prev) => ({ ...prev, room_id: undefined }));
                             }}
-                            className={`text-left p-4 rounded-2xl border transition-all ${
-                              isSelected
+                            className={`text-left p-4 rounded-2xl border transition-all ${isSelected
                                 ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/15'
                                 : isBlocked
                                   ? 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 opacity-60 cursor-not-allowed'
                                   : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
@@ -765,9 +766,8 @@ StepIndicator.displayName = 'StepIndicator';
                         {(() => {
                           const normalizedStatus = normalizeRoomStatus(room?.status);
                           return (
-                            <span className={`inline-block border-none font-black text-[9px] uppercase tracking-widest mb-3 rounded-lg px-2.5 py-1 transition-colors ${
-                              room ? roomStatusClass[normalizedStatus] : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                            }`}>
+                            <span className={`inline-block border-none font-black text-[9px] uppercase tracking-widest mb-3 rounded-lg px-2.5 py-1 transition-colors ${room ? roomStatusClass[normalizedStatus] : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                              }`}>
                               Trạng thái: {room ? roomStatusLabel[normalizedStatus] : 'Chưa chọn'}
                             </span>
                           );
@@ -808,8 +808,8 @@ StepIndicator.displayName = 'StepIndicator';
               </div>
             </motion.div>
           )}
-          {/* ─────── STEP 4 (ĐIỀU KHOẢN) ─────── */}
-          {step === 4 && (
+          {/* Step 3: Terms */}
+          {step === 3 && (
             <motion.div
               key="step3"
               initial={{ opacity: 0, x: 20 }}
@@ -829,9 +829,8 @@ StepIndicator.displayName = 'StepIndicator';
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => updateField('start_date', e.target.value)}
-                      className={`w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border rounded-[1.25rem] outline-none focus:ring-4 transition-all text-sm font-black shadow-sm ${
-                        errors.start_date ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
-                      }`}
+                      className={`w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border rounded-[1.25rem] outline-none focus:ring-4 transition-all text-sm font-black shadow-sm ${errors.start_date ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
+                        }`}
                     />
                   </div>
                 </div>
@@ -864,9 +863,8 @@ StepIndicator.displayName = 'StepIndicator';
                       value={formData.rent_price || ''}
                       onChange={(e) => updateField('rent_price', Number(e.target.value))}
                       placeholder={room?.base_price === 0 ? "Tự động tính theo diện tích..." : "0"}
-                      className={`w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-800 dark:text-slate-100 border rounded-[1.25rem] outline-none focus:ring-4 transition-all text-lg font-black shadow-sm ${
-                        errors.rent_price ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
-                      }`}
+                      className={`w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-800 dark:text-slate-100 border rounded-[1.25rem] outline-none focus:ring-4 transition-all text-lg font-black shadow-sm ${errors.rent_price ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
+                        }`}
                     />
                     {room?.base_price === 0 && formData.rent_price === 0 && (
                       <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-500/10 rounded-full border border-indigo-100 dark:border-indigo-500/20">
@@ -951,139 +949,8 @@ StepIndicator.displayName = 'StepIndicator';
             </motion.div>
           )}
 
-          {/* ─────── STEP 1 (SCAN) ─────── */}
-          {step === 1 && (
-            <motion.div
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="space-y-8"
-            >
-              <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-5xl p-10 relative overflow-hidden text-center transition-colors shadow-sm">
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-                
-                <div className="max-w-xl mx-auto space-y-8 relative z-10">
-                  <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-3xl flex items-center justify-center mx-auto text-indigo-500 dark:text-indigo-400 mb-6 shadow-inner ring-4 ring-indigo-500/5">
-                    <FileUp className="w-10 h-10" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-3">
-                      Tải lên hợp đồng / OCR
-                    </h3>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-4">
-                      Hệ thống sẽ tự động trích xuất thông tin khách thuê, giá tiền, thời hạn... từ file Hợp đồng Word hoặc PDF của bạn.
-                    </p>
-                  </div>
-                  
-                  <div className="relative mt-10">
-                    {!scanFile ? (
-                      <label className="flex flex-col items-center justify-center w-full h-56 border-2 border-dashed border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-[2rem] cursor-pointer transition-all hover:border-indigo-400 group shadow-sm">
-                        <UploadCloud className="w-12 h-12 text-indigo-300 dark:text-indigo-600 group-hover:text-indigo-500 transition-colors mb-5 group-hover:scale-110 duration-300" />
-                        <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-2 group-hover:text-indigo-700 dark:group-hover:text-indigo-300">
-                          Chọn hoặc Kéo thả file mềm
-                        </span>
-                        <span className="text-xs font-bold text-indigo-400/70 dark:text-indigo-500/70 uppercase tracking-tighter bg-white dark:bg-slate-800 px-3 py-1 rounded-full shadow-sm">
-                          Hỗ trợ .PDF, .DOCX
-                        </span>
-                        <input
-                          type="file"
-                          className="hidden"
-                          accept=".pdf,.doc,.docx"
-                          onChange={(e) => {
-                            if (e.target.files && e.target.files[0]) {
-                              setScanFile(e.target.files[0]);
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : (
-                      <div className="p-8 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-[2rem] flex items-center justify-between shadow-sm">
-                        <div className="flex items-center gap-5 text-left">
-                          <div className="w-14 h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-indigo-500 dark:text-indigo-400 shadow-md ring-2 ring-indigo-500/10 shrink-0">
-                            <FileText className="w-7 h-7" />
-                          </div>
-                          <div className="min-w-0 pr-4">
-                            <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate" title={scanFile.name}>
-                              {scanFile.name}
-                            </p>
-                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 uppercase tracking-tighter">
-                              {(scanFile.size / 1024 / 1024).toFixed(2)} MB • Sẵn sàng quét
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setScanFile(null)}
-                          className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-all shadow-sm border border-slate-100 dark:border-slate-700"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <AnimatePresence>
-                    {scanFile && (
-                      <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        onClick={() => {
-                          scanContract.mutate(scanFile, {
-                            onSuccess: (data) => {
-                              toast.success('Đã trích xuất dữ liệu thành công!');
-                              setFormData(prev => ({
-                                ...prev,
-                                rent_price: data?.rent_price || prev.rent_price,
-                                deposit_amount: data?.deposit_amount || prev.deposit_amount,
-                                start_date: data?.start_date ? new Date(data.start_date).toISOString().split('T')[0] : prev.start_date,
-                                billing_cycle: data?.billing_cycle
-                                  ? normalizeBillingCycleMonths(data.billing_cycle)
-                                  : prev.billing_cycle,
-                                contract_file_path: data?.file_path || prev.contract_file_path,
-                                contract_file_name: scanFile.name || prev.contract_file_name,
-                              }));
-                              nextStep();
-                            },
-                            onError: () => {
-                              toast.error('Trích xuất thất bại, vui lòng kiểm tra lại file hoặc điền thủ công.');
-                              nextStep();
-                            }
-                          });
-                        }}
-                        disabled={scanContract.isPending}
-                        className="w-full mt-8 py-5 px-8 bg-indigo-600 dark:bg-indigo-500 text-white rounded-[1.5rem] text-sm font-black uppercase tracking-widest hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-indigo-200 dark:shadow-none hover:-translate-y-0.5 active:scale-[0.98]"
-                      >
-                        {scanContract.isPending ? (
-                          <>
-                            <Clock className="w-5 h-5 animate-spin" />
-                            HỆ THỐNG ĐANG PHÂN TÍCH OCR...
-                          </>
-                        ) : (
-                          'Bắt đầu phân tích dữ liệu'
-                        )}
-                      </motion.button>
-                    )}
-                  </AnimatePresence>
-                  
-                  {!scanFile && (
-                    <div className="pt-4">
-                      <button
-                        onClick={nextStep}
-                        className="text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors uppercase tracking-widest px-4 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50"
-                      >
-                        Chưa có file mềm, điền thủ công
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ─────── STEP 5 ─────── */}
-          {step === 5 && (
+          {/* Step 4: Review */}
+          {step === 4 && (
             <motion.div
               key="step4"
               initial={{ opacity: 0, x: 20 }}
@@ -1100,10 +967,10 @@ StepIndicator.displayName = 'StepIndicator';
                       <ShieldAlert className="w-3 h-3" /> Chế độ an toàn
                     </span>
                   </div>
-                  
+
                   <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-5xl p-10 space-y-8 shadow-xl shadow-slate-200/20 dark:shadow-none relative overflow-hidden group transition-colors">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full -translate-y-32 translate-x-32 blur-3xl pointer-events-none" />
-                    
+
                     <div className="flex justify-between items-start pb-8 border-b border-slate-100 dark:border-slate-700 transition-colors">
                       <div>
                         <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 transition-colors">Bên thuê (Tenant)</p>
@@ -1223,10 +1090,10 @@ StepIndicator.displayName = 'StepIndicator';
                       <div className="space-y-4">
                         <h4 className="text-xl font-black text-white leading-tight">Cam kết bảo mật & Pháp lý</h4>
                         <p className="text-sm font-medium text-slate-400 leading-relaxed">
-                          Mọi thông tin trong bản nháp này đều được mã hóa theo chuẩn <span className="text-white font-bold">AES-256</span>. 
+                          Mọi thông tin trong bản nháp này đều được mã hóa theo chuẩn <span className="text-white font-bold">AES-256</span>.
                         </p>
                       </div>
-                      
+
                       <ul className="space-y-4">
                         {[
                           'Tự động sao lưu bản nháp',
@@ -1240,12 +1107,12 @@ StepIndicator.displayName = 'StepIndicator';
                         ))}
                       </ul>
                     </div>
-                    
+
                     <div className="pt-8 border-t border-white/10 mt-auto">
                       <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Hostech Verified</p>
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
-                          {[1,2,3].map(i => (
+                          {[1, 2, 3].map(i => (
                             <div key={i} className="w-6 h-6 rounded-full bg-slate-700 border-2 border-slate-900" />
                           ))}
                         </div>
@@ -1284,7 +1151,7 @@ StepIndicator.displayName = 'StepIndicator';
             </button>
           )}
 
-          {step < 5 ? (
+          {step < 4 ? (
             <button
               onClick={nextStep}
               className="flex items-center gap-2 px-10 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-[1.25rem] text-sm font-black shadow-lg shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all active:scale-95 hover:-translate-y-0.5"
