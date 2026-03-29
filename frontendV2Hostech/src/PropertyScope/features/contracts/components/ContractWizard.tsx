@@ -1033,16 +1033,39 @@ StepIndicator.displayName = 'StepIndicator';
                           scanContract.mutate(scanFile, {
                             onSuccess: (data) => {
                               toast.success('Đã trích xuất dữ liệu thành công!');
+                              
+                              if (data?._db_user_found && data?.user_id) {
+                                toast.success(`Đã tự động liên kết cư dân: ${data.tenant_name}`);
+                                setSelectedTenantRecords(prev => {
+                                  if (prev.some(t => t.id === data.user_id)) return prev;
+                                  return [...prev, {
+                                    id: data.user_id!,
+                                    full_name: data.tenant_name || '',
+                                    phone: data.tenant_phone || '',
+                                    identity_number: data.tenant_id_number || '',
+                                    email: '', // dummy
+                                    role: 'TENANT',
+                                    is_active: true,
+                                    created_at: new Date().toISOString()
+                                  } as import('@/PropertyScope/features/users/types').PropertyUser];
+                                });
+                              }
+
                               setFormData(prev => ({
                                 ...prev,
                                 rent_price: data?.rent_price || prev.rent_price,
                                 deposit_amount: data?.deposit_amount || prev.deposit_amount,
                                 start_date: data?.start_date ? new Date(data.start_date).toISOString().split('T')[0] : prev.start_date,
+                                end_date: data?.end_date ? new Date(data.end_date).toISOString().split('T')[0] : prev.end_date,
                                 billing_cycle: data?.billing_cycle
                                   ? normalizeBillingCycleMonths(data.billing_cycle)
                                   : prev.billing_cycle,
                                 contract_file_path: data?.file_path || prev.contract_file_path,
                                 contract_file_name: scanFile.name || prev.contract_file_name,
+                                selected_tenant_ids: data?.user_id 
+                                  ? Array.from(new Set([...prev.selected_tenant_ids, data.user_id])) 
+                                  : prev.selected_tenant_ids,
+                                primary_tenant_id: data?.user_id || prev.primary_tenant_id,
                               }));
                               nextStep();
                             },
