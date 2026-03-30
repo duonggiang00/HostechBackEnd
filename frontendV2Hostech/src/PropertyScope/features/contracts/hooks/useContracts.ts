@@ -160,6 +160,16 @@ export const useContractActions = () => {
     mutationFn: (file: File) => contractsApi.scanContract(file),
   });
 
+  /** POST /api/contracts/{id}/generate-document */
+  const generateDocument = useMutation({
+    mutationFn: ({ id, data }: { id: string, data?: any }) => contractsApi.generateDocument(id, data),
+  });
+
+  /** GET /api/contracts/{id}/document/download */
+  const downloadDocument = useMutation({
+    mutationFn: (id: string) => contractsApi.downloadDocument(id),
+  });
+
   return {
     createContract,
     updateContract,
@@ -171,5 +181,7 @@ export const useContractActions = () => {
     requestRoomTransfer,
     terminateContract,
     scanContract,
+    generateDocument,
+    downloadDocument,
   };
 };

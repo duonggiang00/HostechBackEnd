@@ -571,8 +571,8 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                           type="button"
                           onClick={() => toggleTenantSelection(tenant)}
                           className={`p-5 rounded-3xl border text-left transition-all ${isSelected
-                              ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
-                              : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200'
+                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
+                            : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200'
                             }`}
                         >
                           <div className="flex items-start justify-between gap-3">
@@ -723,10 +723,10 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                               setErrors((prev) => ({ ...prev, room_id: undefined }));
                             }}
                             className={`text-left p-4 rounded-2xl border transition-all ${isSelected
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/15'
-                                : isBlocked
-                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 opacity-60 cursor-not-allowed'
-                                  : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300'
+                              ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/15'
+                              : isBlocked
+                                ? 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 opacity-60 cursor-not-allowed'
+                                : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300'
                               }`}
                           >
                             <div className="flex items-start justify-between gap-3">

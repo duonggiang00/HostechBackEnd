@@ -109,6 +109,18 @@ export const contractsApi = {
     return response.data;
   },
 
+  generateDocument: async (id: string, data?: { extra_notes?: string; landlord_name?: string; landlord_phone?: string }) => {
+    const response = await apiClient.post(`/contracts/${id}/generate-document`, data);
+    return response.data; // { message, document_path, download_url }
+  },
+
+  downloadDocument: async (id: string): Promise<Blob> => {
+    const response = await apiClient.get(`/contracts/${id}/document/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
   scanContract: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
