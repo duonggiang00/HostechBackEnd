@@ -1,14 +1,8 @@
 import { useState } from 'react';
-import {
-  Plus,
-  MessageCircle,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  ChevronRight,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, CheckCircle2, ChevronRight, Clock, MessageCircle, Plus } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import TicketTimeline from '@/shared/features/tickets/components/TicketTimeline';
+import MaintenanceReportModal from '@/shared/features/tickets/components/MaintenanceReportModal';
 
 interface Request {
   id: string;
@@ -19,8 +13,9 @@ interface Request {
 }
 
 export default function TenantRequestsPage() {
-  const [activeTab, setActiveTab] = useState('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const requests: Request[] = [
     { id: 'REQ-101', title: 'Thay lõi lọc máy lạnh', category: 'Bảo trì', status: 'pending', date: '15/03/2026' },
@@ -28,58 +23,74 @@ export default function TenantRequestsPage() {
     { id: 'REQ-103', title: 'Cấp lại thẻ ra vào', category: 'An ninh', status: 'completed', date: '08/03/2026' },
   ];
 
-  const statusIcons = {
-    pending: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'Chờ xử lý' },
-    in_progress: { icon: AlertCircle, color: 'text-indigo-500', bg: 'bg-indigo-500/10', label: 'Đang xử lý' },
-    completed: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10', label: 'Hoàn tất' },
+  const statusMap = {
+    pending: { icon: Clock, label: 'Chờ xử lý', tone: 'text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10' },
+    in_progress: { icon: AlertCircle, label: 'Đang xử lý', tone: 'text-indigo-600 bg-indigo-50 dark:text-indigo-300 dark:bg-indigo-500/10' },
+    completed: { icon: CheckCircle2, label: 'Hoàn tất', tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10' },
   };
 
-  const visibleRequests = requests.filter((request) => activeTab === 'active' ? request.status !== 'completed' : request.status === 'completed');
+  const visibleRequests = requests.filter((request) =>
+    activeTab === 'active' ? request.status !== 'completed' : request.status === 'completed',
+  );
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-700">
+    <div className="space-y-6 pb-20 lg:pb-0">
+      <MaintenanceReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+
       <AnimatePresence>
-        {selectedTicketId && (
+        {selectedTicketId ? (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed inset-0 z-200 flex items-center justify-center p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6"
           >
-            <div className="absolute inset-0 bg-[#0A0A0B]/90 backdrop-blur-xl" onClick={() => setSelectedTicketId(null)} />
-            <div className="relative w-full max-w-2xl bg-[#0A0A0B] border border-white/10 rounded-6xl shadow-2xl overflow-hidden p-2">
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur" onClick={() => setSelectedTicketId(null)} />
+            <div className="relative w-full max-w-2xl overflow-hidden rounded-[32px] border border-white/10 bg-slate-950 p-2 shadow-2xl">
               <TicketTimeline />
               <button
                 onClick={() => setSelectedTicketId(null)}
-                className="absolute top-8 right-8 p-3 rounded-2xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all"
+                className="absolute right-6 top-6 rounded-2xl bg-white/10 p-3 text-slate-300 transition-colors hover:bg-white/20 hover:text-white"
               >
-                <Plus className="w-5 h-5 rotate-45" />
+                <Plus className="h-5 w-5 rotate-45" />
               </button>
             </div>
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Yêu cầu hỗ trợ</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">Theo dõi các yêu cầu bạn đã gửi và tiến độ xử lý</p>
-        </div>
-        <button className="p-3 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-100 dark:shadow-indigo-900/30 hover:scale-105 active:scale-95 transition-all">
-          <Plus className="w-6 h-6" />
-        </button>
-      </div>
+      <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Yêu cầu hỗ trợ</p>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Gửi mới hoặc kiểm tra tiến độ</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Chỉ giữ lại hai nhóm dễ thao tác: đang xử lý và đã hoàn tất.
+            </p>
+          </div>
 
-      <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-4xl border border-slate-200 dark:border-slate-700">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+          >
+            <Plus className="h-4 w-4" />
+            Báo sự cố mới
+          </button>
+        </div>
+      </section>
+
+      <div className="inline-flex rounded-3xl border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         {[
           { key: 'active', label: 'Đang xử lý' },
           { key: 'completed', label: 'Đã hoàn tất' },
         ].map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex-1 py-3 text-xs font-black uppercase tracking-[0.2em] rounded-3xl transition-all ${
-              activeTab === tab.key ? 'bg-white dark:bg-slate-700 text-indigo-600 shadow-sm' : 'text-slate-400 dark:text-slate-500'
+            onClick={() => setActiveTab(tab.key as 'active' | 'completed')}
+            className={`rounded-3xl px-5 py-3 text-sm font-black transition-colors ${
+              activeTab === tab.key
+                ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             {tab.label}
@@ -87,55 +98,47 @@ export default function TenantRequestsPage() {
         ))}
       </div>
 
-      <div className="space-y-4">
+      <section className="space-y-3">
         {visibleRequests.map((request) => {
-          const statusInfo = statusIcons[request.status];
+          const status = statusMap[request.status];
           return (
-            <motion.div
+            <button
               key={request.id}
-              whileTap={{ scale: 0.98 }}
               onClick={() => setSelectedTicketId(request.id)}
-              className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-5xl p-6 shadow-sm hover:border-indigo-200 dark:hover:border-indigo-700 hover:shadow-md transition-all flex items-center gap-5 cursor-pointer group"
+              className="flex w-full items-center gap-4 rounded-[28px] border border-slate-200 bg-white p-5 text-left shadow-sm transition-colors hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500 dark:hover:bg-slate-800/70"
             >
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${statusInfo.bg} ${statusInfo.color}`}>
-                <statusInfo.icon className="w-7 h-7" />
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${status.tone}`}>
+                <status.icon className="h-5 w-5" />
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 leading-none">{request.category}</span>
-                  <span className="text-xs font-bold text-slate-400 dark:text-slate-500">{request.date}</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  <span>{request.category}</span>
+                  <span>{request.date}</span>
                 </div>
-                <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                  {request.title}
-                </h3>
-                <div className="flex items-center gap-2 mt-2.5">
-                  <div className={`w-2 h-2 rounded-full ${statusInfo.color.replace('text', 'bg')}`} />
-                  <span className={`text-xs font-black uppercase tracking-widest ${statusInfo.color}`}>{statusInfo.label}</span>
-                </div>
+                <h3 className="mt-2 text-base font-black text-slate-950 dark:text-white">{request.title}</h3>
               </div>
 
-              <div className="p-3 text-slate-200 dark:text-slate-600 group-hover:text-indigo-300 dark:group-hover:text-indigo-400 transition-colors">
-                <ChevronRight className="w-6 h-6" />
+              <div className="flex items-center gap-3">
+                <span className={`hidden rounded-2xl px-3 py-1.5 text-xs font-black sm:inline-flex ${status.tone}`}>
+                  {status.label}
+                </span>
+                <ChevronRight className="h-5 w-5 text-slate-300 dark:text-slate-600" />
               </div>
-            </motion.div>
+            </button>
           );
         })}
-      </div>
 
-      {visibleRequests.length === 0 && (
-        <div className="bg-slate-50 dark:bg-slate-800/50 border border-dashed border-slate-200 dark:border-slate-600 rounded-6xl p-16 text-center space-y-6">
-          <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-4xl shadow-sm flex items-center justify-center mx-auto text-slate-200 dark:text-slate-600 border border-slate-100 dark:border-slate-700">
-            <MessageCircle className="w-10 h-10" />
-          </div>
-          <div>
-            <h4 className="text-lg font-black text-slate-800 dark:text-slate-100">Không có yêu cầu phù hợp</h4>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 max-w-[240px] mx-auto font-medium leading-relaxed">
-              Khi bạn gửi yêu cầu mới, lịch sử và tiến độ xử lý sẽ hiển thị tại đây.
+        {visibleRequests.length === 0 ? (
+          <div className="rounded-[28px] border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <MessageCircle className="mx-auto h-10 w-10 text-slate-300 dark:text-slate-600" />
+            <h4 className="mt-4 text-lg font-black text-slate-950 dark:text-white">Chưa có mục nào ở nhóm này</h4>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              Khi bạn tạo yêu cầu mới hoặc yêu cầu hoàn tất, danh sách sẽ tự cập nhật tại đây.
             </p>
           </div>
-        </div>
-      )}
+        ) : null}
+      </section>
     </div>
   );
 }
