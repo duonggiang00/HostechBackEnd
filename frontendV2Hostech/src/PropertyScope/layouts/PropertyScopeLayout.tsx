@@ -98,10 +98,10 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
       id: 'operations',
       label: 'Vận hành',
       items: [
-        { 
-          id: 'meters', 
-          icon: Gauge, 
-          label: 'Chỉ số điện nước', 
+        {
+          id: 'meters',
+          icon: Gauge,
+          label: 'Chỉ số điện nước',
           path: `/properties/${propertyId}/meters`,
           children: [
             { id: 'meters-list', label: 'Quản lý chỉ số', path: `/properties/${propertyId}/meters`, exact: true },
@@ -143,7 +143,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             Sneat
           </h1>
         </div>
-        <button 
+        <button
           onClick={() => setIsMobileMenuOpen(false)}
           className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:hidden transition-colors"
         >
@@ -186,16 +186,16 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         {/* Tree View */}
         <div className="min-h-[150px] shrink-0 flex-1 px-2 pt-5">
           {propertyId && (
-             <div className="relative pt-4">
-               <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
-               <div className="px-5 py-4">
-                 <SidebarDropdownSection label="Sơ đồ tòa nhà">
-                   <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
-                     <PropertyTreeView />
-                   </div>
-                 </SidebarDropdownSection>
-               </div>
-             </div>
+            <div className="relative pt-4">
+              <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
+              <div className="px-5 py-4">
+                <SidebarDropdownSection label="Sơ đồ tòa nhà">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
+                    <PropertyTreeView />
+                  </div>
+                </SidebarDropdownSection>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -233,7 +233,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               onClick={() => setIsMobileMenuOpen(false)}
               className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
             />
-            <motion.aside 
+            <motion.aside
               initial={{ x: -280 }}
               animate={{ x: 0 }}
               exit={{ x: -280 }}
