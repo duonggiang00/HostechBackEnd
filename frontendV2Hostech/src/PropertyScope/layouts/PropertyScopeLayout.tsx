@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import {
   Building2,
@@ -16,9 +16,6 @@ import {
   CreditCard,
   Settings,
   Ticket,
-  FilePlus2,
-  Zap,
-  ReceiptText,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -26,6 +23,7 @@ import { useDashboardHomePath } from '@/shared/hooks/useDashboardHomePath';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
+import SidebarDropdownSection, { type SidebarDropdownItem } from '@/shared/components/ui/SidebarDropdownSection';
 import { useTickets } from '../features/tickets/hooks/useTickets';
 import { useContracts } from '../features/contracts/hooks/useContracts';
 import { usePropertyInvoices } from '../features/billing/hooks/usePropertyInvoices';
@@ -34,19 +32,11 @@ interface PropertyScopeLayoutProps {
   children: ReactNode;
 }
 
-interface SidebarItem {
-  id: string;
-  icon: any;
-  label: string;
-  path: string;
-  exact?: boolean;
-  badge?: number;
-}
-
 interface SidebarSection {
   id: string;
   label: string;
-  items: SidebarItem[];
+  defaultOpen?: boolean;
+  items: SidebarDropdownItem[];
 }
 
 export default function PropertyScopeLayout({ children }: PropertyScopeLayoutProps) {
@@ -78,16 +68,17 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     {
       id: 'setup',
       label: 'Thiết lập',
+      defaultOpen: true,
       items: [
         { id: 'home', icon: Home, label: 'Tổng quan', path: dashboardPath, exact: true },
-        { id: 'floors', icon: Layers, label: 'Tầng & sơ đồ', path: `/properties/${propertyId}/floors` },
+        { id: 'floors', icon: Layers, label: 'Tầng và sơ đồ', path: `/properties/${propertyId}/floors` },
         { id: 'rooms', icon: DoorOpen, label: 'Phòng', path: `/properties/${propertyId}/rooms` },
-        { id: 'templates', icon: Settings, label: 'Mẫu & cấu hình', path: `/properties/${propertyId}/templates` },
+        { id: 'templates', icon: Settings, label: 'Mẫu và cấu hình', path: `/properties/${propertyId}/templates` },
       ],
     },
     {
       id: 'onboarding',
-      label: 'Onboarding khách thuê',
+      label: 'Khách thuê',
       items: [
         {
           id: 'contracts',
@@ -95,26 +86,43 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
           label: 'Hợp đồng',
           path: `/properties/${propertyId}/contracts`,
           badge: contractAttentionCount > 0 ? contractAttentionCount : undefined,
+          children: [
+            { id: 'contracts-list', label: 'Danh sách hợp đồng', path: `/properties/${propertyId}/contracts`, exact: true },
+            { id: 'contracts-create', label: 'Tạo hợp đồng nhanh', path: `/properties/${propertyId}/contracts/create` }
+          ]
         },
-        { id: 'users', icon: User, label: 'Cư dân & nhân sự', path: `/properties/${propertyId}/users` },
+        { id: 'users', icon: User, label: 'Cư dân và nhân sự', path: `/properties/${propertyId}/users` },
       ],
     },
     {
       id: 'operations',
-      label: 'Vận hành tháng',
+      label: 'Vận hành',
       items: [
-        { id: 'meters', icon: Gauge, label: 'Chốt số điện nước', path: `/properties/${propertyId}/meters` },
+        { 
+          id: 'meters', 
+          icon: Gauge, 
+          label: 'Chỉ số điện nước', 
+          path: `/properties/${propertyId}/meters`,
+          children: [
+            { id: 'meters-list', label: 'Quản lý chỉ số', path: `/properties/${propertyId}/meters`, exact: true },
+            { id: 'meters-quick', label: 'Nhập chỉ số nhanh', path: `/properties/${propertyId}/meters/quick` }
+          ]
+        },
         {
           id: 'billing',
           icon: CreditCard,
-          label: 'Hóa đơn & thanh toán',
+          label: 'Hóa đơn và thu chi',
           path: `/properties/${propertyId}/billing`,
           badge: issuedInvoiceCount > 0 ? issuedInvoiceCount : undefined,
+          children: [
+            { id: 'billing-list', label: 'Quản lý hóa đơn', path: `/properties/${propertyId}/billing`, exact: true },
+            { id: 'billing-review', label: 'Duyệt hóa đơn', path: `/properties/${propertyId}/billing?tab=review` }
+          ]
         },
         {
           id: 'tickets',
           icon: Ticket,
-          label: 'Sự cố & yêu cầu',
+          label: 'Sự cố và yêu cầu',
           path: `/properties/${propertyId}/tickets`,
           badge: openCount > 0 ? openCount : undefined,
         },
@@ -122,121 +130,78 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     },
   ];
 
-  const quickActions = [
-    { id: 'create-contract', icon: FilePlus2, label: 'Tạo hợp đồng', path: `/properties/${propertyId}/contracts/create` },
-    { id: 'quick-reading', icon: Zap, label: 'Nhập chỉ số nhanh', path: `/properties/${propertyId}/meters/quick` },
-    { id: 'review-invoices', icon: ReceiptText, label: 'Duyệt hóa đơn', path: `/properties/${propertyId}/billing` },
-  ];
+  // Removed quickActions as they are now integrated into dropdowns above.
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-slate-800">
-      {/* Header section - Sticky top */}
-      <div className="shrink-0 p-6 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+  const renderSidebarContent = () => (
+    <div className="flex h-full w-full flex-col bg-white dark:bg-slate-900">
+      <div className="flex shrink-0 items-center justify-between px-6 py-6 pb-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30">
-            <Building2 className="w-6 h-6 text-white" />
+          <div className="flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-200 dark:shadow-none">
+            <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-bold bg-linear-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-            Hostech V2
+          <h1 className="text-xl font-extrabold text-[#566a7f] dark:text-slate-200 tracking-tight">
+            Sneat
           </h1>
         </div>
-        <button
+        <button 
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:hidden transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
       {/* Middle scrollable content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col pb-4">
         {/* Switcher */}
-        <div className="p-4 shrink-0">
+        <div className="shrink-0 px-4 py-3">
           <PropertySwitcher />
         </div>
 
         {/* Navigation */}
-        <nav className="px-4 space-y-1 shrink-0">
-          <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-3 mt-1 px-3">
+        <nav className="shrink-0 space-y-3 px-3">
+          <div className="mb-3 mt-1 px-3 text-[11px] font-black uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
             Luồng vận hành
           </div>
 
           {propertyId ? (
             menuSections.map((section) => (
-              <div key={section.id} className="mb-5">
-                <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400/80 dark:text-slate-500">
-                  {section.label}
-                </div>
-                <div className="space-y-1">
-                  {section.items.map((item) => (
-                    <NavLink
-                      key={item.id}
-                      to={item.path}
-                      end={item.exact ?? false}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `group flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-all duration-200 ${
-                          isActive
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm shadow-indigo-100/50 dark:shadow-none border border-indigo-100 dark:border-indigo-800'
-                            : 'text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent'
-                        }`
-                      }
-                    >
-                      <item.icon className="w-4.5 h-4.5 shrink-0 transition-transform group-hover:scale-110 group-active:scale-95" />
-                      <span className="flex-1 truncate tracking-tight">{item.label}</span>
-                      {item.badge ? (
-                        <span className="px-2 py-0.5 text-[10px] font-black bg-rose-500 text-white rounded-full shrink-0 shadow-sm shadow-rose-200 dark:shadow-none animate-in fade-in zoom-in spin-in-2 duration-300">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </NavLink>
-                  ))}
-                </div>
-              </div>
+              <SidebarDropdownSection
+                key={section.id}
+                label={section.label}
+                items={section.items}
+                defaultOpen={section.defaultOpen}
+                onNavigate={() => setIsMobileMenuOpen(false)}
+              />
             ))
           ) : (
-            <div className="px-3 py-4 text-sm text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 italic text-center">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-4 text-center text-sm italic text-slate-500 dark:border-slate-700 dark:bg-slate-800">
               Vui lòng chọn cơ sở
             </div>
           )}
         </nav>
 
-        {/* Quick Actions */}
-        {propertyId ? (
-          <div className="px-4 pt-4 mt-2 shrink-0 relative">
-            <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
-            <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-              Thao tác nhanh
-            </div>
-            <div className="space-y-1">
-              {quickActions.map((action) => (
-                <NavLink
-                  key={action.id}
-                  to={action.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2 text-xs font-bold rounded-xl text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:border-indigo-700 dark:hover:text-indigo-300 transition-all hover:shadow-sm"
-                >
-                  <action.icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{action.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        {/* Quick Actions removed - Now integrated via Dropdowns */}
 
         {/* Tree View */}
-        <div className="flex-1 px-2 pt-6 shrink-0 min-h-[150px]">
+        <div className="min-h-[150px] shrink-0 flex-1 px-2 pt-5">
           {propertyId && (
              <div className="relative pt-4">
                <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
-               <PropertyTreeView />
+               <div className="px-5 py-4">
+                 <SidebarDropdownSection label="Sơ đồ tòa nhà">
+                   <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
+                     <PropertyTreeView />
+                   </div>
+                 </SidebarDropdownSection>
+               </div>
              </div>
           )}
         </div>
       </div>
 
       {/* Footer section (Account Menu) - Always visible */}
-      <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md z-10 w-full shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.02)]">
+      <div className="w-full shrink-0 border-t border-slate-200/60 bg-white p-4 dark:border-white/10 dark:bg-slate-900">
         <SidebarAccountMenu
           profilePath={`/properties/${propertyId}/profile`}
           userName={user?.full_name}
@@ -252,9 +217,10 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-      <aside className="w-72 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 hidden lg:flex flex-col sticky top-0 h-screen">
-        <SidebarContent />
+    <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
+      {/* Desktop Sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-[260px] flex-col border-r border-[#eceef1] bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex shadow-sm">
+        {renderSidebarContent()}
       </aside>
 
       <AnimatePresence>
@@ -267,14 +233,14 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               onClick={() => setIsMobileMenuOpen(false)}
               className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
             />
-            <motion.aside
-              initial={{ x: -300 }}
+            <motion.aside 
+              initial={{ x: -280 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
+              exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-800 shadow-2xl z-50 lg:hidden flex flex-col"
+              className="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-white shadow-xl dark:bg-slate-900 lg:hidden"
             >
-              <SidebarContent />
+              {renderSidebarContent()}
             </motion.aside>
           </>
         )}
