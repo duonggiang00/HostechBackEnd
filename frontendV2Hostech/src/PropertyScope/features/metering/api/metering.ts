@@ -196,6 +196,62 @@ export const meteringApi = {
     return response.data.data || response.data;
   },
 
+  /**
+   * Lấy readings theo status cho nhiều meters (song song).
+   * Thành phần máy chủ không có endpoint property-level, nên
+   * ta gọi /meters/{id}/readings cho từng meter và gộp lại.
+   */
+  getReadingsForMeters: async (
+    meterIds: string[],
+    params?: { status?: string; period_start?: string; period_end?: string; per_page?: number }
+  ): Promise<{ data: (MeterReading & { meter_id: string })[]; meta: { total: number } }> => {
+    if (!meterIds.length) return { data: [], meta: { total: 0 } };
+
+    const results = await Promise.allSettled(
+      meterIds.map(meterId =>
+        apiClient.get(`/meters/${meterId}/readings`, {
+          params: {
+            'filter[status]': params?.status || undefined,
+            per_page: params?.per_page ?? 50,
+          },
+        }).then(res => {
+          const list: MeterReading[] = res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+          return list.map(r => ({ ...r, meter_id: meterId }));
+        })
+      )
+    );
+
+    const allReadings: (MeterReading & { meter_id: string })[] = [];
+    results.forEach(r => {
+      if (r.status === 'fulfilled') allReadings.push(...r.value);
+    });
+
+    return { data: allReadings, meta: { total: allReadings.length } };
+  },
+
+  // Duyệt nhiều chốt số cùng lúc (gọi từng cái song song)
+  bulkApproveReadings: async (items: { meterId: string; readingId: string }[]) => {
+    const results = await Promise.allSettled(
+      items.map(({ meterId, readingId }) =>
+        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'APPROVED' })
+      )
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    return { succeeded, failed };
+  },
+
+  bulkRejectReadings: async (items: { meterId: string; readingId: string }[], reason?: string) => {
+    const results = await Promise.allSettled(
+      items.map(({ meterId, readingId }) =>
+        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'REJECTED', meta: { rejection_reason: reason } })
+      )
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    return { succeeded, failed };
+  },
+
   // Legacy method
   addReading: async (meterId: string, reading_value: number, reading_date: string, photo?: File) => {
     const formData = new FormData();

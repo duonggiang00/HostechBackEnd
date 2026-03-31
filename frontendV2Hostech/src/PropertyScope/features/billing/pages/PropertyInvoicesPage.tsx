@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Search, Filter, FileText } from 'lucide-react';
+import { Plus, Search, Filter, FileText, ClipboardList } from 'lucide-react';
 import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
 import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
 import { GenerateMonthlyModal } from '../components/GenerateMonthlyModal';
 import { InvoiceDetailPanel } from '../components/InvoiceDetailPanel';
+import { BillingPeriodChecklist } from '../components/BillingPeriodChecklist';
+import { BulkApproveReadingsModal } from '../../metering/components/BulkApproveReadingsModal';
 import type { InvoiceStatus } from '../types';
 import { AnimatePresence } from 'framer-motion';
 
@@ -15,6 +17,7 @@ export function PropertyInvoicesPage() {
   const [page, setPage] = useState(1);
   
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   const { data, isLoading } = usePropertyInvoices(propertyId!, {
@@ -42,14 +45,30 @@ export function PropertyInvoicesPage() {
             </p>
           </div>
           
-          <button 
-            onClick={() => setIsGenerateModalOpen(true)}
-            className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-500/20"
-          >
-            <Plus className="w-4 h-4" />
-            Tạo hóa đơn tháng
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsBulkApproveOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+            >
+              <ClipboardList className="w-4 h-4 text-amber-500" />
+              Duyệt chốt số
+            </button>
+            <button 
+              onClick={() => setIsGenerateModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              Tạo hóa đơn tháng
+            </button>
+          </div>
         </div>
+
+        {/* Billing Period Checklist */}
+        <BillingPeriodChecklist
+          propertyId={propertyId!}
+          onOpenBulkApprove={() => setIsBulkApproveOpen(true)}
+          onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
+        />
 
         {/* Status bar / Insights placeholder */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -203,6 +222,14 @@ export function PropertyInvoicesPage() {
         isOpen={isGenerateModalOpen}
         onClose={() => setIsGenerateModalOpen(false)}
       />
+
+      {isBulkApproveOpen && (
+        <BulkApproveReadingsModal
+          propertyId={propertyId!}
+          isOpen={isBulkApproveOpen}
+          onClose={() => setIsBulkApproveOpen(false)}
+        />
+      )}
 
       <AnimatePresence>
         {selectedInvoiceId && (
