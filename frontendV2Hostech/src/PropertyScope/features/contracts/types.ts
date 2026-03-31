@@ -152,10 +152,16 @@ export interface CreateContractPayload {
 
 export interface ScanContractResponse {
   tenant_name?: string;
+  tenant_phone?: string;
+  tenant_id_number?: string;
+  room_code?: string;
   rent_price?: number;
   deposit_amount?: number;
   start_date?: string;
+  end_date?: string;
   billing_cycle?: string | number;
   file_path?: string;
+  user_id?: string;
+  _db_user_found?: boolean;
 }
 
