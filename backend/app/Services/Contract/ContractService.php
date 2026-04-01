@@ -740,8 +740,11 @@ class ContractService
     private function cancelInitialInvoice(Contract $contract): void
     {
         $initialInvoice = Invoice::where('contract_id', $contract->id)
-            ->where('snapshot->is_initial', true)
-            ->whereNot('status', 'PAID')
+            ->where(function ($q) {
+                $q->whereJsonContains('snapshot->is_initial', true)
+                  ->orWhere('snapshot', 'like', '%"is_initial":true%');
+            })
+            ->whereNotIn('status', ['PAID', 'CANCELLED'])
             ->first();
 
         if ($initialInvoice) {
@@ -767,14 +770,34 @@ class ContractService
             throw new \Exception('Chỉ có thể xác nhận thanh toán cho hợp đồng đang chờ thanh toán.');
         }
 
-        return DB::transaction(function () use ($contract) {
-            // 1. Mark contract as ACTIVE
-            $contract->update([
-                'status' => ContractStatus::ACTIVE,
-                'activated_at' => now(),
-            ]);
+        return DB::transaction(function () use ($contract, $performer) {
+            // 1. Tìm Initial Invoice chưa PAID và mark PAID
+            $initialInvoice = Invoice::where('contract_id', $contract->id)
+                ->where(function ($q) {
+                    $q->whereJsonContains('snapshot->is_initial', true)
+                      ->orWhere('snapshot', 'like', '%"is_initial":true%');
+                })
+                ->whereNotIn('status', ['PAID', 'CANCELLED'])
+                ->first();
 
-            // 2. Mark Room as OCCUPIED
+            if ($initialInvoice) {
+                // payInvoice gọi activateContractIfInitialInvoice() hook bên trong InvoiceService
+                $this->invoiceService->payInvoice(
+                    $initialInvoice,
+                    'Xác nhận thanh toán bởi quản lý khi ký hợp đồng.'
+                );
+                $contract->refresh();
+            }
+
+            // 2. Đảm bảo contract ACTIVE (hook có thể đã set, hoặc không có initial invoice)
+            if ($contract->status !== ContractStatus::ACTIVE) {
+                $contract->update([
+                    'status'       => ContractStatus::ACTIVE,
+                    'activated_at' => now(),
+                ]);
+            }
+
+            // 3. Đảm bảo Room → occupied
             if ($contract->room) {
                 $contract->room->update(['status' => 'occupied']);
             }
