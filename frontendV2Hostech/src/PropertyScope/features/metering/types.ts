@@ -27,26 +27,32 @@ export interface MeterReading {
   photo_url?: string;
   consumption?: number;
   status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
-  // Period
+  // New fields from backend
   period_start?: string;
   period_end?: string;
-  // Submission
   submitted_by_user_id?: string;
   submitted_at?: string;
   submitted_by?: { id: string; name: string };
-  // Approval
   approved_by_user_id?: string;
   approved_at?: string;
   approved_by?: { id: string; name: string };
-  // Rejection
+  rejection_reason?: string;
   rejected_by_user_id?: string;
   rejected_at?: string;
   rejected_by?: { id: string; name: string };
-  rejection_reason?: string;
-  // Media proofs
-  proofs?: Array<{ id: string; url: string; thumb_url: string; name: string; file_name?: string; mime_type?: string; size?: number }>;
   locked_at?: string;
   meta?: Record<string, any>;
+  proofs?: {
+    id: string;
+    url: string;
+    thumb_url?: string;
+    name?: string;
+    file_name?: string;
+    mime_type?: string;
+    size?: number;
+  }[];
+  /** IDs từ temporary upload để gán ảnh khi tạo/cập nhật reading */
+  proof_media_ids?: string[];
   created_at?: string;
   updated_at?: string;
 }

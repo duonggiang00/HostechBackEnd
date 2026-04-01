@@ -102,6 +102,7 @@ class MeterReading extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('reading_proofs')
+            ->singleFile()
             ->registerMediaConversions(function (Media $media) {
                 $this->addMediaConversion('thumb')
                     ->fit(Fit::Crop, 300, 300)

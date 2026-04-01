@@ -1,6 +1,7 @@
 import { ClipboardList, CreditCard, FileSignature, Home, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
+import SidebarDropdownSection from '@/shared/components/ui/SidebarDropdownSection';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 const navItems = [
@@ -10,6 +11,26 @@ const navItems = [
   { icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
 ];
 
+const navSections = [
+  {
+    id: 'residence',
+    label: 'Chỗ ở',
+    defaultOpen: true,
+    items: [
+      { id: 'dashboard', icon: Home, label: 'Tổng quan', path: '/app/dashboard', exact: true },
+      { id: 'contracts', icon: FileSignature, label: 'Hợp đồng', path: '/app/contracts/pending' },
+    ],
+  },
+  {
+    id: 'services',
+    label: 'Tài chính và hỗ trợ',
+    items: [
+      { id: 'billing', icon: CreditCard, label: 'Hóa đơn', path: '/app/billing' },
+      { id: 'requests', icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
+    ],
+  },
+];
+
 const accountItem = { icon: User, label: 'Tài khoản', path: '/app/profile' };
 
 export default function TenantNav() {
@@ -17,7 +38,7 @@ export default function TenantNav() {
 
   return (
     <>
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white/90 lg:px-5 lg:py-6 lg:backdrop-blur dark:lg:border-slate-800 dark:lg:bg-slate-950/85">
+      <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white/90 lg:px-4 lg:py-5 lg:backdrop-blur dark:lg:border-slate-800 dark:lg:bg-slate-950/85">
         <div className="px-3">
           <p className="text-[11px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
             Cổng cư dân
@@ -26,26 +47,18 @@ export default function TenantNav() {
             Hostech
           </h2>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Mọi thao tác chính đều nằm ở đây.
+            Các thao tác chính đã được gom theo từng nhóm để dễ tìm hơn.
           </p>
         </div>
 
-        <nav className="mt-8 flex-1 space-y-2">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition-colors ${
-                  isActive
-                    ? 'bg-slate-950 text-white shadow-lg shadow-slate-900/10 dark:bg-white dark:text-slate-950'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white'
-                }`
-              }
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              <span>{item.label}</span>
-            </NavLink>
+        <nav className="mt-6 flex-1 space-y-3">
+          {navSections.map((section) => (
+            <SidebarDropdownSection
+              key={section.id}
+              label={section.label}
+              items={section.items}
+              defaultOpen={section.defaultOpen}
+            />
           ))}
         </nav>
 

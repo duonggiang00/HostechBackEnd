@@ -2,6 +2,25 @@ import apiClient from '@/shared/api/client';
 import type { Meter, MeterReading } from '../types';
 
 export const meteringApi = {
+  uploadReadingProof: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collection', 'reading_proofs');
+
+    const response = await apiClient.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data?.data as {
+      media_id: string;
+      temporary_upload_id: string;
+      url: string;
+      file_name: string;
+      mime_type: string;
+      size: number;
+    };
+  },
+
   // Meter CRUD Operations
   getMeters: async (propertyId: string, filters?: Record<string, any>, search?: string, page: number = 1, perPage: number = 15) => {
     // Format filters properly for Laravel's filter[] syntax
@@ -99,7 +118,7 @@ export const meteringApi = {
       page,
       per_page: perPage,
       sort: '-period_end',
-      include: 'submittedBy,approvedBy,media',
+      include: 'submittedBy,approvedBy,media,meter,meter.room',
       // Always filter by meter_id to get the correct meter's readings
       'filter[meter_id]': meterId,
     };
@@ -121,32 +140,40 @@ export const meteringApi = {
 
   getMeterReading: async (meterId: string, readingId: string) => {
     const response = await apiClient.get(`/meters/${meterId}/readings/${readingId}`, {
-      params: { include: 'meter,submittedBy,approvedBy' }
+      params: { include: 'meter,submittedBy,approvedBy,media' }
     });
     console.log(`📡 API: GET /meters/${meterId}/readings/${readingId}:`, response.data.data);
     return response.data.data as MeterReading;
   },
 
-  createReading: async (meterId: string, data: { reading_value: number; period_start: string; period_end: string; proof_media_ids?: string[]; meta?: Record<string, any> }) => {
+  createReading: async (meterId: string, data: { reading_value: number; period_start: string; period_end: string; meta?: Record<string, any>; proof_media_ids?: string[] }) => {
     // Ensure dates are in YYYY-MM-DD format
     const payload = {
       reading_value: data.reading_value,
       period_start: data.period_start, // Should be YYYY-MM-DD from input type="date"
       period_end: data.period_end,     // Should be YYYY-MM-DD from input type="date"
-      ...(data.proof_media_ids && data.proof_media_ids.length > 0 && { proof_media_ids: data.proof_media_ids }),
       ...(data.meta && { meta: data.meta }),
+      ...(data.proof_media_ids && data.proof_media_ids.length > 0 ? { proof_media_ids: data.proof_media_ids } : {}),
     };
     
     console.log(`📤 Sending POST /meters/${meterId}/readings:`, JSON.stringify(payload, null, 2));
+    console.log(`📊 Payload details:`, {
+      meterId,
+      reading_value: `${payload.reading_value} (type: ${typeof payload.reading_value})`,
+      period_start: `${payload.period_start} (type: ${typeof payload.period_start})`,
+      period_end: `${payload.period_end} (type: ${typeof payload.period_end})`,
+    });
     
     try {
       const response = await apiClient.post(`/meters/${meterId}/readings`, payload);
-      console.log(`📡 API: POST /meters/${meterId}/readings (Created):`, response.data);
+      console.log(`📡 API: POST /meters/${meterId}/readings -Status ${response.status}:`, response.data);
       const result = response.data.data || response.data;
+      console.log(`📡 API: POST /meters/${meterId}/readings (Created):`, result);
       return result as MeterReading;
     } catch (error: any) {
       console.error(`❌ API Error:`, {
         status: error.response?.status,
+        statusText: error.response?.statusText,
         data: error.response?.data,
         message: error.message,
       });
@@ -156,40 +183,121 @@ export const meteringApi = {
 
   updateReading: async (meterId: string, readingId: string, data: Partial<MeterReading>) => {
     const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, data);
+    console.log(`📡 API: PUT /meters/${meterId}/readings/${readingId} (Updated):`, response.data.data);
     return response.data.data as MeterReading;
   },
 
-  // ═══ Workflow Action Endpoints ═══
+  approveReading: async (meterId: string, readingId: string) => {
+    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'APPROVED' });
+    const result = response.data.data || response.data;
+    console.log(`📡 API: Approved reading:`, result);
+    return result as MeterReading;
+  },
 
   submitReading: async (meterId: string, readingId: string) => {
-    const response = await apiClient.post(`/meters/${meterId}/readings/${readingId}/submit`);
-    return (response.data.data || response.data) as MeterReading;
+    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'SUBMITTED' });
+    const result = response.data.data || response.data;
+    console.log(`📡 API: Submitted reading:`, result);
+    return result as MeterReading;
   },
 
-  approveReading: async (meterId: string, readingId: string) => {
-    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}/approve`);
-    return (response.data.data || response.data) as MeterReading;
-  },
-
-  rejectReading: async (meterId: string, readingId: string, reason: string) => {
-    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}/reject`, {
+  rejectReading: async (meterId: string, readingId: string, reason?: string) => {
+    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { 
+      status: 'REJECTED',
       rejection_reason: reason,
+      meta: reason ? { rejection_reason: reason } : undefined,
     });
-    return (response.data.data || response.data) as MeterReading;
+    const result = response.data.data || response.data;
+    console.log(`📡 API: Rejected reading:`, result);
+    return result as MeterReading;
   },
 
   deleteReading: async (meterId: string, readingId: string) => {
     const response = await apiClient.delete(`/meters/${meterId}/readings/${readingId}`);
+    console.log(`📡 API: DELETE reading:`, response.status);
     return response;
   },
 
   bulkCreateReadings: async (propertyId: string, readings: any[]) => {
     const response = await apiClient.post(`/properties/${propertyId}/meters/bulk-readings`, { readings });
+    console.log(`📡 API: POST bulk readings:`, response.data);
     return response.data.data || response.data;
+  },
+
+  /**
+   * Lấy readings theo status cho nhiều meters (song song).
+   * Thành phần máy chủ không có endpoint property-level, nên
+   * ta gọi /meters/{id}/readings cho từng meter và gộp lại.
+   */
+  getReadingsForMeters: async (
+    meterIds: string[],
+    params?: { status?: string; period_start?: string; period_end?: string; per_page?: number }
+  ): Promise<{ data: (MeterReading & { meter_id: string })[]; meta: { total: number } }> => {
+    if (!meterIds.length) return { data: [], meta: { total: 0 } };
+
+    const results = await Promise.allSettled(
+      meterIds.map(meterId =>
+        apiClient.get(`/meters/${meterId}/readings`, {
+          params: {
+            'filter[status]': params?.status || undefined,
+            per_page: params?.per_page ?? 50,
+          },
+        }).then(res => {
+          const list: MeterReading[] = res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+          return list.map(r => ({ ...r, meter_id: meterId }));
+        })
+      )
+    );
+
+    const allReadings: (MeterReading & { meter_id: string })[] = [];
+    results.forEach(r => {
+      if (r.status === 'fulfilled') allReadings.push(...r.value);
+    });
+
+    return { data: allReadings, meta: { total: allReadings.length } };
   },
 
   bulkSubmitReadings: async (readingIds: string[]) => {
     const response = await apiClient.post('/meters/readings/bulk-submit', { reading_ids: readingIds });
     return response.data.data || response.data;
+  },
+
+  // Duyệt nhiều chốt số cùng lúc (gọi từng cái song song)
+  bulkApproveReadings: async (items: { meterId: string; readingId: string }[]) => {
+    const results = await Promise.allSettled(
+      items.map(({ meterId, readingId }) =>
+        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'APPROVED' })
+      )
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    return { succeeded, failed };
+  },
+
+  bulkRejectReadings: async (items: { meterId: string; readingId: string }[], reason?: string) => {
+    const results = await Promise.allSettled(
+      items.map(({ meterId, readingId }) =>
+        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'REJECTED', meta: { rejection_reason: reason } })
+      )
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    return { succeeded, failed };
+  },
+
+  // Legacy method
+  addReading: async (meterId: string, reading_value: number, reading_date: string, photo?: File) => {
+    const formData = new FormData();
+    formData.append('reading_value', reading_value.toString());
+    formData.append('reading_date', reading_date);
+    if (photo) {
+      formData.append('photo', photo);
+    }
+    
+    const response = await apiClient.post(`/meters/${meterId}/readings`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    console.log(`📡 API: POST /meters/${meterId}/readings (Added):`, response.data.data);
+    return response.data.data as MeterReading;
   },
 };

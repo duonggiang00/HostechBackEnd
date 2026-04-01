@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus,
@@ -16,13 +16,15 @@ import {
   ChevronRight,
   Filter,
   RotateCcw,
+  ClipboardList,
 } from 'lucide-react';
-import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
+import { useMeters, useMeterActions, usePropertyReadings, type Meter } from '../hooks/useMeters';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import apiClient from '@/shared/api/client';
-// @ts-expect-error - Module resolution issue with auto-created component
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import MeterFormModal from '../components/MeterFormModal';
+
+import { BulkApproveReadingsModal } from '../components/BulkApproveReadingsModal';
 
 const METER_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   ELECTRIC: {
@@ -56,35 +58,22 @@ export default function MeterListPage() {
 
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingMeter, setEditingMeter] = useState<Meter | null>(null);
-
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showBulkApprove, setShowBulkApprove] = useState(false);
 
-  // Stats state
-  const [stats, setStats] = useState<any>(null);
-  const [statsLoading, setStatsLoading] = useState(true);
-  
+  // Pending readings badge
+  const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+  const monthEnd   = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+  const { data: pendingReadingsData } = usePropertyReadings(propertyId, {
+    status: 'PENDING',
+    period_start: monthStart,
+    period_end: monthEnd,
+  });
+  const pendingCount = pendingReadingsData?.meta?.total ?? pendingReadingsData?.data?.length ?? 0;
+
   // Pagination state
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
-
-  // Fetch statistics
-  useEffect(() => {
-    if (!propertyId) return;
-
-    const fetchStats = async () => {
-      try {
-        setStatsLoading(true);
-        const response = await apiClient.get(`properties/${propertyId}/meters/statistics`);
-        setStats(response.data);
-      } catch (error) {
-        console.error('Failed to fetch stats:', error);
-      } finally {
-        setStatsLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [propertyId]);
 
   // Calculate if filters have changed
   const isFilterChanged = useMemo(() => {
@@ -122,7 +111,6 @@ export default function MeterListPage() {
   // Use pagination data from API
   const totalItems = pagination?.total || 0;
   const totalPages = pagination?.last_page || 1;
-  const currentPage = pagination?.current_page || page;
 
   // Handlers
   const handleApplyFilters = () => {
@@ -180,6 +168,18 @@ export default function MeterListPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
         </div>
         <div className="flex items-center gap-3">
+          {pendingCount > 0 && (
+            <button
+              onClick={() => setShowBulkApprove(true)}
+              className="relative inline-flex items-center gap-2 px-5 py-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all shadow-sm active:scale-95"
+            >
+              <ClipboardList className="w-5 h-5" />
+              Duyệt chốt số
+              <span className="ml-1 px-2 py-0.5 bg-amber-500 text-white text-[10px] font-black rounded-full">
+                {pendingCount}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => navigate(`/properties/${propertyId}/meters/quick`)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
@@ -200,42 +200,25 @@ export default function MeterListPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng số</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total_meters}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đang hoạt động</p>
-            <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{stats.active_meters}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Master</p>
-            <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{stats.master_meters}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Điện</p>
-            <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400 mt-1">{stats.electric_meters}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Nước</p>
-            <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{stats.water_meters}</p>
-          </div>
-          <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng Tiêu thụ</p>
-            <div className="mt-1 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-yellow-600 dark:text-yellow-400 font-semibold">⚡ {stats.total_electric_reading?.toLocaleString('vi-VN') || '0'} kWh</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-blue-600 dark:text-blue-400 font-semibold">💧 {stats.total_water_reading?.toLocaleString('vi-VN') || '0'} m³</span>
-              </div>
-            </div>
-          </div>
+      {/* Stats Cards - derived from meter list */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng số</p>
+          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{pagination?.total ?? meters.length}</p>
         </div>
-      )}
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đang hoạt động</p>
+          <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{meters.filter((m: any) => m.is_active !== false).length}</p>
+        </div>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Điện</p>
+          <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400 mt-1">{meters.filter((m: any) => m.type === 'ELECTRIC').length}</p>
+        </div>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Nước</p>
+          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{meters.filter((m: any) => m.type === 'WATER').length}</p>
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm space-y-4">
@@ -339,7 +322,7 @@ export default function MeterListPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Loại</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Master</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Phòng</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Mã phòng</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Chỉ số hiện tại</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                 </tr>
@@ -355,16 +338,20 @@ export default function MeterListPage() {
                       className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                     >
                       {/* STT */}
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">
-                        {(page - 1) * itemsPerPage + index + 1}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 w-8 text-center">
+                            {(page - 1) * itemsPerPage + index + 1}
+                          </span>
+                          <span className="text-sm text-slate-600 dark:text-slate-400 truncate max-w-[160px]" title={meter.room?.name || 'Không có phòng'}>
+                            {meter.room?.name || 'Không có phòng'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Code */}
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{meter.code}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{meter.id}</p>
-                        </div>
+                        <p className="font-semibold text-slate-900 dark:text-white">{meter.code}</p>
                       </td>
 
                       {/* Type */}
@@ -416,10 +403,7 @@ export default function MeterListPage() {
                       {/* Room */}
                       <td className="px-6 py-4">
                         {meter.room ? (
-                          <div>
-                            <p className="font-medium text-slate-900 dark:text-slate-200">{meter.room.code}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{meter.room.name}</p>
-                          </div>
+                          <p className="font-medium text-slate-900 dark:text-slate-200">{meter.room.code}</p>
                         ) : (
                           <p className="text-slate-400 dark:text-slate-500 text-sm">-</p>
                         )}
@@ -554,6 +538,14 @@ export default function MeterListPage() {
           meter={editingMeter}
           onClose={handleCloseFormModal}
           propertyId={propertyId}
+        />
+      )}
+
+      {showBulkApprove && (
+        <BulkApproveReadingsModal
+          propertyId={propertyId}
+          isOpen={showBulkApprove}
+          onClose={() => setShowBulkApprove(false)}
         />
       )}
     </div>
