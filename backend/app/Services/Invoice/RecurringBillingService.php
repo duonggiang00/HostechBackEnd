@@ -61,7 +61,21 @@ class RecurringBillingService
             $periodStart = $periodMonth->copy()->startOfMonth();
             $periodEnd = $periodMonth->copy()->endOfMonth();
 
+            // ── Duplicate check: tránh tạo 2 hóa đơn cho cùng kỳ ──────────────
+            $existing = \App\Models\Invoice\Invoice::where('contract_id', $contract->id)
+                ->where('period_start', $periodStart->toDateString())
+                ->whereNotIn('status', ['CANCELLED'])
+                ->first();
+
+            if ($existing) {
+                throw new \Exception(
+                    "Hóa đơn cho kỳ {$periodStart->format('m/Y')} đã tồn tại (ID: {$existing->id}, trạng thái: {$existing->status})."
+                );
+            }
+            // ───────────────────────────────────────────────────────────────────
+
             $items = [];
+
 
             // 1. Basic Rent via Token Logic
             if ($contract->rent_token_balance > 0) {

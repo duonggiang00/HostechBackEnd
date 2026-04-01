@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { Plus, Search, Filter, FileText, ClipboardList } from 'lucide-react';
+import { Plus, Search, Filter, FileText, ClipboardList, TrendingUp, Loader2 } from 'lucide-react';
 import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
 import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
 import { GenerateMonthlyModal } from '../components/GenerateMonthlyModal';
@@ -9,6 +9,7 @@ import { BillingPeriodChecklist } from '../components/BillingPeriodChecklist';
 import { BulkApproveReadingsModal } from '../../metering/components/BulkApproveReadingsModal';
 import type { InvoiceStatus } from '../types';
 import { AnimatePresence } from 'framer-motion';
+
 
 export function PropertyInvoicesPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
@@ -26,6 +27,23 @@ export function PropertyInvoicesPage() {
     page,
     per_page: 15,
   });
+
+  const { data: allInvoicesData, isLoading: statsLoading } = usePropertyInvoices(propertyId!, {
+    per_page: 100,   // max backend cho phép là 100
+
+    page: 1,
+  });
+
+  const summary = useMemo(() => {
+    const all = allInvoicesData?.data ?? [];
+    const totalRevenue = all.reduce((s, inv) => s + (inv.total_amount ?? 0), 0);
+    const totalPaid    = all.reduce((s, inv) => s + (inv.paid_amount  ?? 0), 0);
+    const totalDebt    = all.reduce((s, inv) => s + (inv.debt         ?? 0), 0);
+    return { totalRevenue, totalPaid, totalDebt, count: all.length };
+  }, [allInvoicesData]);
+
+  const fmtVND = (n: number) =>
+    n.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
 
   const invoices = data?.data ?? [];
   const meta = data?.meta;
@@ -70,22 +88,46 @@ export function PropertyInvoicesPage() {
           onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
         />
 
-        {/* Status bar / Insights placeholder */}
+        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-all duration-500"></div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Tổng doanh thu kỳ này</p>
-            <h3 className="text-3xl font-black text-slate-900 dark:text-white mt-2 relative z-10">--- ₫</h3>
+            <div className="flex items-start justify-between relative z-10">
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tổng doanh thu kỳ này</p>
+              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : <TrendingUp className="w-4 h-4 text-indigo-400" />}
+            </div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 relative z-10">
+              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalRevenue)}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 relative z-10">{summary.count} hóa đơn</p>
           </div>
+
           <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-all duration-500"></div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Đã thu</p>
-            <h3 className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 relative z-10">--- ₫</h3>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-all duration-500"></div>
+            <div className="flex items-start justify-between relative z-10">
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Đã thu</p>
+              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
+            </div>
+            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 relative z-10">
+              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalPaid)}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 relative z-10">
+              {statsLoading ? '' : `${summary.totalRevenue > 0 ? Math.round(summary.totalPaid / summary.totalRevenue * 100) : 0}% tổng doanh thu`}
+            </p>
           </div>
+
           <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-rose-100 dark:group-hover:bg-rose-500/20 transition-all duration-500"></div>
-            <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest relative z-10">Dư nợ / Chưa thanh toán</p>
-            <h3 className="text-3xl font-black text-rose-600 dark:text-rose-400 mt-2 relative z-10">--- ₫</h3>
+            <div className="flex items-start justify-between relative z-10">
+              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Dư nợ / Chưa thanh toán</p>
+              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
+            </div>
+            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2 relative z-10">
+              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalDebt)}
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 relative z-10">
+              {statsLoading ? '' : summary.totalDebt > 0 ? `${allInvoicesData?.data.filter(i => i.debt > 0).length} hóa đơn còn nợ` : 'Không có dư nợ'}
+            </p>
           </div>
         </div>
 

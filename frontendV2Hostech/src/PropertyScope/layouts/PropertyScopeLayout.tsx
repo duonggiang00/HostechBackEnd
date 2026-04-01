@@ -111,13 +111,9 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         {
           id: 'billing',
           icon: CreditCard,
-          label: 'Hóa đơn và thu chi',
+          label: 'Hóa đơn và thanh toán',
           path: `/properties/${propertyId}/billing`,
           badge: issuedInvoiceCount > 0 ? issuedInvoiceCount : undefined,
-          children: [
-            { id: 'billing-list', label: 'Quản lý hóa đơn', path: `/properties/${propertyId}/billing`, exact: true },
-            { id: 'billing-review', label: 'Duyệt hóa đơn', path: `/properties/${propertyId}/billing?tab=review` }
-          ]
         },
         {
           id: 'tickets',
