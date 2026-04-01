@@ -104,24 +104,46 @@ export function useMeterReadings(meterId?: string | null) {
     enabled: !!meterId,
   });
 
-  const addReading = useMutation({
-    mutationFn: (newReading: { reading_value: number; reading_date: string; photo?: File }) => 
-      meteringApi.addReading(meterId!, newReading.reading_value, newReading.reading_date, newReading.photo),
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['meter-readings', meterId] });
+    queryClient.invalidateQueries({ queryKey: ['meters'] });
+  };
+
+  const submitReading = useMutation({
+    mutationFn: (readingId: string) => meteringApi.submitReading(meterId!, readingId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meter-readings', meterId] });
-      queryClient.invalidateQueries({ queryKey: ['meters'] });
-      toast.success('Thêm chỉ số thành công');
+      invalidateAll();
+      toast.success('Đã gửi duyệt chốt số');
     },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Lỗi khi thêm chỉ số');
+    onError: (error: any) => toast.error(error.response?.data?.message || 'Lỗi khi gửi duyệt'),
+  });
+
+  const approveReading = useMutation({
+    mutationFn: (readingId: string) => meteringApi.approveReading(meterId!, readingId),
+    onSuccess: () => {
+      invalidateAll();
+      toast.success('Duyệt chốt số thành công');
     },
+    onError: (error: any) => toast.error(error.response?.data?.message || 'Lỗi khi duyệt'),
+  });
+
+  const rejectReading = useMutation({
+    mutationFn: ({ readingId, reason }: { readingId: string; reason: string }) =>
+      meteringApi.rejectReading(meterId!, readingId, reason),
+    onSuccess: () => {
+      invalidateAll();
+      toast.success('Từ chối chốt số thành công');
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || 'Lỗi khi từ chối'),
   });
 
   return {
     readings: readingsQuery.data || [],
     isLoading: readingsQuery.isLoading,
     error: readingsQuery.error,
-    addReading,
+    submitReading,
+    approveReading,
+    rejectReading,
   };
 }
 

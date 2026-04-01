@@ -61,7 +61,7 @@ class ContractResource extends JsonResource
                     'status' => $invoice->status,
                     'total_amount' => (float) $invoice->total_amount,
                     'paid_amount' => (float) $invoice->paid_amount,
-                    'due_date' => $invoice->due_date?->format('Y-m-d'),
+                    'due_date' => $invoice->due_date ? \Illuminate\Support\Carbon::parse($invoice->due_date)->format('Y-m-d') : null,
                 ];
             }),
             'join_code' => $this->when(! $request->user()?->hasRole('Tenant'), $this->join_code),
@@ -72,6 +72,7 @@ class ContractResource extends JsonResource
             'document_url' => $this->document_path ? route('api.contracts.document.download', $this->id) : null,
             'signed_document_url' => $this->getFirstMediaUrl('signed_contracts') ?: null,
             'created_by' => new UserResource($this->whenLoaded('createdBy')),
+            'handovers' => \App\Http\Resources\Handover\HandoverResource::collection($this->whenLoaded('handovers')),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];

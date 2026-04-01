@@ -2,6 +2,16 @@ import type { Property } from '@/OrgScope/features/properties/types';
 import type { Room } from '@/PropertyScope/features/rooms/types';
 import type { User } from '@/shared/features/auth/types';
 
+export interface HandoverBase {
+  id: string;
+  type: 'CHECKIN' | 'CHECKOUT';
+  status: 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
+  note: string | null;
+  confirmed_by_user_id: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
 export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'ENDED' | 'TERMINATED' | 'CANCELLED';
 export type ContractMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'LEFT';
 
@@ -91,6 +101,7 @@ export interface Contract {
   property?: Property;
   members?: ContractMember[];
   createdBy?: User;
+  handovers?: HandoverBase[];
 }
 
 export interface ContractQueryParams {

@@ -60,6 +60,8 @@ class MeterReadingStoreRequest extends FormRequest
             ],
             'period_end' => ['required', 'date_format:Y-m-d', 'after_or_equal:period_start'],
             'reading_value' => ['required', 'integer', 'min:0'],
+            'proof_media_ids' => ['nullable', 'array'],
+            'proof_media_ids.*' => ['uuid'],
             'meta' => ['nullable', 'array'],
         ];
     }

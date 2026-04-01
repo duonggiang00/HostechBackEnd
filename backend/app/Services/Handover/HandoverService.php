@@ -61,7 +61,58 @@ class HandoverService
         return DB::transaction(function () use ($data) {
             $handover = Handover::create($data);
 
-            // Tương lai: Có thể auto clone danh sách từ room_assets vào handover_items ở đây
+            if (!empty($data['room_id'])) {
+                $roomId = $data['room_id'];
+                
+                // 1. Auto clone room assets -> HandoverItems
+                $assets = \App\Models\Property\RoomAsset::where('room_id', $roomId)->get();
+                $itemsToInsert = [];
+                foreach ($assets as $asset) {
+                    $itemsToInsert[] = [
+                        'id' => (string) \Illuminate\Support\Str::uuid(),
+                        'org_id' => $data['org_id'],
+                        'handover_id' => $handover->id,
+                        'room_asset_id' => $asset->id,
+                        'name' => $asset->name,
+                        'status' => 'OK',
+                        'note' => $asset->condition ? 'Tình trạng: ' . $asset->condition : '',
+                        'sort_order' => 0,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                if (!empty($itemsToInsert)) {
+                    \App\Models\Handover\HandoverItem::insert($itemsToInsert);
+                }
+
+                // 2. Auto clone active meters -> HandoverMeterSnapshots
+                $meters = \App\Models\Meter\Meter::where('room_id', $roomId)->where('is_active', true)->get();
+                $snapshotsToInsert = [];
+                foreach ($meters as $meter) {
+                    $readingValue = null;
+                    if (($data['type'] ?? '') === 'CHECKOUT') {
+                        $lastReading = \App\Models\Meter\MeterReading::where('meter_id', $meter->id)
+                            ->latest('period_end')
+                            ->first();
+                        if ($lastReading) {
+                            $readingValue = $lastReading->reading_value;
+                        }
+                    }
+
+                    $snapshotsToInsert[] = [
+                        'id' => (string) \Illuminate\Support\Str::uuid(),
+                        'org_id' => $data['org_id'],
+                        'handover_id' => $handover->id,
+                        'meter_id' => $meter->id,
+                        'reading_value' => $readingValue,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+                if (!empty($snapshotsToInsert)) {
+                    \App\Models\Handover\HandoverMeterSnapshot::insert($snapshotsToInsert);
+                }
+            }
 
             return $handover;
         });

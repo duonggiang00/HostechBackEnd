@@ -66,7 +66,7 @@ return new class extends Migration
             $table->uuid('handover_id')->index();
             $table->uuid('meter_id')->index();
 
-            $table->bigInteger('reading_value');
+            $table->bigInteger('reading_value')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

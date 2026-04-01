@@ -155,7 +155,7 @@ class ContractService
 
     public function find(string $id): ?Contract
     {
-        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices'])->find($id);
+        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices', 'handovers'])->find($id);
     }
 
     public function findTrashed(string $id): ?Contract
@@ -713,8 +713,7 @@ class ContractService
      */
     public function confirmPayment(Contract $contract, User $performer): bool
     {
-        $allowedStatuses = array_map(fn ($enum) => $enum->value, ContractStatus::allowConfirmPayment());
-        if (! in_array($contract->status, $allowedStatuses)) {
+        if (! in_array($contract->status, ContractStatus::allowConfirmPayment())) {
             throw new \Exception('Chỉ có thể xác nhận thanh toán cho hợp đồng đang chờ thanh toán.');
         }
 
@@ -729,6 +728,8 @@ class ContractService
             if ($contract->room) {
                 $contract->room->update(['status' => 'occupied']);
             }
+
+            event(new \App\Events\Contract\ContractActivated($contract));
 
             return true;
         });
@@ -772,8 +773,10 @@ class ContractService
             $contract->status = $status;
             $contract->deposit_status = $depositStatus;
             $contract->end_date = $terminationDate;
-            $contract->terminated_at = now();
+            $contract->terminated_at = \Illuminate\Support\Carbon::now();
+            /** @var mixed $refundedAmount */
             $contract->refunded_amount = $refundedAmount;
+            /** @var mixed $forfeitedAmount */
             $contract->forfeited_amount = $forfeitedAmount;
             $contract->meta = array_merge($contract->meta ?? [], [
                 'termination_details' => [
@@ -831,6 +834,8 @@ class ContractService
 
             // Free the room
             $contract->room->update(['status' => 'available']);
+
+            event(new \App\Events\Contract\ContractTerminated($contract));
 
             return true;
         });

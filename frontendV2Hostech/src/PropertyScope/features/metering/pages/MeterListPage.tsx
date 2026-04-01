@@ -20,6 +20,7 @@ import {
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import apiClient from '@/shared/api/client';
 // @ts-expect-error - Module resolution issue with auto-created component
 import MeterFormModal from '../components/MeterFormModal';
 
@@ -73,18 +74,8 @@ export default function MeterListPage() {
     const fetchStats = async () => {
       try {
         setStatsLoading(true);
-        const response = await fetch(
-          `/api/properties/${propertyId}/meters/statistics`,
-          {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-            },
-          }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setStats(data);
-        }
+        const response = await apiClient.get(`properties/${propertyId}/meters/statistics`);
+        setStats(response.data);
       } catch (error) {
         console.error('Failed to fetch stats:', error);
       } finally {

@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
-  AlertCircle, CheckCircle2, History, XCircle, Loader2
+  AlertCircle, CheckCircle2, History, XCircle, Loader2,
+  ClipboardList
 } from 'lucide-react';
 import { useContract, useContractActions } from '../hooks/useContracts';
 import { TerminateContractModal } from '../components/TerminateContractModal';
@@ -337,8 +338,8 @@ export default function ContractDetailPage() {
                           {member.phone || '---'}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors ${member.status === 'active' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
-                            {member.status === 'active' ? 'Đã duyệt' : 'Chờ duyệt'}
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors ${member.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
+                            {member.status === 'APPROVED' ? 'Đã duyệt' : 'Chờ duyệt'}
                           </span>
                         </td>
                       </tr>
@@ -352,6 +353,74 @@ export default function ContractDetailPage() {
                     )}
                   </tbody>
                 </table>
+              </div>
+            </section>
+
+            <div className="h-px bg-slate-100 dark:bg-slate-700 w-full transition-colors" />
+
+            {/* Handovers */}
+            <section>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-8 italic transition-colors">
+                <ClipboardList className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                Biên bản bàn giao
+              </h3>
+              
+              <div className="space-y-4">
+                {contract.handovers && contract.handovers.length > 0 ? (
+                  contract.handovers.map((handover) => {
+                    const isAuto = handover.note && handover.note.toLowerCase().includes('tự động tạo');
+                    const isCheckin = handover.type === 'CHECKIN';
+                    return (
+                      <div 
+                        key={handover.id}
+                        onClick={() => toast.success('Tính năng xem chi tiết biên bản đang được phát triển')}
+                        className="group p-5 bg-white dark:bg-slate-800 border-2 border-slate-100 hover:border-indigo-100 dark:border-slate-700 dark:hover:border-indigo-500/30 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer transition-all shadow-sm hover:shadow-md"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${isCheckin ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+                            <ClipboardList className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-black uppercase tracking-wider text-slate-900 dark:text-white transition-colors">
+                                Biên bản {isCheckin ? 'Nhận phòng' : 'Trả phòng'}
+                              </p>
+                              {isAuto && (
+                                <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                  <span>🤖 Tự động tạo</span>
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 italic transition-colors">
+                              Mã BB: {handover.id.substring(0, 8).toUpperCase()} • Tạo ngày {format(new Date(handover.created_at), 'dd/MM/yyyy')}
+                            </p>
+                            {handover.note && (
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 line-clamp-1">{handover.note}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0">
+                          <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                            handover.status === 'DRAFT' 
+                              ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400' 
+                              : handover.status === 'CONFIRMED'
+                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400'
+                          }`}>
+                            {handover.status === 'DRAFT' ? 'Bản nháp' : handover.status === 'CONFIRMED' ? 'Đã xác nhận' : 'Đã hủy'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-3xl transition-colors">
+                    <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm">
+                      <ClipboardList className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                    </div>
+                    <p className="text-slate-400 dark:text-slate-500 font-bold italic transition-colors">Chưa có biên bản bàn giao nào.</p>
+                  </div>
+                )}
               </div>
             </section>
           </motion.div>

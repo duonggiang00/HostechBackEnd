@@ -13,6 +13,10 @@ Route::apiResource('meters', MeterController::class);
 
 // Meter Readings
 Route::post('properties/{property_id}/meters/bulk-readings', [MeterReadingController::class, 'bulkStore']);
+Route::post('meters/readings/bulk-submit', [MeterReadingController::class, 'bulkSubmit']);
+Route::post('meters/{meter}/readings/{reading}/submit', [MeterReadingController::class, 'submit']);
+Route::put('meters/{meter}/readings/{reading}/approve', [MeterReadingController::class, 'approve']);
+Route::put('meters/{meter}/readings/{reading}/reject', [MeterReadingController::class, 'reject']);
 Route::apiResource('meters.readings', MeterReadingController::class)->scoped();
 
 // Meter Reading Adjustments

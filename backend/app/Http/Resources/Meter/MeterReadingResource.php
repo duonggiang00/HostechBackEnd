@@ -26,6 +26,9 @@ class MeterReadingResource extends JsonResource
             'submitted_at' => $this->submitted_at?->format('Y-m-d H:i:s'),
             'approved_by_user_id' => $this->approved_by_user_id,
             'approved_at' => $this->approved_at?->format('Y-m-d H:i:s'),
+            'rejected_by_user_id' => $this->rejected_by_user_id,
+            'rejected_at' => $this->rejected_at?->format('Y-m-d H:i:s'),
+            'rejection_reason' => $this->rejection_reason,
             'locked_at' => $this->locked_at?->format('Y-m-d H:i:s'),
             'meta' => $this->meta,
             'created_at' => $this->created_at?->format('Y-m-d H:i:s'),
@@ -41,16 +44,23 @@ class MeterReadingResource extends JsonResource
             }),
             'approved_by' => $this->whenLoaded('approvedBy', function () {
                 return [
-                    'id' => $this->approvedBy?->id,
-                    'name' => $this->approvedBy?->name,
+                    'id'    => $this->approvedBy?->id,
+                    'name'  => $this->approvedBy?->name,
                     'email' => $this->approvedBy?->email,
+                ];
+            }),
+            'rejected_by' => $this->whenLoaded('rejectedBy', function () {
+                return [
+                    'id'    => $this->rejectedBy?->id,
+                    'name'  => $this->rejectedBy?->name,
+                    'email' => $this->rejectedBy?->email,
                 ];
             }),
             'adjustments' => AdjustmentNoteResource::collection($this->whenLoaded('adjustmentNotes')),
             'proofs' => $this->whenLoaded('media', function () {
                 return $this->getMedia('reading_proofs')->map(function ($media) {
                     return [
-                        'id' => $this->id,
+                        'id' => $media->id,
                         'url' => $media->getUrl(),
                         'thumb_url' => $media->getUrl('thumb'),
                         'name' => $media->name,

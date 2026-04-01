@@ -114,4 +114,9 @@ class Contract extends Model implements HasMedia
     {
         return $this->hasMany(Invoice::class);
     }
+
+    public function handovers(): HasMany
+    {
+        return $this->hasMany(\App\Models\Handover\Handover::class);
+    }
 }

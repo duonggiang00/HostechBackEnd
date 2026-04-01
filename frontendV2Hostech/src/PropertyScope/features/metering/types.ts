@@ -26,16 +26,25 @@ export interface MeterReading {
   reading_date?: string;
   photo_url?: string;
   consumption?: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  // New fields from backend
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  // Period
   period_start?: string;
   period_end?: string;
+  // Submission
   submitted_by_user_id?: string;
   submitted_at?: string;
   submitted_by?: { id: string; name: string };
+  // Approval
   approved_by_user_id?: string;
   approved_at?: string;
   approved_by?: { id: string; name: string };
+  // Rejection
+  rejected_by_user_id?: string;
+  rejected_at?: string;
+  rejected_by?: { id: string; name: string };
+  rejection_reason?: string;
+  // Media proofs
+  proofs?: Array<{ id: string; url: string; thumb_url: string; name: string; file_name?: string; mime_type?: string; size?: number }>;
   locked_at?: string;
   meta?: Record<string, any>;
   created_at?: string;
