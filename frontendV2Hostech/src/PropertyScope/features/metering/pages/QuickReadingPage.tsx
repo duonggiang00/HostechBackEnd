@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { echo } from '@/shared/utils/echo';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
-import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2 } from 'lucide-react';
+import { meteringApi } from '../api/metering';
+import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -47,7 +48,90 @@ export default function QuickReadingPage() {
   
   // Keyed by meter ID
   const [readings, setReadings] = useState<Record<string, string>>({});
+  const [proofFiles, setProofFiles] = useState<Record<string, File | null>>({});
+  const [proofPreviewUrls, setProofPreviewUrls] = useState<Record<string, string>>({});
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const proofInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const proofPreviewUrlsRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    proofPreviewUrlsRef.current = proofPreviewUrls;
+  }, [proofPreviewUrls]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(proofPreviewUrlsRef.current).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
+
+  const MAX_PROOF_IMAGE_SIZE_MB = 5;
+  const MAX_PROOF_IMAGE_SIZE = MAX_PROOF_IMAGE_SIZE_MB * 1024 * 1024;
+
+  const handleProofFileChange = (meterId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    const existingPreview = proofPreviewUrls[meterId];
+
+    if (existingPreview) {
+      URL.revokeObjectURL(existingPreview);
+    }
+
+    if (!file) {
+      setProofFiles((prev) => ({ ...prev, [meterId]: null }));
+      setProofPreviewUrls((prev) => {
+        const next = { ...prev };
+        delete next[meterId];
+        return next;
+      });
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Chỉ chấp nhận file ảnh (jpg, png, webp, ...).');
+      event.target.value = '';
+      setProofFiles((prev) => ({ ...prev, [meterId]: null }));
+      setProofPreviewUrls((prev) => {
+        const next = { ...prev };
+        delete next[meterId];
+        return next;
+      });
+      return;
+    }
+
+    if (file.size > MAX_PROOF_IMAGE_SIZE) {
+      toast.error(`Ảnh vượt quá ${MAX_PROOF_IMAGE_SIZE_MB}MB. Vui lòng chọn ảnh nhỏ hơn.`);
+      event.target.value = '';
+      setProofFiles((prev) => ({ ...prev, [meterId]: null }));
+      setProofPreviewUrls((prev) => {
+        const next = { ...prev };
+        delete next[meterId];
+        return next;
+      });
+      return;
+    }
+
+    setProofFiles((prev) => ({ ...prev, [meterId]: file }));
+    setProofPreviewUrls((prev) => ({ ...prev, [meterId]: URL.createObjectURL(file) }));
+  };
+
+  const handleRemoveProof = (meterId: string) => {
+    const existingPreview = proofPreviewUrls[meterId];
+    if (existingPreview) {
+      URL.revokeObjectURL(existingPreview);
+    }
+
+    setProofFiles((prev) => ({ ...prev, [meterId]: null }));
+    setProofPreviewUrls((prev) => {
+      const next = { ...prev };
+      delete next[meterId];
+      return next;
+    });
+
+    const inputRef = proofInputRefs.current[meterId];
+    if (inputRef) {
+      inputRef.value = '';
+    }
+  };
 
   // Grouping meters by Floor -> Room with proper sorting
   const groupedMeters = useMemo(() => {
@@ -106,7 +190,7 @@ export default function QuickReadingPage() {
 
   const handleSave = async () => {
     // Collect valid readings
-    const payload = Object.entries(readings)
+    const basePayload = Object.entries(readings)
       .map(([meterId, value]) => ({
         meter_id: meterId,
         reading_value: parseFloat(value as string),
@@ -115,14 +199,14 @@ export default function QuickReadingPage() {
       }))
       .filter(item => !isNaN(item.reading_value));
 
-    if (payload.length === 0) {
+    if (basePayload.length === 0) {
       toast.error('Vui lòng nhập ít nhất một chỉ số để lưu.');
       return;
     }
 
     // Validation Check: ensure new reading is not smaller than previous
     let hasError = false;
-    for (const item of payload) {
+    for (const item of basePayload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
       const prevReading = meter?.last_reading ?? meter?.base_reading ?? 0;
       if (item.reading_value < prevReading) {
@@ -136,11 +220,27 @@ export default function QuickReadingPage() {
 
     try {
       setIsSubmitting(true);
+      const payload = await Promise.all(
+        basePayload.map(async (item) => {
+          const proof = proofFiles[item.meter_id];
+          if (!proof) return item;
+
+          const uploaded = await meteringApi.uploadReadingProof(proof);
+          return {
+            ...item,
+            proof_media_ids: [uploaded.temporary_upload_id],
+          };
+        }),
+      );
+
       await bulkCreateReadings.mutateAsync(payload);
       toast.success(`Đã chốt thành công ${payload.length} chỉ số.`);
       navigate(`/properties/${propertyId}/meters`);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra khi lưu chỉ số.');
+      const details = error?.response?.data?.errors
+        ? Object.values(error.response.data.errors).flat().join(', ')
+        : null;
+      toast.error(details || error?.response?.data?.message || 'Có lỗi xảy ra khi lưu chỉ số.');
     } finally {
       setIsSubmitting(false);
     }
@@ -210,7 +310,6 @@ export default function QuickReadingPage() {
                 type="date"
                 value={periodStart}
                 data-testid="reading-period-start"
-                max={format(new Date(), 'yyyy-MM-dd')}
                 onChange={(e) => setPeriodStart(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
               />
@@ -221,7 +320,6 @@ export default function QuickReadingPage() {
                 type="date"
                 value={periodEnd}
                 data-testid="reading-period-end"
-                max={format(new Date(), 'yyyy-MM-dd')}
                 onChange={(e) => setPeriodEnd(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
               />
@@ -278,76 +376,140 @@ export default function QuickReadingPage() {
                         const consumption = calculateConsumption(meter, currentValue);
                         
                         return (
-                          <div key={meter.id} className="flex flex-col sm:flex-row gap-4 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors items-start sm:items-center">
-                            {/* Icon & Details */}
-                            <div className="flex items-center gap-3 w-32 shrink-0">
-                              <div className={`p-2 rounded-lg ${
-                                isElectric ? 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                              }`}>
-                                {isElectric ? <Zap className="w-4 h-4" /> : <Droplet className="w-4 h-4" />}
+                          <div key={meter.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors space-y-2">
+                            {/* Row 1: Icon, số cũ, input, tiêu thụ */}
+                            <div className="flex items-center gap-3">
+                              {/* Icon & Meter Code */}
+                              <div className="flex items-center gap-2 w-28 shrink-0">
+                                <div className={`p-2 rounded-lg shrink-0 ${
+                                  isElectric
+                                    ? 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                                    : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                }`}>
+                                  {isElectric ? <Zap className="w-4 h-4" /> : <Droplet className="w-4 h-4" />}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase leading-none">
+                                    {isElectric ? 'Điện' : 'Nước'}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5 truncate" title={meter.code}>
+                                    {meter.code}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{isElectric ? 'Điện' : 'Nước'}</p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5" title={meter.code}>{meter.code.substring(0, 8)}</p>
+
+                              {/* Số cũ */}
+                              <div className="w-24 shrink-0">
+                                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Số cũ</p>
+                                <p
+                                  className="text-sm font-bold text-slate-700 dark:text-slate-300"
+                                  data-testid={`prev-reading-value-${meter.id}`}
+                                >
+                                  {prevValue.toLocaleString('vi-VN')}
+                                  <span className="text-[10px] text-slate-400 ml-0.5 font-normal">
+                                    {isElectric ? 'kWh' : 'm³'}
+                                  </span>
+                                </p>
                               </div>
-                            </div>
 
-                            {/* Old Reading */}
-                            <div className="flex-1 min-w-[100px]">
-                              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Số cũ</p>
-                              <p 
-                                className="font-semibold text-slate-700 dark:text-slate-300"
-                                data-testid={`prev-reading-value-${meter.id}`}
-                              >
-                                {prevValue.toLocaleString('vi-VN')}
-                                <span className="text-xs text-slate-400 ml-1 font-normal">{isElectric ? 'kWh' : 'm³'}</span>
-                              </p>
-                            </div>
+                              {/* Input số mới */}
+                              <div className="flex-1 min-w-[110px]">
+                                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Số mới</p>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  placeholder="Nhập số..."
+                                  value={currentValue}
+                                  data-testid={`meter-reading-input-${meter.id}`}
+                                  onChange={(e) => handleReadingChange(meter.id, e.target.value)}
+                                  className={`w-full px-3 py-1.5 bg-white dark:bg-slate-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-sm text-slate-900 dark:text-white placeholder:font-normal placeholder:text-slate-400
+                                    ${currentValue && parseFloat(currentValue) < prevValue
+                                      ? 'border-red-300 focus:border-red-500'
+                                      : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'}
+                                  `}
+                                />
+                              </div>
 
-                            {/* Input New Reading */}
-                            <div className="flex-2">
-                              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Số mới</p>
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                placeholder="Nhập số mới..."
-                                value={currentValue}
-                                data-testid={`meter-reading-input-${meter.id}`}
-                                onChange={(e) => handleReadingChange(meter.id, e.target.value)}
-                                className={`w-full px-3 py-2 bg-white dark:bg-slate-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-900 dark:text-white placeholder:font-normal placeholder:text-slate-400
-                                  ${currentValue && parseInt(currentValue, 10) < prevValue ? 'border-red-300 focus:border-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'}
-                                `}
-                              />
-                            </div>
-
-                            {/* Consumption & Trend */}
-                            <div className="w-32 shrink-0 text-right">
-                              <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1 uppercase tracking-wider">Tiêu thụ</p>
-                              <div className="flex flex-col items-end gap-1">
-                                <div className="flex items-center justify-end gap-2">
-                                  <p 
-                                    className={`font-bold ${consumption > 500 ? 'text-orange-600 animate-pulse' : consumption > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+                              {/* Tiêu thụ */}
+                              <div className="w-28 shrink-0 text-right">
+                                <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Tiêu thụ</p>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <p
+                                    className={`text-sm font-bold ${
+                                      consumption > 500
+                                        ? 'text-orange-600 animate-pulse'
+                                        : consumption > 0
+                                        ? 'text-indigo-600 dark:text-indigo-400'
+                                        : 'text-slate-400 dark:text-slate-500'
+                                    }`}
                                     data-testid={`consumption-value-${meter.id}`}
                                   >
-                                    {currentValue ? consumption.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 }) : '-'}
+                                    {currentValue
+                                      ? consumption.toLocaleString('vi-VN', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+                                      : '-'}
                                   </p>
                                   {currentValue && (
-                                    <div className={`p-1 rounded-full ${
-                                      consumption > 0 ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400' : 
-                                      consumption === 0 ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500' :
-                                      'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                    <div className={`p-0.5 rounded-full ${
+                                      consumption > 0
+                                        ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400'
+                                        : consumption === 0
+                                        ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                                        : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
                                     }`}>
-                                      {consumption > 0 ? <TrendingUp className="w-3 h-3" /> : 
-                                       consumption === 0 ? <Minus className="w-3 h-3" /> : 
+                                      {consumption > 0 ? <TrendingUp className="w-3 h-3" /> :
+                                       consumption === 0 ? <Minus className="w-3 h-3" /> :
                                        <TrendingDown className="w-3 h-3" />}
                                     </div>
                                   )}
                                 </div>
                                 {consumption > 500 && (
-                                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 flex items-center justify-end gap-0.5 mt-0.5">
                                     <AlertCircle className="w-3 h-3" />
                                     Bất thường!
                                   </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Row 2: Upload ảnh chứng minh (full width, compact) */}
+                            <div className="flex items-center gap-3 pl-1 border-t border-slate-100 dark:border-slate-700/50 pt-2">
+                              <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 w-20">
+                                Ảnh CM
+                              </p>
+                              <div className="flex-1 flex items-center gap-2 flex-wrap">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  ref={(el) => { proofInputRefs.current[meter.id] = el; }}
+                                  onChange={(e) => handleProofFileChange(meter.id, e)}
+                                  className="text-[11px] text-slate-600 dark:text-slate-300 file:mr-2 file:px-2 file:py-1 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 file:text-[11px] dark:file:bg-indigo-500/20 dark:file:text-indigo-300 cursor-pointer"
+                                />
+                                {proofFiles[meter.id] && proofPreviewUrls[meter.id] && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewImageUrl(proofPreviewUrls[meter.id])}
+                                      className="h-8 w-8 overflow-hidden rounded border border-slate-200 dark:border-slate-700 shrink-0"
+                                      title="Xem ảnh"
+                                    >
+                                      <img
+                                        src={proofPreviewUrls[meter.id]}
+                                        alt="Ảnh chứng minh"
+                                        className="h-full w-full object-cover"
+                                      />
+                                    </button>
+                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 max-w-[140px] truncate" title={proofFiles[meter.id]?.name}>
+                                      {proofFiles[meter.id]?.name}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveProof(meter.id)}
+                                      className="inline-flex items-center gap-0.5 rounded border border-red-200 dark:border-red-500/30 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400 shrink-0"
+                                      title="Xóa ảnh"
+                                    >
+                                      <X className="w-3 h-3" /> Xóa
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -360,6 +522,21 @@ export default function QuickReadingPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {previewImageUrl && (
+        <div className="fixed inset-0 z-[80] bg-black/80 flex items-center justify-center p-4" onClick={() => setPreviewImageUrl(null)}>
+          <div className="relative max-w-5xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="absolute -top-10 right-0 text-white hover:text-slate-200"
+              onClick={() => setPreviewImageUrl(null)}
+              title="Đóng"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img src={previewImageUrl} alt="Ảnh chứng minh" className="w-full max-h-[85vh] object-contain rounded-lg" />
+          </div>
         </div>
       )}
     </div>

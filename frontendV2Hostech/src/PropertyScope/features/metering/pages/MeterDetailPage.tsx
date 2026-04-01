@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Loader2, Plus, Check, X, Clock, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Check, X, Clock, Trash2, Edit2, SendHorizontal, Eye } from 'lucide-react';
 import { meteringApi } from '../api/metering';
 import type { Meter, MeterReading } from '../types';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
@@ -26,6 +26,95 @@ export default function MeterDetailPage() {
     period_end: '',
   });
   const [formError, setFormError] = useState<string>('');
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [selectedProofPreviewUrl, setSelectedProofPreviewUrl] = useState<string | null>(null);
+  const [isAddingReading, setIsAddingReading] = useState(false);
+  const proofInputRef = useRef<HTMLInputElement | null>(null);
+
+  // State riêng cho ảnh trong edit modal
+  const [editProofFile, setEditProofFile] = useState<File | null>(null);
+  const [editProofPreviewUrl, setEditProofPreviewUrl] = useState<string | null>(null);
+  const editProofInputRef = useRef<HTMLInputElement | null>(null);
+
+  const MAX_PROOF_IMAGE_SIZE_MB = 5;
+  const MAX_PROOF_IMAGE_SIZE = MAX_PROOF_IMAGE_SIZE_MB * 1024 * 1024;
+
+  // Tạo/huỷ preview URL cho ảnh chứng minh mới (add form)
+  useEffect(() => {
+    if (!proofFile) {
+      setSelectedProofPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(proofFile);
+    setSelectedProofPreviewUrl(objectUrl);
+    return () => { URL.revokeObjectURL(objectUrl); };
+  }, [proofFile]);
+
+  // Tạo/huỷ preview URL cho ảnh chứng minh trong edit modal
+  useEffect(() => {
+    if (!editProofFile) {
+      setEditProofPreviewUrl(null);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(editProofFile);
+    setEditProofPreviewUrl(objectUrl);
+    return () => { URL.revokeObjectURL(objectUrl); };
+  }, [editProofFile]);
+
+  const clearProofSelection = () => {
+    setProofFile(null);
+    if (proofInputRef.current) proofInputRef.current.value = '';
+  };
+
+  const clearEditProofSelection = () => {
+    setEditProofFile(null);
+    if (editProofInputRef.current) editProofInputRef.current.value = '';
+  };
+
+  // Xử lý chọn ảnh trong edit modal
+  const handleEditProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    if (!file) { clearEditProofSelection(); return; }
+    if (!file.type.startsWith('image/')) {
+      toast.error('Chỉ chấp nhận file ảnh (jpg, png, webp, ...).');
+      event.target.value = '';
+      clearEditProofSelection();
+      return;
+    }
+    if (file.size > MAX_PROOF_IMAGE_SIZE) {
+      toast.error(`Ảnh vượt quá ${MAX_PROOF_IMAGE_SIZE_MB}MB. Vui lòng chọn ảnh nhỏ hơn.`);
+      event.target.value = '';
+      clearEditProofSelection();
+      return;
+    }
+    setEditProofFile(file);
+  };
+
+  const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+
+    if (!file) {
+      clearProofSelection();
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Chỉ chấp nhận file ảnh (jpg, png, webp, ...).');
+      event.target.value = '';
+      clearProofSelection();
+      return;
+    }
+
+    if (file.size > MAX_PROOF_IMAGE_SIZE) {
+      toast.error(`Ảnh vượt quá ${MAX_PROOF_IMAGE_SIZE_MB}MB. Vui lòng chọn ảnh nhỏ hơn.`);
+      event.target.value = '';
+      clearProofSelection();
+      return;
+    }
+
+    setProofFile(file);
+  };
 
   useEffect(() => {
     if (!meterId) return;
@@ -53,34 +142,36 @@ export default function MeterDetailPage() {
     try {
       setReadingsLoading(true);
       const response = await meteringApi.getMeterReadings(mId, page, 10);
-      
+
       console.log('📊 Readings response:', response);
-      
-      // Handle different response formats
+
+      // Xử lý nhiều format response từ API
       let readingsList: MeterReading[] = [];
       let total = 0;
-      
+
       if (Array.isArray(response)) {
-        // Direct array response
         readingsList = response;
         total = response.length;
       } else if (response?.data && Array.isArray(response.data)) {
-        // Paginated response { data: [...], meta, links, ... }
         readingsList = response.data;
         total = response.meta?.total || response.data.length;
       } else if (response?.readings && Array.isArray(response.readings)) {
-        // Alternative format { readings: [...] }
         readingsList = response.readings;
         total = response.readings.length;
       } else if (typeof response === 'object' && response !== null) {
-        // Could be paginated format without explicit 'data' wrapper
         const dataField = Object.keys(response).find(key => Array.isArray(response[key as keyof typeof response]));
         if (dataField) {
           readingsList = response[dataField as keyof typeof response] as MeterReading[];
           total = readingsList.length;
         }
       }
-      
+
+      // Normalise: backend có thể trả về 'media' thay vì 'proofs'
+      readingsList = readingsList.map(r => ({
+        ...r,
+        proofs: r.proofs ?? (r as any).media ?? [],
+      }));
+
       console.log('✅ Processed readings:', readingsList.length, 'Total:', total);
       setReadings(readingsList);
       setTotalReadings(total);
@@ -95,6 +186,10 @@ export default function MeterDetailPage() {
 
   const handleAddReading = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isAddingReading) {
+      return;
+    }
+
     if (!meterId) {
       setFormError('Meter ID không tìm thấy');
       return;
@@ -134,6 +229,7 @@ export default function MeterDetailPage() {
     }
 
     try {
+      setIsAddingReading(true);
       const readingValue = parseInt(formData.reading_value);
       if (isNaN(readingValue)) {
         setFormError('Chỉ số phải là số nguyên');
@@ -152,16 +248,24 @@ export default function MeterDetailPage() {
         period_end: formData.period_end,
       });
 
+      let proofMediaIds: string[] = [];
+      if (proofFile) {
+        const uploadResult = await meteringApi.uploadReadingProof(proofFile);
+        proofMediaIds = [uploadResult.temporary_upload_id];
+      }
+
       const result = await meteringApi.createReading(meterId, {
         reading_value: readingValue,
         period_start: formData.period_start,
         period_end: formData.period_end,
+        ...(proofMediaIds.length > 0 ? { proof_media_ids: proofMediaIds } : {}),
       });
 
       console.log('✅ Reading created:', result);
       toast.success('Thêm chốt số thành công');
       setFormData({ reading_value: '', period_start: '', period_end: '' });
       setFormError('');
+      clearProofSelection();
       setShowAddForm(false);
       if (meterId) {
         await _fetchReadings(meterId, 1);
@@ -194,6 +298,8 @@ export default function MeterDetailPage() {
       
       setFormError(errorMessage);
       toast.error(errorMessage);
+    } finally {
+      setIsAddingReading(false);
     }
   };
 
@@ -217,6 +323,7 @@ export default function MeterDetailPage() {
       period_start: lastReadingDate,
       period_end: '',
     });
+    clearProofSelection();
     setFormError('');
     setShowAddForm(true);
   };
@@ -234,6 +341,19 @@ export default function MeterDetailPage() {
     }
   };
 
+  const handleSubmitReading = async (readingId: string) => {
+    if (!meterId) return;
+
+    try {
+      await meteringApi.submitReading(meterId, readingId);
+      toast.success('Đã gửi duyệt cho quản lý');
+      await _fetchReadings(meterId, readingsPage);
+    } catch (error: unknown) {
+      console.error('Failed to submit reading:', error);
+      toast.error('Không thể gửi duyệt chốt số');
+    }
+  };
+
   const handleRejectReading = async (readingId: string) => {
     if (!meterId) return;
 
@@ -247,13 +367,40 @@ export default function MeterDetailPage() {
     }
   };
 
-  const handleOpenEditForm = (reading: MeterReading) => {
-    setEditingReading(reading);
-    setFormData({
-      reading_value: reading.reading_value?.toString() || '',
-      period_start: reading.period_start || '',
-      period_end: reading.period_end || '',
-    });
+  const handleOpenEditForm = async (reading: MeterReading) => {
+    if (!meterId) return;
+
+    try {
+      // Lấy chi tiết mới nhất để chắc chắn có proofs (ảnh) cho modal edit
+      const fresh = await meteringApi.getMeterReading(meterId, reading.id);
+      const merged = {
+        ...reading,
+        ...fresh,
+        proofs: (fresh as any)?.proofs ?? (fresh as any)?.media ?? reading.proofs ?? [],
+      } as MeterReading;
+
+      setEditingReading(merged);
+      setFormData({
+        reading_value: merged.reading_value?.toString() || '',
+        period_start: merged.period_start || '',
+        period_end: merged.period_end || '',
+      });
+
+      // Cập nhật danh sách để cột "Ảnh" hiển thị ngay sau khi mở modal
+      setReadings(prev => prev.map(r => (r.id === merged.id ? merged : r)));
+    } catch (error) {
+      console.error('❌ Failed to fetch reading detail for edit:', error);
+      // Fallback dùng data hiện tại nếu call detail lỗi
+      setEditingReading(reading);
+      setFormData({
+        reading_value: reading.reading_value?.toString() || '',
+        period_start: reading.period_start || '',
+        period_end: reading.period_end || '',
+      });
+    }
+
+    // Reset ảnh edit mỗi lần mở modal
+    clearEditProofSelection();
     setFormError('');
     setShowEditForm(true);
   };
@@ -310,7 +457,7 @@ export default function MeterDetailPage() {
       }
 
       // Check monotonicity against previous/next reading if available
-      const currentIndex = readings.findIndex(r => r.id === (editingReading as any).id);
+      const currentIndex = readings.findIndex(r => r.id === editingReading.id);
       if (currentIndex !== -1) {
         // Readings are sorted by period_end desc in the list
         if (currentIndex < readings.length - 1) {
@@ -336,16 +483,25 @@ export default function MeterDetailPage() {
         period_end: formData.period_end,
       });
 
+      // Upload ảnh mới nếu người dùng chọn thay đổi; nếu không chọn thì giữ nguyên ảnh cũ (không gửi proof_media_ids)
+      let proofMediaIds: string[] | undefined;
+      if (editProofFile) {
+        const uploadResult = await meteringApi.uploadReadingProof(editProofFile);
+        proofMediaIds = [uploadResult.temporary_upload_id];
+      }
+
       await meteringApi.updateReading(meterId, editingReading.id, {
         reading_value: readingValue,
         period_start: formData.period_start,
         period_end: formData.period_end,
+        ...(proofMediaIds ? { proof_media_ids: proofMediaIds } : {}),
       });
 
       console.log('✅ Reading updated');
       toast.success('Cập nhật chốt số thành công');
       setFormData({ reading_value: '', period_start: '', period_end: '' });
       setFormError('');
+      clearEditProofSelection();
       setShowEditForm(false);
       setEditingReading(null);
       if (meterId) {
@@ -406,8 +562,9 @@ export default function MeterDetailPage() {
     }
   };
 
-  // Check if user can manage readings (edit/delete) - Manager and Owner can do this
-  const canManageReadings = hasRole(['Manager', 'Owner']);
+  // Manager/Owner full control, Staff can thao tác cho luồng nháp.
+  const canManageReadings = hasRole(['Manager', 'Owner', 'Staff']);
+  const canSubmitDraftReadings = hasRole(['Manager', 'Owner', 'Staff']);
   
   // Check if user can approve readings (duyệt/từ chối) - Only Manager and Owner
   const canApproveReadings = hasRole(['Manager', 'Owner']);
@@ -618,6 +775,50 @@ export default function MeterDetailPage() {
                 </div>
               </div>
 
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Ảnh chứng minh đồng hồ</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={proofInputRef}
+                  onChange={handleProofFileChange}
+                  className="w-full text-sm text-slate-700 dark:text-slate-300 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-500/20 dark:file:text-indigo-300"
+                />
+                {proofFile ? (
+                  <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
+                    <div className="flex items-start gap-3">
+                      {selectedProofPreviewUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImageUrl(selectedProofPreviewUrl)}
+                          className="h-20 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+                          title="Xem ảnh đã chọn"
+                        >
+                          <img src={selectedProofPreviewUrl} alt="Ảnh đã chọn" className="h-full w-full object-cover" />
+                        </button>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-slate-600 dark:text-slate-300 truncate" title={proofFile.name}>
+                          Đã chọn: {proofFile.name}
+                        </p>
+                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                          {(proofFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                        <button
+                          type="button"
+                          onClick={clearProofSelection}
+                          className="mt-2 inline-flex items-center rounded-md border border-red-200 dark:border-red-500/30 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                        >
+                          Xóa ảnh đã chọn
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">Bạn có thể chụp ảnh công tơ để lưu bằng chứng.</p>
+                )}
+              </div>
+
               {/* Dynamic Usage Calculation Preview */}
               <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="flex flex-wrap items-center gap-6">
@@ -654,15 +855,18 @@ export default function MeterDetailPage() {
               <div className="flex gap-3 mt-4">
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                  disabled={isAddingReading}
+                  className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm inline-flex items-center gap-2"
                 >
-                  Lưu
+                  {isAddingReading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isAddingReading ? 'Đang lưu...' : 'Lưu'}
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddForm(false);
                     setFormError('');
+                    clearProofSelection();
                   }}
                   className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
                 >
@@ -691,6 +895,7 @@ export default function MeterDetailPage() {
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thời gian</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Chỉ số</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Mức sử sử dụng</th>
+                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Ảnh</th>
                         <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
                         <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                       </tr>
@@ -725,6 +930,26 @@ export default function MeterDetailPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4">
+                            {reading.proofs && reading.proofs.length > 0 ? (
+                              <button
+                                onClick={() => setPreviewImageUrl(reading.proofs?.[0]?.url || null)}
+                                className="relative h-12 w-20 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 group"
+                                title="Xem ảnh chốt số"
+                              >
+                                <img
+                                  src={reading.proofs[0].thumb_url || reading.proofs[0].url}
+                                  alt="Ảnh chứng minh"
+                                  className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-black/40 text-white text-xs font-semibold">
+                                  <Eye className="w-3 h-3 mr-1" /> Xem
+                                </span>
+                              </button>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500 text-sm">Không có</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
                               {reading.status === 'APPROVED' && (
                                 <>
@@ -732,10 +957,16 @@ export default function MeterDetailPage() {
                                   <span className="text-sm font-semibold text-green-600 dark:text-green-500">Đã duyệt</span>
                                 </>
                               )}
-                              {reading.status === 'PENDING' && (
+                              {reading.status === 'SUBMITTED' && (
                                 <>
                                   <Clock className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
                                   <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-500">Chờ duyệt</span>
+                                </>
+                              )}
+                              {reading.status === 'DRAFT' && (
+                                <>
+                                  <Edit2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                  <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Nháp</span>
                                 </>
                               )}
                               {reading.status === 'REJECTED' && (
@@ -748,8 +979,19 @@ export default function MeterDetailPage() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex gap-2 justify-end">
-                              {/* Approve/Reject for PENDING readings - Only Manager can do this */}
-                              {reading.status === 'PENDING' && canApproveReadings && (
+                              {/* Submit for manager review */}
+                              {reading.status === 'DRAFT' && canSubmitDraftReadings && (
+                                <button
+                                  onClick={() => handleSubmitReading(reading.id)}
+                                  className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
+                                  title="Gửi duyệt"
+                                >
+                                  <SendHorizontal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                                </button>
+                              )}
+
+                              {/* Approve/Reject for SUBMITTED readings - Only Manager can do this */}
+                              {reading.status === 'SUBMITTED' && canApproveReadings && (
                                 <>
                                   <button
                                     onClick={() => handleApproveReading(reading.id)}
@@ -768,8 +1010,8 @@ export default function MeterDetailPage() {
                                 </>
                               )}
                               
-                              {/* Edit - Available for PENDING readings */}
-                              {reading.status === 'PENDING' && canManageReadings && (
+                              {/* Edit only for DRAFT */}
+                              {reading.status === 'DRAFT' && canManageReadings && (
                                 <button
                                   onClick={() => handleOpenEditForm(reading)}
                                   className="p-2 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
@@ -900,6 +1142,77 @@ export default function MeterDetailPage() {
                     />
                   </div>
 
+                  {/* Ảnh chứng minh - hiện ảnh cũ + cho phép thay ảnh mới */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">Ảnh chứng minh</label>
+
+                    {/* Ảnh hiện tại (nếu có và chưa chọn ảnh mới) */}
+                    {!editProofFile && editingReading?.proofs && editingReading.proofs.length > 0 && (
+                      <div className="mb-3 flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImageUrl(editingReading.proofs![0].url)}
+                          className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 shrink-0"
+                          title="Xem ảnh hiện tại"
+                        >
+                          <img
+                            src={editingReading.proofs[0].thumb_url || editingReading.proofs[0].url}
+                            alt="Ảnh hiện tại"
+                            className="h-full w-full object-cover"
+                          />
+                        </button>
+                        <div>
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Ảnh hiện tại</p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Chọn ảnh mới bên dưới để thay thế</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload ảnh mới */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={editProofInputRef}
+                      onChange={handleEditProofFileChange}
+                      className="w-full text-sm text-slate-700 dark:text-slate-300 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 dark:file:bg-indigo-500/20 dark:file:text-indigo-300"
+                    />
+
+                    {/* Preview ảnh mới đã chọn */}
+                    {editProofFile && editProofPreviewUrl && (
+                      <div className="mt-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3">
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewImageUrl(editProofPreviewUrl)}
+                            className="h-16 w-16 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 shrink-0"
+                            title="Xem ảnh mới"
+                          >
+                            <img src={editProofPreviewUrl} alt="Ảnh mới" className="h-full w-full object-cover" />
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-slate-600 dark:text-slate-300 truncate" title={editProofFile.name}>
+                              Ảnh mới: {editProofFile.name}
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                              {(editProofFile.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                            <button
+                              type="button"
+                              onClick={clearEditProofSelection}
+                              className="mt-2 inline-flex items-center rounded-md border border-red-200 dark:border-red-500/30 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            >
+                              Huỷ chọn
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {!editProofFile && (!editingReading?.proofs || editingReading.proofs.length === 0) && (
+                      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Chưa có ảnh. Bạn có thể thêm ảnh bằng chứng.</p>
+                    )}
+                  </div>
+
                   <div className="flex gap-3 pt-4">
                     <button
                       type="submit"
@@ -912,6 +1225,7 @@ export default function MeterDetailPage() {
                       onClick={() => {
                         setShowEditForm(false);
                         setEditingReading(null);
+                        clearEditProofSelection();
                         setFormError('');
                       }}
                       className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex-1"
@@ -925,6 +1239,24 @@ export default function MeterDetailPage() {
           )}
         </div>
       </div>
+
+      {previewImageUrl && (
+        <div
+          className="fixed inset-0 z-[80] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreviewImageUrl(null)}
+        >
+          <div className="relative max-w-6xl w-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="absolute -top-10 right-0 text-white hover:text-slate-200"
+              onClick={() => setPreviewImageUrl(null)}
+              title="Đóng"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img src={previewImageUrl} alt="Ảnh đồng hồ" className="w-full max-h-[85vh] object-contain rounded-lg" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

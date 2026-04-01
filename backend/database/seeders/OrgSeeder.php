@@ -593,6 +593,7 @@ class OrgSeeder extends Seeder
                 'period_start' => $pStart->toDateString(),
                 'period_end' => $pEnd->toDateString(),
                 'reading_value' => $newValue,
+                'status' => 'SUBMITTED',
                 'submitted_by_user_id' => $staffId,
                 'submitted_at' => $pEnd->copy()->addDay(),
             ]);

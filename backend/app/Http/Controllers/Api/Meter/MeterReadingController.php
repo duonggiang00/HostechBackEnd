@@ -10,6 +10,7 @@ use App\Http\Resources\Meter\MeterReadingResource;
 use App\Models\Meter\MeterReading;
 use App\Services\Meter\MeterReadingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class MeterReadingController extends Controller
 {
@@ -32,7 +33,7 @@ class MeterReadingController extends Controller
     /**
      * Lấy danh sách Lịch sử chốt chỉ số của một đồng hồ.
      *
-     * @queryParam filter[status] string Trạng thái (PENDING, APPROVED, REJECTED).
+        * @queryParam filter[status] string Trạng thái (DRAFT, SUBMITTED, APPROVED, REJECTED).
      */
     public function index(Request $request, string $meterId)
     {
@@ -57,13 +58,15 @@ class MeterReadingController extends Controller
         $this->authorize('create', MeterReading::class);
 
         $data = array_merge($request->validated(), [
-            'org_id' => auth()->user()->org_id,
+            'org_id' => Auth::user()?->org_id,
             'meter_id' => $meterId,
         ]);
 
         $reading = $this->service->create($data);
 
-        return new MeterReadingResource($reading);
+        // Reload model từ database để đảm bảo proofs được load từ media table
+        // Resource sẽ dùng getMedia() để lấy proofs, nên không cần eager load relationships
+        return new MeterReadingResource($reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']));
     }
 
     /**
@@ -73,7 +76,8 @@ class MeterReadingController extends Controller
     {
         $this->authorize('view', $reading);
 
-        return new MeterReadingResource($reading->load(['meter', 'submittedBy', 'approvedBy']));
+        // Fresh reload để đảm bảo getMedia() lấy proofs từ DB mới nhất
+        return new MeterReadingResource($reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']));
     }
 
     /**

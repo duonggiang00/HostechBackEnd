@@ -25,7 +25,10 @@ class MeterReadingBulkStoreRequest extends FormRequest
             'readings.*.period_start' => ['required', 'date_format:Y-m-d'],
             'readings.*.period_end' => ['required', 'date_format:Y-m-d', 'after_or_equal:readings.*.period_start'],
             'readings.*.reading_value' => ['required', 'integer', 'min:0'],
+            'readings.*.status' => ['nullable', 'string', 'in:DRAFT,SUBMITTED,APPROVED,REJECTED'],
             'readings.*.meta' => ['nullable', 'array'],
+            'readings.*.proof_media_ids' => ['nullable', 'array'],
+            'readings.*.proof_media_ids.*' => ['string', 'exists:temporary_uploads,id'],
         ];
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Meter;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 class MeterReadingStoreRequest extends FormRequest
 {
@@ -36,31 +37,15 @@ class MeterReadingStoreRequest extends FormRequest
      */
     public function rules(): array
     {
-        $meterId = $this->route('meter');
-        // Handle both Model object and string ID
-        $meter_id = is_object($meterId) ? $meterId->id : $meterId;
-        
         return [
             'meter_id' => ['required', 'string', 'exists:meters,id'],
-            'period_start' => [
-                'required', 
-                'date_format:Y-m-d',
-                function ($attribute, $value, $fail) use ($meter_id) {
-                    // Check if a non-deleted reading exists with same meter_id and period range
-                    $exists = \App\Models\Meter\MeterReading::where('meter_id', $meter_id)
-                        ->where('period_start', $value)
-                        ->where('period_end', $this->input('period_end'))
-                        ->whereNull('deleted_at')
-                        ->exists();
-                    
-                    if ($exists) {
-                        $fail('Đã tồn tại chốt số cho khoảng thời gian này');
-                    }
-                },
-            ],
+            'period_start' => ['required', 'date_format:Y-m-d'],
             'period_end' => ['required', 'date_format:Y-m-d', 'after_or_equal:period_start'],
             'reading_value' => ['required', 'integer', 'min:0'],
+            'status' => ['nullable', 'string', 'in:DRAFT,SUBMITTED,APPROVED,REJECTED'],
             'meta' => ['nullable', 'array'],
+            'proof_media_ids' => ['nullable', 'array'],
+            'proof_media_ids.*' => ['string', 'exists:temporary_uploads,id'],
         ];
     }
 
@@ -81,6 +66,7 @@ class MeterReadingStoreRequest extends FormRequest
             'reading_value.required' => 'Chỉ số là bắt buộc',
             'reading_value.integer' => 'Chỉ số phải là số nguyên',
             'reading_value.min' => 'Chỉ số không được âm',
+            'status.in' => 'Trạng thái phải là DRAFT, SUBMITTED, APPROVED hoặc REJECTED',
         ];
     }
 
@@ -89,7 +75,7 @@ class MeterReadingStoreRequest extends FormRequest
      */
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
-        \Log::error('MeterReadingStoreRequest validation failed', [
+        Log::error('MeterReadingStoreRequest validation failed', [
             'errors' => $validator->errors()->toArray(),
             'request_data' => $this->all(),
             'route_params' => $this->route()->parameters(),

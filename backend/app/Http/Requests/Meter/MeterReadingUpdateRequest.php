@@ -23,8 +23,11 @@ class MeterReadingUpdateRequest extends FormRequest
             'period_start' => ['sometimes', 'date_format:Y-m-d'],
             'period_end' => ['sometimes', 'date_format:Y-m-d', 'after_or_equal:period_start'],
             'reading_value' => ['sometimes', 'integer', 'min:0'],
-            'status' => ['sometimes', 'string', 'in:PENDING,APPROVED,REJECTED'],
+            'status' => ['sometimes', 'string', 'in:DRAFT,SUBMITTED,APPROVED,REJECTED'],
+            'rejection_reason' => ['nullable', 'string', 'max:1000'],
             'meta' => ['nullable', 'array'],
+            'proof_media_ids' => ['nullable', 'array'],
+            'proof_media_ids.*' => ['string', 'exists:temporary_uploads,id'],
         ];
     }
 
@@ -39,7 +42,7 @@ class MeterReadingUpdateRequest extends FormRequest
             'period_end.after_or_equal' => 'Đến ngày phải >= từ ngày',
             'reading_value.integer' => 'Chỉ số phải là số nguyên',
             'reading_value.min' => 'Chỉ số không được âm',
-            'status.in' => 'Trạng thái phải là PENDING, APPROVED hoặc REJECTED',
+            'status.in' => 'Trạng thái phải là DRAFT, SUBMITTED, APPROVED hoặc REJECTED',
         ];
     }
 }

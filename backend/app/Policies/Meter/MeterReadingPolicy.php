@@ -54,11 +54,22 @@ class MeterReadingPolicy implements RbacModuleProvider
 
     public function update(User $user, MeterReading $meterReading): bool
     {
-        if (! $user->hasPermissionTo('update MeterReading')) {
-            return false;
+        // Manager/Owner keep full update permission in property scope.
+        if ($user->hasPermissionTo('update MeterReading')) {
+            return $this->checkPropertyScope($user, $meterReading);
         }
 
-        return $this->checkPropertyScope($user, $meterReading);
+        // Staff can revise their own DRAFT records before submission.
+        if (
+            $user->hasRole('Staff')
+            && $user->hasPermissionTo('create MeterReading')
+            && $meterReading->status === 'DRAFT'
+            && $meterReading->submitted_by_user_id === $user->id
+        ) {
+            return $this->checkPropertyScope($user, $meterReading);
+        }
+
+        return false;
     }
 
     public function delete(User $user, MeterReading $meterReading): bool

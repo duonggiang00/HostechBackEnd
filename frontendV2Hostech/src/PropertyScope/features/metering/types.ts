@@ -26,7 +26,7 @@ export interface MeterReading {
   reading_date?: string;
   photo_url?: string;
   consumption?: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
   // New fields from backend
   period_start?: string;
   period_end?: string;
@@ -38,6 +38,17 @@ export interface MeterReading {
   approved_by?: { id: string; name: string };
   locked_at?: string;
   meta?: Record<string, any>;
+  proofs?: {
+    id: string;
+    url: string;
+    thumb_url?: string;
+    name?: string;
+    file_name?: string;
+    mime_type?: string;
+    size?: number;
+  }[];
+  /** IDs từ temporary upload để gán ảnh khi tạo/cập nhật reading */
+  proof_media_ids?: string[];
   created_at?: string;
   updated_at?: string;
 }

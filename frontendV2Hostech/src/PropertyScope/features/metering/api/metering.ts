@@ -2,6 +2,25 @@ import apiClient from '@/shared/api/client';
 import type { Meter, MeterReading } from '../types';
 
 export const meteringApi = {
+  uploadReadingProof: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collection', 'reading_proofs');
+
+    const response = await apiClient.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    return response.data?.data as {
+      media_id: string;
+      temporary_upload_id: string;
+      url: string;
+      file_name: string;
+      mime_type: string;
+      size: number;
+    };
+  },
+
   // Meter CRUD Operations
   getMeters: async (propertyId: string, filters?: Record<string, any>, search?: string, page: number = 1, perPage: number = 15) => {
     // Format filters properly for Laravel's filter[] syntax
@@ -99,7 +118,7 @@ export const meteringApi = {
       page,
       per_page: perPage,
       sort: '-period_end',
-      include: 'submittedBy,approvedBy',
+      include: 'submittedBy,approvedBy,media,meter,meter.room',
       // Always filter by meter_id to get the correct meter's readings
       'filter[meter_id]': meterId,
     };
@@ -121,19 +140,20 @@ export const meteringApi = {
 
   getMeterReading: async (meterId: string, readingId: string) => {
     const response = await apiClient.get(`/meters/${meterId}/readings/${readingId}`, {
-      params: { include: 'meter,submittedBy,approvedBy' }
+      params: { include: 'meter,submittedBy,approvedBy,media' }
     });
     console.log(`📡 API: GET /meters/${meterId}/readings/${readingId}:`, response.data.data);
     return response.data.data as MeterReading;
   },
 
-  createReading: async (meterId: string, data: { reading_value: number; period_start: string; period_end: string; meta?: Record<string, any> }) => {
+  createReading: async (meterId: string, data: { reading_value: number; period_start: string; period_end: string; meta?: Record<string, any>; proof_media_ids?: string[] }) => {
     // Ensure dates are in YYYY-MM-DD format
     const payload = {
       reading_value: data.reading_value,
       period_start: data.period_start, // Should be YYYY-MM-DD from input type="date"
       period_end: data.period_end,     // Should be YYYY-MM-DD from input type="date"
       ...(data.meta && { meta: data.meta }),
+      ...(data.proof_media_ids && data.proof_media_ids.length > 0 ? { proof_media_ids: data.proof_media_ids } : {}),
     };
     
     console.log(`📤 Sending POST /meters/${meterId}/readings:`, JSON.stringify(payload, null, 2));
@@ -174,10 +194,18 @@ export const meteringApi = {
     return result as MeterReading;
   },
 
+  submitReading: async (meterId: string, readingId: string) => {
+    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'SUBMITTED' });
+    const result = response.data.data || response.data;
+    console.log(`📡 API: Submitted reading:`, result);
+    return result as MeterReading;
+  },
+
   rejectReading: async (meterId: string, readingId: string, reason?: string) => {
     const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { 
       status: 'REJECTED',
-      meta: { rejection_reason: reason }
+      rejection_reason: reason,
+      meta: reason ? { rejection_reason: reason } : undefined,
     });
     const result = response.data.data || response.data;
     console.log(`📡 API: Rejected reading:`, result);

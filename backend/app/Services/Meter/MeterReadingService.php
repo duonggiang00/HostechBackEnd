@@ -6,7 +6,10 @@ use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
 use App\Services\Notification\NotificationService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -21,15 +24,32 @@ class MeterReadingService
     public function paginate(array $filters = [], int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         $query = QueryBuilder::for(MeterReading::class)
-            ->allowedFilters(array_merge($filters, [
+            ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('meter_id'),
                 AllowedFilter::exact('submitted_by_user_id'),
                 AllowedFilter::exact('approved_by_user_id'),
-            ]))
+            ])
             ->allowedSorts(['period_start', 'period_end', 'reading_value', 'created_at'])
             ->defaultSort('-created_at')
-            ->allowedIncludes(['meter', 'submittedBy', 'approvedBy']);
+            ->allowedIncludes(['meter', 'meter.room', 'submittedBy', 'approvedBy', 'media']);
+
+        // Force filters passed from controller (e.g. lock index by meter_id).
+        if (! empty($filters['meter_id'])) {
+            $query->where('meter_id', $filters['meter_id']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['submitted_by_user_id'])) {
+            $query->where('submitted_by_user_id', $filters['submitted_by_user_id']);
+        }
+
+        if (! empty($filters['approved_by_user_id'])) {
+            $query->where('approved_by_user_id', $filters['approved_by_user_id']);
+        }
 
         $user = request()->user();
         if ($user && $user->hasRole('Tenant')) {
@@ -59,8 +79,44 @@ class MeterReadingService
     public function create(array $data): MeterReading
     {
         return DB::transaction(function () use ($data) {
+            $actorId = Auth::id();
+            $data['org_id'] = $data['org_id'] ?? Auth::user()?->org_id;
             $meterId = $data['meter_id'];
             $readingValue = $data['reading_value'];
+            $status = $data['status'] ?? 'DRAFT';
+
+            $data['status'] = $status;
+            $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actorId;
+
+            if ($status === 'SUBMITTED' || $status === 'APPROVED') {
+                $data['submitted_at'] = $data['submitted_at'] ?? now();
+            }
+
+            if ($status === 'APPROVED') {
+                $data['approved_at'] = $data['approved_at'] ?? now();
+                $data['approved_by_user_id'] = $data['approved_by_user_id'] ?? $actorId;
+            }
+
+            // Keep one record per meter-period. If a soft-deleted row exists, remove it first.
+            $existing = MeterReading::withTrashed()->where('meter_id', $meterId)
+                ->where('period_start', $data['period_start'])
+                ->where('period_end', $data['period_end'])
+                ->first();
+
+            if ($existing && $existing->trashed()) {
+                $existing->forceDelete();
+                $existing = null;
+            }
+
+            if ($existing) {
+                if ($existing->status !== 'DRAFT') {
+                    throw ValidationException::withMessages([
+                        'period_start' => 'Đã tồn tại bản chốt số cho kỳ này và không còn ở trạng thái DRAFT.',
+                    ]);
+                }
+
+                return $this->update($existing, $data);
+            }
 
             // Get previous approved reading
             $prev = MeterReading::where('meter_id', $meterId)
@@ -83,7 +139,22 @@ class MeterReadingService
                 $meter->update(['meta' => $meta]);
             }
 
-            $reading = MeterReading::create($data);
+            try {
+                $reading = MeterReading::create($data);
+            } catch (UniqueConstraintViolationException $e) {
+                $duplicate = MeterReading::where('meter_id', $meterId)
+                    ->where('period_start', $data['period_start'])
+                    ->where('period_end', $data['period_end'])
+                    ->first();
+
+                if ($duplicate && $duplicate->status === 'DRAFT') {
+                    return $this->update($duplicate, $data);
+                }
+
+                throw ValidationException::withMessages([
+                    'period_start' => 'Đã tồn tại bản chốt số cho kỳ này.',
+                ]);
+            }
             
             // Centralize consumption calculation
             $this->recalculateConsumption($reading);
@@ -99,7 +170,8 @@ class MeterReadingService
             // Dispatch notification after successful creation
             $this->notificationService->notifyMeterReadingStatusChanged($reading, $reading->status);
 
-            return $reading->fresh(['meter', 'submittedBy', 'approvedBy']);
+            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB (không dùng 'media' relationship)
+            return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
         });
     }
 
@@ -123,27 +195,33 @@ class MeterReadingService
     public function update(MeterReading $reading, array $data): MeterReading
     {
         return DB::transaction(function () use ($reading, $data) {
-            $isBecameApproved = isset($data['status']) && $data['status'] === 'APPROVED' && $reading->status !== 'APPROVED';
+            $originalStatus = $reading->status;
+            $targetStatus = $data['status'] ?? $originalStatus;
 
-            if ($isBecameApproved) {
-                $data['approved_at'] = now();
-                $data['approved_by_user_id'] = auth()->id();
-            }
+            $this->assertValidTransition($originalStatus, $targetStatus);
+            $this->enrichStatusAuditFields($data, $targetStatus, $originalStatus);
+
+            $isBecameApproved = $targetStatus === 'APPROVED' && $originalStatus !== 'APPROVED';
+            $isReadingValueChanged = isset($data['reading_value']) || isset($data['period_start']) || isset($data['period_end']);
 
             $reading->update($data);
             
-            // Centralize consumption calculation
-            $this->recalculateConsumption($reading);
+            // Recalculate only when value/date changed or when status moves into APPROVED.
+            if ($isReadingValueChanged || $isBecameApproved) {
+                $this->recalculateConsumption($reading);
+            }
             
             // If we are updating in the middle of history, we might need to cascade
-            $this->triggerCascadeRecalculation($reading->meter, $reading->period_end);
+            if ($isReadingValueChanged) {
+                $this->triggerCascadeRecalculation($reading->meter, $reading->period_end);
+            }
 
             // Sync base reading and aggregate if approved
             if ($reading->status === 'APPROVED') {
                 $this->syncMeterBaseReading($reading->meter);
                 
                 // Aggregate to master if status just became approved OR if values changed on an already approved reading
-                $isValueChanged = isset($data['reading_value']) || isset($data['consumption']);
+                $isValueChanged = $isReadingValueChanged || isset($data['consumption']);
                 if ($isBecameApproved || $isValueChanged) {
                     $this->aggregateToMaster($reading);
                 }
@@ -160,11 +238,12 @@ class MeterReadingService
                 $this->notificationService->notifyMeterReadingStatusChanged(
                     $reading,
                     $data['status'],
-                    $data['rejection_reason'] ?? null
+                    $this->resolveRejectionReason($data)
                 );
             }
 
-            return $reading->fresh(['meter', 'submittedBy', 'approvedBy']);
+            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB (không dùng 'media' relationship)
+            return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
         });
     }
 
@@ -235,7 +314,7 @@ class MeterReadingService
                 'status' => 'APPROVED',
                 'submitted_at' => now(),
                 'org_id' => $masterMeter->org_id,
-                'submitted_by_user_id' => auth()->id(),
+                'submitted_by_user_id' => Auth::id(),
             ]
         );
 
@@ -319,20 +398,84 @@ class MeterReadingService
     protected function attachProofs(MeterReading $reading, array $mediaIds)
     {
         if (empty($mediaIds)) {
+            \Log::debug('📸 No proof media IDs to attach - clearing existing proofs to allow deletion');
+            $reading->clearMediaCollection('reading_proofs');
             return;
         }
 
         $temporaryUploads = TemporaryUpload::whereIn('id', $mediaIds)->get();
+        \Log::debug("📸 Found {$temporaryUploads->count()} temporary uploads for reading {$reading->id}");
 
         foreach ($temporaryUploads as $tempUpload) {
-            $mediaPath = storage_path('app/'.$tempUpload->file_path);
+            $tempMedias = $tempUpload->media; // Fix: get all media regardless of collection name
+            \Log::debug("📸 Temp upload {$tempUpload->id} has {$tempMedias->count()} media items");
 
-            if (file_exists($mediaPath)) {
-                $reading->addMedia($mediaPath)
-                    ->preservingOriginal()
+            foreach ($tempMedias as $tempMedia) {
+                $relativePath = $tempMedia->getPathRelativeToRoot();
+
+                if (! $relativePath) {
+                    \Log::warning("📸 No relative path for media {$tempMedia->id}");
+                    continue;
+                }
+
+                $reading->addMediaFromDisk($relativePath, $tempMedia->disk)
+                    ->usingFileName($tempMedia->file_name)
                     ->toMediaCollection('reading_proofs');
+                    
+                \Log::debug("📸 Attached media {$tempMedia->file_name} to reading {$reading->id}");
             }
         }
+        
+        // Verify attachment
+        $proofs = $reading->getMedia('reading_proofs');
+        \Log::debug("📸 After attachment, reading {$reading->id} has {$proofs->count()} proofs");
+    }
+
+    protected function assertValidTransition(string $fromStatus, string $toStatus): void
+    {
+        $allowed = [
+            'DRAFT' => ['DRAFT', 'SUBMITTED'],
+            'SUBMITTED' => ['SUBMITTED', 'APPROVED', 'REJECTED'],
+            'REJECTED' => ['REJECTED', 'DRAFT', 'SUBMITTED'],
+            // Keep correction flow for approved records (same status with value fix).
+            'APPROVED' => ['APPROVED'],
+            'LOCKED' => ['LOCKED'],
+        ];
+
+        $transitions = $allowed[$fromStatus] ?? [];
+        if (! in_array($toStatus, $transitions, true)) {
+            throw ValidationException::withMessages([
+                'status' => "Không thể chuyển trạng thái từ {$fromStatus} sang {$toStatus}",
+            ]);
+        }
+    }
+
+    protected function enrichStatusAuditFields(array &$data, string $targetStatus, string $originalStatus): void
+    {
+        $actorId = Auth::id();
+
+        if ($targetStatus === 'SUBMITTED' && $originalStatus !== 'SUBMITTED') {
+            $data['submitted_at'] = $data['submitted_at'] ?? now();
+            $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actorId;
+        }
+
+        if ($targetStatus === 'APPROVED' && $originalStatus !== 'APPROVED') {
+            $data['approved_at'] = now();
+            $data['approved_by_user_id'] = $actorId;
+        }
+    }
+
+    protected function resolveRejectionReason(array $data): ?string
+    {
+        if (! empty($data['rejection_reason'])) {
+            return $data['rejection_reason'];
+        }
+
+        if (! empty($data['meta']['rejection_reason'])) {
+            return $data['meta']['rejection_reason'];
+        }
+
+        return null;
     }
 
     /**

@@ -348,7 +348,7 @@ export default function MeterListPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Loại</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Master</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Phòng</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Mã phòng</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Chỉ số hiện tại</th>
                   <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
                 </tr>
@@ -364,16 +364,20 @@ export default function MeterListPage() {
                       className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
                     >
                       {/* STT */}
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-300 text-center">
-                        {(page - 1) * itemsPerPage + index + 1}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 w-8 text-center">
+                            {(page - 1) * itemsPerPage + index + 1}
+                          </span>
+                          <span className="text-sm text-slate-600 dark:text-slate-400 truncate max-w-[160px]" title={meter.room?.name || 'Không có phòng'}>
+                            {meter.room?.name || 'Không có phòng'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Code */}
                       <td className="px-6 py-4">
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{meter.code}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{meter.id}</p>
-                        </div>
+                        <p className="font-semibold text-slate-900 dark:text-white">{meter.code}</p>
                       </td>
 
                       {/* Type */}
@@ -425,10 +429,7 @@ export default function MeterListPage() {
                       {/* Room */}
                       <td className="px-6 py-4">
                         {meter.room ? (
-                          <div>
-                            <p className="font-medium text-slate-900 dark:text-slate-200">{meter.room.code}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{meter.room.name}</p>
-                          </div>
+                          <p className="font-medium text-slate-900 dark:text-slate-200">{meter.room.code}</p>
                         ) : (
                           <p className="text-slate-400 dark:text-slate-500 text-sm">-</p>
                         )}
