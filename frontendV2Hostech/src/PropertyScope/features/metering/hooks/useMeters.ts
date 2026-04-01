@@ -153,3 +153,69 @@ export function useMeterHistory(meterId?: string | null, months: number = 12) {
     enabled: !!meterId,
   });
 }
+
+// Hook lấy danh sách readings theo status cho toàn property
+// Step 1: lấy meters, Step 2: fetch readings từng meter song song
+export function usePropertyReadings(
+  propertyId?: string | null,
+  params?: { status?: string; period_start?: string; period_end?: string }
+) {
+  // Bước 1: lấy danh sách meter IDs của property (dùng perPage cao để lấy hết)
+  const metersQuery = useQuery({
+    queryKey: ['meters-ids-for-readings', propertyId],
+    queryFn: async () => {
+      if (!propertyId) return [] as string[];
+      const res = await meteringApi.getMeters(propertyId, {}, undefined, 1, 200);
+      return (res.data ?? []).map((m: any) => m.id as string);
+    },
+    enabled: !!propertyId,
+    staleTime: 60_000,
+  });
+
+  const meterIds = metersQuery.data ?? [];
+
+  // Bước 2: fetch readings cho toàn bộ meters (chỉ chạy khi đã có meterIds)
+  return useQuery({
+    queryKey: ['property-readings', propertyId, params, meterIds.join(',')],
+    queryFn: () => meteringApi.getReadingsForMeters(meterIds, params),
+    enabled: !!propertyId && meterIds.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+// Hook duyệt hàng loạt chốt số
+export function useBulkApproveReadings(propertyId?: string | null) {
+  const queryClient = useQueryClient();
+
+  const approveMutation = useMutation({
+    mutationFn: (items: { meterId: string; readingId: string }[]) =>
+      meteringApi.bulkApproveReadings(items),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      if (result.failed > 0) {
+        toast.error(`Duyệt thành công ${result.succeeded}, thất bại ${result.failed} chốt số.`);
+      } else {
+        toast.success(`Đã duyệt thành công ${result.succeeded} chốt số!`);
+      }
+    },
+    onError: () => {
+      toast.error('Có lỗi xảy ra khi duyệt chốt số.');
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ items, reason }: { items: { meterId: string; readingId: string }[]; reason?: string }) =>
+      meteringApi.bulkRejectReadings(items, reason),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      toast.success(`Đã từ chối ${result.succeeded} chốt số.`);
+    },
+    onError: () => {
+      toast.error('Có lỗi xảy ra khi từ chối chốt số.');
+    },
+  });
+
+  return { approveMutation, rejectMutation };
+}

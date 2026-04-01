@@ -16,9 +16,6 @@ import {
   CreditCard,
   Settings,
   Ticket,
-  FilePlus2,
-  Zap,
-  ReceiptText,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -89,6 +86,10 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
           label: 'Hợp đồng',
           path: `/properties/${propertyId}/contracts`,
           badge: contractAttentionCount > 0 ? contractAttentionCount : undefined,
+          children: [
+            { id: 'contracts-list', label: 'Danh sách hợp đồng', path: `/properties/${propertyId}/contracts`, exact: true },
+            { id: 'contracts-create', label: 'Tạo hợp đồng nhanh', path: `/properties/${propertyId}/contracts/create` }
+          ]
         },
         { id: 'users', icon: User, label: 'Cư dân và nhân sự', path: `/properties/${propertyId}/users` },
       ],
@@ -97,7 +98,16 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
       id: 'operations',
       label: 'Vận hành',
       items: [
-        { id: 'meters', icon: Gauge, label: 'Chỉ số điện nước', path: `/properties/${propertyId}/meters` },
+        {
+          id: 'meters',
+          icon: Gauge,
+          label: 'Chỉ số điện nước',
+          path: `/properties/${propertyId}/meters`,
+          children: [
+            { id: 'meters-list', label: 'Quản lý chỉ số', path: `/properties/${propertyId}/meters`, exact: true },
+            { id: 'meters-quick', label: 'Nhập chỉ số nhanh', path: `/properties/${propertyId}/meters/quick` }
+          ]
+        },
         {
           id: 'billing',
           icon: CreditCard,
@@ -116,29 +126,24 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     },
   ];
 
-  const quickActions: SidebarDropdownItem[] = [
-    { id: 'create-contract', icon: FilePlus2, label: 'Tạo hợp đồng', path: `/properties/${propertyId}/contracts/create` },
-    { id: 'quick-reading', icon: Zap, label: 'Nhập chỉ số nhanh', path: `/properties/${propertyId}/meters/quick` },
-    { id: 'review-invoices', icon: ReceiptText, label: 'Duyệt hóa đơn', path: `/properties/${propertyId}/billing` },
-  ];
+  // Removed quickActions as they are now integrated into dropdowns above.
 
   const renderSidebarContent = () => (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-slate-800">
-      {/* Header section - Sticky top */}
-      <div className="shrink-0 flex items-center justify-between border-b border-slate-100 px-5 py-5 dark:border-slate-700/50">
+    <div className="flex h-full w-full flex-col bg-white dark:bg-slate-900">
+      <div className="flex shrink-0 items-center justify-between px-6 py-6 pb-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30">
-            <Building2 className="w-6 h-6 text-white" />
+          <div className="flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-200 dark:shadow-none">
+            <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-bold bg-linear-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-            Hostech V2
+          <h1 className="text-xl font-extrabold text-[#566a7f] dark:text-slate-200 tracking-tight">
+            Sneat
           </h1>
         </div>
         <button
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:hidden transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
       </div>
 
@@ -172,37 +177,27 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
           )}
         </nav>
 
-        {/* Quick Actions */}
-        {propertyId ? (
-          <div className="relative mt-2 shrink-0 px-3 pt-4">
-            <div className="absolute left-8 right-8 top-0 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent dark:via-slate-700"></div>
-            <SidebarDropdownSection
-              label="Thao tác nhanh"
-              items={quickActions}
-              onNavigate={() => setIsMobileMenuOpen(false)}
-            />
-          </div>
-        ) : null}
+        {/* Quick Actions removed - Now integrated via Dropdowns */}
 
         {/* Tree View */}
         <div className="min-h-[150px] shrink-0 flex-1 px-2 pt-5">
           {propertyId && (
-             <div className="relative pt-4">
-               <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
-               <div className="px-2">
-                 <SidebarDropdownSection label="Sơ đồ tòa nhà">
-                   <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
-                     <PropertyTreeView />
-                   </div>
-                 </SidebarDropdownSection>
-               </div>
-             </div>
+            <div className="relative pt-4">
+              <div className="absolute top-0 left-8 right-8 h-px bg-linear-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent"></div>
+              <div className="px-5 py-4">
+                <SidebarDropdownSection label="Sơ đồ tòa nhà">
+                  <div className="rounded-2xl border border-slate-200/70 bg-slate-50/80 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
+                    <PropertyTreeView />
+                  </div>
+                </SidebarDropdownSection>
+              </div>
+            </div>
           )}
         </div>
       </div>
 
       {/* Footer section (Account Menu) - Always visible */}
-      <div className="z-10 w-full shrink-0 border-t border-slate-100 bg-slate-50/80 p-4 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.02)] backdrop-blur-md dark:border-slate-700/70 dark:bg-slate-800/80">
+      <div className="w-full shrink-0 border-t border-slate-200/60 bg-white p-4 dark:border-white/10 dark:bg-slate-900">
         <SidebarAccountMenu
           profilePath={`/properties/${propertyId}/profile`}
           userName={user?.full_name}
@@ -218,8 +213,9 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
-      <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:flex">
+    <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
+      {/* Desktop Sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-[260px] flex-col border-r border-[#eceef1] bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex shadow-sm">
         {renderSidebarContent()}
       </aside>
 
@@ -234,11 +230,11 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
             />
             <motion.aside
-              initial={{ x: -300 }}
+              initial={{ x: -280 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
+              exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white shadow-2xl dark:bg-slate-800 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-white shadow-xl dark:bg-slate-900 lg:hidden"
             >
               {renderSidebarContent()}
             </motion.aside>

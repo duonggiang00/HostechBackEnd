@@ -1,4 +1,4 @@
-﻿import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { 
   Building2, 
@@ -55,21 +55,21 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   ].filter((section) => section.items.length > 0);
 
   const renderSidebarContent = () => (
-    <>
-      <div className="flex items-center justify-between border-b border-slate-200/50 px-5 py-5 dark:border-slate-700/50">
+    <div className="flex h-full w-full flex-col bg-white dark:bg-slate-900">
+      <div className="flex shrink-0 items-center justify-between px-6 py-6 pb-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30">
-            <Building2 className="w-6 h-6 text-white" />
+          <div className="flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-200 dark:shadow-none">
+            <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
           </div>
-          <h1 className="text-xl font-bold bg-linear-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
-            Hostech V2
+          <h1 className="text-xl font-extrabold text-[#566a7f] dark:text-slate-200 tracking-tight">
+            Sneat
           </h1>
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(false)}
-          className="lg:hidden p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:hidden transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
       </div>
       
@@ -83,8 +83,8 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
                 <Shield className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Tá»• chá»©c</p>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Quáº£n lÃ½ bá»Ÿi há»‡ thá»‘ng</p>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Tổ chức</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Quản lý bởi hệ thống</p>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
 
       <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2 custom-scrollbar">
         <div className="mb-3 mt-1 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-           Pháº¡m vi tá»• chá»©c
+           Phạm vi tổ chức
         </div>
 
         {menuSections.map((section) => (
@@ -107,7 +107,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
         ))}
       </nav>
 
-      <div className="shrink-0 border-t border-slate-100 bg-slate-50/50 p-4 dark:border-slate-700/50 dark:bg-slate-800/30">
+      <div className="w-full shrink-0 border-t border-slate-200/60 bg-white p-4 dark:border-white/10 dark:bg-slate-900">
         <SidebarAccountMenu
           profilePath="/org/profile"
           userName={user?.full_name}
@@ -119,13 +119,13 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
           onActionComplete={() => setIsMobileMenuOpen(false)}
         />
       </div>
-    </>
+    </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans">
+    <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
       {/* Desktop Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-[260px] flex-col border-r border-[#eceef1] bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex shadow-sm">
         {renderSidebarContent()}
       </aside>
 
@@ -141,11 +141,11 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
               className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
             />
             <motion.aside 
-              initial={{ x: -300 }}
+              initial={{ x: -280 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
+              exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white shadow-2xl dark:bg-slate-800 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-white shadow-xl dark:bg-slate-900 lg:hidden"
             >
               {renderSidebarContent()}
             </motion.aside>
@@ -162,7 +162,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Cá»•ng thÃ´ng tin tá»• chá»©c</h2>
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Cổng thông tin tổ chức</h2>
             <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 hidden xl:block" />
             <div className="min-w-0">
               <PropertySwitcher />
@@ -174,7 +174,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input 
                 type="text" 
-                placeholder="TÃ¬m kiáº¿m há»‡ thá»‘ng..."
+                placeholder="Tìm kiếm hệ thống..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>
@@ -198,4 +198,3 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
     </div>
   );
 }
-

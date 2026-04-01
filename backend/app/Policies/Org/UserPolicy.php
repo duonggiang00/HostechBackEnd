@@ -36,38 +36,38 @@ class UserPolicy implements RbacModuleProvider
 
     public function view(User $user, User $model): bool
     {
-        if (! $user->hasPermissionTo('view Users')) {
-            return false;
+        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('view Users')) {
+            return $this->checkOrgScope($user, $model);
         }
 
-        return $this->checkOrgScope($user, $model);
+        return false;
     }
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Users');
+        return $user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('create Users');
     }
 
     public function update(User $user, User $model): bool
     {
-        if (! $user->hasPermissionTo('update Users')) {
-            return false;
+        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('update Users')) {
+            return $this->checkOrgScope($user, $model);
         }
 
-        return $this->checkOrgScope($user, $model);
+        return false;
     }
 
     public function delete(User $user, User $model): bool
     {
-        if (! $user->hasPermissionTo('delete Users')) {
-            return false;
-        }
-
         // Prevent deleting self? (Optional business logic)
         if ($user->id === $model->id) {
             return false;
         }
 
-        return $this->checkOrgScope($user, $model);
+        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('delete Users')) {
+            return $this->checkOrgScope($user, $model);
+        }
+
+        return false;
     }
 }

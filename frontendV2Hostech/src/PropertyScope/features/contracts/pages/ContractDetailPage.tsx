@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
-  AlertCircle, CheckCircle2, History, XCircle
+  AlertCircle, CheckCircle2, History, XCircle, Loader2
 } from 'lucide-react';
-import { useContract } from '../hooks/useContracts';
+import { useContract, useContractActions } from '../hooks/useContracts';
 import { TerminateContractModal } from '../components/TerminateContractModal';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -34,7 +35,43 @@ export default function ContractDetailPage() {
   const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
   const navigate = useNavigate();
   const { data: contract, isLoading, error } = useContract(contractId);
+  const { generateDocument, downloadDocument } = useContractActions();
   const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+  
+  const handlePrintContract = async () => {
+    if (!contractId) return;
+    setIsPrinting(true);
+    try {
+      // 1. Generate document
+      await generateDocument.mutateAsync({ id: contractId });
+      
+      // 2. Download the Blob
+      const blob = await downloadDocument.mutateAsync(contractId);
+      
+      // 3. Create URL and download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract room code to name the file nicely
+      const fileName = `Hop-dong-${contract?.room?.code || contractId.substring(0,8)}.docx`;
+      link.setAttribute('download', fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Đã tải file hợp đồng thành công! Vui lòng mở file để in.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi tải file hợp đồng.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
   
   const handleBack = () => {
     navigate(`/properties/${propertyId}/contracts`);
@@ -109,9 +146,13 @@ export default function ContractDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm">
-            <Printer className="w-4 h-4" />
-            <span>In hợp đồng</span>
+          <button 
+            onClick={handlePrintContract}
+            disabled={isPrinting}
+            className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+            <span>{isPrinting ? 'Đang tạo file...' : 'In hợp đồng'}</span>
           </button>
           {isOrdinalEditable && (
             <button 
