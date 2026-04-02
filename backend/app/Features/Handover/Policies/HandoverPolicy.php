@@ -35,12 +35,12 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Handover');
+        return $user->can('viewAny Handover');
     }
 
     public function view(User $user, Handover $handover): bool
     {
-        if ($user->hasPermissionTo('view Handover')) {
+        if ($user->can('view Handover')) {
             return $this->checkOrgScope($user, $handover);
         }
 
@@ -54,7 +54,7 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Handover');
+        return $user->can('create Handover');
     }
 
     public function update(User $user, Handover $handover): bool
@@ -63,7 +63,7 @@ class HandoverPolicy implements RbacModuleProvider
             return false;
         }
 
-        if (! $user->hasPermissionTo('update Handover')) {
+        if (! $user->can('update Handover')) {
             return false;
         }
 
@@ -76,7 +76,7 @@ class HandoverPolicy implements RbacModuleProvider
             return false;
         }
 
-        if (! $user->hasPermissionTo('delete Handover')) {
+        if (! $user->can('delete Handover')) {
             return false;
         }
 
@@ -85,7 +85,7 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function restore(User $user, Handover $handover): bool
     {
-        if (! $user->hasPermissionTo('delete Handover')) {
+        if (! $user->can('delete Handover')) {
             return false;
         }
 
@@ -94,7 +94,7 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function forceDelete(User $user, Handover $handover): bool
     {
-        if (! $user->hasPermissionTo('delete Handover')) {
+        if (! $user->can('delete Handover')) {
             return false;
         }
 

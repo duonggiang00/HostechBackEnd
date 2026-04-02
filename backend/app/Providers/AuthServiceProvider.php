@@ -3,17 +3,19 @@
 namespace App\Providers;
 
 use App\Features\Finance\Models\Payment;
+use App\Features\Finance\Policies\FinancePolicy;
+use App\Features\Handover\Models\Handover;
+use App\Features\Handover\Policies\HandoverPolicy;
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
+use App\Features\Org\Policies\OrgPolicy;
+use App\Features\Org\Policies\UserPolicy;
 use App\Features\Property\Models\Floor;
 use App\Features\Property\Models\Property;
 use App\Features\Property\Models\Room;
-use App\Policies\Finance\FinancePolicy;
-use App\Policies\Org\OrgPolicy;
-use App\Policies\Org\UserPolicy;
-use App\Policies\Property\FloorPolicy;
-use App\Policies\Property\PropertyPolicy;
-use App\Policies\Property\RoomPolicy;
+use App\Features\Property\Policies\FloorPolicy;
+use App\Features\Property\Policies\PropertyPolicy;
+use App\Features\Property\Policies\RoomPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -24,13 +26,13 @@ class AuthServiceProvider extends ServiceProvider
      * @var array<class-string, class-string>
      */
     protected $policies = [
-        User::class     => UserPolicy::class,
-        Org::class      => OrgPolicy::class,
-        Property::class => PropertyPolicy::class,
-        Floor::class    => FloorPolicy::class,
-        Room::class     => RoomPolicy::class,
-        \App\Features\Handover\Models\Handover::class => \App\Policies\Handover\HandoverPolicy::class,
-        Payment::class  => FinancePolicy::class,
+        User::class      => UserPolicy::class,
+        Org::class       => OrgPolicy::class,
+        Property::class  => PropertyPolicy::class,
+        Floor::class     => FloorPolicy::class,
+        Room::class      => RoomPolicy::class,
+        Handover::class  => HandoverPolicy::class,
+        Payment::class   => FinancePolicy::class,
     ];
 
     /**

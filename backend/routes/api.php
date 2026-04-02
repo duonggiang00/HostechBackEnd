@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\Finance\VNPayController;
-use App\Http\Controllers\Api\System\UserInvitationController;
+use App\Features\Finance\Controllers\VNPayController;
+use App\Features\System\Controllers\UserInvitationController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -34,8 +34,11 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // --- Feature Module Routes (New Modular) ---
-// Note: Each module's api.php handles its own middleware
-$featureRouteFiles = glob(base_path('app/Features/*/Routes/api.php'));
-foreach ($featureRouteFiles as $file) {
-    require $file;
-}
+// Note: Each module's api.php handles its own internal routing logic,
+// but we wrap all of them in auth:sanctum here to ensure a consistent experience.
+Route::middleware('auth:sanctum')->group(function () {
+    $featureRouteFiles = glob(base_path('app/Features/*/Routes/api.php'));
+    foreach ($featureRouteFiles as $file) {
+        require $file;
+    }
+});

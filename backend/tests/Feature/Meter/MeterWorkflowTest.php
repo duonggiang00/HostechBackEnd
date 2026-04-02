@@ -2,12 +2,12 @@
 
 namespace Tests\Feature\Meter;
 
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Property\Room;
-use App\Models\Property\Property;
-use App\Models\Org\Org;
-use App\Models\Service\Service;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Property\Models\Room;
+use App\Features\Property\Models\Property;
+use App\Features\Org\Models\Org;
+use App\Features\Service\Models\Service;
 use App\Models\User;
 use App\Services\Meter\MeterReadingService;
 use Tests\TestCase;

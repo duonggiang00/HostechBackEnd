@@ -3,8 +3,8 @@
 namespace Tests\Feature\Meter;
 
 use App\Http\Resources\Meter\MeterResource;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;

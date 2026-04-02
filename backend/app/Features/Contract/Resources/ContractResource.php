@@ -3,8 +3,8 @@
 namespace App\Features\Contract\Resources;
 
 use App\Features\Org\Resources\UserResource;
-use App\Http\Resources\Property\PropertyResource;
-use App\Http\Resources\Property\RoomResource;
+use App\Features\Property\Resources\PropertyResource;
+use App\Features\Property\Resources\RoomResource;
 use App\Features\Invoice\Models\Invoice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

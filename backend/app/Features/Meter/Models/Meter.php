@@ -2,7 +2,7 @@
 
 namespace App\Features\Meter\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Org\Models\Org;
 use App\Features\Property\Models\Room;
 use App\Traits\SystemLoggable;

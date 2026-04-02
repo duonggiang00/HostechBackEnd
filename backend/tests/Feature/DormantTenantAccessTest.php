@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Contract\Models\Contract;
+use App\Features\Contract\Models\ContractMember;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -162,7 +162,7 @@ class DormantTenantAccessTest extends TestCase
     public function test_unrelated_tenant_cannot_sign_others_contract()
     {
         // Tenant 1 tạo hợp đồng
-        $org = \App\Models\Org\Org::create(['name' => 'Shared Org']);
+        $org = \App\Features\Org\Models\Org::create(['name' => 'Shared Org']);
         $tenant1 = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Tenant One']);
         $tenant1->assignRole('Tenant');
 

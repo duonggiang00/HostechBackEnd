@@ -2,7 +2,7 @@
 
 namespace App\Features\Property\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Service\Models\RoomService;
 use App\Traits\HasMediaAttachments;
 use App\Traits\SystemLoggable;

@@ -32,7 +32,7 @@ class AuditLogPolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny AuditLog');
+        return $user->can('viewAny AuditLog');
     }
 
     /**
@@ -40,7 +40,7 @@ class AuditLogPolicy implements RbacModuleProvider
      */
     public function view(User $user, AuditLog $auditLog): bool
     {
-        if (! $user->hasPermissionTo('view AuditLog')) {
+        if (! $user->can('view AuditLog')) {
             return false;
         }
 

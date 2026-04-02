@@ -3,8 +3,8 @@ require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 
 $properties = Property::with('floors')->orderBy('created_at', 'desc')->limit(18)->get();
 $violationCount = 0;

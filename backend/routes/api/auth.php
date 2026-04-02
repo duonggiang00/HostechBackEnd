@@ -1,7 +1,7 @@
 <?php
 
 use App\Features\Org\Controllers\ProfileController;
-use App\Http\Controllers\Api\Auth\TwoFactorAuthenticationController;
+use App\Features\Org\Controllers\Auth\TwoFactorAuthenticationController;
 
 use Illuminate\Support\Facades\Route;
 
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 | Auth Routes (MFA, Profile, etc.)
 |--------------------------------------------------------------------------
 |
-| Prefix via parent: /api/v1 (or as defined in RouteServiceProvider)
+| Prefix via parent: 
 | Note: Fortify routes use /api/auth prefix directly from config/fortify.php
 |
 */

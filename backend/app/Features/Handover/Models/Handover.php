@@ -2,7 +2,7 @@
 
 namespace App\Features\Handover\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Contract\Models\Contract;
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;

@@ -4,7 +4,7 @@ namespace App\Features\Finance\Models;
 
 use App\Features\Org\Models\User;
 use App\Features\Property\Models\Property;
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

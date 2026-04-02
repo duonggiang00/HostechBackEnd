@@ -50,7 +50,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Ticket');
+        return $user->can('viewAny Ticket');
     }
 
     /**
@@ -65,7 +65,7 @@ class TicketPolicy implements RbacModuleProvider
             return (string) $ticket->created_by_user_id === (string) $user->id;
         }
 
-        if (! $user->hasPermissionTo('view Ticket')) {
+        if (! $user->can('view Ticket')) {
             return false;
         }
 
@@ -77,7 +77,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Ticket');
+        return $user->can('create Ticket');
     }
 
     /**
@@ -85,7 +85,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function update(User $user, Ticket $ticket): bool
     {
-        if (! $user->hasPermissionTo('update Ticket')) {
+        if (! $user->can('update Ticket')) {
             return false;
         }
 
@@ -97,7 +97,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function delete(User $user, Ticket $ticket): bool
     {
-        if (! $user->hasPermissionTo('delete Ticket')) {
+        if (! $user->can('delete Ticket')) {
             return false;
         }
 
@@ -109,7 +109,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function updateStatus(User $user, Ticket $ticket): bool
     {
-        if (! $user->hasPermissionTo('update Ticket')) {
+        if (! $user->can('update Ticket')) {
             return false;
         }
 
@@ -125,7 +125,7 @@ class TicketPolicy implements RbacModuleProvider
             return (string) $ticket->created_by_user_id === (string) $user->id;
         }
 
-        if (! $user->hasPermissionTo('view Ticket')) {
+        if (! $user->can('view Ticket')) {
             return false;
         }
 
@@ -137,7 +137,7 @@ class TicketPolicy implements RbacModuleProvider
      */
     public function addCost(User $user, Ticket $ticket): bool
     {
-        if (! $user->hasPermissionTo('update Ticket')) {
+        if (! $user->can('update Ticket')) {
             return false;
         }
 

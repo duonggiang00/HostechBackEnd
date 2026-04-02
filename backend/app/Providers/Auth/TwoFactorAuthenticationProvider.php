@@ -3,7 +3,7 @@
 namespace App\Providers\Auth;
 
 use App\Features\Org\Models\User;
-use App\Services\Auth\MfaService;
+use App\Features\Org\Services\MfaService;
 use Laravel\Fortify\TwoFactorAuthenticationProvider as FortifyProvider;
 
 class TwoFactorAuthenticationProvider extends FortifyProvider

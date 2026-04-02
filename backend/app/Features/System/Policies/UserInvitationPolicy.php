@@ -32,7 +32,7 @@ class UserInvitationPolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny UserInvitations');
+        return $user->can('viewAny UserInvitations');
     }
 
     /**
@@ -40,7 +40,7 @@ class UserInvitationPolicy implements RbacModuleProvider
      */
     public function view(User $user, UserInvitation $invitation): bool
     {
-        if (! $user->hasPermissionTo('view UserInvitations')) {
+        if (! $user->can('view UserInvitations')) {
             return false;
         }
 
@@ -52,7 +52,7 @@ class UserInvitationPolicy implements RbacModuleProvider
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create UserInvitations');
+        return $user->can('create UserInvitations');
     }
 
     /**
@@ -60,7 +60,7 @@ class UserInvitationPolicy implements RbacModuleProvider
      */
     public function delete(User $user, UserInvitation $invitation): bool
     {
-        if (! $user->hasPermissionTo('delete UserInvitations')) {
+        if (! $user->can('delete UserInvitations')) {
             return false;
         }
 

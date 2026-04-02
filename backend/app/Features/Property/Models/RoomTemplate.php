@@ -2,7 +2,7 @@
 
 namespace App\Features\Property\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Service\Models\Service;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

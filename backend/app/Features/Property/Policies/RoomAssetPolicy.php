@@ -17,7 +17,7 @@ class RoomAssetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny RoomAssets');
+        return $user->can('viewAny Properties');
     }
 
     /**
@@ -25,7 +25,7 @@ class RoomAssetPolicy
      */
     public function view(User $user, RoomAsset $roomAsset): bool
     {
-        if (!$user->hasPermissionTo('view RoomAssets')) {
+        if (!$user->can('view Properties')) {
             return false;
         }
 
@@ -37,7 +37,7 @@ class RoomAssetPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create RoomAssets');
+        return $user->can('create Properties');
     }
 
     /**
@@ -45,7 +45,7 @@ class RoomAssetPolicy
      */
     public function update(User $user, RoomAsset $roomAsset): bool
     {
-        if (!$user->hasPermissionTo('update RoomAssets')) {
+        if (!$user->can('update Properties')) {
             return false;
         }
 
@@ -57,7 +57,7 @@ class RoomAssetPolicy
      */
     public function delete(User $user, RoomAsset $roomAsset): bool
     {
-        if (!$user->hasPermissionTo('delete RoomAssets')) {
+        if (!$user->can('delete Properties')) {
             return false;
         }
 
@@ -69,7 +69,7 @@ class RoomAssetPolicy
      */
     public function restore(User $user, RoomAsset $roomAsset): bool
     {
-        return $user->hasPermissionTo('restore RoomAssets');
+        return $user->can('restore Properties');
     }
 
     /**
@@ -77,6 +77,6 @@ class RoomAssetPolicy
      */
     public function forceDelete(User $user, RoomAsset $roomAsset): bool
     {
-        return $user->hasPermissionTo('forceDelete RoomAssets');
+        return $user->can('forceDelete Properties');
     }
 }

@@ -28,16 +28,12 @@ class PropertyPolicy implements RbacModuleProvider
 
     public function viewAny(User $user): bool
     {
-        if ($user->hasPermissionTo('viewAny Properties')) {
-            return true;
-        }
-
-        return false;
+        return $user->can('viewAny Properties');
     }
 
     public function view(User $user, Property $property): bool
     {
-        if (! $user->hasPermissionTo('view Properties')) {
+        if (! $user->can('view Properties')) {
             return false;
         }
 
@@ -56,12 +52,12 @@ class PropertyPolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Properties');
+        return $user->can('create Properties');
     }
 
     public function update(User $user, Property $property): bool
     {
-        if (! $user->hasPermissionTo('update Properties')) {
+        if (! $user->can('update Properties')) {
             return false;
         }
 
@@ -70,7 +66,7 @@ class PropertyPolicy implements RbacModuleProvider
 
     public function delete(User $user, Property $property): bool
     {
-        if (! $user->hasPermissionTo('delete Properties')) {
+        if (! $user->can('delete Properties')) {
             return false;
         }
 

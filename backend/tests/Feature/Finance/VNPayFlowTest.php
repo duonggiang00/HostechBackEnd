@@ -2,9 +2,9 @@
 
 use App\Models\Invoice\Invoice;
 use App\Models\Finance\Payment;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 

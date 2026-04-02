@@ -32,7 +32,7 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Contracts');
+        return $user->can('viewAny Contracts');
     }
 
     /**
@@ -41,7 +41,7 @@ class ContractPolicy implements RbacModuleProvider
     public function view(User $user, Contract $contract): bool
     {
         // 1. Staff/Manager/Owner -> via Permission + PropertyScope
-        if ($user->hasPermissionTo('view Contracts') && ! $user->hasRole('Tenant')) {
+        if ($user->can('view Contracts') && ! $user->hasRole('Tenant')) {
             return $this->checkPropertyScope($user, $contract);
         }
 
@@ -54,7 +54,7 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Contracts');
+        return $user->can('create Contracts');
     }
 
     /**
@@ -62,7 +62,7 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function update(User $user, Contract $contract): bool
     {
-        if (! $user->hasPermissionTo('update Contracts')) {
+        if (! $user->can('update Contracts')) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class ContractPolicy implements RbacModuleProvider
     public function addMember(User $user, Contract $contract): bool
     {
         // Manager/Owner/Staff -> Can add to any contract in Org
-        if ($user->hasPermissionTo('update Contracts')) {
+        if ($user->can('update Contracts')) {
             return $this->checkPropertyScope($user, $contract);
         }
 
@@ -91,7 +91,7 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function delete(User $user, Contract $contract): bool
     {
-        if (! $user->hasPermissionTo('delete Contracts')) {
+        if (! $user->can('delete Contracts')) {
             return false;
         }
 
@@ -103,7 +103,7 @@ class ContractPolicy implements RbacModuleProvider
      */
     public function restore(User $user, Contract $contract): bool
     {
-        if (! $user->hasPermissionTo('delete Contracts')) { // Restore usually maps to delete permission or specialized one
+        if (! $user->can('restore Contracts')) { // Restore usually maps to delete permission or specialized one
             return false;
         }
 
@@ -116,7 +116,7 @@ class ContractPolicy implements RbacModuleProvider
     public function forceDelete(User $user, Contract $contract): bool
     {
         // Force delete might be restricted to Admin or Owner
-        if (! $user->hasPermissionTo('delete Contracts')) {
+        if (! $user->can('forceDelete Contracts')) {
             return false;
         }
         // In some systems force delete is separate. Adhering to standard for now.

@@ -3,11 +3,11 @@
 namespace App\Features\Contract\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Contract\ContractIndexRequest;
-use App\Http\Requests\Contract\ContractStoreRequest;
-use App\Http\Requests\Contract\ContractUpdateRequest;
-use App\Http\Requests\Contract\RoomTransferRequest;
-use App\Http\Resources\Contract\ContractResource;
+use App\Features\Contract\Requests\ContractIndexRequest;
+use App\Features\Contract\Requests\ContractStoreRequest;
+use App\Features\Contract\Requests\ContractUpdateRequest;
+use App\Features\Contract\Requests\RoomTransferRequest;
+use App\Features\Contract\Resources\ContractResource;
 use App\Features\Contract\Models\Contract;
 use App\Features\Contract\Services\ContractService;
 use Dedoc\Scramble\Attributes\Group;

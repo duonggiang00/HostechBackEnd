@@ -1,7 +1,7 @@
 <?php
-use App\Models\Property\Property;
-use App\Models\Org\User;
-use App\Models\Contract\Contract;
+use App\Features\Property\Models\Property;
+use App\Features\Org\Models\User;
+use App\Features\Contract\Models\Contract;
 
 echo "Checking User filtering by property_id...\n";
 $property = Property::whereHas('contracts')->first() ?? Property::first();

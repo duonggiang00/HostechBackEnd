@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Org\User;
+use App\Features\Org\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -30,8 +30,8 @@ class AuthenticationTest extends TestCase
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
             'expires_at' => now()->addDays(1),
-            'org_id' => \App\Models\Org\Org::factory()->create()->id,
-            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+            'org_id' => \App\Features\Org\Models\Org::factory()->create()->id,
+            'invited_by' => \App\Features\Org\Models\User::factory()->create()->id,
         ]);
 
         try {
@@ -147,8 +147,8 @@ class AuthenticationTest extends TestCase
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
             'expires_at' => now()->addDays(1),
-            'org_id' => \App\Models\Org\Org::factory()->create()->id,
-            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+            'org_id' => \App\Features\Org\Models\Org::factory()->create()->id,
+            'invited_by' => \App\Features\Org\Models\User::factory()->create()->id,
         ]);
 
         $response = $this->postJson('/api/auth/register', [

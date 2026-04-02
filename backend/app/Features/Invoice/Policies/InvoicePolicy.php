@@ -56,7 +56,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Invoice');
+        return $user->can('viewAny Invoice');
     }
 
     /**
@@ -75,7 +75,7 @@ class InvoicePolicy implements RbacModuleProvider
                     ->exists();
         }
 
-        if (! $user->hasPermissionTo('view Invoice')) {
+        if (! $user->can('view Invoice')) {
             return false;
         }
 
@@ -87,7 +87,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Invoice');
+        return $user->can('create Invoice');
     }
 
     /**
@@ -95,7 +95,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function update(User $user, Invoice $invoice): bool
     {
-        if (! $user->hasPermissionTo('update Invoice')) {
+        if (! $user->can('update Invoice')) {
             return false;
         }
 
@@ -108,7 +108,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function delete(User $user, Invoice $invoice): bool
     {
-        if (! $user->hasPermissionTo('delete Invoice')) {
+        if (! $user->can('delete Invoice')) {
             return false;
         }
 
@@ -120,7 +120,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function restore(User $user, Invoice $invoice): bool
     {
-        if (! $user->hasPermissionTo('delete Invoice')) {
+        if (! $user->can('delete Invoice')) {
             return false;
         }
 
@@ -132,7 +132,7 @@ class InvoicePolicy implements RbacModuleProvider
      */
     public function forceDelete(User $user, Invoice $invoice): bool
     {
-        if (! $user->hasPermissionTo('delete Invoice')) {
+        if (! $user->can('delete Invoice')) {
             return false;
         }
 

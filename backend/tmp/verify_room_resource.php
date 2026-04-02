@@ -1,6 +1,6 @@
 <?php
 use App\Http\Resources\Property\RoomResource;
-use App\Models\Property\Room;
+use App\Features\Property\Models\Room;
 
 $room = Room::with(["roomServices.service.currentRate"])->has("roomServices")->first();
 if ($room) {

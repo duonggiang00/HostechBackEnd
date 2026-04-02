@@ -4,7 +4,7 @@ namespace App\Features\System\Models;
 
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

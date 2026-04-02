@@ -3,10 +3,10 @@
 namespace Tests\Feature\Meter;
 
 use App\Models\Meter\AdjustmentNote;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Org\Org;
-use App\Models\Org\User;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -38,8 +38,8 @@ class AdjustmentNoteTest extends TestCase
         $this->user = User::factory()->create();
         $this->org = Org::factory()->create();
 
-        $this->property = \App\Models\Property\Property::factory()->create(['org_id' => $this->org->id]);
-        $this->room = \App\Models\Property\Room::factory()->create([
+        $this->property = \App\Features\Property\Models\Property::factory()->create(['org_id' => $this->org->id]);
+        $this->room = \App\Features\Property\Models\Room::factory()->create([
             'org_id' => $this->org->id,
             'property_id' => $this->property->id,
         ]);

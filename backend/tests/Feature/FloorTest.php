@@ -4,10 +4,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;

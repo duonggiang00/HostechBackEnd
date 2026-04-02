@@ -46,7 +46,7 @@ class FinancePolicy implements RbacModuleProvider
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Payment');
+        return $user->can('viewAny Payment');
     }
 
     /**
@@ -59,7 +59,7 @@ class FinancePolicy implements RbacModuleProvider
             return (string) $payment->payer_user_id === (string) $user->id;
         }
 
-        if (! $user->hasPermissionTo('view Payment')) {
+        if (! $user->can('view Payment')) {
             return false;
         }
 
@@ -75,7 +75,7 @@ class FinancePolicy implements RbacModuleProvider
             return true;
         }
 
-        return $user->hasPermissionTo('create Payment');
+        return $user->can('create Payment');
     }
 
     /**
@@ -83,7 +83,7 @@ class FinancePolicy implements RbacModuleProvider
      */
     public function delete(User $user, Payment $payment): bool
     {
-        if (! $user->hasPermissionTo('delete Payment')) {
+        if (! $user->can('delete Payment')) {
             return false;
         }
 
@@ -95,6 +95,6 @@ class FinancePolicy implements RbacModuleProvider
      */
     public function viewLedger(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Payment');
+        return $user->can('viewAny Payment');
     }
 }

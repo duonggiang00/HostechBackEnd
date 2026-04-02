@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Meter;
 
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
-use App\Models\Service\Service;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
+use App\Features\Service\Models\Service;
 use App\Services\Meter\MeterReadingService;
 use App\Services\Meter\MeterService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

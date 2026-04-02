@@ -4,15 +4,15 @@ namespace Tests\Feature;
 
 use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
-use App\Models\Contract\Contract;
-use App\Models\Handover\Handover;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
-use App\Models\Property\RoomAsset;
+use App\Features\Contract\Models\Contract;
+use App\Features\Handover\Models\Handover;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
+use App\Features\Property\Models\RoomAsset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -51,7 +51,7 @@ class ContractHandoverIntegrationTest extends TestCase
         ]);
 
         // Service
-        $service = \App\Models\Service\Service::factory()->create([
+        $service = \App\Features\Service\Models\Service::factory()->create([
             'org_id' => $org->id,
         ]);
 
@@ -118,7 +118,7 @@ class ContractHandoverIntegrationTest extends TestCase
         ]);
 
         // Setup Meter with initial and last reading
-        $service = \App\Models\Service\Service::factory()->create([
+        $service = \App\Features\Service\Models\Service::factory()->create([
             'org_id' => $org->id,
         ]);
 

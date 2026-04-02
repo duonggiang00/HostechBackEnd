@@ -28,11 +28,7 @@ class OrgPolicy implements RbacModuleProvider
 
     public function viewAny(User $user): bool
     {
-        if ($user->hasPermissionTo('viewAny Orgs')) {
-            return true;
-        }
-
-        return false;
+        return $user->can('viewAny Orgs');
     }
 
     public function view(User $user, Org $org): bool
@@ -42,7 +38,7 @@ class OrgPolicy implements RbacModuleProvider
             return true;
         }
 
-        if (! $user->hasPermissionTo('view Orgs')) {
+        if (! $user->can('view Orgs')) {
             return false;
         }
 
@@ -56,12 +52,12 @@ class OrgPolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Orgs');
+        return $user->can('create Orgs');
     }
 
     public function update(User $user, Org $org): bool
     {
-        if (! $user->hasPermissionTo('update Orgs')) {
+        if (! $user->can('update Orgs')) {
             return false;
         }
 
@@ -74,7 +70,7 @@ class OrgPolicy implements RbacModuleProvider
 
     public function delete(User $user, Org $org): bool
     {
-        if (! $user->hasPermissionTo('delete Orgs')) {
+        if (! $user->can('delete Orgs')) {
             return false;
         }
 

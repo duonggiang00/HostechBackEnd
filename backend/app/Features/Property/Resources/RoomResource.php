@@ -92,7 +92,7 @@ class RoomResource extends JsonResource
                     'id' => $contract->id,
                     'start_date' => $contract->start_date instanceof \Carbon\Carbon ? $contract->start_date->format('Y-m-d') : ($contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') : null),
                     'end_date' => $contract->end_date instanceof \Carbon\Carbon ? $contract->end_date->format('Y-m-d') : ($contract->end_date ? \Carbon\Carbon::parse($contract->end_date)->format('Y-m-d') : null),
-                    'status' => strtolower($contract->status instanceof \App\Enums\ContractStatus ? $contract->status->value : $contract->status),
+                    'status' => $contract->status ? strtolower($contract->status instanceof \BackedEnum ? $contract->status->value : (string) $contract->status) : null,
                     'monthly_rent' => (float) $contract->rent_price,
                     'deposit_amount' => (float) $contract->deposit_amount,
                     'members' => $contract->members->map(fn($m) => [
@@ -109,7 +109,7 @@ class RoomResource extends JsonResource
                 $contract = $this->activeContract;
                 return [
                     'id' => $contract->id,
-                    'status' => strtolower($contract->status instanceof \App\Enums\ContractStatus ? $contract->status->value : $contract->status),
+                    'status' => $contract->status ? strtolower($contract->status instanceof \BackedEnum ? $contract->status->value : (string) $contract->status) : null,
                     'start_date' => $contract->start_date instanceof \Carbon\Carbon ? $contract->start_date->format('Y-m-d') : ($contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('Y-m-d') : null),
                     'monthly_rent' => (float) $contract->rent_price,
                     'deposit_amount' => (float) $contract->deposit_amount,
@@ -138,7 +138,7 @@ class RoomResource extends JsonResource
                     'issue_date' => $invoice->created_at instanceof \Carbon\Carbon ? $invoice->created_at->format('Y-m-d') : ($invoice->created_at ? \Carbon\Carbon::parse($invoice->created_at)->format('Y-m-d') : null),
                     'period_start' => $invoice->period_start instanceof \Carbon\Carbon ? $invoice->period_start->format('Y-m-d') : ($invoice->period_start ? \Carbon\Carbon::parse($invoice->period_start)->format('Y-m-d') : null),
                     'period_end' => $invoice->period_end instanceof \Carbon\Carbon ? $invoice->period_end->format('Y-m-d') : ($invoice->period_end ? \Carbon\Carbon::parse($invoice->period_end)->format('Y-m-d') : null),
-                    'status' => strtolower($invoice->status),
+                    'status' => $invoice->status ? strtolower($invoice->status instanceof \BackedEnum ? $invoice->status->value : (string) $invoice->status) : null,
                     'total_amount' => (float) $invoice->total_amount,
                     'paid_amount' => (float) $invoice->paid_amount,
                 ]);

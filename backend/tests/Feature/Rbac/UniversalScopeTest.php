@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Rbac;
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 

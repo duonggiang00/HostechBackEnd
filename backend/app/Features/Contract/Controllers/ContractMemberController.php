@@ -3,10 +3,10 @@
 namespace App\Features\Contract\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Contract\ContractMemberIndexRequest;
-use App\Http\Requests\Contract\ContractMemberStoreRequest;
-use App\Http\Requests\Contract\ContractMemberUpdateRequest;
-use App\Http\Resources\Contract\ContractMemberResource;
+use App\Features\Contract\Requests\ContractMemberIndexRequest;
+use App\Features\Contract\Requests\ContractMemberStoreRequest;
+use App\Features\Contract\Requests\ContractMemberUpdateRequest;
+use App\Features\Contract\Resources\ContractMemberResource;
 use App\Features\Contract\Models\ContractMember;
 use App\Features\Contract\Services\ContractService;
 use Dedoc\Scramble\Attributes\Group;

@@ -4,11 +4,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
@@ -49,10 +49,10 @@ test('admin can crud room', function () {
     $id = $response->json('data.id');
 
     // Assert asset created
-    \App\Models\Property\RoomAsset::where('room_id', $id)->where('name', 'Tivi Samsung')->exists();
+    \App\Features\Property\Models\RoomAsset::where('room_id', $id)->where('name', 'Tivi Samsung')->exists();
 
     // Assert price history created
-    \App\Models\Property\RoomPrice::where('room_id', $id)->where('price', 500000)->exists();
+    \App\Features\Property\Models\RoomPrice::where('room_id', $id)->where('price', 500000)->exists();
 
     // Read
     getJson("/api/rooms/{$id}")
@@ -68,7 +68,7 @@ test('admin can crud room', function () {
         ->assertJsonFragment(['name' => 'Updated Name']);
 
     // Assert new price history
-    \App\Models\Property\RoomPrice::where('room_id', $id)->where('price', 600000)->exists();
+    \App\Features\Property\Models\RoomPrice::where('room_id', $id)->where('price', 600000)->exists();
 
     // Delete
     deleteJson("/api/rooms/{$id}")->assertStatus(200);
@@ -142,8 +142,8 @@ test('quick create creates a draft room with minimal data', function () {
 
     // Không ghi RoomPrice hay RoomStatusHistory khi draft
     $id = $response->json('data.id');
-    expect(\App\Models\Property\RoomPrice::where('room_id', $id)->count())->toBe(0);
-    expect(\App\Models\Property\RoomStatusHistory::where('room_id', $id)->count())->toBe(0);
+    expect(\App\Features\Property\Models\RoomPrice::where('room_id', $id)->count())->toBe(0);
+    expect(\App\Features\Property\Models\RoomStatusHistory::where('room_id', $id)->count())->toBe(0);
 });
 
 test('publish transitions draft room to available', function () {
@@ -171,8 +171,8 @@ test('publish transitions draft room to available', function () {
         ->assertJsonFragment(['is_draft' => false]);
 
     // Sau publish phải có RoomPrice và RoomStatusHistory
-    expect(\App\Models\Property\RoomPrice::where('room_id', $id)->count())->toBe(1);
-    expect(\App\Models\Property\RoomStatusHistory::where('room_id', $id)->count())->toBe(1);
+    expect(\App\Features\Property\Models\RoomPrice::where('room_id', $id)->count())->toBe(1);
+    expect(\App\Features\Property\Models\RoomStatusHistory::where('room_id', $id)->count())->toBe(1);
 
     // Không thể publish lần 2
     postJson("/api/rooms/{$id}/publish", ['base_price' => 1000])
@@ -204,7 +204,7 @@ test('floor plan node can be set and removed', function () {
       ->assertJsonFragment(['message' => 'Floor plan node updated successfully.']);
 
     // Xác nhận bản ghi tồn tại trong DB
-    expect(\App\Models\Property\RoomFloorPlanNode::where('room_id', $room->id)->count())->toBe(1);
+    expect(\App\Features\Property\Models\RoomFloorPlanNode::where('room_id', $room->id)->count())->toBe(1);
 
     // Xóa vị trí
     deleteJson("/api/rooms/{$room->id}/floor-plan")

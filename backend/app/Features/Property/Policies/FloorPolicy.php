@@ -17,7 +17,7 @@ class FloorPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Floors');
+        return $user->can('viewAny Properties');
     }
 
     /**
@@ -25,7 +25,7 @@ class FloorPolicy
      */
     public function view(User $user, Floor $floor): bool
     {
-        if (!$user->hasPermissionTo('view Floors')) {
+        if (!$user->can('view Properties')) {
             return false;
         }
 
@@ -37,7 +37,7 @@ class FloorPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Floors');
+        return $user->can('create Properties');
     }
 
     /**
@@ -45,7 +45,7 @@ class FloorPolicy
      */
     public function update(User $user, Floor $floor): bool
     {
-        if (!$user->hasPermissionTo('update Floors')) {
+        if (!$user->can('update Properties')) {
             return false;
         }
 
@@ -57,7 +57,7 @@ class FloorPolicy
      */
     public function delete(User $user, Floor $floor): bool
     {
-        if (!$user->hasPermissionTo('delete Floors')) {
+        if (!$user->can('delete Properties')) {
             return false;
         }
 
@@ -69,7 +69,7 @@ class FloorPolicy
      */
     public function restore(User $user, Floor $floor): bool
     {
-        return $user->hasPermissionTo('restore Floors');
+        return $user->can('restore Properties');
     }
 
     /**
@@ -77,6 +77,6 @@ class FloorPolicy
      */
     public function forceDelete(User $user, Floor $floor): bool
     {
-        return $user->hasPermissionTo('forceDelete Floors');
+        return $user->can('forceDelete Properties');
     }
 }

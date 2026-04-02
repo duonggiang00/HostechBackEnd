@@ -2,7 +2,7 @@
 
 namespace App\Features\Contract\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Invoice\Models\Invoice;
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;

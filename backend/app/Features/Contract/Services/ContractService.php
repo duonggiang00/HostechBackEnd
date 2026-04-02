@@ -9,8 +9,8 @@ use App\Features\Contract\Models\Contract;
 use App\Features\Contract\Models\ContractMember;
 use App\Features\Invoice\Models\Invoice;
 use App\Features\Org\Models\User;
-use App\Services\Invoice\InvoiceService;
-use App\Services\Service\ServiceService;
+use App\Features\Invoice\Services\InvoiceService;
+use App\Features\Service\Services\ServiceService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -408,12 +408,35 @@ class ContractService
                     'signed_at' => now(),
                     'activated_at' => now(),
                 ]);
-                
                 if ($contract->room) {
                     $contract->room->update(['status' => 'occupied']);
                 }
             }
 
+            return true;
+        });
+    }
+
+    /**
+     * Xác nhận thanh toán & Kích hoạt hợp đồng (Admin)
+     */
+    public function confirmPayment(Contract $contract, User $user): bool
+    {
+        $allowedStatuses = ContractStatus::allowedForConfirmation();
+        if (! in_array($contract->status, $allowedStatuses)) {
+            throw new \Exception('Chỉ có thể xác nhận thanh toán cho hợp đồng đang chờ thanh toán.');
+        }
+
+        return DB::transaction(function () use ($contract) {
+            // 1. Mark contract as ACTIVE
+            $contract->update([
+                'status' => ContractStatus::ACTIVE,
+                'activated_at' => now(),
+                'signed_at' => $contract->signed_at ?? now(),
+            ]);
+
+            // Note: ContractObserver will handle room status sync via created/updated events
+            
             return true;
         });
     }

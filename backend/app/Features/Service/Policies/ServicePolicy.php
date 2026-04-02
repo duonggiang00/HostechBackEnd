@@ -29,12 +29,12 @@ class ServicePolicy implements RbacModuleProvider
 
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('viewAny Services');
+        return $user->can('viewAny Services');
     }
 
     public function view(User $user, Service $service): bool
     {
-        if (! $user->hasPermissionTo('view Services')) {
+        if (! $user->can('view Services')) {
             return false;
         }
 
@@ -43,12 +43,12 @@ class ServicePolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create Services');
+        return $user->can('create Services');
     }
 
     public function update(User $user, Service $service): bool
     {
-        if (! $user->hasPermissionTo('update Services')) {
+        if (! $user->can('update Services')) {
             return false;
         }
 
@@ -76,7 +76,7 @@ class ServicePolicy implements RbacModuleProvider
 
     public function delete(User $user, Service $service): bool
     {
-        if (! $user->hasPermissionTo('delete Services')) {
+        if (! $user->can('delete Services')) {
             return false;
         }
 

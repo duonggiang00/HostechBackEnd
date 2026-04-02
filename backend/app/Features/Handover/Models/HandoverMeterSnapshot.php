@@ -3,7 +3,7 @@
 namespace App\Features\Handover\Models;
 
 use App\Features\Meter\Models\Meter;
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 
 use App\Features\Org\Models\Org;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

@@ -2,16 +2,16 @@
 
 namespace Tests\Feature\Handover;
 
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
-use App\Models\Handover\Handover;
-use App\Models\Handover\HandoverItem;
-use App\Models\Meter\Meter;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Contract\Models\Contract;
+use App\Features\Contract\Models\ContractMember;
+use App\Features\Handover\Models\Handover;
+use App\Features\Handover\Models\HandoverItem;
+use App\Features\Meter\Models\Meter;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -330,7 +330,7 @@ class HandoverTest extends TestCase
         [$org, $property, $floor, $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = \App\Features\Meter\Models\Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-001',
         ]);
@@ -353,7 +353,7 @@ class HandoverTest extends TestCase
         [$org, $property, $floor, $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = \App\Features\Meter\Models\Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'WATER', 'code' => 'W-001',
         ]);
@@ -379,7 +379,7 @@ class HandoverTest extends TestCase
         [$org, $property, , $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = \App\Features\Meter\Models\Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-002',
         ]);
@@ -400,7 +400,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
         $tenant = $this->makeApprovedTenant($org, $contract);
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = \App\Features\Meter\Models\Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-003',
         ]);

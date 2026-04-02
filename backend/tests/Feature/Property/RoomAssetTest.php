@@ -4,12 +4,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
-use App\Models\Property\RoomAsset;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
+use App\Features\Property\Models\RoomAsset;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\deleteJson;

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;

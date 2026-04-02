@@ -111,7 +111,7 @@ try {
     $invoice1    = Invoice::find($inv1Id);
     $invoice2    = Invoice::find($inv2Id);
     $invoice3    = Invoice::find($inv3Id);
-    $ownerModel  = \App\Models\Org\User::find($owner->id);
+    $ownerModel  = \App\Features\Org\Models\User::find($owner->id);
 
     echo "✅ Invoice #1 (5,000,000đ) | Invoice #2 (500,000đ) | Invoice #3 (300,000đ)\n\n";
 

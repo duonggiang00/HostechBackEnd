@@ -2,7 +2,7 @@
 
 namespace App\Features\Notification\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Org\Models\Org;
 use App\Features\Property\Models\Property;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

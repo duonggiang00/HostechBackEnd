@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Contract\Models\Contract;
+use App\Features\Contract\Models\ContractMember;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;

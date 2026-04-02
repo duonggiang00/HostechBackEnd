@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Meter;
 
-use App\Models\Meter\Meter;
+use App\Features\Meter\Models\Meter;
 use App\Models\System\TemporaryUpload;
-use App\Models\Org\User;
+use App\Features\Org\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -20,7 +20,7 @@ class MeterMediaTest extends TestCase
     {
         parent::setUp();
         $this->seed(\Database\Seeders\RBACSeeder::class);
-        $org = \App\Models\Org\Org::factory()->create();
+        $org = \App\Features\Org\Models\Org::factory()->create();
         \App\Services\TenantManager::setOrgId($org->id);
         $this->user = User::factory()->owner()->create(['org_id' => $org->id]);
         $this->actingAs($this->user);
@@ -30,8 +30,8 @@ class MeterMediaTest extends TestCase
     {
         Storage::fake('local');
         
-        $property = \App\Models\Property\Property::factory()->create(['org_id' => $this->user->org_id]);
-        $room = \App\Models\Property\Room::factory()->create([
+        $property = \App\Features\Property\Models\Property::factory()->create(['org_id' => $this->user->org_id]);
+        $room = \App\Features\Property\Models\Room::factory()->create([
             'org_id' => $this->user->org_id,
             'property_id' => $property->id
         ]);
@@ -67,7 +67,7 @@ class MeterMediaTest extends TestCase
     public function test_can_add_media_to_existing_meter()
     {
         Storage::fake('local');
-        $property = \App\Models\Property\Property::factory()->create(['org_id' => $this->user->org_id]);
+        $property = \App\Features\Property\Models\Property::factory()->create(['org_id' => $this->user->org_id]);
         $meter = Meter::factory()->create([
             'org_id' => $this->user->org_id,
             'property_id' => $property->id

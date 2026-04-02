@@ -2,7 +2,7 @@
 
 namespace App\Features\Handover\Models;
 
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 use App\Features\Org\Models\Org;
 use App\Features\Property\Models\RoomAsset;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

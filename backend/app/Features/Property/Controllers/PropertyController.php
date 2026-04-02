@@ -2,6 +2,7 @@
 
 namespace App\Features\Property\Controllers;
 
+use App\Features\Invoice\Services\InvoiceService;
 use App\Http\Controllers\Controller;
 use App\Features\Property\Requests\PropertyIndexRequest;
 use App\Features\Property\Requests\PropertyStoreRequest;
@@ -143,7 +144,7 @@ class PropertyController extends Controller
      *
      * Tạo hóa đơn cho tất cả các phòng có hợp đồng đang hoạt động trong tòa nhà.
      */
-    public function triggerBilling(Request $request, string $id, \App\Services\Invoice\InvoiceService $invoiceService)
+    public function triggerBilling(Request $request, string $id, InvoiceService $invoiceService)
     {
         $property = $this->service->find($id) ?? abort(404, 'Property not found');
 

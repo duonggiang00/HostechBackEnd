@@ -3,7 +3,7 @@
 namespace App\Features\Finance\Models;
 
 use App\Features\Invoice\Models\Invoice;
-use App\Models\Concerns\MultiTenant;
+use App\Core\Models\Concerns\MultiTenant;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

@@ -4,8 +4,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 
 use function Pest\Laravel\actingAs;
 

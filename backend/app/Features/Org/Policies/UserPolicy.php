@@ -27,16 +27,12 @@ class UserPolicy implements RbacModuleProvider
 
     public function viewAny(User $user): bool
     {
-        if ($user->hasPermissionTo('viewAny Users')) {
-            return true;
-        }
-
-        return false;
+        return $user->can('viewAny Users');
     }
 
     public function view(User $user, User $model): bool
     {
-        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('view Users')) {
+        if ($user->can('view Users')) {
             return $this->checkOrgScope($user, $model);
         }
 
@@ -45,12 +41,12 @@ class UserPolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
-        return $user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('create Users');
+        return $user->can('create Users');
     }
 
     public function update(User $user, User $model): bool
     {
-        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('update Users')) {
+        if ($user->can('update Users')) {
             return $this->checkOrgScope($user, $model);
         }
 
@@ -64,7 +60,7 @@ class UserPolicy implements RbacModuleProvider
             return false;
         }
 
-        if ($user->hasRole(['Admin', 'ADMIN', 'Owner', 'OWNER', 'Manager', 'MANAGER']) || $user->hasPermissionTo('delete Users')) {
+        if ($user->can('delete Users')) {
             return $this->checkOrgScope($user, $model);
         }
 
