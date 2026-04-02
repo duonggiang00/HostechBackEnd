@@ -15,7 +15,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        \App\Models\Contract\Contract::observe(\App\Observers\ContractObserver::class);
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Features\Service\Models\Service::class,
+            \App\Features\Service\Policies\ServicePolicy::class
+        );
+
+        \App\Features\Contract\Models\Contract::observe(\App\Observers\ContractObserver::class);
 
         $this->configureRateLimiting();
 

@@ -14,7 +14,7 @@ class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
      */
     public function toResponse($request): JsonResponse
     {
-        /** @var \App\Models\Org\User */
+        /** @var \App\Features\Org\Models\User */
         $user = auth()->user();
 
         // Revoke previous tokens

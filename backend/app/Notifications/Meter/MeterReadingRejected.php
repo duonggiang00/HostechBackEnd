@@ -2,7 +2,7 @@
 
 namespace App\Notifications\Meter;
 
-use App\Models\Meter\MeterReading;
+use App\Features\Meter\Models\MeterReading;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;

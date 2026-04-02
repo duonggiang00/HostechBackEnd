@@ -1,0 +1,137 @@
+<?php
+
+namespace App\Features\System\Services;
+
+use App\Features\Org\Models\User;
+use App\Features\System\Models\UserInvitation;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use App\Mail\System\UserInvitationMail;
+
+class UserInvitationService
+{
+    /**
+     * Create a new user invitation
+     */
+    public function createInvite(User $inviter, array $data): UserInvitation
+    {
+        // Generate secure random token
+        $data['token'] = Str::random(64);
+        $data['invited_by'] = $inviter->id;
+        $data['expires_at'] = Carbon::now()->addDays(7); // Invitations valid for 7 days
+
+        $role = $data['role_name'];
+
+        // Role hierarchy logic & Security checks
+        if ($inviter->hasRole('Admin')) {
+            // Admin can invite anyone. If inviting Owner, org_id must be null.
+            if ($role === 'Owner') {
+                $data['org_id'] = null;
+            } elseif (empty($data['org_id'])) {
+                abort(422, "org_id is required when Admin invites $role");
+            }
+        } elseif ($inviter->hasRole('Owner')) {
+            // Owner can only invite inside their Org
+            if (in_array($role, ['Admin', 'Owner'])) {
+                abort(422, "Owner cannot invite $role");
+            }
+            $data['org_id'] = $inviter->org_id;
+        } elseif ($inviter->hasRole('Manager')) {
+            // Manager can only invite Staff/Tenant in their specific properties
+            if (! in_array($role, ['Staff', 'Tenant'])) {
+                abort(422, "Manager cannot invite $role");
+            }
+            $data['org_id'] = $inviter->org_id;
+
+            // Ensure requested properties are within Manager's scope
+            $managerProps = $inviter->properties->pluck('id')->toArray();
+            $requestedProps = $data['properties_scope'] ?? [];
+
+            if (empty($requestedProps)) {
+                abort(400, 'Manager must specify property scope for the invite.');
+            }
+
+            if (count(array_diff($requestedProps, $managerProps)) > 0) {
+                abort(400, 'You can only invite users to properties you manage.');
+            }
+        } else {
+            abort(403, 'You do not have permission to invite users.');
+        }
+
+        $invitation = UserInvitation::create($data);
+
+        // Fire Job/Event to send email with Magic Link to $invitation->email
+        Mail::to($invitation->email)->queue(new UserInvitationMail($invitation));
+
+        return $invitation;
+    }
+
+    /**
+     * Validate a token
+     */
+    public function validateToken(string $token): UserInvitation
+    {
+        $invitation = UserInvitation::where('token', $token)
+            ->whereNull('registered_at')
+            ->where('expires_at', '>', Carbon::now())
+            ->first();
+
+        if (! $invitation) {
+            abort(400, 'This invitation token is invalid or has expired.');
+        }
+
+        return $invitation;
+    }
+
+    /**
+     * Accept a token and register the user
+     */
+    public function acceptToken(string $token, array $data): User
+    {
+        $invitation = $this->validateToken($token);
+
+        DB::beginTransaction();
+        try {
+            // If it's an Owner invitation without an Org, create the Org first
+            if (is_null($invitation->org_id) && $invitation->role_name === 'Owner') {
+                if (empty($data['org_name'])) {
+                    abort(422, 'Tên tổ chức (org_name) là bắt buộc để khởi tạo tài khoản Chủ sở hữu.');
+                }
+                $org = \App\Features\Org\Models\Org::create(['name' => $data['org_name']]);
+                $orgId = $org->id;
+            } else {
+                $orgId = $invitation->org_id;
+            }
+
+            // Create User
+            $user = User::create([
+                'org_id' => $orgId,
+                'email' => $invitation->email,
+                'full_name' => $data['full_name'],
+                'password' => $data['password'],
+                'is_active' => true,
+            ]);
+
+            // Assign Role
+            $user->assignRole($invitation->role_name);
+
+            // Assign properties scope if specified
+            if (! empty($invitation->properties_scope)) {
+                $user->properties()->sync($invitation->properties_scope);
+            }
+
+            // Mark invitation as registered
+            $invitation->update(['registered_at' => Carbon::now()]);
+
+            DB::commit();
+
+            return $user;
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
+}

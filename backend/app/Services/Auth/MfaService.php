@@ -2,9 +2,10 @@
 
 namespace App\Services\Auth;
 
-use App\Models\Org\User;
-use App\Models\System\VerificationCode;
+use App\Features\Org\Models\User;
+use App\Features\System\Models\VerificationCode;
 use App\Mail\Auth\OTPMail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -69,10 +70,18 @@ class MfaService
         $verification = VerificationCode::where('email', $email)
             ->where('code', $code)
             ->where('type', 'mfa_otp')
-            ->where('used_at', null)
+            ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->latest()
             ->first();
+
+        if ($verification && !($verification instanceof \Illuminate\Database\Eloquent\Model)) {
+            Log::error('HYDRATION_ISSUE: VerificationCode is not an Eloquent model', [
+                'class' => get_class($verification),
+                'content' => (array) $verification,
+                'backtrace' => debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 5)
+            ]);
+        }
 
         if ($verification) {
             $verification->update(['used_at' => now()]);

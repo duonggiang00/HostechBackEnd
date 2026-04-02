@@ -2,11 +2,14 @@
 
 namespace Database\Factories\Property;
 
+use App\Features\Property\Models\Floor;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 class FloorFactory extends Factory
 {
+    protected $model = Floor::class;
+
     public function definition(): array
     {
         return [

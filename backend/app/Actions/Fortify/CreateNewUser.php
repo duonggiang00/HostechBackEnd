@@ -2,8 +2,8 @@
 
 namespace App\Actions\Fortify;
 
-use App\Models\Org\Org;
-use App\Models\Org\User;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 use App\Services\System\UserInvitationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;

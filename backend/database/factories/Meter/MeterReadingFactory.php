@@ -2,9 +2,10 @@
 
 namespace Database\Factories\Meter;
 
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Org\Org;
+
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Org\Models\Org;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MeterReadingFactory extends Factory

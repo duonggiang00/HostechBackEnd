@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Org\User;
+use App\Features\Org\Models\User;
 use Illuminate\Http\Request;
 
 class UploadController extends Controller

@@ -2,8 +2,8 @@
 
 namespace Database\Factories\System;
 
-use App\Models\Org\User;
-use App\Models\System\TemporaryUpload;
+use App\Features\Org\Models\User;
+use App\Features\System\Models\TemporaryUpload;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class TemporaryUploadFactory extends Factory

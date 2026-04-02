@@ -2,18 +2,20 @@
 
 namespace Database\Factories\Property;
 
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Models\Property\Room;
-use App\Models\Property\RoomAsset;
-use App\Models\Property\RoomPrice;
-use App\Models\Property\RoomStatusHistory;
+use App\Features\Meter\Models\Meter;
+use App\Features\Meter\Models\MeterReading;
+use App\Features\Property\Models\Room;
+use App\Features\Property\Models\RoomAsset;
+use App\Features\Property\Models\RoomPrice;
+use App\Features\Property\Models\RoomStatusHistory;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 class RoomFactory extends Factory
 {
+    protected $model = Room::class;
+
     public function definition(): array
     {
         return [

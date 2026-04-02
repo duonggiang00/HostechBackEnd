@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\System\TemporaryUpload;
+use App\Features\System\Models\TemporaryUpload;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 

@@ -2,14 +2,17 @@
 
 namespace Database\Factories\Service;
 
-use App\Models\Org\Org;
+use App\Features\Org\Models\Org;
+use App\Features\Service\Models\Service;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Service\Service>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Features\Service\Models\Service>
  */
 class ServiceFactory extends Factory
 {
+    protected $model = Service::class;
+
     /**
      * Define the model's default state.
      *

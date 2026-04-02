@@ -2,25 +2,30 @@
 
 namespace Database\Seeders;
 
-use App\Models\Contract\Contract;
-use App\Models\Contract\ContractMember;
-use App\Models\Handover\Handover;
-use App\Models\Handover\HandoverItem;
-use App\Models\Handover\HandoverMeterSnapshot;
-use App\Models\Invoice\Invoice;
-use App\Models\Invoice\InvoiceItem;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
-use App\Models\Property\RoomAsset;
-use App\Models\Property\RoomPrice;
-use App\Models\Property\RoomTemplate;
-use App\Models\Service\Service;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
-use App\Services\Meter\MeterReadingService;
+use App\Features\Contract\Models\Contract;
+use App\Features\Contract\Models\ContractMember;
+use App\Features\Handover\Models\Handover;
+use App\Features\Handover\Models\HandoverItem;
+use App\Features\Handover\Models\HandoverMeterSnapshot;
+use App\Features\Invoice\Models\Invoice;
+use App\Features\Invoice\Models\InvoiceItem;
+
+
+use App\Features\Meter\Models\Meter;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
+use App\Features\Property\Models\RoomAsset;
+use App\Features\Property\Models\RoomPrice;
+use App\Features\Property\Models\RoomTemplate;
+use App\Features\Service\Models\Service;
+
+
+use App\Features\Meter\Services\MeterReadingService;
+use App\Features\Contract\Enums\ContractStatus;
+use App\Features\Contract\Enums\DepositStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -52,15 +57,15 @@ class OrgSeeder extends Seeder
         $orgNames = [
             'Mường Thanh',
             'Nam Thanh',
-            'Thăng Long',
-            'Ngọc Ánh',
-            'Titanic',
-            'Love Street Hotel',
+            // 'Thăng Long',
+            // 'Ngọc Ánh',
+            // 'Titanic',
+            // 'Love Street Hotel',
         ];
         $orgCount = count($orgNames);
         $usersPerOrg = 10;
         $propertiesPerOrg = rand(2, 3);
-        $floorsPerProperty = rand(3, 4);
+        $floorsPerProperty = rand(2, 3);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
@@ -187,7 +192,7 @@ class OrgSeeder extends Seeder
 
             Property::factory(rand(2, 3))
                 ->state(['org_id' => $org->id])
-                ->sequence(fn ($sequence) => [
+                ->sequence(fn($sequence) => [
                     'area' => rand(70, 200),
                     'shared_area' => rand(7, 20), // ~10% shared area
                 ])
@@ -203,10 +208,13 @@ class OrgSeeder extends Seeder
                     $manager = $managers[$index % $managers->count()];
                     $staff1 = $staffs[($index * 2) % $staffs->count()];
                     $staff2 = $staffs[($index * 2 + 1) % $staffs->count()];
-                    
-                    if ($manager) $property->managers()->attach($manager->id);
-                    if ($staff1) $property->managers()->attach($staff1->id);
-                    if ($staff2) $property->managers()->attach($staff2->id);
+
+                    if ($manager)
+                        $property->managers()->attach($manager->id);
+                    if ($staff1)
+                        $property->managers()->attach($staff1->id);
+                    if ($staff2)
+                        $property->managers()->attach($staff2->id);
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
@@ -224,36 +232,38 @@ class OrgSeeder extends Seeder
                     // Create floors
                     $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
 
-                    $totalRoomsInProperty = 0; 
+                    $totalRoomsInProperty = 0;
 
                     for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
                             'org_id' => $org->id,
                             'property_id' => $property->id,
                             'name' => "Tầng $i",
-                            'code' => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
+                            'code' => 'F' . str_pad($i, 2, '0', STR_PAD_LEFT),
                             'sort_order' => $i,
                         ]);
 
                         $availableArea = $property->area - ($property->shared_area ?? 0);
                         // Realistic room count based on area (min 15m2 per room)
                         $maxRoomsByArea = max(1, floor($availableArea / 15));
-                        $roomsOnFloor = rand(max(1, floor($maxRoomsByArea / 2)), min(6, $maxRoomsByArea)); 
-                        
+                        $roomsOnFloor = rand(max(1, floor($maxRoomsByArea / 2)), min(6, $maxRoomsByArea));
+
                         $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích khả dụng: {$availableArea}m2)");
 
                         $remainingArea = $availableArea;
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
                             // Pick a random template
                             $template = $templates->random();
-                            
+
                             // Ensure each room leaves enough area for remaining rooms (min 15m2 each)
                             $minAreaForOthers = ($roomsOnFloor - $j - 1) * 15;
                             $maxAllowedForThis = $remainingArea - $minAreaForOthers;
-                            
+
                             $roomArea = min($template->area, $maxAllowedForThis);
-                            if ($roomArea < 15) $roomArea = 15;
-                            if ($roomArea > $remainingArea) $roomArea = $remainingArea;
+                            if ($roomArea < 15)
+                                $roomArea = 15;
+                            if ($roomArea > $remainingArea)
+                                $roomArea = $remainingArea;
 
                             Room::factory()->create([
                                 'org_id' => $org->id,
@@ -382,13 +392,22 @@ class OrgSeeder extends Seeder
 
                     // 1. Ended Contracts
                     for ($k = 0; $k < $numEndedContracts; $k++) {
-                        if ($currentDate->gt($cutoffDate->copy()->subMonths(6))) break;
+                        if ($currentDate->gt($cutoffDate->copy()->subMonths(6)))
+                            break;
 
                         $duration = rand(3, 6);
                         $endDate = $currentDate->copy()->addMonths($duration);
-                        
+
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId, $propertyMonthlyUsage
+                            $org,
+                            $room,
+                            $ownerId,
+                            $currentDate,
+                            $endDate,
+                            'ENDED',
+                            $meters,
+                            $propertyStaffId,
+                            $propertyMonthlyUsage
                         );
 
                         $currentDate = $endDate->copy()->addMonths(1)->startOfMonth();
@@ -397,10 +416,20 @@ class OrgSeeder extends Seeder
                     // 2. Active Contract
                     if ($isActiveRoom && $currentDate->lt($cutoffDate)) {
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
+                            $org,
+                            $room,
+                            $ownerId,
+                            $currentDate,
+                            $currentDate->copy()->addMonths(12)->endOfMonth(),
+                            'ACTIVE',
+                            $meters,
+                            $propertyStaffId,
+                            $propertyMonthlyUsage
                         );
+                        /** @var \App\Features\Property\Models\Room $room */
                         $room->update(['status' => 'occupied']);
                     } else {
+                        /** @var \App\Features\Property\Models\Room $room */
                         $room->update(['status' => 'draft']);
                     }
                 }
@@ -411,10 +440,11 @@ class OrgSeeder extends Seeder
                         ->where('type', $type)
                         ->where('is_master', true)
                         ->first();
-                    
+
                     if ($masterMeter) {
+                        /** @var \App\Features\Meter\Models\Meter $masterMeter */
                         $masterMeter->update(['base_reading' => $sum]);
-                        
+
                         // Initial reading placeholder (vốn dĩ đã ở dial này rồi)
                     }
                 }
@@ -422,260 +452,261 @@ class OrgSeeder extends Seeder
         }
 
         $this->command->info("\n================================");
-    $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
-    $this->command->info('================================');
-    $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
-    $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
-    $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
-    $this->command->line('✅ Bất động sản: <fg=cyan>'.Property::count().'</>');
-    $this->command->line('✅ Tầng: <fg=cyan>'.Floor::count().'</>');
-    $this->command->line('✅ Phòng: <fg=cyan>'.Room::count().'</>');
-    $this->command->line('✅ Room Templates: <fg=cyan>'.RoomTemplate::count().'</>');
+        $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
+        $this->command->info('================================');
+        $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
+        $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
+        $this->command->line('✅ Tổng người dùng: <fg=cyan>' . ($orgCount * $usersPerOrg) . '</>');
+        $this->command->line('✅ Bất động sản: <fg=cyan>' . Property::count() . '</>');
+        $this->command->line('✅ Tầng: <fg=cyan>' . Floor::count() . '</>');
+        $this->command->line('✅ Phòng: <fg=cyan>' . Room::count() . '</>');
+        $this->command->line('✅ Room Templates: <fg=cyan>' . RoomTemplate::count() . '</>');
 
-    // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
-    $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
-    $this->command->line('✅ Lịch sử giá (Prices): <fg=cyan>'.RoomPrice::count().'</>');
-    $this->command->line('✅ Dịch vụ (Services): <fg=cyan>'.Service::count().'</>');
-    $this->command->line('✅ Hợp đồng (Contracts): <fg=cyan>'.Contract::count().'</>');
-    $this->command->line('✅ Hóa đơn (Invoices): <fg=cyan>'.Invoice::count().'</>');
-    $this->command->line('✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>'.DB::table('tickets')->count().'</>');
-    $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
-}
+        // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
+        $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>' . RoomAsset::count() . '</>');
+        $this->command->line('✅ Lịch sử giá (Prices): <fg=cyan>' . RoomPrice::count() . '</>');
+        $this->command->line('✅ Dịch vụ (Services): <fg=cyan>' . Service::count() . '</>');
+        $this->command->line('✅ Hợp đồng (Contracts): <fg=cyan>' . Contract::count() . '</>');
+        $this->command->line('✅ Hóa đơn (Invoices): <fg=cyan>' . Invoice::count() . '</>');
+        $this->command->line('✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>' . DB::table('tickets')->count() . '</>');
+        $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>' . Handover::count() . "</>\n");
+    }
 
     private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $staffId, &$propertyMonthlyUsage)
-{
-    $cutoffLimit = Carbon::parse('2026-03-31');
-    $readingService = app(MeterReadingService::class);
-    
-    // Calculate fixed services fee (non-metered services)
-    $roomServiceIds = DB::table('room_services')->where('room_id', $room->id)->pluck('service_id');
-    $fixedServicesFee = DB::table('services')
-        ->join('service_rates', 'services.id', '=', 'service_rates.service_id')
-        ->whereIn('services.id', $roomServiceIds)
-        ->where('services.calc_mode', '!=', 'PER_METER')
-        ->sum('service_rates.price');
+    {
+        $cutoffLimit = Carbon::parse('2026-03-31');
+        $readingService = app(MeterReadingService::class);
 
-    $baseRent = $room->base_price ?: 5000000;
-    $property = $room->property;
-    $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
-    
-    $contract = Contract::factory()->create([
-        'org_id' => $room->org_id,
-        'property_id' => $room->property_id,
-        'room_id' => $room->id,
-        'status' => $status,
-        'start_date' => $startDate,
-        'end_date' => $endDate,
-        'terminated_at' => $status === 'ENDED' ? $endDate : null,
-        'created_by_user_id' => $ownerId,
-        'rent_price' => $baseRent,
-        'base_rent' => $baseRent,
-        'fixed_services_fee' => $fixedServicesFee,
-        'total_rent' => $baseRent + $fixedServicesFee,
-        'deposit_amount' => $depositAmount,
-        'deposit_status' => $status === 'ACTIVE' ? \App\Enums\DepositStatus::HELD : \App\Enums\DepositStatus::REFUNDED,
-        'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
-        'due_day' => $property->default_due_day ?? 5,
-        'cutoff_day' => $property->default_cutoff_day ?? 30,
-        'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
-    ]);
+        // Calculate fixed services fee (non-metered services)
+        $roomServiceIds = DB::table('room_services')->where('room_id', $room->id)->pluck('service_id');
+        $fixedServicesFee = DB::table('services')
+            ->join('service_rates', 'services.id', '=', 'service_rates.service_id')
+            ->whereIn('services.id', $roomServiceIds)
+            ->where('services.calc_mode', '!=', 'PER_METER')
+            ->sum('service_rates.price');
 
-    // Create IN Handover
-    $this->createHandoverForContract($contract, 'IN', $startDate);
+        $baseRent = $room->base_price ?: 5000000;
+        $property = $room->property;
+        $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
 
-    // Create OUT Handover if ENDED
-    if ($status === 'ENDED') {
-        $this->createHandoverForContract($contract, 'OUT', $endDate);
-    }
-    
-    $numMembers = rand(2, 3);
-    for ($i = 0; $i < $numMembers; $i++) {
-        // Dynamically create a tenant user for each contract member
-        $fullName = fake('vi_VN')->name();
-        $email = Str::slug($fullName) . '.' . Str::random(5) . '@tenant.hostech.vn';
-        
-        $memberUser = User::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $org->id,
-            'full_name' => $fullName,
-            'email' => $email,
-            'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
-            'email_verified_at' => now(),
-            'is_active' => true,
-        ]);
-        $memberUser->assignRole('Tenant');
-
-        ContractMember::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $contract->org_id,
-            'contract_id' => $contract->id,
-            'user_id' => $memberUser->id,
-            'full_name' => $fullName,
-            'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
-            'is_primary' => $i === 0,
-            'left_at' => $status === 'ENDED' ? $endDate : null,
-        ]);
-    }
-
-    // --- Invoicing Logic ---
-    $tempDate = $startDate->copy();
-    $isFirstInvoice = true;
-
-    while ($tempDate->lte($endDate) && $tempDate->lte($cutoffLimit)) {
-        $invoiceDate = $tempDate->copy()->addDays(rand(0, 5));
-        if ($invoiceDate->gt($cutoffLimit)) break;
-
-        $invoice = Invoice::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $org->id,
+        $contract = Contract::factory()->create([
+            'org_id' => $room->org_id,
             'property_id' => $room->property_id,
-            'contract_id' => $contract->id,
             'room_id' => $room->id,
-            'status' => ($status === 'ENDED' || $tempDate->lt(now()->subMonth())) ? 'PAID' : 'PENDING',
-            'issue_date' => $invoiceDate,
-            'due_date' => $invoiceDate->copy()->addDays(7),
-            'period_start' => $tempDate->copy()->startOfMonth(),
-            'period_end' => $tempDate->copy()->endOfMonth(),
-            'total_amount' => 0,
-            'paid_amount' => 0,
+            'status' => $status,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'terminated_at' => $status === 'ENDED' ? $endDate : null,
             'created_by_user_id' => $ownerId,
-        ]);
-        if ($isFirstInvoice) {
-            // First Invoice: Rent + Deposit
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền đặt cọc',
-                'amount' => $contract->deposit_amount,
-                'unit_price' => $contract->deposit_amount,
-                'quantity' => 1,
-                'type' => 'DEPOSIT',
-            ]);
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền phòng tháng đầu',
-                'amount' => $contract->total_rent,
-                'unit_price' => $contract->total_rent,
-                'quantity' => 1,
-                'type' => 'RENT',
-            ]);
-            $isFirstInvoice = false;
-            // No addMonth here because utility readings happen at the end of the same month
-        }
-
-        if (!$isFirstInvoice && $tempDate->gt($startDate)) {
-             InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền phòng',
-                'amount' => $contract->total_rent,
-                'unit_price' => $contract->total_rent,
-                'quantity' => 1,
-                'type' => 'RENT',
-            ]);
-        }
-
-        // End of month: Utilities (DIEN, NUOC)
-        foreach ($meters as &$m) {
-            $pStart = $tempDate->copy()->startOfMonth();
-            $pEnd = $tempDate->copy()->endOfMonth();
-            $usage = rand($m['config']['min'], $m['config']['max']);
-            $newValue = $m['last_value'] + $usage;
-            $readingId = Str::uuid()->toString();
-
-            $reading = $readingService->create([
-                'org_id' => $org->id,
-                'meter_id' => $m['id'],
-                'period_start' => $pStart->toDateString(),
-                'period_end' => $pEnd->toDateString(),
-                'reading_value' => $newValue,
-                'status' => 'SUBMITTED',
-                'submitted_by_user_id' => $staffId,
-                'submitted_at' => $pEnd->copy()->addDay(),
-            ]);
-
-            // Approve to trigger master aggregation
-            $readingService->update($reading, ['status' => 'APPROVED']);
-
-            // Aggregate to property monthly total
-            $monthKey = $tempDate->toDateString();
-            $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
-
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền ' . $m['config']['type'],
-                'amount' => $usage * ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
-                'unit_price' => ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
-                'quantity' => $usage,
-                'type' => 'SERVICE',
-            ]);
-
-            $m['last_value'] = $newValue;
-        }
-
-        $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
-        $invoice->update([
-            'total_amount' => $total,
-            'paid_amount' => $invoice->status === 'PAID' ? $total : 0
+            'rent_price' => $baseRent,
+            'base_rent' => $baseRent,
+            'fixed_services_fee' => $fixedServicesFee,
+            'total_rent' => $baseRent + $fixedServicesFee,
+            'deposit_amount' => $depositAmount,
+            'deposit_status' => $status === 'ACTIVE' ? DepositStatus::PAID : DepositStatus::REFUNDED,
+            'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
+            'due_day' => $property->default_due_day ?? 5,
+            'cutoff_day' => $property->default_cutoff_day ?? 30,
+            'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
         ]);
 
-        $tempDate->addMonths(1);
+        // Create IN Handover
+        $this->createHandoverForContract($contract, 'IN', $startDate);
+
+        // Create OUT Handover if ENDED
+        if ($status === 'ENDED') {
+            $this->createHandoverForContract($contract, 'OUT', $endDate);
+        }
+
+        $numMembers = rand(2, 3);
+        for ($i = 0; $i < $numMembers; $i++) {
+            // Dynamically create a tenant user for each contract member
+            $fullName = fake('vi_VN')->name();
+            $email = Str::slug($fullName) . '.' . Str::random(5) . '@tenant.hostech.vn';
+
+            $memberUser = User::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $org->id,
+                'full_name' => $fullName,
+                'email' => $email,
+                'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+            ]);
+            $memberUser->assignRole('Tenant');
+
+            ContractMember::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'contract_id' => $contract->id,
+                'user_id' => $memberUser->id,
+                'full_name' => $fullName,
+                'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
+                'is_primary' => $i === 0,
+                'left_at' => $status === 'ENDED' ? $endDate : null,
+            ]);
+        }
+
+        // --- Invoicing Logic ---
+        $tempDate = $startDate->copy();
+        $isFirstInvoice = true;
+
+        while ($tempDate->lte($endDate) && $tempDate->lte($cutoffLimit)) {
+            $invoiceDate = $tempDate->copy()->addDays(rand(0, 5));
+            if ($invoiceDate->gt($cutoffLimit))
+                break;
+
+            $invoice = Invoice::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $org->id,
+                'property_id' => $room->property_id,
+                'contract_id' => $contract->id,
+                'room_id' => $room->id,
+                'status' => ($status === 'ENDED' || $tempDate->lt(now()->subMonth())) ? 'PAID' : 'PENDING',
+                'issue_date' => $invoiceDate,
+                'due_date' => $invoiceDate->copy()->addDays(7),
+                'period_start' => $tempDate->copy()->startOfMonth(),
+                'period_end' => $tempDate->copy()->endOfMonth(),
+                'total_amount' => 0,
+                'paid_amount' => 0,
+                'created_by_user_id' => $ownerId,
+            ]);
+            if ($isFirstInvoice) {
+                // First Invoice: Rent + Deposit
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền đặt cọc',
+                    'amount' => $contract->deposit_amount,
+                    'unit_price' => $contract->deposit_amount,
+                    'quantity' => 1,
+                    'type' => 'DEPOSIT',
+                ]);
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền phòng tháng đầu',
+                    'amount' => $contract->total_rent,
+                    'unit_price' => $contract->total_rent,
+                    'quantity' => 1,
+                    'type' => 'RENT',
+                ]);
+                $isFirstInvoice = false;
+                // No addMonth here because utility readings happen at the end of the same month
+            }
+
+            if (!$isFirstInvoice && $tempDate->gt($startDate)) {
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền phòng',
+                    'amount' => $contract->total_rent,
+                    'unit_price' => $contract->total_rent,
+                    'quantity' => 1,
+                    'type' => 'RENT',
+                ]);
+            }
+
+            // End of month: Utilities (DIEN, NUOC)
+            foreach ($meters as &$m) {
+                $pStart = $tempDate->copy()->startOfMonth();
+                $pEnd = $tempDate->copy()->endOfMonth();
+                $usage = rand($m['config']['min'], $m['config']['max']);
+                $newValue = $m['last_value'] + $usage;
+                $readingId = Str::uuid()->toString();
+
+                $reading = $readingService->create([
+                    'org_id' => $org->id,
+                    'meter_id' => $m['id'],
+                    'period_start' => $pStart->toDateString(),
+                    'period_end' => $pEnd->toDateString(),
+                    'reading_value' => $newValue,
+                    'status' => 'SUBMITTED',
+                    'submitted_by_user_id' => $staffId,
+                    'submitted_at' => $pEnd->copy()->addDay(),
+                ]);
+
+                // Approve to trigger master aggregation
+                $readingService->update($reading, ['status' => 'APPROVED']);
+
+                // Aggregate to property monthly total
+                $monthKey = $tempDate->toDateString();
+                $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
+
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền ' . $m['config']['type'],
+                    'amount' => $usage * ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
+                    'unit_price' => ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
+                    'quantity' => $usage,
+                    'type' => 'SERVICE',
+                ]);
+
+                $m['last_value'] = $newValue;
+            }
+
+            $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
+            $invoice->update([
+                'total_amount' => $total,
+                'paid_amount' => $invoice->status === 'PAID' ? $total : 0
+            ]);
+
+            $tempDate->addMonths(1);
+        }
+
+        return $contract;
     }
 
-    return $contract;
-}
-
-/**
- * Create Handover, Items and Meter Snapshots for a contract
- */
-private function createHandoverForContract($contract, $type, $date)
-{
-    $handover = Handover::create([
-        'id' => \Illuminate\Support\Str::uuid()->toString(),
-        'org_id' => $contract->org_id,
-        'contract_id' => $contract->id,
-        'room_id' => $contract->room_id,
-        'type' => $type,
-        'status' => 'COMPLETED',
-        'confirmed_at' => $date,
-        'confirmed_by_user_id' => $contract->created_by_user_id,
-        'locked_at' => $date,
-        'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
-    ]);
-
-    // Create Handover Items from Room Assets
-    $assets = $contract->room->assets;
-    foreach ($assets as $index => $asset) {
-        HandoverItem::create([
+    /**
+     * Create Handover, Items and Meter Snapshots for a contract
+     */
+    private function createHandoverForContract($contract, $type, $date)
+    {
+        $handover = Handover::create([
             'id' => \Illuminate\Support\Str::uuid()->toString(),
             'org_id' => $contract->org_id,
-            'handover_id' => $handover->id,
-            'room_asset_id' => $asset->id,
-            'name' => $asset->name,
-            'status' => 'GOOD',
-            'sort_order' => $index,
+            'contract_id' => $contract->id,
+            'room_id' => $contract->room_id,
+            'type' => $type,
+            'status' => 'COMPLETED',
+            'confirmed_at' => $date,
+            'confirmed_by_user_id' => $contract->created_by_user_id,
+            'locked_at' => $date,
+            'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
         ]);
-    }
 
-    // Create Handover Meter Snapshots from Room Meters
-    $meters = $contract->room->meters;
-    foreach ($meters as $meter) {
-        $baseReading = 100; // Mock base
-        $readingValue = $type === 'IN' ? $baseReading : $baseReading + rand(50, 200);
+        // Create Handover Items from Room Assets
+        $assets = $contract->room->assets;
+        foreach ($assets as $index => $asset) {
+            HandoverItem::create([
+                'id' => \Illuminate\Support\Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'handover_id' => $handover->id,
+                'room_asset_id' => $asset->id,
+                'name' => $asset->name,
+                'status' => 'GOOD',
+                'sort_order' => $index,
+            ]);
+        }
 
-        HandoverMeterSnapshot::create([
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
-            'org_id' => $contract->org_id,
-            'handover_id' => $handover->id,
-            'meter_id' => $meter->id,
-            'reading_value' => $readingValue,
-        ]);
+        // Create Handover Meter Snapshots from Room Meters
+        $meters = $contract->room->meters;
+        foreach ($meters as $meter) {
+            $baseReading = 100; // Mock base
+            $readingValue = $type === 'IN' ? $baseReading : $baseReading + rand(50, 200);
+
+            HandoverMeterSnapshot::create([
+                'id' => \Illuminate\Support\Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'handover_id' => $handover->id,
+                'meter_id' => $meter->id,
+                'reading_value' => $readingValue,
+            ]);
+        }
     }
-}
 }

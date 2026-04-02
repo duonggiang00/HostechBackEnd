@@ -23,7 +23,7 @@ Route::post('invitations/accept/{token}', [UserInvitationController::class, 'acc
 Route::post('finance/vnpay/ipn', [VNPayController::class, 'handleIpn'])->name('vnpay.ipn');
 
 
-// --- Protected API Routes (Modularized) ---
+// --- Protected API Routes (Modularized Legacy) ---
 Route::middleware('auth:sanctum')->group(function () {
     // Automatically load all .php files in the api/ directory
     $routeFiles = glob(__DIR__.'/api/*.php');
@@ -32,3 +32,10 @@ Route::middleware('auth:sanctum')->group(function () {
         require $file;
     }
 });
+
+// --- Feature Module Routes (New Modular) ---
+// Note: Each module's api.php handles its own middleware
+$featureRouteFiles = glob(base_path('app/Features/*/Routes/api.php'));
+foreach ($featureRouteFiles as $file) {
+    require $file;
+}

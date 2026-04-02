@@ -25,19 +25,10 @@ class RbacService
         // 1. Clear permission cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // 2. Scan Policies
-        $policyPath = app_path('Policies');
-        if (! File::exists($policyPath)) {
-            return $stats;
-        }
+        // 2. Resolve Policy Classes
+        $classes = $this->discoverPolicyClasses();
 
-        $files = File::allFiles($policyPath);
-
-        foreach ($files as $file) {
-            $relativePath = $file->getRelativePathname();
-            $classPath = str_replace(['/', '.php'], ['\\', ''], $relativePath);
-            $className = 'App\\Policies\\'.$classPath;
-
+        foreach ($classes as $className) {
             if (! class_exists($className)) {
                 continue;
             }
@@ -50,6 +41,33 @@ class RbacService
         }
 
         return $stats;
+    }
+
+    /**
+     * Discover all policy classes from feature directories.
+     */
+    protected function discoverPolicyClasses(): array
+    {
+        $classes = [];
+
+        // Scan App\Features\{Feature}\Policies
+        $featuresPath = app_path('Features');
+        if (File::exists($featuresPath)) {
+            $featureDirs = File::directories($featuresPath);
+            foreach ($featureDirs as $featureDir) {
+                $policyDir = $featureDir . DIRECTORY_SEPARATOR . 'Policies';
+                if (File::exists($policyDir)) {
+                    $featureName = basename($featureDir);
+                    foreach (File::allFiles($policyDir) as $file) {
+                        $relativePath = $file->getRelativePathname();
+                        $classPath = str_replace(['/', '.php'], ['\\', ''], $relativePath);
+                        $classes[] = "App\\Features\\{$featureName}\\Policies\\{$classPath}";
+                    }
+                }
+            }
+        }
+
+        return array_unique($classes);
     }
 
     protected function processModule(string $className, array &$stats): void

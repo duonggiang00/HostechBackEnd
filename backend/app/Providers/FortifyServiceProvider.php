@@ -10,7 +10,7 @@ use App\Http\Responses\Auth\LoginResponse;
 use App\Http\Responses\Auth\RegisterResponse;
 use App\Http\Responses\Auth\TwoFactorChallengeResponse;
 use App\Http\Responses\Auth\TwoFactorLoginResponse;
-use App\Models\Org\User;
+use App\Features\Org\Models\User;
 use App\Http\Responses\Auth\LogoutResponse;
 use Laravel\Fortify\Contracts\LogoutResponse as LogoutResponseContract;
 use Illuminate\Support\Facades\Hash;

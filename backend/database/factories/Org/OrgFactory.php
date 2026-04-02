@@ -2,11 +2,14 @@
 
 namespace Database\Factories\Org;
 
+use App\Features\Org\Models\Org;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 class OrgFactory extends Factory
 {
+    protected $model = Org::class;
+
     public function definition(): array
     {
         return [

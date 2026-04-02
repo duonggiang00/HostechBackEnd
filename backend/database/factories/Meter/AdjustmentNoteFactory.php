@@ -2,10 +2,10 @@
 
 namespace Database\Factories\Meter;
 
-use App\Models\Meter\AdjustmentNote;
-use App\Models\Meter\MeterReading;
-use App\Models\Org\Org;
-use App\Models\Org\User;
+use App\Features\Meter\Models\Meter\AdjustmentNote;
+use App\Features\Meter\Models\Meter\MeterReading;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AdjustmentNoteFactory extends Factory

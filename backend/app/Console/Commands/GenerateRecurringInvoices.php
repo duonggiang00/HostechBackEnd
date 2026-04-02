@@ -31,7 +31,7 @@ class GenerateRecurringInvoices extends Command
 
         $this->info('Generating recurring invoices for period: ' . $periodMonth->format('M Y'));
 
-        $query = \App\Models\Org\Org::query();
+        $query = \App\Features\Org\Models\Org::query();
         if ($orgId) {
             $query->where('id', $orgId);
         }

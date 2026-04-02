@@ -14,16 +14,15 @@ return new class extends Migration
     {
         // Use raw SQL for robust enum transition
         // 1. Change to VARCHAR temporarily
-        DB::statement("ALTER TABLE contracts MODIFY COLUMN deposit_status VARCHAR(255) DEFAULT 'UNPAID'");
+        DB::statement("ALTER TABLE contracts MODIFY COLUMN deposit_status VARCHAR(255) DEFAULT 'PENDING'");
         
-        // 2. Map PENDING (unexpected status) to UNPAID and normalize others to UPPERCASE
-        DB::table('contracts')->where('deposit_status', 'PENDING')->update(['deposit_status' => 'UNPAID']);
+        // 2. Normalize to UPPERCASE
         DB::table('contracts')->update([
             'deposit_status' => DB::raw('UPPER(deposit_status)')
         ]);
 
-        // 3. Set to final ENUM
-        DB::statement("ALTER TABLE contracts MODIFY COLUMN deposit_status ENUM('UNPAID', 'HELD', 'REFUND_PENDING', 'REFUNDED', 'PARTIAL_REFUND', 'FORFEITED') DEFAULT 'UNPAID'");
+        // 3. Set to final ENUM (Including PENDING and PAID from PHP Enum)
+        DB::statement("ALTER TABLE contracts MODIFY COLUMN deposit_status ENUM('PENDING', 'PAID', 'UNPAID', 'HELD', 'REFUND_PENDING', 'REFUNDED', 'PARTIAL_REFUND', 'FORFEITED') DEFAULT 'PENDING'");
     }
 
     /**

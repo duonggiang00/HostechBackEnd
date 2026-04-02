@@ -27,7 +27,7 @@ class CleanupTempUploads extends Command
     {
         $cutoff = now()->subDay();
 
-        $uploads = \App\Models\System\TemporaryUpload::where('created_at', '<', $cutoff)->get();
+        $uploads = \App\Features\System\Models\TemporaryUpload::where('created_at', '<', $cutoff)->get();
 
         $count = 0;
         foreach ($uploads as $upload) {

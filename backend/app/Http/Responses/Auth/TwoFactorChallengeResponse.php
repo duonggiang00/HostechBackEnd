@@ -15,7 +15,7 @@ class TwoFactorChallengeResponse implements TwoFactorChallengeResponseContract
     public function toResponse($request): JsonResponse
     {
         $userId = $request->session()->get('fortify.two_factor_user_id');
-        $user = $userId ? \App\Models\Org\User::find($userId) : null;
+        $user = $userId ? \App\Features\Org\Models\User::find($userId) : null;
 
         return response()->json([
             'two_factor' => true,

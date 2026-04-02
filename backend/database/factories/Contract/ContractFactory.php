@@ -2,13 +2,19 @@
 
 namespace Database\Factories\Contract;
 
+use App\Features\Contract\Models\Contract;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
+use App\Features\Org\Models\Org;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Contract\Contract>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Features\Contract\Models\Contract>
  */
 class ContractFactory extends Factory
 {
+    protected $model = Contract::class;
+
     /**
      * Define the model's default state.
      *
@@ -20,9 +26,9 @@ class ContractFactory extends Factory
         $endDate = (clone $startDate)->modify('+1 year');
 
         return [
-            'org_id' => \App\Models\Org\Org::factory(),
-            'property_id' => \App\Models\Property\Property::factory(),
-            'room_id' => \App\Models\Property\Room::factory(),
+            'org_id' => Org::factory(),
+            'property_id' => Property::factory(),
+            'room_id' => Room::factory(),
             'status' => $this->faker->randomElement(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']),
             'start_date' => $startDate,
             'end_date' => $this->faker->boolean(80) ? $endDate : null,
@@ -35,13 +41,13 @@ class ContractFactory extends Factory
             },
             'join_code' => \Illuminate\Support\Str::random(8),
             'join_code_expires_at' => $this->faker->dateTimeBetween('now', '+1 month'),
-            'created_by_user_id' => \App\Models\Org\User::factory(),
+            'created_by_user_id' => \App\Features\Org\Models\User::factory(),
         ];
     }
 
     public function configure()
     {
-        return $this->afterMaking(function (\App\Models\Contract\Contract $contract) {
+        return $this->afterMaking(function (Contract $contract) {
             // Ensure consistency if room is provided
             if ($contract->room) {
                 $contract->property_id = $contract->room->property_id;

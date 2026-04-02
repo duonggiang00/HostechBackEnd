@@ -1,7 +1,8 @@
 <?php
 
+use App\Features\Org\Controllers\ProfileController;
 use App\Http\Controllers\Api\Auth\TwoFactorAuthenticationController;
-use App\Http\Controllers\Api\Org\ProfileController;
+
 use Illuminate\Support\Facades\Route;
 
 /*

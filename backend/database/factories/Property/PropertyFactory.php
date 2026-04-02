@@ -2,11 +2,14 @@
 
 namespace Database\Factories\Property;
 
+use App\Features\Property\Models\Property;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
 class PropertyFactory extends Factory
 {
+    protected $model = Property::class;
+
     public function definition(): array
     {
         return [

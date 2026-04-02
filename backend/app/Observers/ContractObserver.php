@@ -2,8 +2,8 @@
 
 namespace App\Observers;
 
-use App\Models\Contract\Contract;
-use App\Models\Property\RoomStatusHistory;
+use App\Features\Contract\Models\Contract;
+use App\Features\Property\Models\RoomStatusHistory;
 use Illuminate\Support\Str;
 
 class ContractObserver

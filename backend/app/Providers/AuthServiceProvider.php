@@ -2,12 +2,12 @@
 
 namespace App\Providers;
 
-use App\Models\Finance\Payment;
-use App\Models\Org\Org;
-use App\Models\Org\User;
-use App\Models\Property\Floor;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Finance\Models\Payment;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Floor;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use App\Policies\Finance\FinancePolicy;
 use App\Policies\Org\OrgPolicy;
 use App\Policies\Org\UserPolicy;
@@ -29,7 +29,7 @@ class AuthServiceProvider extends ServiceProvider
         Property::class => PropertyPolicy::class,
         Floor::class    => FloorPolicy::class,
         Room::class     => RoomPolicy::class,
-        \App\Models\Handover\Handover::class => \App\Policies\Handover\HandoverPolicy::class,
+        \App\Features\Handover\Models\Handover::class => \App\Policies\Handover\HandoverPolicy::class,
         Payment::class  => FinancePolicy::class,
     ];
 

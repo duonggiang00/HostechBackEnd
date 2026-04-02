@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Services\Dashboard\DashboardService;
-use App\Models\Property\Property;
+use App\Features\Property\Models\Property;
 use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +38,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var \App\Features\Org\Models\User $user */
         $user = $request->user();
         [$from, $to] = $this->resolveRange($request);
 
@@ -106,7 +106,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var \App\Features\Org\Models\User $user */
         $user = $request->user();
 
         if (! $user->hasRole('Admin')) {
@@ -152,7 +152,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var \App\Features\Org\Models\User $user */
         $user = $request->user();
 
         if (! $user->hasRole(['Admin', 'Owner'])) {
@@ -201,7 +201,7 @@ class DashboardController extends Controller
             'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
         ]));
 
-        /** @var \App\Models\Org\User $user */
+        /** @var \App\Features\Org\Models\User $user */
         $user = $request->user();
 
         if (! $user->hasRole(['Admin', 'Owner', 'Manager', 'Staff'])) {
@@ -213,7 +213,7 @@ class DashboardController extends Controller
 
         // Case 1: Specific property requested
         if ($propertyId) {
-            $property = \App\Models\Property\Property::withoutGlobalScopes()->findOrFail($propertyId);
+            $property = \App\Features\Property\Models\Property::withoutGlobalScopes()->findOrFail($propertyId);
 
             // Authorization: Admin/Owner or assigned Manager/Staff
             if (! $user->hasRole(['Admin', 'Owner'])) {

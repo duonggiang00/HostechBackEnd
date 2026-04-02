@@ -17,7 +17,7 @@ class UserInvitationMail extends Mailable
      * Create a new message instance.
      */
     public function __construct(
-        public \App\Models\System\UserInvitation $invitation
+        public \App\Features\System\Models\UserInvitation $invitation
     ) {}
 
     /**

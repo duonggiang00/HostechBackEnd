@@ -2,16 +2,16 @@
 
 namespace Database\Factories\Invoice;
 
-use App\Models\Contract\Contract;
-use App\Models\Invoice\Invoice;
-use App\Models\Org\Org;
-use App\Models\Property\Property;
-use App\Models\Property\Room;
+use App\Features\Contract\Models\Contract;
+use App\Features\Invoice\Models\Invoice;
+use App\Features\Org\Models\Org;
+use App\Features\Property\Models\Property;
+use App\Features\Property\Models\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Invoice\Invoice>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Features\Invoice\Models\Invoice>
  */
 class InvoiceFactory extends Factory
 {

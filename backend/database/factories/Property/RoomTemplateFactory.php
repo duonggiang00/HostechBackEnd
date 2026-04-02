@@ -2,7 +2,7 @@
 
 namespace Database\Factories\Property;
 
-use App\Models\Property\RoomTemplate;
+use App\Features\Property\Models\RoomTemplate;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class RoomTemplateFactory extends Factory

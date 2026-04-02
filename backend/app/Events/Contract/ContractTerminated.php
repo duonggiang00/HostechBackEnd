@@ -2,7 +2,7 @@
 
 namespace App\Events\Contract;
 
-use App\Models\Contract\Contract;
+use App\Features\Contract\Models\Contract;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;

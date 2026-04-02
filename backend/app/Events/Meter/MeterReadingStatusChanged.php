@@ -2,7 +2,7 @@
 
 namespace App\Events\Meter;
 
-use App\Models\Meter\MeterReading;
+use App\Features\Meter\Models\Meter\MeterReading;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;

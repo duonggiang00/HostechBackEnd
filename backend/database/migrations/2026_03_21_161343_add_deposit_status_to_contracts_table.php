@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('contracts', function (Blueprint $table) {
-            $table->string('deposit_status', 50)->default('UNPAID')->after('deposit_amount');
+            $table->string('deposit_status', 50)->default('PENDING')->after('deposit_amount');
             $table->decimal('refunded_amount', 15, 2)->default(0)->after('deposit_status');
             $table->decimal('forfeited_amount', 15, 2)->default(0)->after('refunded_amount');
         });

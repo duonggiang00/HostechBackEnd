@@ -30,7 +30,7 @@ class RedirectIfTwoFactorAuthenticatable extends FortifyRedirect
             function ($request, $next) {
                 // Fetch the user from the session, as they are not authenticated yet
                 $userId = $request->session()->get('fortify.two_factor_user_id');
-                $user = $userId ? \App\Models\Org\User::find($userId) : null;
+                $user = $userId ? \App\Features\Org\Models\User::find($userId) : null;
 
                 if ($user && $user->mfa_enabled && $user->mfa_method === 'email') {
                     app(MfaService::class)->sendEmailOtp($user);

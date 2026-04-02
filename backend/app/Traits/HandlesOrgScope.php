@@ -2,7 +2,7 @@
 
 namespace App\Traits;
 
-use App\Models\Org\User;
+use App\Features\Org\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
 trait HandlesOrgScope
