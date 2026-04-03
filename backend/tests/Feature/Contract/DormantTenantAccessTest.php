@@ -75,6 +75,7 @@ class DormantTenantAccessTest extends TestCase
             'status' => $memberStatus,
             'is_primary' => true,
             'full_name' => $tenant->full_name,
+            'phone' => '0987654321', // Added phone
         ]);
 
         return [$property, $room, $contract];
@@ -114,7 +115,7 @@ class DormantTenantAccessTest extends TestCase
     public function test_tenant_can_accept_signature_and_unlock_access()
     {
         $tenant = $this->createTenant();
-        [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
+        [$property, $room, $contract] = $this->setupContractScenario($tenant, 'PENDING_SIGNATURE', 'PENDING');
 
         // Accept Signature
         $acceptResponse = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/accept-signature');
@@ -147,7 +148,7 @@ class DormantTenantAccessTest extends TestCase
     public function test_tenant_can_reject_contract()
     {
         $tenant = $this->createTenant();
-        [$property, $room, $contract] = $this->setupContractScenario($tenant, 'DRAFT', 'PENDING');
+        [$property, $room, $contract] = $this->setupContractScenario($tenant, 'PENDING_SIGNATURE', 'PENDING');
 
         $rejectResponse = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/reject-signature');
         $rejectResponse->assertStatus(200);
@@ -170,7 +171,7 @@ class DormantTenantAccessTest extends TestCase
         $tenant2 = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Tenant Two']);
         $tenant2->assignRole('Tenant');
 
-        [$property, $room, $contract] = $this->setupContractScenario($tenant1, 'DRAFT', 'PENDING');
+        [$property, $room, $contract] = $this->setupContractScenario($tenant1, 'PENDING_SIGNATURE', 'PENDING');
 
         // Tenant 2 cố gắng ký hợp đồng của Tenant 1
         $response = $this->actingAs($tenant2)->postJson('/api/contracts/'.$contract->id.'/accept-signature');

@@ -65,6 +65,7 @@ class TenantSelfServiceTest extends TestCase
             'contract_id' => $contract->id,
             'user_id' => $tenant->id,
             'full_name' => $tenant->full_name,
+            'phone' => '0987654321', // Added phone
             'status' => 'APPROVED',
             'is_primary' => true,
         ]);

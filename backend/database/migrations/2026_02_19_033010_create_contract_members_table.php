@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('status', 20)->default('APPROVED')->comment('ENUM: PENDING, APPROVED, REJECTED');
             $table->boolean('is_primary')->default(false);
             $table->timestamp('joined_at')->nullable();
+            $table->timestamp('signed_at')->nullable();
             $table->timestamp('left_at')->nullable();
 
             $table->timestamps();

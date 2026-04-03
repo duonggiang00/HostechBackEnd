@@ -22,7 +22,7 @@ class PropertyFactory extends Factory
             'use_floors' => true,
             'default_billing_cycle' => 'MONTHLY',
             'default_due_day' => 5,
-            'default_cutoff_day' => 30,
+            'default_cutoff_day' => 25,
             'default_deposit_months' => fake()->randomElement([1, 2]),
             'bank_accounts' => json_encode([
                 ['bank' => 'Vietcombank', 'account' => '1234567890'],

@@ -27,7 +27,7 @@ class LoginResponse implements LoginResponseContract
         )->plainTextToken;
 
         return response()->json([
-            'user' => [
+            [
                 'id'        => (string) $user->id,
                 'full_name' => $user->full_name,
                 'email'     => $user->email,

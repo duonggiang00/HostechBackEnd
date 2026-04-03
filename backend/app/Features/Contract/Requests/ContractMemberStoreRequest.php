@@ -14,9 +14,9 @@ class ContractMemberStoreRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'uuid', 'exists:users,id'],
+            'user_id' => ['required_if:is_primary,true', 'nullable', 'uuid', 'exists:users,id'],
             'full_name' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'phone' => ['required_if:is_primary,true', 'nullable', 'string', 'max:20'],
             'identity_number' => ['nullable', 'string', 'max:50'],
             'role' => ['required', 'string', 'in:TENANT,ROOMMATE,GUARANTOR'],
             'is_primary' => ['boolean'],

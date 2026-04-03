@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignUuid('org_id')->constrained('orgs')->cascadeOnDelete();
             $table->foreignUuid('property_id')->constrained('properties')->cascadeOnDelete();
             $table->foreignUuid('room_id')->constrained('rooms')->cascadeOnDelete();
-            $table->string('status', 10)->default('DRAFT')->comment('ENUM: DRAFT, ACTIVE, ENDED, CANCELLED');
+            $table->string('status', 20)->default('DRAFT')->comment('ENUM: DRAFT, ACTIVE, ENDED, CANCELLED');
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->string('billing_cycle', 10)->default('MONTHLY')->comment('ENUM: MONTHLY, QUARTERLY');

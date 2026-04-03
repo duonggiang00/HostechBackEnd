@@ -66,6 +66,17 @@ class MeterReadingService
             $query->whereHas('meter.room.property.managers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
+
+            // Visibility Scope: Managers/Owners only see submitted upwards.
+            // Staff see submitted upwards + their own DRAFT readings.
+            if ($user->hasRole(['Manager', 'Owner'])) {
+                $query->where('status', '!=', 'DRAFT');
+            } elseif ($user->hasRole('Staff')) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('status', '!=', 'DRAFT')
+                      ->orWhere('submitted_by_user_id', $user->id);
+                });
+            }
         }
 
         return $query->paginate($perPage)->withQueryString();
@@ -77,14 +88,17 @@ class MeterReadingService
     public function create(array $data): MeterReading
     {
         return DB::transaction(function () use ($data) {
-            $actorId = Auth::id();
-            $data['org_id'] = $data['org_id'] ?? Auth::user()?->org_id;
+            $actor = Auth::user();
+            $data['org_id'] = $data['org_id'] ?? $actor?->org_id;
             $meterId = $data['meter_id'];
             $readingValue = $data['reading_value'];
-            $status = $data['status'] ?? 'DRAFT';
+
+            // Manager/Owner created readings are auto-approved.
+            $defaultStatus = ($actor && $actor->hasRole(['Manager', 'Owner'])) ? 'APPROVED' : 'DRAFT';
+            $status = $data['status'] ?? $defaultStatus;
 
             $data['status'] = $status;
-            $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actorId;
+            $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actor?->id;
 
             if ($status === 'SUBMITTED' || $status === 'APPROVED') {
                 $data['submitted_at'] = $data['submitted_at'] ?? now();
@@ -92,7 +106,7 @@ class MeterReadingService
 
             if ($status === 'APPROVED') {
                 $data['approved_at'] = $data['approved_at'] ?? now();
-                $data['approved_by_user_id'] = $data['approved_by_user_id'] ?? $actorId;
+                $data['approved_by_user_id'] = $data['approved_by_user_id'] ?? $actor?->id;
             }
 
             // Keep one record per meter-period. If a soft-deleted row exists, remove it first.
@@ -181,6 +195,27 @@ class MeterReadingService
             $results = [];
             foreach ($readings as $readingData) {
                 $results[] = $this->create($readingData);
+            }
+            return $results;
+        });
+    }
+
+    /**
+     * Bulk submit DRAFT readings (DRAFT → SUBMITTED).
+     * Only the owning Staff can submit their own drafts.
+     */
+    public function bulkSubmit(array $readingIds): array
+    {
+        return DB::transaction(function () use ($readingIds) {
+            $readings = MeterReading::whereIn('id', $readingIds)
+                ->where('status', 'DRAFT')
+                ->where('submitted_by_user_id', Auth::id())
+                ->get();
+
+            $results = [];
+            foreach ($readings as $reading) {
+                /** @var MeterReading $reading */
+                $results[] = $this->update($reading, ['status' => 'SUBMITTED']);
             }
             return $results;
         });
@@ -284,6 +319,7 @@ class MeterReadingService
         }
 
         // Ensure Master Meter reading is CUMULATIVE
+        /** @var MeterReading|null $prevMaster */
         $prevMaster = MeterReading::where('meter_id', $masterMeter->id)
             ->where('period_end', '<=', $periodStart)
             ->where('status', 'APPROVED')
@@ -325,6 +361,7 @@ class MeterReadingService
      */
     public function recalculateConsumption(MeterReading $reading): void
     {
+        /** @var MeterReading|null $prev */
         $prev = MeterReading::where('meter_id', $reading->meter_id)
             ->where('id', '!=', $reading->id)
             ->where('period_end', '<=', $reading->period_start)

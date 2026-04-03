@@ -160,13 +160,15 @@ class MeterReadingController extends Controller
             'reading_ids.*' => 'uuid|exists:meter_readings,id',
         ]);
 
-        $readings = MeterReading::whereIn('id', $request->input('reading_ids'))->get();
-        $results = [];
-
+        $ids = $request->input('reading_ids');
+        
+        // Per-item authorization (Modern practice)
+        $readings = MeterReading::whereIn('id', $ids)->get();
         foreach ($readings as $reading) {
             $this->authorize('update', $reading);
-            $results[] = $this->service->update($reading, ['status' => 'SUBMITTED']);
         }
+
+        $results = $this->service->bulkSubmit($ids);
 
         return MeterReadingResource::collection(collect($results));
     }

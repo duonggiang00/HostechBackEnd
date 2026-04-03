@@ -288,13 +288,16 @@ class RoomController extends Controller
      * Kích hoạt phòng từ trạng thái `draft` sang `available`.
      * Có thể truyền `code` và `base_price` để override trước khi publish.
      */
+    /**
+     * Publish a room (Draft -> Available)
+     */
     public function publish(RoomPublishRequest $request, string $id)
     {
         $room = $this->service->find($id) ?? abort(404, 'Room not found');
 
         $this->authorize('publish', $room);
 
-        $published = $this->service->publish($room, $request->validated(), $request->user());
+        $published = $this->service->publish($room->id, $request->validated(), $request->user());
 
         return new RoomResource($published);
     }

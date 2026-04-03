@@ -24,6 +24,11 @@ enum ContractStatus: string
         return [self::PENDING_PAYMENT, self::PENDING_SIGNATURE];
     }
 
+    public static function allowAcceptSignature(): array
+    {
+        return [self::PENDING_SIGNATURE];
+    }
+
     public function label(): string
     {
         return match ($this) {

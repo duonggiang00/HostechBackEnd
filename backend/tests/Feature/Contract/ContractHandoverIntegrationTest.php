@@ -68,9 +68,20 @@ class ContractHandoverIntegrationTest extends TestCase
             'property_id' => $property->id,
             'room_id' => $room->id,
             'status' => ContractStatus::PENDING_PAYMENT,
-            'deposit_status' => DepositStatus::UNPAID,
+            'deposit_status' => DepositStatus::PENDING,
             'deposit_amount' => 5000000,
             'rent_price' => 3000000,
+        ]);
+
+        $tenant = User::factory()->create(['org_id' => $org->id]);
+        \App\Features\Contract\Models\ContractMember::create([
+            'org_id' => $org->id,
+            'contract_id' => $contract->id,
+            'user_id' => $tenant->id,
+            'full_name' => $tenant->full_name,
+            'phone' => '0987654321',
+            'is_primary' => true,
+            'status' => 'APPROVED',
         ]);
 
         $this->actingAs($admin)
@@ -150,8 +161,19 @@ class ContractHandoverIntegrationTest extends TestCase
             'room_id' => $room->id,
             'status' => ContractStatus::ACTIVE,
             'deposit_amount' => 5000000,
-            'deposit_status' => DepositStatus::HELD,
+            'deposit_status' => DepositStatus::PAID,
             'rent_price' => 3000000,
+        ]);
+
+        $tenant = User::factory()->create(['org_id' => $org->id]);
+        \App\Features\Contract\Models\ContractMember::create([
+            'org_id' => $org->id,
+            'contract_id' => $contract->id,
+            'user_id' => $tenant->id,
+            'full_name' => $tenant->full_name,
+            'phone' => '0987654321',
+            'is_primary' => true,
+            'status' => 'APPROVED',
         ]);
 
         $this->actingAs($admin)

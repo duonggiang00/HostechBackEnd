@@ -2,8 +2,6 @@
 
 Bản kế hoạch này hợp nhất tất cả các nội dung đã được thảo luận và duyệt, bao gồm cả nội dung văn bản mẫu và sơ đồ quy trình nghiệp vụ.
 
----
-
 ## 1. Kế hoạch Nghiệp vụ Tổng thể (Operational Plan)
 
 ### 1.1. Giai đoạn: Cấu hình Property (Configuration)
@@ -22,8 +20,6 @@ Bản kế hoạch này hợp nhất tất cả các nội dung đã được th
     - Tự động/Thủ công tạo Hóa đơn (Invoice).
     - Thanh toán & Đối soát nợ.
 - **Sự kiện Vòng đời**: Bàn giao (Handover), Chấm dứt, Làm mới, Chuyển phòng.
-
----
 
 ## 2. Hệ thống Sơ đồ Workflow Trực quan (Diagrams)
 
@@ -83,8 +79,6 @@ graph TD
     end
 ```
 
----
-
 ## 3. Vòng đời Trạng thái Hợp đồng (State Diagram)
 
 ```mermaid
@@ -103,8 +97,6 @@ stateDiagram-v2
     TERMINATED --> [*]
 ```
 
----
-
 ## 4. Bảng giải thích Nghiệp vụ Chi tiết
 
 | Mục | Nội dung Logic | Ghi chú |
@@ -114,7 +106,5 @@ stateDiagram-v2
 | **Mapping** | `{{tags}}` trong Markdown được ánh xạ tự động từ `ContractService`. | Dữ liệu chính xác 100% từ DB. |
 | **Cấu hình Meter** | Cho phép gán đồng hồ cho cả Fixed Rate. | Tăng tính linh hoạt nếu muốn theo dõi chỉ số. |
 
----
-
-> [!NOTE]
-> Tôi đã hợp nhất toàn bộ các đề xuất từ trước đến nay vào bản kế hoạch này. Không có nội dung nào bị xóa bỏ, chỉ được sắp xếp lại để khoa học và dễ theo dõi hơn.
+> [!IMPORTANT]
+> Bản kế hoạch này đã được định dạng lại để hỗ trợ hiển thị biểu đồ Mermaid trực quan.

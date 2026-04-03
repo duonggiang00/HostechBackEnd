@@ -20,7 +20,7 @@ return new class extends Migration
 
             $table->date('period_start');
             $table->date('period_end');
-            $table->string('status', 10)->default('DRAFT')->comment('ENUM: DRAFT, ISSUED, PENDING, PAID, OVERDUE, CANCELLED');
+            $table->string('status', 20)->default('DRAFT')->comment('ENUM: DRAFT, ISSUED, PENDING, PAID, OVERDUE, CANCELLED');
             $table->date('issue_date')->nullable();
             $table->date('due_date');
 
@@ -32,9 +32,9 @@ return new class extends Migration
             $table->foreignUuid('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignUuid('issued_by_user_id')->nullable()->constrained('users')->nullOnDelete();
 
-            $table->boolean('is_termination')->default(false);
             $table->timestamp('issued_at')->nullable();
             $table->timestamp('cancelled_at')->nullable();
+            $table->json('meta')->nullable();
             $table->timestamps();
             $table->softDeletes();
 

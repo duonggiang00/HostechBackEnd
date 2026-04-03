@@ -3,6 +3,10 @@
 namespace Tests\Feature\Contract;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+uses(TestCase::class, RefreshDatabase::class);
+
 use App\Features\Contract\Models\Contract;
 use App\Features\Contract\Models\ContractMember;
 use App\Features\Invoice\Models\Invoice;
@@ -54,7 +58,7 @@ test('admin can create contract', function () {
     $response = postJson('/api/contracts', [
         'property_id' => $property->id,
         'room_id' => $room->id,
-        'status' => 'ACTIVE',
+        'status' => 'PENDING_SIGNATURE',
         'start_date' => now()->toDateString(),
         'end_date' => now()->addYear()->toDateString(),
         'rent_price' => 5000000,
@@ -67,6 +71,7 @@ test('admin can create contract', function () {
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'phone' => '0987654321',
                 'joined_at' => now()->toDateString(),
             ],
         ],
@@ -277,15 +282,18 @@ test('manager can create contract', function () {
     postJson('/api/contracts', [
         'property_id' => $property->id,
         'room_id' => $room->id,
-        'status' => 'ACTIVE',
+        'status' => 'PENDING_SIGNATURE',
         'rent_price' => 5000000,
         'start_date' => now()->toDateString(),
+        'due_day' => 25,
+        'cutoff_day' => 20,
         'members' => [
             [
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
-                'status' => 'PENDING',
+                'phone' => '0987654321',
+                'status' => 'PENDING_SIGNATURE',
             ],
         ],
     ])->assertStatus(201)->assertJsonPath('data.status', 'PENDING_SIGNATURE');
@@ -317,6 +325,7 @@ test('staff cannot create contract', function () {
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'phone' => '0987654321',
             ],
         ],
     ], ['X-Org-Id' => $org->id])->assertStatus(403);
@@ -645,6 +654,7 @@ test('cannot create contract with cutoff day greater than 25', function () {
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'phone' => '0987654321',
             ],
         ],
     ])->assertStatus(422)->assertJsonValidationErrors(['cutoff_day']);
@@ -672,7 +682,7 @@ test('initial invoice is created only after all contract members sign and tenant
     $response = postJson('/api/contracts', [
         'property_id' => $property->id,
         'room_id' => $room->id,
-        'status' => 'ACTIVE',
+        'status' => 'PENDING_SIGNATURE',
         'start_date' => now()->toDateString(),
         'end_date' => now()->addYear()->toDateString(),
         'rent_price' => 4000000,
@@ -685,6 +695,7 @@ test('initial invoice is created only after all contract members sign and tenant
                 'user_id' => $primaryTenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'phone' => '0987654321',
             ],
             [
                 'user_id' => $roommate->id,

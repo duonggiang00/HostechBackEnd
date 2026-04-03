@@ -7,9 +7,10 @@ use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
 use App\Features\Property\Models\Property;
 use App\Features\Property\Models\Room;
-use App\Models\Invoice\Invoice;
+use App\Features\Invoice\Models\Invoice;
 use App\Features\Contract\Enums\ContractStatus;
 use App\Features\Contract\Enums\DepositStatus;
+use App\Features\Contract\Models\ContractMember;
 use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -45,8 +46,19 @@ class ContractTerminationTest extends TestCase
             'room_id' => $room->id,
             'status' => ContractStatus::ACTIVE,
             'deposit_amount' => 5000000,
-            'deposit_status' => DepositStatus::HELD,
+            'deposit_status' => DepositStatus::PAID,
             'rent_price' => 3000000,
+        ]);
+
+        $tenant = User::factory()->create(['org_id' => $org->id]);
+        ContractMember::create([
+            'org_id' => $org->id,
+            'contract_id' => $contract->id,
+            'user_id' => $tenant->id,
+            'full_name' => $tenant->full_name,
+            'phone' => '0987654321',
+            'is_primary' => true,
+            'status' => 'APPROVED',
         ]);
 
         $terminationDate = now()->format('Y-m-d');
@@ -61,7 +73,7 @@ class ContractTerminationTest extends TestCase
 
         $contract->refresh();
         $this->assertEquals(ContractStatus::TERMINATED, $contract->status);
-        $this->assertEquals(DepositStatus::REFUND_PENDING, $contract->deposit_status);
+        $this->assertEquals(DepositStatus::REFUNDED, $contract->deposit_status);
         $this->assertNotNull($contract->terminated_at);
         
         $room->refresh();
@@ -95,8 +107,19 @@ class ContractTerminationTest extends TestCase
             'room_id' => $room->id,
             'status' => ContractStatus::ACTIVE,
             'deposit_amount' => 5000000,
-            'deposit_status' => DepositStatus::HELD,
+            'deposit_status' => DepositStatus::PAID,
             'rent_price' => 3000000,
+        ]);
+
+        $tenant = User::factory()->create(['org_id' => $org->id]);
+        ContractMember::create([
+            'org_id' => $org->id,
+            'contract_id' => $contract->id,
+            'user_id' => $tenant->id,
+            'full_name' => $tenant->full_name,
+            'phone' => '0987654321',
+            'is_primary' => true,
+            'status' => 'APPROVED',
         ]);
 
         $this->actingAs($admin)
