@@ -5284,7 +5284,7 @@ export interface operations {
             401: components["responses"]["AuthenticationException"];
         };
     };
-    "org.profile.show_0": {
+    "org.profile.show_1": {
         parameters: {
             query?: never;
             header?: never;

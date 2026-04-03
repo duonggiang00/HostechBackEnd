@@ -1,5 +1,5 @@
 import apiClient from '@/shared/api/client';
-import type { Organization, UserInvitation, InvitationValidation } from '../types';
+import type { Organization, InvitationValidation } from '../types';
 
 export const organizationsApi = {
   getOrganizations: async () => {

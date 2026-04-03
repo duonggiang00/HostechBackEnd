@@ -122,11 +122,11 @@ const itemVariants = {
   visible: (index: number) => ({
     opacity: 1,
     x: 0,
-    transition: {
-      duration: 0.34,
-      delay: index * 0.045,
-      ease: [0.22, 1, 0.36, 1],
-    },
+    transition: { 
+      duration: 0.3,
+      delay: index * 0.05,
+      ease: [0.25, 0.1, 0.25, 1] as any // Fix TypeScript variance requirement
+    }
   }),
 };
 
