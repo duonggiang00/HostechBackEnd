@@ -28,10 +28,29 @@ class MeterReadingStatusChanged implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('property.' . $this->reading->meter->property_id),
             new PrivateChannel('user.' . $this->reading->submitted_by_user_id),
         ];
+
+        // Khi APPROVED → broadcast cho Tenant (chuẩn bị hạ tầng cho App Tenant)
+        if ($this->reading->status === 'APPROVED') {
+            $this->reading->loadMissing('meter.room.contracts.members');
+            $room = $this->reading->meter->room;
+            if ($room) {
+                $tenantIds = $room->contracts
+                    ->where('status', 'ACTIVE')
+                    ->flatMap(fn ($c) => $c->members)
+                    ->where('status', 'APPROVED')
+                    ->pluck('user_id')
+                    ->unique();
+                foreach ($tenantIds as $tenantId) {
+                    $channels[] = new PrivateChannel('user.' . $tenantId);
+                }
+            }
+        }
+
+        return $channels;
     }
 
     /**

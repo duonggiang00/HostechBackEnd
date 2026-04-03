@@ -6,8 +6,11 @@
     "dev:premium": "npm run dev --prefix frontend",
     "dev:v2": "npm run dev --prefix frontendV2Hostech",
     "dev:backend": "cd backend && php artisan serve",
+    "dev:reverb": "cd backend && php artisan reverb:start --debug",
+    "dev:queue": "cd backend && php artisan queue:work --tries=3 --timeout=30",
     "dev:allv2": "npx concurrently \"npm run dev:v2\" \"npm run dev:backend\"",
-    "dev:allv1": "npx concurrently \"npm run dev:premium\" \"npm run dev:backend\""
+    "dev:allv1": "npx concurrently \"npm run dev:premium\" \"npm run dev:backend\"",
+    "start": "npx concurrently \"npm run dev:v2\" \"npm run dev:backend\" \"npm run dev:reverb\" \"npm run dev:queue\""
   },
   "dependencies": {
     "all": "^0.0.0"

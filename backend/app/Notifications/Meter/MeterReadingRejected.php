@@ -63,13 +63,4 @@ class MeterReadingRejected extends Notification implements ShouldQueue
         return new BroadcastMessage($this->toArray($notifiable));
     }
 
-    /**
-     * Broadcast on user channel (personal notification to submitter).
-     */
-    public function broadcastOn(): array
-    {
-        return [
-            new \Illuminate\Broadcasting\PrivateChannel("user.{$this->reading->submitted_by_user_id}"),
-        ];
-    }
 }

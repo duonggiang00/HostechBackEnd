@@ -23,3 +23,8 @@ Broadcast::channel('property.{propertyId}', function ($user, $propertyId) {
 Broadcast::channel('user.{userId}', function ($user, $userId) {
     return (string) $user->id === (string) $userId;
 });
+
+// Channel mặc định của Laravel Notification
+Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
+    return (int) $user->id === (int) $id;
+});

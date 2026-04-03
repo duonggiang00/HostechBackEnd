@@ -47,19 +47,22 @@ class MeterReadingResource extends JsonResource
                 ];
             }),
             'adjustments' => AdjustmentNoteResource::collection($this->whenLoaded('adjustmentNotes')),
-            'proofs' => $this->whenLoaded('media', function () {
-                return $this->getMedia('reading_proofs')->map(function ($media) {
+            // Luôn trả proofs từ media library thông qua getMedia() - không conflict
+            'proofs' => (function () {
+                $proofs = $this->getMedia('reading_proofs');
+                \Log::debug("📸 Resource getMedia() for reading {$this->id} returned {$proofs->count()} proofs");
+                return $proofs->map(function ($media) {
                     return [
-                        'id' => $this->id,
-                        'url' => $media->getUrl(),
-                        'thumb_url' => $media->getUrl('thumb'),
-                        'name' => $media->name,
+                        'id'        => $media->id,
+                        'url'       => $media->getUrl(),
+                        'thumb_url' => $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl(),
+                        'name'      => $media->name,
                         'file_name' => $media->file_name,
                         'mime_type' => $media->mime_type,
-                        'size' => $media->size,
+                        'size'      => $media->size,
                     ];
-                });
-            }),
+                })->values();
+            })(),
         ];
     }
 }

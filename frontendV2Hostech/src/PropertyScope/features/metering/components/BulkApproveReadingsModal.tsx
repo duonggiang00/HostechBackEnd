@@ -28,7 +28,7 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
   const [tab, setTab] = useState<'PENDING' | 'APPROVED'>('PENDING');
 
   const { data: pendingData, isLoading: loadingPending } = usePropertyReadings(propertyId, {
-    status: 'PENDING',
+    status: 'SUBMITTED',
     period_start: thisMonthStart,
     period_end: thisMonthEnd,
   });
@@ -246,9 +246,25 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
                   <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {Object.entries(groupedPending).map(([roomName, readings]) => (
                       <div key={roomName}>
-                        <div className="px-6 py-2.5 bg-slate-50/70 dark:bg-slate-800/30 flex items-center gap-2">
-                          <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{roomName}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold">{readings.length}</span>
+                        <div className="px-6 py-2.5 bg-slate-50/70 dark:bg-slate-800/30 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{roomName}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold">{readings.length}</span>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const items = readings.filter(r => r.meter?.id).map(r => ({ meterId: r.meter!.id, readingId: r.id }));
+                              if (items.length > 0) {
+                                approveMutation.mutate(items);
+                              }
+                            }}
+                            disabled={isProcessing}
+                            className="flex items-center gap-1 px-2.5 py-1 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-50 shadow-sm"
+                          >
+                            <CheckCircle2 className="w-3 h-3" />
+                            Duyệt phòng này
+                          </button>
                         </div>
                         {readings.map((r) => {
                           const isElec = r.meter?.type === 'ELECTRIC';
@@ -293,10 +309,18 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
                               </div>
 
                               {/* Reading value */}
-                              <div className="text-right w-24 flex-shrink-0">
-                                <p className="text-sm font-black text-slate-900 dark:text-white">{r.reading_value?.toLocaleString('vi-VN')}</p>
-                                {r.consumption !== undefined && r.consumption > 0 && (
-                                  <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">+{r.consumption.toLocaleString('vi-VN')} {isElec ? 'kWh' : 'm³'}</p>
+                              <div className="text-right w-36 flex-shrink-0">
+                                {r.consumption !== undefined && r.consumption > 0 ? (
+                                  <div className="flex flex-col items-end">
+                                    <div className="flex items-center gap-1.5 text-xs">
+                                      <span className="text-slate-400 dark:text-slate-500 line-through">{(r.reading_value! - r.consumption).toLocaleString('vi-VN')}</span>
+                                      <span className="text-slate-300 dark:text-slate-600">→</span>
+                                      <span className="font-black text-slate-900 dark:text-white">{r.reading_value?.toLocaleString('vi-VN')}</span>
+                                    </div>
+                                    <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">+{r.consumption.toLocaleString('vi-VN')} {isElec ? 'kWh' : 'm³'}</p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm font-black text-slate-900 dark:text-white">{r.reading_value?.toLocaleString('vi-VN')} <span className="text-[10px] text-slate-500 font-normal">{isElec ? 'kWh' : 'm³'}</span></p>
                                 )}
                               </div>
 
@@ -350,12 +374,18 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
                               ? `${new Date(r.period_start).toLocaleDateString('vi-VN')} → ${new Date(r.period_end).toLocaleDateString('vi-VN')}`
                               : '—'}
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                              {r.reading_value?.toLocaleString('vi-VN')} {isElec ? 'kWh' : 'm³'}
-                            </p>
-                            {r.consumption !== undefined && r.consumption > 0 && (
-                              <p className="text-[10px] text-slate-400">+{r.consumption.toLocaleString('vi-VN')}</p>
+                          <div className="text-right w-36 flex-shrink-0">
+                            {r.consumption !== undefined && r.consumption > 0 ? (
+                              <div className="flex flex-col items-end">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <span className="text-slate-400 dark:text-slate-500 line-through">{(r.reading_value! - r.consumption).toLocaleString('vi-VN')}</span>
+                                  <span className="text-slate-300 dark:text-slate-600">→</span>
+                                  <span className="font-black text-slate-900 dark:text-white">{r.reading_value?.toLocaleString('vi-VN')}</span>
+                                </div>
+                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">+{r.consumption.toLocaleString('vi-VN')} {isElec ? 'kWh' : 'm³'}</p>
+                              </div>
+                            ) : (
+                              <p className="text-sm font-black text-slate-900 dark:text-white">{r.reading_value?.toLocaleString('vi-VN')} <span className="text-[10px] text-slate-500 font-normal">{isElec ? 'kWh' : 'm³'}</span></p>
                             )}
                           </div>
                         </div>
