@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, MoreVertical, Trash2 } from 'lucide-react';
+import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, Trash2 } from 'lucide-react';
 import { usePropertyUsers } from '../hooks/usePropertyUsers';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
