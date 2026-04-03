@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useContract, useContractActions } from '../hooks/useContracts';
 import { TerminateContractModal } from '../components/TerminateContractModal';
+import { ContractPreviewModal } from '../components/ContractPreviewModal';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -38,6 +39,7 @@ export default function ContractDetailPage() {
   const { data: contract, isLoading, error } = useContract(contractId);
   const { generateDocument, downloadDocument } = useContractActions();
   const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   
   const handlePrintContract = async () => {
@@ -147,6 +149,13 @@ export default function ContractDetailPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsPreviewModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-3.5 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Xem hợp đồng</span>
+          </button>
           <button 
             onClick={handlePrintContract}
             disabled={isPrinting}
@@ -509,6 +518,11 @@ export default function ContractDetailPage() {
         isOpen={isTerminateModalOpen}
         onClose={() => setIsTerminateModalOpen(false)}
         contract={contract}
+      />
+      <ContractPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        contractId={contractId || ''}
       />
     </div>
   );

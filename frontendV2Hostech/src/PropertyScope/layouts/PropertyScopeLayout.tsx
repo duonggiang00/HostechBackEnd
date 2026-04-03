@@ -16,6 +16,7 @@ import {
   CreditCard,
   Settings,
   Ticket,
+  DollarSign,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -27,6 +28,7 @@ import SidebarDropdownSection, { type SidebarDropdownItem } from '@/shared/compo
 import { useTickets } from '../features/tickets/hooks/useTickets';
 import { useContracts } from '../features/contracts/hooks/useContracts';
 import { usePropertyInvoices } from '../features/billing/hooks/usePropertyInvoices';
+import NotificationCenter from '@/shared/features/messaging/components/NotificationCenter';
 
 interface PropertyScopeLayoutProps {
   children: ReactNode;
@@ -43,6 +45,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   const { user, logout } = useAuthStore();
   const { propertyId } = useParams<{ propertyId: string }>();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   const dashboardPath = useDashboardHomePath(propertyId);
 
@@ -73,7 +76,15 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         { id: 'home', icon: Home, label: 'Tổng quan', path: dashboardPath, exact: true },
         { id: 'floors', icon: Layers, label: 'Tầng và sơ đồ', path: `/properties/${propertyId}/floors` },
         { id: 'rooms', icon: DoorOpen, label: 'Phòng', path: `/properties/${propertyId}/rooms` },
-        { id: 'templates', icon: Settings, label: 'Mẫu và cấu hình', path: `/properties/${propertyId}/templates` },
+        { id: 'finances', icon: DollarSign, label: 'Tài chính', path: `/properties/${propertyId}/invoices`, children: [
+          { id: 'invoices', label: 'Phiếu thu', path: `/properties/${propertyId}/invoices` },
+          { id: 'expenses', label: 'Phiếu chi / Hoàn cọc', path: `/properties/${propertyId}/expenses` },
+        ]},
+        { id: 'settings', icon: Settings, label: 'Cài đặt tòa nhà', path: `/properties/${propertyId}/settings`, children: [
+          { id: 'general', label: 'Thông tin chung', path: `/properties/${propertyId}/settings` },
+          { id: 'services', label: 'Dịch vụ & Bảng giá', path: `/properties/${propertyId}/services` },
+        ]},
+        { id: 'templates', icon: FileText, label: 'Mẫu và cấu hình', path: `/properties/${propertyId}/templates` },
       ],
     },
     {
@@ -269,7 +280,10 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>
-            <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer border border-slate-100 dark:border-slate-600 relative group">
+            <div 
+              onClick={() => setIsNotificationOpen(true)}
+              className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer border border-slate-100 dark:border-slate-600 relative group"
+            >
               <Bell className="w-5 h-5" />
               <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-800 group-hover:scale-110 transition-transform" />
             </div>
@@ -284,6 +298,8 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
           <div className="max-w-7xl mx-auto animate-in fade-in duration-700">{children}</div>
         </main>
       </div>
+
+      <NotificationCenter isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
     </div>
   );
 }

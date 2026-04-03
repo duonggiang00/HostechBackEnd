@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { echo } from '@/shared/utils/echo';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
+import { useBulkSubmitReadings } from '../hooks/useMeters';
 import { meteringApi } from '../api/metering';
-import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X } from 'lucide-react';
+import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X, Send } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import toast from 'react-hot-toast';
 
@@ -54,6 +55,11 @@ export default function QuickReadingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const proofInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const proofPreviewUrlsRef = useRef<Record<string, string>>({});
+
+  // Bulk submit flow
+  const [savedDraftIds, setSavedDraftIds] = useState<string[]>([]);
+  const [showSubmitPrompt, setShowSubmitPrompt] = useState(false);
+  const bulkSubmitMutation = useBulkSubmitReadings(propertyId);
 
   useEffect(() => {
     proofPreviewUrlsRef.current = proofPreviewUrls;
@@ -233,9 +239,21 @@ export default function QuickReadingPage() {
         }),
       );
 
-      await bulkCreateReadings.mutateAsync(payload);
-      toast.success(`Đã chốt thành công ${payload.length} chỉ số.`);
-      navigate(`/properties/${propertyId}/meters`);
+      const result = await bulkCreateReadings.mutateAsync(payload);
+      // Kiểm tra kết quả trả về: Manager → APPROVED, Staff → DRAFT
+      const createdItems = Array.isArray(result) ? result : [];
+      const draftIds = createdItems.filter((r: any) => r.status === 'DRAFT').map((r: any) => r.id);
+
+      if (draftIds.length > 0) {
+        // Staff flow: có bản nháp → hiện prompt gửi duyệt
+        setSavedDraftIds(draftIds);
+        toast.success(`Đã lưu ${payload.length} bản nháp thành công.`);
+        setShowSubmitPrompt(true);
+      } else {
+        // Manager flow: tự động APPROVED → chuyển về danh sách
+        toast.success(`Đã chốt thành công ${payload.length} chỉ số.`);
+        navigate(`/properties/${propertyId}/meters`);
+      }
     } catch (error: any) {
       const details = error?.response?.data?.errors
         ? Object.values(error.response.data.errors).flat().join(', ')
@@ -536,6 +554,53 @@ export default function QuickReadingPage() {
               <X className="w-6 h-6" />
             </button>
             <img src={previewImageUrl} alt="Ảnh chứng minh" className="w-full max-h-[85vh] object-contain rounded-lg" />
+          </div>
+        </div>
+      )}
+
+      {/* Submit Prompt Overlay */}
+      {showSubmitPrompt && (
+        <div className="fixed inset-0 z-[90] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-8 max-w-md w-full text-center space-y-6">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-50 dark:bg-green-500/10 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white">Lưu thành công!</h3>
+              <p className="text-slate-500 dark:text-slate-400 mt-2">
+                Đã lưu <span className="font-bold text-indigo-600">{savedDraftIds.length}</span> bản nháp.
+                Bạn muốn gửi duyệt ngay cho Quản lý?
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  if (savedDraftIds.length > 0) {
+                    await bulkSubmitMutation.mutateAsync(savedDraftIds);
+                  }
+                  setShowSubmitPrompt(false);
+                  navigate(`/properties/${propertyId}/meters`);
+                }}
+                disabled={bulkSubmitMutation.isPending}
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {bulkSubmitMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+                Gửi duyệt ngay
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubmitPrompt(false);
+                  navigate(`/properties/${propertyId}/meters`);
+                }}
+                className="w-full py-3 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              >
+                Về danh sách (giữ bản nháp)
+              </button>
+            </div>
           </div>
         </div>
       )}

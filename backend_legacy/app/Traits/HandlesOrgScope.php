@@ -1,0 +1,43 @@
+<?php
+
+namespace App\Traits;
+
+use App\Models\Org\User;
+use Illuminate\Database\Eloquent\Model;
+
+trait HandlesOrgScope
+{
+    /**
+     * Check if user can access the model within their organization.
+     *
+     * @param  Model  $model  Matches valid models with org_id
+     */
+    protected function checkOrgScope(User $user, Model $model): bool
+    {
+        if ($user->hasRole('Admin')) {
+            return true;
+        }
+
+        // Must be in same org
+        // Use loose comparison or string casting to avoid issues with UUID objects vs strings
+        return (string) $user->org_id === (string) $model->org_id;
+    }
+
+    /**
+     * Check if user is an Owner of the organization.
+     */
+    protected function isOwner(User $user): bool
+    {
+        return $user->hasRole('Owner');
+    }
+
+    protected function isManager(User $user): bool
+    {
+        return $user->hasRole('Manager');
+    }
+
+    protected function isStaff(User $user): bool
+    {
+        return $user->hasRole('Staff');
+    }
+}

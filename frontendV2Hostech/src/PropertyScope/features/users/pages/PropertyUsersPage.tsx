@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, MoreVertical, Trash2 } from 'lucide-react';
+import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, Trash2, DoorOpen } from 'lucide-react';
 import { usePropertyUsers } from '../hooks/usePropertyUsers';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -156,6 +156,7 @@ export default function PropertyUsersPage() {
                         <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Người dùng</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Phòng</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Trạng thái</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
                         </tr>
@@ -185,6 +186,20 @@ export default function PropertyUsersPage() {
                             }`}>
                               {user.roles?.[0] || user.role || 'NA'}
                             </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {user.assigned_rooms && user.assigned_rooms.length > 0 ? (
+                              <div className="flex flex-wrap gap-1.5">
+                                {user.assigned_rooms.map(room => (
+                                  <span key={room.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 rounded-lg text-xs font-bold border border-violet-100 dark:border-violet-800/50">
+                                    <DoorOpen className="w-3.5 h-3.5" />
+                                    {room.name || room.code}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">Chưa gán phòng</span>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-black uppercase tracking-tight">

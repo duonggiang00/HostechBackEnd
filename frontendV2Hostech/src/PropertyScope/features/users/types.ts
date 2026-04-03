@@ -35,6 +35,7 @@ export interface PropertyUser {
   roles?: any;
   permissions?: any;
   properties?: any;
+  assigned_rooms?: { id: string; name: string; code: string }[];
   created_at: string;
   updated_at?: string;
 }

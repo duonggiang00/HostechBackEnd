@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Features\Property\Policies;
+
+use App\Contracts\RbacModuleProvider;
+use App\Features\Org\Models\User;
+use App\Features\Property\Models\Property;
+use App\Traits\HandlesPropertyScope;
+
+class PropertyPolicy implements RbacModuleProvider
+{
+    use HandlesPropertyScope;
+
+    public static function getModuleName(): string
+    {
+        return 'Properties'; // Matches the module name in existing Seeder/Policies context
+    }
+
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'CRUD',
+            'Manager' => 'RU',
+            'Staff' => 'R',
+            'Tenant' => 'R', // Granted but Scoped via Service/Policy contract check
+        ];
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $user->can('viewAny Properties');
+    }
+
+    public function view(User $user, Property $property): bool
+    {
+        if (! $user->can('view Properties')) {
+            return false;
+        }
+
+        if ($user->hasRole('Tenant')) {
+            // Tenant chỉ được xem chi tiết Tòa nhà nếu đang có Contract ACTIVE hoặc PENDING_PAYMENT tại đó
+            return \App\Features\Contract\Models\Contract::where('property_id', $property->id)
+                ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
+                ->whereHas('members', function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->where('status', 'APPROVED');
+                })
+                ->exists();
+        }
+
+        return $this->checkPropertyScope($user, $property);
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->can('create Properties');
+    }
+
+    public function update(User $user, Property $property): bool
+    {
+        if (! $user->can('update Properties')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $property);
+    }
+
+    public function delete(User $user, Property $property): bool
+    {
+        if (! $user->can('delete Properties')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $property);
+    }
+}

@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Policies\Property;
+
+use App\Contracts\RbacModuleProvider;
+use App\Models\Org\User;
+use App\Models\Property\Room;
+use App\Models\Property\RoomAsset;
+use App\Traits\HandlesPropertyScope;
+use Illuminate\Auth\Access\HandlesAuthorization;
+
+class RoomAssetPolicy implements RbacModuleProvider
+{
+    use HandlesAuthorization, HandlesPropertyScope;
+
+    /**
+     * Get the module name for RBAC
+     */
+    public static function getModuleName(): string
+    {
+        return 'RoomAsset';
+    }
+
+    /**
+     * Get default roles and their permissions for this module
+     */
+    public static function getRolePermissions(): array
+    {
+        return [
+            'Owner' => 'CRUD',
+            'Manager' => 'CRUD',
+            'Staff' => 'V',
+            'Tenant' => 'V',
+        ];
+    }
+
+    private function checkAccess(User $user, ?RoomAsset $asset = null, ?Room $room = null): bool
+    {
+        // Require at least one model context
+        if (! $asset && ! $room) {
+            return false;
+        }
+
+        $targetRoom = $asset ? $asset->room : $room;
+        if (! $targetRoom) {
+            return false;
+        }
+
+        // Tenants only see assets in standard active contracts
+        if ($user->hasRole('Tenant')) {
+            return \App\Models\Contract\ContractMember::where('user_id', $user->id)
+                ->whereHas('contract', function ($q) use ($targetRoom) {
+                    $q->where('room_id', $targetRoom->id)->where('status', 'ACTIVE');
+                })->exists();
+        }
+
+        return $this->checkPropertyScope($user, $targetRoom);
+    }
+
+    public function viewAny(User $user, ?Room $room = null): bool
+    {
+        if (! $user->hasPermissionTo('viewAny RoomAsset')) {
+            return false;
+        }
+
+        if (! $room) {
+            return $user->hasRole('Admin') || $user->hasRole('Owner');
+        }
+
+        return $this->checkAccess($user, null, $room);
+    }
+
+    public function view(User $user, RoomAsset $asset): bool
+    {
+        return $user->hasPermissionTo('view RoomAsset') && $this->checkAccess($user, $asset);
+    }
+
+    public function create(User $user, ?Room $room = null): bool
+    {
+        if (! $user->hasPermissionTo('create RoomAsset')) {
+            return false;
+        }
+
+        if (! $room) {
+            return $user->hasRole('Admin') || $user->hasRole('Owner');
+        }
+
+        return $this->checkAccess($user, null, $room);
+    }
+
+    public function update(User $user, RoomAsset $asset): bool
+    {
+        return $user->hasPermissionTo('update RoomAsset') && $this->checkAccess($user, $asset);
+    }
+
+    public function delete(User $user, RoomAsset $asset): bool
+    {
+        return $user->hasPermissionTo('delete RoomAsset') && $this->checkAccess($user, $asset);
+    }
+}

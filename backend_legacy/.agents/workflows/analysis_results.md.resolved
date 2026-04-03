@@ -1,0 +1,56 @@
+# Skill Recommendation Report for Multi-Tenant SaaS Frontend
+
+Based on your comprehensive requirements for a Multi-Tenant SaaS platform (Boarding House Management), here is the recommended set of skills and roles for agents to effectively build and complete this project.
+
+## 1. Core Architecture & Orchestration
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@app-builder` | Main orchestrator to coordinate complex full-stack/frontend feature builds. |
+| `@senior-architect` | Designing the Multi-Tenant boundaries and the "Context Switcher" logic. |
+| `@domain-driven-design` | Mapping the "Organization" vs "Property" vs "Tenant" scopes. |
+
+## 2. Frontend Development & State
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@typescript-pro` | Managing complex data types for RBAC, Permissions, and Multi-Scope payloads. |
+| `@react-nextjs-development` | High-performance React patterns, SSR for portals, and optimized routing. |
+| `@react-state-management` | Critical for the "Context Switcher" that manages `organization_id` and `property_id`. |
+| `@zustand-store-ts` | Lightweight and robust state management for the central store (User, Roles, Scopes). |
+
+## 3. UI/UX & Design (The "WOW" Factor)
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@ui-ux-pro-max` | Access to 50+ styles and palettes to create a premium, state-of-the-art interface. |
+| `@frontend-design` | Creating distinctive, non-generic visual identities for the 3 portals. |
+| `@tailwind-patterns` | Efficient, responsive design for both Desktop (Admin) and Mobile-First (Tenant App). |
+| `@scroll-experience` | Adding micro-animations and immersive transitions for a premium feel. |
+
+## 4. Security & Integration
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@auth-implementation-patterns` | Implementing Laravel Sanctum/Fortify flows (JWT, 2FA, CSRF). |
+| `@laravel-expert` | Deep integration with Laravel Echo (WebSockets) and Sanctum middleware. |
+| `@api-security-best-practices` | Securely handling tokens and preventing unauthorized scope access. |
+
+## 5. Specialized Features
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@react-flow-architect` | Perfect for building the "Visual Floor Plan" (Kanban/Grid) with interactive nodes. |
+| `@pdf-official` | Handling contract generation, PDF viewing, and e-signature canvas integration. |
+| `@camera-integration` | Necessary for the Tenant App's feature to scan QR codes and upload room status photos. |
+
+## 6. Verification & Quality
+| Skill | Why it's needed |
+| :--- | :--- |
+| `@playwright-skill` | E2E testing for complex RBAC flows (verifying Staff in Area A cannot see Area B). |
+| `@web-performance-optimization` | Ensuring the PWA is fast and passes Core Web Vitals. |
+| `@kaizen` | Continuous improvement of code quality and standardization across the 3 portals. |
+
+---
+
+### Suggested Workflow:
+1. **Phase 1: Foundation**: Use `@senior-architect` and `@app-builder` to set up the Multi-Tenant routing and Auth context.
+2. **Phase 2: UI Design System**: Use `@ui-ux-pro-max` to define the tokens and visual style.
+3. **Phase 3: Module Implementation**: Activate specialized skills like `@react-flow-architect` for the Floor Plan and `@pdf-official` for Contracts.
+4. **Phase 4: Mobile & PWA**: Use `@frontend-design` and `@mobile-design` to polish the Tenant App.
+5. **Phase 5: Verification**: Run `@playwright-skill` for automated QA across all user roles.

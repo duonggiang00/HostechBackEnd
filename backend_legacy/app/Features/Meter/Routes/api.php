@@ -1,0 +1,28 @@
+<?php
+
+use App\Features\Meter\Controllers\AdjustmentNoteController;
+use App\Features\Meter\Controllers\MeterController;
+use App\Features\Meter\Controllers\MeterReadingController;
+use Illuminate\Support\Facades\Route;
+
+// Meters
+Route::group(['prefix' => 'api'], function () {
+    Route::get('properties/{property_id}/meters/statistics', [MeterController::class, 'statisticsByProperty']);
+    Route::get('properties/{property_id}/meters', [MeterController::class, 'indexByProperty']);
+    Route::get('properties/{property_id}/floors/{floor_id}/meters', [MeterController::class, 'indexByFloor']);
+    Route::apiResource('meters', MeterController::class);
+
+    // Meter Readings
+    Route::post('properties/{property_id}/meters/bulk-readings', [MeterReadingController::class, 'bulkStore']);
+    Route::post('meters/readings/bulk-submit', [MeterReadingController::class, 'bulkSubmit']);
+    Route::post('meters/{meter}/readings/{reading}/submit', [MeterReadingController::class, 'submit']);
+    Route::put('meters/{meter}/readings/{reading}/approve', [MeterReadingController::class, 'approve']);
+    Route::put('meters/{meter}/readings/{reading}/reject', [MeterReadingController::class, 'reject']);
+    Route::apiResource('meters.readings', MeterReadingController::class)->scoped();
+
+    // Meter Reading Adjustments
+    Route::post('meter-readings/{reading}/adjustments', [AdjustmentNoteController::class, 'store']);
+    Route::get('meter-readings/{reading}/adjustments', [AdjustmentNoteController::class, 'index']);
+    Route::put('meter-readings/{reading}/adjustments/{adjustment}/approve', [AdjustmentNoteController::class, 'approve']);
+    Route::put('meter-readings/{reading}/adjustments/{adjustment}/reject', [AdjustmentNoteController::class, 'reject']);
+});

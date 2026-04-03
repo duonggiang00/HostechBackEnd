@@ -1,0 +1,19 @@
+{
+    "property_id": "70bafd79-6e35-4c82-b0a4-69f7388c4943",
+    "room_id": "b2ab1009-30b2-4091-9029-d81dc9f2d553",
+    "status": "PENDING_SIGNATURE",
+    "start_date": "2026-04-03",
+    "end_date": "2027-04-03",
+    "billing_cycle": "2",
+    "due_day": 25,
+    "cutoff_day": 20,
+    "rent_price": 4000000,
+    "deposit_amount": 2000000,
+    "org_id": "26d6c6d2-380f-4a17-b79b-8016ca28c65a",
+    "created_by_user_id": "19081906-a923-46d0-8710-f9631da2f5cc",
+    "join_code": "JOXUIMHR",
+    "base_rent": 4000000,
+    "fixed_services_fee": 0,
+    "total_rent": 4000000,
+    "next_billing_date": "2026-06-03"
+}

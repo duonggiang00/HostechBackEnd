@@ -1,0 +1,123 @@
+﻿
+   FAIL  Tests\Feature\Contract\ContractTest
+  Γ¿» admin can create contract          11.95s  
+  Γ£ô user cannot create contract for anΓÇª 1.56s  
+  Γ£ô can list contracts with filters     1.66s  
+  Γ£ô can update contract                 1.59s  
+  Γ£ô can soft delete and restore contraΓÇª 1.61s  
+  Γ£ô can force delete contract           1.57s  
+  Γ¿» manager can create contract         1.53s  
+  Γ¿» staff cannot create contract        1.56s  
+  Γ£ô staff can view any contract in org  1.65s  
+  Γ£ô tenant can view own contract        1.65s  
+  Γ£ô tenant cannot view other contract   1.99s  
+  Γ£ô unauthorized user cannot list contΓÇª 1.72s  
+  Γ£ô admin can add registered tenant acΓÇª 1.61s  
+  Γ£ô admin can update contract member    1.62s  
+  Γ£ô admin can mark contract member asΓÇª  1.65s  
+  Γ£ô tenant can request to add roommateΓÇª 1.63s  
+  Γ£ô admin can approve pending roommateΓÇª 1.67s  
+  Γ£ô tenant cannot approve their own orΓÇª 1.63s  
+  Γ£ô cannot create contract with cutoffΓÇª 1.56s  
+  Γ¿» initial invoice is created only afΓÇª 1.58s  
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\CoΓÇª  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'property_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `property_user` (`created_at`, `property_id`, `updated_at`, `user_id`) values (2026-04-03 03:24:34, ?, 2026-04-03 03:24:34, 5b14eb09-d310-424d-b5f5-12f26a3f39f3), (2026-04-03 03:24:34, 179c025d-da63-47b7-b55f-bff417ab9716, 2026-04-03 03:24:34, 5b14eb09-d310-424d-b5f5-12f26a3f39f3))
+
+  at vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+     49Γûò             $this->bindValues($statement, $this->prepareBindings($bindings));
+     50Γûò 
+     51Γûò             $this->recordsHaveBeenModified();
+     52Γûò 
+  Γ₧£  53Γûò             $result = $statement->execute();
+     54Γûò 
+     55Γûò             $this->lastInsertId = $this->getPdo()->lastInsertId($sequence);
+     56Γûò 
+     57Γûò             return $result;
+
+  1   vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\CoΓÇª  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'property_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `property_user` (`created_at`, `property_id`, `updated_at`, `user_id`) values (2026-04-03 03:24:43, ?, 2026-04-03 03:24:43, ab49f4dc-32cb-49b8-81d7-09b182f7c0f8), (2026-04-03 03:24:43, 2d7d4c97-008b-476a-a31e-7acc94cae504, 2026-04-03 03:24:43, ab49f4dc-32cb-49b8-81d7-09b182f7c0f8))
+
+  at vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+     49Γûò             $this->bindValues($statement, $this->prepareBindings($bindings));
+     50Γûò 
+     51Γûò             $this->recordsHaveBeenModified();
+     52Γûò 
+  Γ₧£  53Γûò             $result = $statement->execute();
+     54Γûò 
+     55Γûò             $this->lastInsertId = $this->getPdo()->lastInsertId($sequence);
+     56Γûò 
+     57Γûò             return $result;
+
+  1   vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\Contract\ContractTΓÇª   
+  Expected response status code [403] but received 422.
+Failed asserting that 422 is identical to 403.
+
+The following errors occurred during the last request:
+
+{
+    "message": "Chß╗ë t├ái khoß║ún Tenant mß╗¢i ─æ╞░ß╗úc th├¬m v├áo hß╗úp ─æß╗ông. (and 1 more error)",
+    "errors": {
+        "members.0.user_id": [
+            "Chß╗ë t├ái khoß║ún Tenant mß╗¢i ─æ╞░ß╗úc th├¬m v├áo hß╗úp ─æß╗ông.",
+            "C╞░ d├ón n├áy kh├┤ng thuß╗Öc bß║Ñt ─æß╗Öng sß║ún ─æ├ú chß╗ìn."
+        ]
+    }
+}
+
+  at tests\Feature\Contract\ContractTest.php:313
+    309Γûò                 'role' => 'TENANT',
+    310Γûò                 'is_primary' => true,
+    311Γûò             ],
+    312Γûò         ],
+  Γ₧£ 313Γûò     ], ['X-Org-Id' => $org->id])->assertStatus(403);
+    314Γûò });
+    315Γûò 
+    316Γûò test('staff can view any contract in org', function () {
+    317Γûò     $org = Org::factory()->create();
+
+  ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ  
+   FAILED  Tests\Feature\Contract\ContractTΓÇª   
+  Expected response status code [201] but received 422.
+Failed asserting that 422 is identical to 201.
+
+The following errors occurred during the last request:
+
+{
+    "message": "Ph├▓ng ─æang bß║úo tr├¼, kh├┤ng thß╗â tß║ío hß╗úp ─æß╗ông mß╗¢i. (and 2 more errors)",
+    "errors": {
+        "room_id": [
+            "Ph├▓ng ─æang bß║úo tr├¼, kh├┤ng thß╗â tß║ío hß╗úp ─æß╗ông mß╗¢i."
+        ],
+        "members.0.user_id": [
+            "C╞░ d├ón n├áy kh├┤ng thuß╗Öc bß║Ñt ─æß╗Öng sß║ún ─æ├ú chß╗ìn."
+        ],
+        "members.1.user_id": [
+            "C╞░ d├ón n├áy kh├┤ng thuß╗Öc bß║Ñt ─æß╗Öng sß║ún ─æ├ú chß╗ìn."
+        ]
+    }
+}
+
+  at tests\Feature\Contract\ContractTest.php:687
+    683Γûò                 'role' => 'ROOMMATE',
+    684Γûò                 'is_primary' => false,
+    685Γûò             ],
+    686Γûò         ],
+  Γ₧£ 687Γûò     ])->assertStatus(201)
+    688Γûò         ->assertJsonPath('data.status', 'PENDING_SIGNATURE');
+    689Γûò 
+    690Γûò     $contractId = $response->json('data.id');
+    691Γûò
+
+
+  Tests:    4 failed, 16 passed (49 assertions)
+  Duration: 43.17s
+
