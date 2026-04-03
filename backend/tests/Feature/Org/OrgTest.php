@@ -1,13 +1,13 @@
 <?php
 
+namespace Tests\Feature\Org;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
-
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
-
 use function Pest\Laravel\actingAs;
+
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);

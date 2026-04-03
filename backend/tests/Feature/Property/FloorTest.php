@@ -1,9 +1,8 @@
 <?php
 
+namespace Tests\Feature\Property;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
-
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
 use App\Features\Property\Models\Floor;
@@ -15,6 +14,8 @@ use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
+
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);

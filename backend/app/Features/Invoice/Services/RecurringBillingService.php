@@ -186,7 +186,9 @@ class RecurringBillingService
 
         $prevValue = $previousReading ? $previousReading->reading_value : $meter->base_reading;
         $currValue = $currentReading->reading_value;
-        $usage = $currValue - $prevValue;
+        
+        // Priority: Use pre-calculated consumption from reading record, fallback to manual calculation if missing
+        $usage = $currentReading->consumption ?? ($currValue - $prevValue);
 
         if ($usage < 0) {
             $usage = 0;

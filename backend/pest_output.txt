@@ -1,0 +1,282 @@
+
+   FAIL  Tests\Feature\Contract\ContractTest
+  ⨯ admin can create contract                                                      11.30s  
+  ⨯ user cannot create contract for another org                                     1.58s  
+  ⨯ can list contracts with filters                                                 1.56s  
+  ⨯ can update contract                                                             1.66s  
+  ───────────────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Contract\ContractTest > admin can create contr…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'property_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `property_user` (`created_at`, `property_id`, `updated_at`, `user_id`) values (2026-04-03 02:56:36, ?, 2026-04-03 02:56:36, b36be763-9e6b-4c86-98db-e79dc9697b9c), (2026-04-03 02:56:36, 41d5e4d0-c88f-4c5d-9d9b-7e66207d1ac2, 2026-04-03 02:56:36, b36be763-9e6b-4c86-98db-e79dc9697b9c))
+
+  at vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+     49▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+     50▕ 
+     51▕             $this->recordsHaveBeenModified();
+     52▕ 
+  ➜  53▕             $result = $statement->execute();
+     54▕ 
+     55▕             $this->lastInsertId = $this->getPdo()->lastInsertId($sequence);
+     56▕ 
+     57▕             return $result;
+
+  1   vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+  ───────────────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Contract\ContractTest > user cannot create con…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'org_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `room_status_histories` (`room_id`, `changed_by_user_id`, `id`, `org_id`, `updated_at`, `created_at`) values (b1164283-a520-4966-9ded-f919bcdee46f, adabee23-32c1-4d01-ab5d-64bcdce6210b, 019d5145-6f93-7192-9929-6693a9ec1736, ?, 2026-04-03 02:56:38, 2026-04-03 02:56:38))
+
+  at vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+     49▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+     50▕ 
+     51▕             $this->recordsHaveBeenModified();
+     52▕ 
+  ➜  53▕             $result = $statement->execute();
+     54▕ 
+     55▕             $this->lastInsertId = $this->getPdo()->lastInsertId($sequence);
+     56▕ 
+     57▕             return $result;
+
+  1   vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+  ───────────────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Contract\ContractTest > can list contracts wit…  QueryException   
+  SQLSTATE[23000]: Integrity constraint violation: 1048 Column 'org_id' cannot be null (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `room_status_histories` (`room_id`, `changed_by_user_id`, `id`, `org_id`, `updated_at`, `created_at`) values (a3438ee1-2e65-4e13-a19d-4854bef84c1e, 041b897f-1a05-4490-ba48-29e4df7f1089, 019d5145-75ad-73e5-89f8-a43e0ee354e0, ?, 2026-04-03 02:56:39, 2026-04-03 02:56:39))
+
+  at vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+     49▕             $this->bindValues($statement, $this->prepareBindings($bindings));
+     50▕ 
+     51▕             $this->recordsHaveBeenModified();
+     52▕ 
+  ➜  53▕             $result = $statement->execute();
+     54▕ 
+     55▕             $this->lastInsertId = $this->getPdo()->lastInsertId($sequence);
+     56▕ 
+     57▕             return $result;
+
+  1   vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:827
+
+  ───────────────────────────────────────────────────────────────────────────────────────  
+   FAILED  Tests\Feature\Contract\ContractTest > can update contract                       
+  Expected response status code [200] but received 500.
+Failed asserting that 500 is identical to 200.
+
+The following exception occurred during the last request:
+
+PDOException: SQLSTATE[HY000]: General error: 1364 Field 'to_status' doesn't have a default value in C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php:53
+Stack trace:
+#0 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php(53): PDOStatement->execute()
+#1 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Connection.php(827): Illuminate\Database\MySqlConnection->Illuminate\Database\{closure}('insert into `ro...', Array)
+#2 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Connection.php(794): Illuminate\Database\Connection->runQueryCallback('insert into `ro...', Array, Object(Closure))
+#3 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php(42): Illuminate\Database\Connection->run('insert into `ro...', Array, Object(Closure))
+#4 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php(4091): Illuminate\Database\MySqlConnection->insert('insert into `ro...', Array)
+#5 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(2235): Illuminate\Database\Query\Builder->insert(Array)
+#6 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1412): Illuminate\Database\Eloquent\Builder->__call('insert', Array)
+#7 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1240): Illuminate\Database\Eloquent\Model->performInsert(Object(Illuminate\Database\Eloquent\Builder))
+#8 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(1219): Illuminate\Database\Eloquent\Model->save()
+#9 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\helpers.php(388): Illuminate\Database\Eloquent\Builder->Illuminate\Database\Eloquent\{closure}(Object(App\Features\Property\Models\RoomStatusHistory))
+#10 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(1218): tap(Object(App\Features\Property\Models\RoomStatusHistory), Object(Closure))
+#11 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\Traits\ForwardsCalls.php(23): Illuminate\Database\Eloquent\Builder->create(Array)
+#12 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2540): Illuminate\Database\Eloquent\Model->forwardCallTo(Object(Illuminate\Database\Eloquent\Builder), 'create', Array)
+#13 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2556): Illuminate\Database\Eloquent\Model->__call('create', Array)
+#14 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Observers\ContractObserver.php(82): Illuminate\Database\Eloquent\Model::__callStatic('create', Array)
+#15 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Observers\ContractObserver.php(26): App\Features\Contract\Observers\ContractObserver->syncRoomStatus(Object(App\Features\Contract\Models\Contract))
+#16 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(512): App\Features\Contract\Observers\ContractObserver->updated(Object(App\Features\Contract\Models\Contract))
+#17 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(319): Illuminate\Events\Dispatcher->Illuminate\Events\{closure}('eloquent.update...', Array)
+#18 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(299): Illuminate\Events\Dispatcher->invokeListeners('eloquent.update...', Array, false)
+#19 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasEvents.php(224): Illuminate\Events\Dispatcher->dispatch('eloquent.update...', Object(App\Features\Contract\Models\Contract))
+#20 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1320): Illuminate\Database\Eloquent\Model->fireModelEvent('updated', false)
+#21 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1233): Illuminate\Database\Eloquent\Model->performUpdate(Object(Illuminate\Database\Eloquent\Builder))
+#22 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1090): Illuminate\Database\Eloquent\Model->save(Array)
+#23 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Services\ContractService.php(344): Illuminate\Database\Eloquent\Model->update(Array)
+#24 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Concerns\ManagesTransactions.php(35): App\Features\Contract\Services\ContractService->App\Features\Contract\Services\{closure}(Object(Illuminate\Database\MySqlConnection))
+#25 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\DatabaseManager.php(491): Illuminate\Database\Connection->transaction(Object(Closure))
+#26 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\Facades\Facade.php(363): Illuminate\Database\DatabaseManager->__call('transaction', Array)
+#27 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Services\ContractService.php(311): Illuminate\Support\Facades\Facade::__callStatic('transaction', Array)
+#28 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Controllers\ContractController.php(108): App\Features\Contract\Services\ContractService->update('019d5145-7bbf-7...', Array)
+#29 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\ControllerDispatcher.php(46): App\Features\Contract\Controllers\ContractController->update(Object(App\Features\Contract\Requests\ContractUpdateRequest), '019d5145-7bbf-7...')
+#30 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Route.php(265): Illuminate\Routing\ControllerDispatcher->dispatch(Object(Illuminate\Routing\Route), Object(App\Features\Contract\Controllers\ContractController), 'update')
+#31 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Route.php(211): Illuminate\Routing\Route->runController()
+#32 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(822): Illuminate\Routing\Route->run()
+#33 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}(Object(Illuminate\Http\Request))
+#34 C:\laragon\www\laravel\HostechBackEnd\backend\app\Http\Middleware\ResolveTenant.php(33): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#35 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): App\Http\Middleware\ResolveTenant->handle(Object(Illuminate\Http\Request), Object(Closure))
+#36 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Middleware\SubstituteBindings.php(50): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#37 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#38 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Auth\Middleware\Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#39 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle(Object(Illuminate\Http\Request), Object(Closure), 'sanctum')
+#40 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#41 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(821): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#42 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(800): Illuminate\Routing\Router->runRouteWithinStack(Object(Illuminate\Routing\Route), Object(Illuminate\Http\Request))
+#43 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(764): Illuminate\Routing\Router->runRoute(Object(Illuminate\Http\Request), Object(Illuminate\Routing\Route))
+#44 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(753): Illuminate\Routing\Router->dispatchToRoute(Object(Illuminate\Http\Request))
+#45 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(200): Illuminate\Routing\Router->dispatch(Object(Illuminate\Http\Request))
+#46 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}(Object(Illuminate\Http\Request))
+#47 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#48 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#49 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle(Object(Illuminate\Http\Request), Object(Closure))
+#50 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#51 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#52 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#53 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#54 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle(Object(Illuminate\Http\Request), Object(Closure))
+#55 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#56 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle(Object(Illuminate\Http\Request), Object(Closure))
+#57 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#58 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle(Object(Illuminate\Http\Request), Object(Closure))
+#59 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#60 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle(Object(Illuminate\Http\Request), Object(Closure))
+#61 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#62 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle(Object(Illuminate\Http\Request), Object(Closure))
+#63 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePathEncoding.php(26): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#64 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle(Object(Illuminate\Http\Request), Object(Closure))
+#65 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#66 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(175): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#67 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter(Object(Illuminate\Http\Request))
+#68 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle(Object(Illuminate\Http\Request))
+#69 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call('PUT', '/api/contracts/...', Array, Array, Array, Array, '{"status":"ACTI...')
+#70 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(441): Illuminate\Foundation\Testing\TestCase->json('PUT', '/api/contracts/...', Array, Array, 0)
+#71 [internal function]: Illuminate\Foundation\Testing\TestCase->putJson('/api/contracts/...', Array, Array)
+#72 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\Reflection.php(38): ReflectionMethod->invoke(Object(P\Tests\Feature\Contract\ContractTest), '/api/contracts/...', Array, Array)
+#73 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\HigherOrderMessage.php(58): Pest\Support\Reflection::call(Object(P\Tests\Feature\Contract\ContractTest), 'putJson', Array)
+#74 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\HigherOrderTapProxy.php(64): Pest\Support\HigherOrderMessage->call(Object(P\Tests\Feature\Contract\ContractTest))
+#75 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest-plugin-laravel\src\Http.php(239): Pest\Support\HigherOrderTapProxy->__call('putJson', Array)
+#76 C:\laragon\www\laravel\HostechBackEnd\backend\tests\Feature\Contract\ContractTest.php(185): Pest\Laravel\putJson('/api/contracts/...', Array, Array)
+#77 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Factories\TestCaseMethodFactory.php(172): P\Tests\Feature\Contract\ContractTest->Tests\Feature\Contract\{closure}()
+#78 [internal function]: P\Tests\Feature\Contract\ContractTest->Pest\Factories\{closure}()
+#79 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(429): call_user_func_array(Object(Closure), Array)
+#80 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\ExceptionTrace.php(26): P\Tests\Feature\Contract\ContractTest->Pest\Concerns\{closure}()
+#81 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(429): Pest\Support\ExceptionTrace::ensure(Object(Closure))
+#82 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(331): P\Tests\Feature\Contract\ContractTest->__callClosure(Object(Closure), Array)
+#83 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Factories\TestCaseFactory.php(170) : eval()'d code(44): P\Tests\Feature\Contract\ContractTest->__runTest(Object(Closure))
+#84 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(1332): P\Tests\Feature\Contract\ContractTest->__pest_evaluable_can_update_contract()
+#85 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(519): PHPUnit\Framework\TestCase->runTest()
+#86 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestRunner\TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()
+#87 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(359): PHPUnit\Framework\TestRunner->run(Object(P\Tests\Feature\Contract\ContractTest))
+#88 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestCase->run()
+#89 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\TextUI\TestRunner.php(64): PHPUnit\Framework\TestSuite->run()
+#90 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\TextUI\Application.php(229): PHPUnit\TextUI\TestRunner->run(Object(PHPUnit\TextUI\Configuration\Configuration), Object(PHPUnit\Runner\ResultCache\DefaultResultCache), Object(PHPUnit\Framework\TestSuite))
+#91 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Kernel.php(103): PHPUnit\TextUI\Application->run(Array)
+#92 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\bin\pest(184): Pest\Kernel->handle(Array, Array)
+#93 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\bin\pest(192): {closure}()
+#94 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\bin\pest(119): include('C:\\laragon\\www\\...')
+#95 {main}
+
+Next Illuminate\Database\QueryException: SQLSTATE[HY000]: General error: 1364 Field 'to_status' doesn't have a default value (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `room_status_histories` (`room_id`, `changed_by_user_id`, `id`, `org_id`, `updated_at`, `created_at`) values (9baefbc8-497d-4d6f-b38f-7b760db2cee1, d4d2bd95-c0cb-4e46-b21c-521609d0910e, 019d5145-7c15-73be-bef7-983461aa434a, 84ab08fa-0b06-4ac0-ac03-d61f6f87cb74, 2026-04-03 02:56:41, 2026-04-03 02:56:41)) in C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Connection.php:838
+Stack trace:
+#0 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Connection.php(794): Illuminate\Database\Connection->runQueryCallback('insert into `ro...', Array, Object(Closure))
+#1 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\MySqlConnection.php(42): Illuminate\Database\Connection->run('insert into `ro...', Array, Object(Closure))
+#2 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Query\Builder.php(4091): Illuminate\Database\MySqlConnection->insert('insert into `ro...', Array)
+#3 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(2235): Illuminate\Database\Query\Builder->insert(Array)
+#4 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1412): Illuminate\Database\Eloquent\Builder->__call('insert', Array)
+#5 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1240): Illuminate\Database\Eloquent\Model->performInsert(Object(Illuminate\Database\Eloquent\Builder))
+#6 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(1219): Illuminate\Database\Eloquent\Model->save()
+#7 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\helpers.php(388): Illuminate\Database\Eloquent\Builder->Illuminate\Database\Eloquent\{closure}(Object(App\Features\Property\Models\RoomStatusHistory))
+#8 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Builder.php(1218): tap(Object(App\Features\Property\Models\RoomStatusHistory), Object(Closure))
+#9 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\Traits\ForwardsCalls.php(23): Illuminate\Database\Eloquent\Builder->create(Array)
+#10 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2540): Illuminate\Database\Eloquent\Model->forwardCallTo(Object(Illuminate\Database\Eloquent\Builder), 'create', Array)
+#11 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(2556): Illuminate\Database\Eloquent\Model->__call('create', Array)
+#12 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Observers\ContractObserver.php(82): Illuminate\Database\Eloquent\Model::__callStatic('create', Array)
+#13 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Observers\ContractObserver.php(26): App\Features\Contract\Observers\ContractObserver->syncRoomStatus(Object(App\Features\Contract\Models\Contract))
+#14 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(512): App\Features\Contract\Observers\ContractObserver->updated(Object(App\Features\Contract\Models\Contract))
+#15 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(319): Illuminate\Events\Dispatcher->Illuminate\Events\{closure}('eloquent.update...', Array)
+#16 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Events\Dispatcher.php(299): Illuminate\Events\Dispatcher->invokeListeners('eloquent.update...', Array, false)
+#17 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Concerns\HasEvents.php(224): Illuminate\Events\Dispatcher->dispatch('eloquent.update...', Object(App\Features\Contract\Models\Contract))
+#18 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1320): Illuminate\Database\Eloquent\Model->fireModelEvent('updated', false)
+#19 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1233): Illuminate\Database\Eloquent\Model->performUpdate(Object(Illuminate\Database\Eloquent\Builder))
+#20 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Eloquent\Model.php(1090): Illuminate\Database\Eloquent\Model->save(Array)
+#21 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Services\ContractService.php(344): Illuminate\Database\Eloquent\Model->update(Array)
+#22 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\Concerns\ManagesTransactions.php(35): App\Features\Contract\Services\ContractService->App\Features\Contract\Services\{closure}(Object(Illuminate\Database\MySqlConnection))
+#23 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Database\DatabaseManager.php(491): Illuminate\Database\Connection->transaction(Object(Closure))
+#24 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Support\Facades\Facade.php(363): Illuminate\Database\DatabaseManager->__call('transaction', Array)
+#25 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Services\ContractService.php(311): Illuminate\Support\Facades\Facade::__callStatic('transaction', Array)
+#26 C:\laragon\www\laravel\HostechBackEnd\backend\app\Features\Contract\Controllers\ContractController.php(108): App\Features\Contract\Services\ContractService->update('019d5145-7bbf-7...', Array)
+#27 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\ControllerDispatcher.php(46): App\Features\Contract\Controllers\ContractController->update(Object(App\Features\Contract\Requests\ContractUpdateRequest), '019d5145-7bbf-7...')
+#28 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Route.php(265): Illuminate\Routing\ControllerDispatcher->dispatch(Object(Illuminate\Routing\Route), Object(App\Features\Contract\Controllers\ContractController), 'update')
+#29 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Route.php(211): Illuminate\Routing\Route->runController()
+#30 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(822): Illuminate\Routing\Route->run()
+#31 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Routing\Router->Illuminate\Routing\{closure}(Object(Illuminate\Http\Request))
+#32 C:\laragon\www\laravel\HostechBackEnd\backend\app\Http\Middleware\ResolveTenant.php(33): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#33 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): App\Http\Middleware\ResolveTenant->handle(Object(Illuminate\Http\Request), Object(Closure))
+#34 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Middleware\SubstituteBindings.php(50): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#35 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Routing\Middleware\SubstituteBindings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#36 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Auth\Middleware\Authenticate.php(63): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#37 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Auth\Middleware\Authenticate->handle(Object(Illuminate\Http\Request), Object(Closure), 'sanctum')
+#38 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#39 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(821): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#40 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(800): Illuminate\Routing\Router->runRouteWithinStack(Object(Illuminate\Routing\Route), Object(Illuminate\Http\Request))
+#41 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(764): Illuminate\Routing\Router->runRoute(Object(Illuminate\Http\Request), Object(Illuminate\Routing\Route))
+#42 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Routing\Router.php(753): Illuminate\Routing\Router->dispatchToRoute(Object(Illuminate\Http\Request))
+#43 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(200): Illuminate\Routing\Router->dispatch(Object(Illuminate\Http\Request))
+#44 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(180): Illuminate\Foundation\Http\Kernel->Illuminate\Foundation\Http\{closure}(Object(Illuminate\Http\Request))
+#45 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#46 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull.php(31): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#47 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull->handle(Object(Illuminate\Http\Request), Object(Closure))
+#48 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TransformsRequest.php(21): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#49 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\TrimStrings.php(51): Illuminate\Foundation\Http\Middleware\TransformsRequest->handle(Object(Illuminate\Http\Request), Object(Closure))
+#50 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\TrimStrings->handle(Object(Illuminate\Http\Request), Object(Closure))
+#51 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePostSize.php(27): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#52 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePostSize->handle(Object(Illuminate\Http\Request), Object(Closure))
+#53 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance.php(109): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#54 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance->handle(Object(Illuminate\Http\Request), Object(Closure))
+#55 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\HandleCors.php(74): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#56 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\HandleCors->handle(Object(Illuminate\Http\Request), Object(Closure))
+#57 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\TrustProxies.php(58): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#58 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\TrustProxies->handle(Object(Illuminate\Http\Request), Object(Closure))
+#59 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks.php(22): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#60 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Foundation\Http\Middleware\InvokeDeferredCallbacks->handle(Object(Illuminate\Http\Request), Object(Closure))
+#61 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Http\Middleware\ValidatePathEncoding.php(26): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#62 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(219): Illuminate\Http\Middleware\ValidatePathEncoding->handle(Object(Illuminate\Http\Request), Object(Closure))
+#63 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Pipeline\Pipeline.php(137): Illuminate\Pipeline\Pipeline->Illuminate\Pipeline\{closure}(Object(Illuminate\Http\Request))
+#64 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(175): Illuminate\Pipeline\Pipeline->then(Object(Closure))
+#65 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Http\Kernel.php(144): Illuminate\Foundation\Http\Kernel->sendRequestThroughRouter(Object(Illuminate\Http\Request))
+#66 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(607): Illuminate\Foundation\Http\Kernel->handle(Object(Illuminate\Http\Request))
+#67 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(573): Illuminate\Foundation\Testing\TestCase->call('PUT', '/api/contracts/...', Array, Array, Array, Array, '{"status":"ACTI...')
+#68 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\laravel\framework\src\Illuminate\Foundation\Testing\Concerns\MakesHttpRequests.php(441): Illuminate\Foundation\Testing\TestCase->json('PUT', '/api/contracts/...', Array, Array, 0)
+#69 [internal function]: Illuminate\Foundation\Testing\TestCase->putJson('/api/contracts/...', Array, Array)
+#70 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\Reflection.php(38): ReflectionMethod->invoke(Object(P\Tests\Feature\Contract\ContractTest), '/api/contracts/...', Array, Array)
+#71 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\HigherOrderMessage.php(58): Pest\Support\Reflection::call(Object(P\Tests\Feature\Contract\ContractTest), 'putJson', Array)
+#72 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\HigherOrderTapProxy.php(64): Pest\Support\HigherOrderMessage->call(Object(P\Tests\Feature\Contract\ContractTest))
+#73 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest-plugin-laravel\src\Http.php(239): Pest\Support\HigherOrderTapProxy->__call('putJson', Array)
+#74 C:\laragon\www\laravel\HostechBackEnd\backend\tests\Feature\Contract\ContractTest.php(185): Pest\Laravel\putJson('/api/contracts/...', Array, Array)
+#75 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Factories\TestCaseMethodFactory.php(172): P\Tests\Feature\Contract\ContractTest->Tests\Feature\Contract\{closure}()
+#76 [internal function]: P\Tests\Feature\Contract\ContractTest->Pest\Factories\{closure}()
+#77 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(429): call_user_func_array(Object(Closure), Array)
+#78 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Support\ExceptionTrace.php(26): P\Tests\Feature\Contract\ContractTest->Pest\Concerns\{closure}()
+#79 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(429): Pest\Support\ExceptionTrace::ensure(Object(Closure))
+#80 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Concerns\Testable.php(331): P\Tests\Feature\Contract\ContractTest->__callClosure(Object(Closure), Array)
+#81 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Factories\TestCaseFactory.php(170) : eval()'d code(44): P\Tests\Feature\Contract\ContractTest->__runTest(Object(Closure))
+#82 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(1332): P\Tests\Feature\Contract\ContractTest->__pest_evaluable_can_update_contract()
+#83 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(519): PHPUnit\Framework\TestCase->runTest()
+#84 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestRunner\TestRunner.php(99): PHPUnit\Framework\TestCase->runBare()
+#85 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestCase.php(359): PHPUnit\Framework\TestRunner->run(Object(P\Tests\Feature\Contract\ContractTest))
+#86 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\Framework\TestSuite.php(374): PHPUnit\Framework\TestCase->run()
+#87 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\TextUI\TestRunner.php(64): PHPUnit\Framework\TestSuite->run()
+#88 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\phpunit\phpunit\src\TextUI\Application.php(229): PHPUnit\TextUI\TestRunner->run(Object(PHPUnit\TextUI\Configuration\Configuration), Object(PHPUnit\Runner\ResultCache\DefaultResultCache), Object(PHPUnit\Framework\TestSuite))
+#89 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\src\Kernel.php(103): PHPUnit\TextUI\Application->run(Array)
+#90 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\bin\pest(184): Pest\Kernel->handle(Array, Array)
+#91 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\pestphp\pest\bin\pest(192): {closure}()
+#92 C:\laragon\www\laravel\HostechBackEnd\backend\vendor\bin\pest(119): include('C:\\laragon\\www\\...')
+#93 {main}
+
+----------------------------------------------------------------------------------
+
+SQLSTATE[HY000]: General error: 1364 Field 'to_status' doesn't have a default value (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: hostech_test, SQL: insert into `room_status_histories` (`room_id`, `changed_by_user_id`, `id`, `org_id`, `updated_at`, `created_at`) values (9baefbc8-497d-4d6f-b38f-7b760db2cee1, d4d2bd95-c0cb-4e46-b21c-521609d0910e, 019d5145-7c15-73be-bef7-983461aa434a, 84ab08fa-0b06-4ac0-ac03-d61f6f87cb74, 2026-04-03 02:56:41, 2026-04-03 02:56:41))
+
+  at tests\Feature\Contract\ContractTest.php:188
+    184▕ 
+    185▕     putJson("/api/contracts/{$contract->id}", [
+    186▕         'status' => 'ACTIVE',
+    187▕         'rent_price' => 6000000,
+  ➜ 188▕     ], ['X-Org-Id' => $org->id])->assertStatus(200)
+    189▕         ->assertJsonPath('data.status', 'ACTIVE')
+    190▕         ->assertJsonPath('data.rent_price', 6000000);
+    191▕ 
+    192▕     assertDatabaseHas('contracts', [
+
+
+  Tests:    4 failed, [2m16 pending[22m (1 assertions)
+  Duration: 16.41s
+

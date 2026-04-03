@@ -25,7 +25,7 @@ class AuthenticationTest extends TestCase
     public function test_user_can_register(): void
     {
         $this->withoutExceptionHandling();
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = \App\Features\System\Models\UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
@@ -34,19 +34,14 @@ class AuthenticationTest extends TestCase
             'invited_by' => \App\Features\Org\Models\User::factory()->create()->id,
         ]);
 
-        try {
-            $response = $this->postJson('/api/auth/register', [
-                'full_name' => 'John Doe',
-                'email' => 'john@example.com',
-                'phone' => '1234567890',
-                'password' => 'Password123!',
-                'password_confirmation' => 'Password123!',
-                'invite_token' => 'mock-token-123',
-            ]);
-        } catch (\Throwable $e) {
-            file_put_contents('error_dump.txt', $e->getMessage());
-            throw $e;
-        }
+        $response = $this->postJson('/api/auth/register', [
+            'full_name' => 'John Doe',
+            'email' => 'john@example.com',
+            'phone' => '1234567890',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'invite_token' => 'mock-token-123',
+        ]);
 
         $response->assertStatus(201);
         $response->assertJsonStructure([
@@ -64,7 +59,8 @@ class AuthenticationTest extends TestCase
         // Verify user has Tenant role
         $user = User::where('email', 'john@example.com')->first();
         $this->assertTrue($user->hasRole('Tenant'));
-        $this->assertTrue($user->hasPermissionTo('view Room'));
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
     }
 
     /**
@@ -142,7 +138,7 @@ class AuthenticationTest extends TestCase
      */
     public function test_registered_user_has_tenant_role_permissions(): void
     {
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = \App\Features\System\Models\UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
@@ -162,9 +158,10 @@ class AuthenticationTest extends TestCase
         $response->assertStatus(201);
         $user = User::where('email', 'john@example.com')->first();
 
-        // Should have only read room permission
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertFalse($user->hasPermissionTo('create Room'));
+        // Verify tenant has correct permissions
+        $user->refresh();
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
     }
 
     // ===== LOGIN TESTS =====
@@ -271,12 +268,12 @@ class AuthenticationTest extends TestCase
         $this->assertNotEmpty($token);
 
         // Verify token works for authenticated requests
-        $authResponse = $this->getJson('/api/users', [
+        $authResponse = $this->getJson('/api/auth/me', [
             'Authorization' => "Bearer {$token}",
         ]);
 
         // Should be able to access protected routes
-        $this->assertNotNull($authResponse->json());
+        $authResponse->assertStatus(200);
     }
 
     // ===== LOGOUT TESTS =====

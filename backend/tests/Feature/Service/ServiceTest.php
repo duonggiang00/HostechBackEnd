@@ -1,9 +1,8 @@
 <?php
 
+namespace Tests\Feature\Service;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
-
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
 use App\Features\Service\Models\Service;
@@ -16,6 +15,8 @@ use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
+
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -106,7 +107,7 @@ test('owner can view their services only', function () {
 
     $org2 = Org::factory()->create();
 
-    // Create service for Org 2 manually since we don't have Factory for Service yet
+    // Create service for Org 2 manually 
     $service2 = Service::create([
         'id' => \Illuminate\Support\Str::uuid(),
         'org_id' => $org2->id,
@@ -361,10 +362,6 @@ test('owner cannot create service for another org', function () {
         'unit' => 'month',
         'price' => 5000,
     ]);
-
-    // System should either ignore org_id input and use user's org_id (201) OR reject (403/422).
-    // Our Controller forces: $data['org_id'] = $request->user()->org_id;
-    // So it should be created under Org 1, IGNORING the input org_id.
 
     $response->assertStatus(201);
 

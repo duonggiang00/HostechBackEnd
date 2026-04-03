@@ -34,14 +34,22 @@ class ContractObserver
     {
         $room = $contract->room;
         if ($room) {
-            $room->update(['status' => 'available']);
-            
-            RoomStatusHistory::create([
-                'room_id' => $room->id,
-                'status' => 'available',
-                'note' => 'Hợp đồng bị xóa',
-                'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
-            ]);
+            $oldStatus = $room->status;
+            $newStatus = 'available';
+
+            if ($oldStatus !== $newStatus) {
+                $room->update(['status' => $newStatus]);
+                
+                RoomStatusHistory::create([
+                    'id' => (string) Str::uuid(),
+                    'org_id' => $room->org_id,
+                    'room_id' => $room->id,
+                    'from_status' => $oldStatus,
+                    'to_status' => $newStatus,
+                    'reason' => 'Hợp đồng bị xóa',
+                    'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
+                ]);
+            }
         }
     }
 
@@ -55,34 +63,37 @@ class ContractObserver
             return;
         }
 
-        $newStatus = 'available';
-        $note = '';
+        $oldStatus = $room->status;
+        $newStatus = $oldStatus;
+        $reason = '';
 
         switch ($contract->status) {
             case ContractStatus::ACTIVE:
                 $newStatus = 'occupied';
-                $note = 'Hợp đồng có hiệu lực';
+                $reason = 'Hợp đồng có hiệu lực';
                 break;
             case ContractStatus::TERMINATED:
             case ContractStatus::EXPIRED:
             case ContractStatus::CANCELLED:
                 $newStatus = 'available';
-                $note = 'Hợp đồng kết thúc/hết hạn (' . $contract->status->value . ')';
+                $reason = 'Hợp đồng kết thúc/hết hạn (' . ($contract->status->value ?? $contract->status) . ')';
                 break;
             case ContractStatus::PENDING_SIGNATURE:
             case ContractStatus::PENDING_PAYMENT:
                 // Thường thì phòng vẫn được giữ chỗ hoặc đang trống cho đến khi kích hoạt
-                // Tùy logic dự án, hiện tại giữ 'available' hoặc 'reserved'
                 break;
         }
 
-        if ($room->status !== $newStatus) {
+        if ($oldStatus !== $newStatus) {
             $room->update(['status' => $newStatus]);
             
             RoomStatusHistory::create([
+                'id' => (string) Str::uuid(),
+                'org_id' => $room->org_id,
                 'room_id' => $room->id,
-                'status' => $newStatus,
-                'note' => $note,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'reason' => $reason,
                 'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
             ]);
         }

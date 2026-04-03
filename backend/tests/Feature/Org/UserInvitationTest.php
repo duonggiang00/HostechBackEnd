@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Org;
 
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
@@ -110,7 +110,6 @@ class UserInvitationTest extends TestCase
 
     public function test_user_can_register_via_invite()
     {
-        $this->withoutExceptionHandling();
         $admin = $this->createAdmin();
 
         // Generate via Service to keep the HTTP session as a Guest
@@ -132,6 +131,8 @@ class UserInvitationTest extends TestCase
             'invite_token' => $token,
             'org_name' => 'Brand New Organization',
         ]);
+
+        $registerResponse->assertStatus(201);
 
         $this->assertDatabaseHas('orgs', [
             'name' => 'Brand New Organization',

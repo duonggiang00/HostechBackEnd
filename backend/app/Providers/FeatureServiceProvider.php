@@ -25,6 +25,32 @@ class FeatureServiceProvider extends ServiceProvider
     {
         $this->registerModuleRoutes();
         $this->registerModuleFactories();
+        $this->registerModuleViews();
+    }
+
+    /**
+     * Automatically register views from all feature modules.
+     * Expects: app/Features/{Module}/Resources/views
+     * Usage: view('Module::view-name')
+     */
+    protected function registerModuleViews(): void
+    {
+        $featuresPath = app_path('Features');
+
+        if (!File::isDirectory($featuresPath)) {
+            return;
+        }
+
+        $modules = File::directories($featuresPath);
+
+        foreach ($modules as $modulePath) {
+            $viewsPath = $modulePath . DIRECTORY_SEPARATOR . 'Resources' . DIRECTORY_SEPARATOR . 'views';
+            $moduleName = strtolower(basename($modulePath));
+
+            if (File::exists($viewsPath)) {
+                $this->loadViewsFrom($viewsPath, $moduleName);
+            }
+        }
     }
 
     /**

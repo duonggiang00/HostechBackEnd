@@ -4,7 +4,7 @@ namespace App\Actions\Fortify;
 
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
-use App\Services\System\UserInvitationService;
+use App\Features\System\Services\UserInvitationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;

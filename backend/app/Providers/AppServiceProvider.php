@@ -20,7 +20,6 @@ class AppServiceProvider extends ServiceProvider
             \App\Features\Service\Policies\ServicePolicy::class
         );
 
-        \App\Features\Contract\Models\Contract::observe(\App\Observers\ContractObserver::class);
 
         $this->configureRateLimiting();
 

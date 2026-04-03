@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Mail\Auth;
+namespace App\Features\Org\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -36,7 +35,7 @@ class OTPMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.auth.otp-code',
+            view: 'org::emails.otp-code',
         );
     }
 

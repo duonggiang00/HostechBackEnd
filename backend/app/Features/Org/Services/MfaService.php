@@ -4,7 +4,7 @@ namespace App\Features\Org\Services;
 
 use App\Features\Org\Models\User;
 use App\Features\System\Models\VerificationCode;
-use App\Mail\Auth\OTPMail;
+use App\Features\Org\Mail\OTPMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;

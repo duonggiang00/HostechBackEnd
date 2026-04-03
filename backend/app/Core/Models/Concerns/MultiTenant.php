@@ -15,6 +15,12 @@ trait MultiTenant
                 $builder->where($builder->getModel()->getTable().'.org_id', $orgId);
             }
         });
+
+        static::creating(function ($model) {
+            if (!$model->org_id) {
+                $model->org_id = TenantManager::getOrgId();
+            }
+        });
     }
 
     public function scopeForOrg(Builder $query, string $orgId): Builder

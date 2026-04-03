@@ -1,0 +1,19 @@
+{
+    "property_id": "8906d4a1-66b3-49ac-9dec-3b11ac57dddb",
+    "room_id": "19bb905d-00c6-4ed2-81c6-e5bec1699e00",
+    "status": "ACTIVE",
+    "start_date": "2026-04-03",
+    "end_date": "2027-04-03",
+    "billing_cycle": "2",
+    "due_day": 25,
+    "cutoff_day": 20,
+    "rent_price": 5000000,
+    "deposit_amount": 5000000,
+    "org_id": "5f8e8fd5-094a-4467-91d0-52674117a9b3",
+    "created_by_user_id": "7e9333d5-3531-43ad-9315-e32019178863",
+    "join_code": "QXBDOGGV",
+    "base_rent": 5000000,
+    "fixed_services_fee": 0,
+    "total_rent": 5000000,
+    "next_billing_date": "2026-06-03"
+}

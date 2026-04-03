@@ -1,9 +1,9 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Contract;
 
-use App\Enums\ContractStatus;
-use App\Enums\DepositStatus;
+use App\Features\Contract\Enums\ContractStatus;
+use App\Features\Contract\Enums\DepositStatus;
 use App\Features\Contract\Models\Contract;
 use App\Features\Handover\Models\Handover;
 use App\Features\Meter\Models\Meter;

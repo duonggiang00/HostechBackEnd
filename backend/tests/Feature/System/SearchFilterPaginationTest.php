@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\System;
 
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
@@ -65,13 +65,6 @@ class SearchFilterPaginationTest extends TestCase
 
         // Test Filter by Role (assuming implemented in UserIndexRequest/Service - check implementation)
         // UserService::paginate allowed filters: ['role', 'email', 'is_active']
-        // Wait, 'role' filter might check role name? Spatie roles are in separate table.
-        // QueryBuilder allowedFilters('role') usually expects a scope or column.
-        // User model doesn't have 'role' column. It uses Spatie.
-        // If 'role' is not a scope in User model, this filter might fail or do nothing.
-        // Let's check User model for scopeRole or look at UserService.
-        // Assuming it might not work out of box with standard allowedFilters unless using Spatie query builder extension or custom scope.
-        // Skipping role filter test for now unless confirmed.
     }
 
     public function test_property_pagination_search_and_filter()

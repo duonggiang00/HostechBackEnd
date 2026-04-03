@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace Tests\Feature\Contract;
 
 use App\Features\Contract\Models\Contract;
 use App\Features\Contract\Models\ContractMember;

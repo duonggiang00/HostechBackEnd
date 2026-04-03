@@ -3,12 +3,13 @@
 namespace Tests\Feature\Contract;
 
 use App\Features\Contract\Models\Contract;
-use App\Features\Contract\Enums\ContractStatus;
-use App\Features\Property\Models\Room;
+use App\Features\Org\Models\Org;
+use App\Features\Org\Models\User;
 use App\Features\Property\Models\Property;
-use App\Features\Invoice\Models\Invoice;
-use App\Models\User;
-use App\Models\Organization\Organization;
+use App\Features\Property\Models\Room;
+use App\Models\Invoice\Invoice;
+use App\Features\Contract\Enums\ContractStatus;
+use App\Features\Contract\Enums\DepositStatus;
 use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -17,41 +18,105 @@ class ContractTerminationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_can_terminate_contract_with_forfeiture()
+    protected function setUp(): void
     {
-        $org = Organization::factory()->create();
-        $owner = User::factory()->create(['org_id' => $org->id]);
-        $role = Role::firstOrCreate(['name' => 'Owner']);
-        $owner->assignRole($role);
+        parent::setUp();
+        Role::firstOrCreate(['name' => 'Admin']);
+        Role::firstOrCreate(['name' => 'Tenant']);
+        Role::firstOrCreate(['name' => 'Owner']);
+    }
+
+    public function test_admin_can_terminate_contract_without_forfeiture()
+    {
+        $org = Org::factory()->create();
+        $admin = User::factory()->create(['org_id' => $org->id]);
+        $admin->assignRole('Admin');
 
         $property = Property::factory()->create(['org_id' => $org->id]);
-        $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id, 'status' => 'occupied']);
-        
-        $contract = Contract::factory()->create([
+        $room = Room::factory()->create([
             'property_id' => $property->id,
-            'room_id' => $room->id,
             'org_id' => $org->id,
-            'status' => ContractStatus::ACTIVE,
-            'deposit_amount' => 10000000,
+            'status' => 'occupied'
         ]);
 
-        $terminationData = [
-            'terminated_at' => now()->format('Y-m-d'),
-            'forfeited_amount' => 5000000,
-            'reason' => 'Vi phạm hợp đồng',
-        ];
+        $contract = Contract::factory()->create([
+            'org_id' => $org->id,
+            'property_id' => $property->id,
+            'room_id' => $room->id,
+            'status' => ContractStatus::ACTIVE,
+            'deposit_amount' => 5000000,
+            'deposit_status' => DepositStatus::HELD,
+            'rent_price' => 3000000,
+        ]);
 
-        $this->actingAs($owner);
-        $response = $this->postJson("/api/contracts/{$contract->id}/terminate", $terminationData);
+        $terminationDate = now()->format('Y-m-d');
 
-        $response->assertStatus(200);
-        
+        $this->actingAs($admin)
+            ->postJson("/api/contracts/{$contract->id}/terminate", [
+                'termination_date' => $terminationDate,
+                'reason' => 'Normal termination',
+                'forfeit_deposit' => false,
+            ])
+            ->assertStatus(200);
+
         $contract->refresh();
         $this->assertEquals(ContractStatus::TERMINATED, $contract->status);
+        $this->assertEquals(DepositStatus::REFUND_PENDING, $contract->deposit_status);
         $this->assertNotNull($contract->terminated_at);
-        $this->assertEquals(5000000, $contract->forfeited_amount);
         
         $room->refresh();
         $this->assertEquals('available', $room->status);
+
+        // Verify termination invoice
+        $invoice = Invoice::where('contract_id', $contract->id)
+            ->where('is_termination', true)
+            ->first();
+
+        $this->assertNotNull($invoice);
+        $this->assertEquals($contract->rent_price, $invoice->total_amount);
+    }
+
+    public function test_admin_can_terminate_contract_with_deposit_forfeiture()
+    {
+        $org = Org::factory()->create();
+        $admin = User::factory()->create(['org_id' => $org->id]);
+        $admin->assignRole('Admin');
+
+        $property = Property::factory()->create(['org_id' => $org->id]);
+        $room = Room::factory()->create([
+            'property_id' => $property->id,
+            'org_id' => $org->id,
+            'status' => 'occupied'
+        ]);
+
+        $contract = Contract::factory()->create([
+            'org_id' => $org->id,
+            'property_id' => $property->id,
+            'room_id' => $room->id,
+            'status' => ContractStatus::ACTIVE,
+            'deposit_amount' => 5000000,
+            'deposit_status' => DepositStatus::HELD,
+            'rent_price' => 3000000,
+        ]);
+
+        $this->actingAs($admin)
+            ->postJson("/api/contracts/{$contract->id}/terminate", [
+                'termination_date' => now()->format('Y-m-d'),
+                'reason' => 'Early termination with forfeiture',
+                'forfeit_deposit' => true,
+            ])
+            ->assertStatus(200);
+
+        $contract->refresh();
+        $this->assertEquals(ContractStatus::TERMINATED, $contract->status);
+        $this->assertEquals(DepositStatus::FORFEITED, $contract->deposit_status);
+        $this->assertEquals(5000000, $contract->forfeited_amount);
+
+        // Verify termination invoice includes forfeiture if applicable
+        $invoice = Invoice::where('contract_id', $contract->id)
+            ->where('is_termination', true)
+            ->first();
+
+        $this->assertNotNull($invoice);
     }
 }

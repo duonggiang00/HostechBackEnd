@@ -182,6 +182,10 @@ class ContractService
 
             $contractData['created_by_user_id'] = $user?->id;
 
+            if (! isset($contractData['status'])) {
+                $contractData['status'] = ContractStatus::DRAFT->value;
+            }
+
             if (! isset($contractData['join_code'])) {
                 $contractData['join_code'] = $this->generateJoinCode();
             }
@@ -194,7 +198,7 @@ class ContractService
             $property = $propertyId ? \App\Features\Property\Models\Property::find($propertyId) : null;
             $room = $roomId ? \App\Features\Property\Models\Room::find($roomId) : null;
 
-            if ($property && $user?->org_id && $property->org_id !== $user->org_id) {
+            if ($property && $user?->org_id && (string) $property->org_id !== (string) $user->org_id) {
                 throw ValidationException::withMessages([
                     'property_id' => 'Bạn không thể tạo hợp đồng ngoài tổ chức hiện tại.',
                 ]);
@@ -281,13 +285,15 @@ class ContractService
             $monthsToAdd = $this->resolveBillingCycleMonths($contractData['billing_cycle'] ?? 1);
             $contractData['next_billing_date'] = $startDateObj->copy()->addMonths($monthsToAdd)->format('Y-m-d');
 
+            file_put_contents(storage_path('contract_debug.json'), json_encode($contractData, JSON_PRETTY_PRINT));
             $contract = Contract::create($contractData);
 
+            $isDraft = (string)($contractData['status'] ?? '') === ContractStatus::DRAFT->value;
             $primaryCount = collect($data['members'] ?? [])->where('is_primary', true)->count();
 
-            if ($primaryCount !== 1) {
+            if (! $isDraft && $primaryCount !== 1) {
                 throw ValidationException::withMessages([
-                    'members' => 'Hợp đồng phải có đúng 1 người thuê chính.',
+                    'members' => 'Hợp đồng phải có đúng 1 người thuê chính khi phát hành.',
                 ]);
             }
 
@@ -298,6 +304,32 @@ class ContractService
             }
 
             return $contract->refresh();
+        });
+    }
+
+    /**
+     * Phát hành hợp đồng (DRAFT -> PENDING_SIGNATURE)
+     */
+    public function publish(Contract $contract, ?User $performer = null): bool
+    {
+        if ($contract->status !== ContractStatus::DRAFT) {
+            throw new \Exception('Chỉ có thể phát hành hợp đồng đang ở trạng thái nháp.');
+        }
+
+        // Validation logic for publishing
+        if (empty($contract->rent_price) || $contract->rent_price <= 0) {
+            throw new \Exception('Cần cập nhật giá thuê trước khi phát hành.');
+        }
+
+        if (! $contract->members()->where('is_primary', true)->exists()) {
+            throw new \Exception('Hợp đồng cần có ít nhất một người thuê chính.');
+        }
+
+        return DB::transaction(function () use ($contract) {
+            return $contract->update([
+                'status' => ContractStatus::PENDING_SIGNATURE,
+                'published_at' => now(),
+            ]);
         });
     }
 
@@ -402,15 +434,14 @@ class ContractService
 
             $member->update($memberUpdateData);
 
-            if ($contract->status === ContractStatus::PENDING && $this->allSignersApproved($contract)) {
+            // Chuyển sang PENDING_PAYMENT thay vì ACTIVE ngay sau khi ký
+            if ($contract->status === ContractStatus::PENDING_SIGNATURE && $this->allSignersApproved($contract)) {
                 $contract->update([
-                    'status' => ContractStatus::ACTIVE,
+                    'status' => ContractStatus::PENDING_PAYMENT,
                     'signed_at' => now(),
-                    'activated_at' => now(),
                 ]);
-                if ($contract->room) {
-                    $contract->room->update(['status' => 'occupied']);
-                }
+                
+                // Note: Logic tạo hóa đơn tự động sẽ được Phase 3 thực hiện tại đây
             }
 
             return true;
@@ -508,18 +539,11 @@ class ContractService
 
     public function addMember(Contract $contract, array $memberData, ?User $performer = null): ContractMember
     {
-        if (empty($memberData['user_id'])) {
-            throw new \InvalidArgumentException('Chỉ được thêm cư dân đã có tài khoản vào hợp đồng.');
-        }
+        $user = ! empty($memberData['user_id']) ? User::find($memberData['user_id']) : null;
 
-        $user = User::find($memberData['user_id']);
-        if (! $user) {
-            throw new \InvalidArgumentException('Không tìm thấy tài khoản cư dân.');
-        }
-
-        $memberData['full_name'] = $memberData['full_name'] ?? $user->full_name;
-        $memberData['phone'] = $memberData['phone'] ?? $user->phone;
-        $memberData['identity_number'] = $memberData['identity_number'] ?? $user->identity_number;
+        $memberData['full_name'] = $memberData['full_name'] ?? $user?->full_name;
+        $memberData['phone'] = $memberData['phone'] ?? $user?->phone;
+        $memberData['identity_number'] = $memberData['identity_number'] ?? $user?->identity_number;
 
         if (! isset($memberData['status'])) {
             $memberData['status'] = 'PENDING';

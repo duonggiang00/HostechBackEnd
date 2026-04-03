@@ -1,9 +1,8 @@
 <?php
 
+namespace Tests\Feature\Org;
+
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
-uses(RefreshDatabase::class);
-
 use App\Features\Org\Models\Org;
 use App\Features\Org\Models\User;
 use Spatie\Permission\Models\Role;
@@ -13,6 +12,8 @@ use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
+
+uses(\Tests\TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $this->seed(\Database\Seeders\RBACSeeder::class);
@@ -31,24 +32,8 @@ test('admin can crud user', function () {
         'email' => 'testuser@example.com',
         'password' => 'Password123!',
         'password_confirmation' => 'Password123!',
-        'role' => 'STAFF', // or Owner/Manager
-        // Role assignment might differ based on controller implementation,
-        // usually passed as 'role' or 'roles' array if creating via User endpoint?
-        // Let's assume basic user creation first.
+        'role' => 'STAFF', 
     ]);
-
-    // Check if UserStoreRequest allows password.
-    // If not, we might need to adjust or expects factory usage in controller?
-    // Usually UserController allows creating "Staff/Manager".
-    // For now, let's just assume standard fields.
-
-    // Refine request: The controller likely uses UserStoreRequest.
-    // Let's assume it accepts basic fields.
-
-    if ($response->status() === 422) {
-        // Debug validation errors if any
-        // dump($response->json());
-    }
 
     $response->assertStatus(201);
     $id = $response->json('data.id');

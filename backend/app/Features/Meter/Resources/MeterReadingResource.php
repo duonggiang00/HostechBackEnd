@@ -30,11 +30,23 @@ class MeterReadingResource extends JsonResource
             'rejected_at' => $this->rejected_at?->toIso8601String(),
             'locked_at' => $this->locked_at?->toIso8601String(),
 
+            // Media proofs (Spatie Media Library)
+            'proofs' => $this->getMedia('reading_proofs')->map(fn($media) => [
+                'id' => $media->id,
+                'url' => $media->getUrl(),
+                'thumb_url' => $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl(),
+                'name' => $media->name,
+                'file_name' => $media->file_name,
+                'mime_type' => $media->mime_type,
+                'size' => $media->size,
+            ]),
+
             // Relationships
             'meter' => new MeterResource($this->whenLoaded('meter')),
             'submitted_by' => new UserResource($this->whenLoaded('submittedBy')),
             'approved_by' => new UserResource($this->whenLoaded('approvedBy')),
             'rejected_by' => new UserResource($this->whenLoaded('rejectedBy')),
+            'adjustments' => AdjustmentNoteResource::collection($this->whenLoaded('adjustmentNotes')),
         ];
     }
 }

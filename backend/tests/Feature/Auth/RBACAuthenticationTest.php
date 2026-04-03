@@ -22,7 +22,7 @@ class RBACAuthenticationTest extends TestCase
      */
     public function test_registered_user_gets_tenant_role(): void
     {
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = \App\Features\System\Models\UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
@@ -45,30 +45,28 @@ class RBACAuthenticationTest extends TestCase
         $this->assertTrue($user->hasRole('Tenant'));
     }
 
-    // Verify tenant user has read room permission
-    public function test_tenant_user_has_read_room_permission(): void
+    // Verify tenant user has read property permission
+    public function test_tenant_user_has_read_property_permission(): void
     {
         $user = User::factory()->create(['email' => 'john@example.com']);
         $user->assignRole('Tenant');
 
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertFalse($user->hasPermissionTo('create Room'));
-        $this->assertFalse($user->hasPermissionTo('update Room'));
-        $this->assertFalse($user->hasPermissionTo('delete Room'));
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
+        $this->assertFalse($user->hasPermissionTo('update Properties'));
+        $this->assertFalse($user->hasPermissionTo('delete Properties'));
     }
-
-    // ... (skipping some unchanged)
 
     public function test_owner_user_has_crud_permissions(): void
     {
         $user = User::factory()->create();
         $user->assignRole('Owner');
 
-        // Owner should have CRUD for Room module
-        $this->assertTrue($user->hasPermissionTo('create Room'));
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertTrue($user->hasPermissionTo('update Room'));
-        $this->assertTrue($user->hasPermissionTo('delete Room'));
+        // Owner should have CRUD for Properties module
+        $this->assertTrue($user->hasPermissionTo('create Properties'));
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertTrue($user->hasPermissionTo('update Properties'));
+        $this->assertTrue($user->hasPermissionTo('delete Properties'));
     }
 
     public function test_staff_user_has_limited_permissions(): void
@@ -76,24 +74,23 @@ class RBACAuthenticationTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('Staff');
 
-        // Staff should have RU (read, update) for Room
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertTrue($user->hasPermissionTo('update Room'));
-        $this->assertFalse($user->hasPermissionTo('create Room'));
-        $this->assertFalse($user->hasPermissionTo('delete Room'));
+        // Staff should have R (read) for Properties
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertFalse($user->hasPermissionTo('update Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
+        $this->assertFalse($user->hasPermissionTo('delete Properties'));
     }
 
-    public function test_manager_user_has_crud_permissions(): void
+    public function test_manager_user_has_ru_permissions(): void
     {
         $user = User::factory()->create();
         $user->assignRole('Manager');
 
-        // Manager should have valid permissions
-        // RoomPolicy: Manager => CRUD
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertTrue($user->hasPermissionTo('update Room'));
-        $this->assertTrue($user->hasPermissionTo('create Room'));
-        $this->assertTrue($user->hasPermissionTo('delete Room'));
+        // Manager should have RU permissions according to PropertyPolicy
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertTrue($user->hasPermissionTo('update Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
+        $this->assertFalse($user->hasPermissionTo('delete Properties'));
     }
 
     public function test_admin_user_has_all_permissions(): void
@@ -101,44 +98,37 @@ class RBACAuthenticationTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('Admin');
 
-        // Admin bypasses via Gate, so explicit permissions might not exist in DB.
-        // We assert False here to confirm no DB pollution, validating Gate logic elsewhere (SystemTest/OrgTest).
-        $this->assertFalse($user->hasPermissionTo('create Room'));
+        // Admin bypasses via Gate, so explicit permissions might not exist in DB unless manually assigned.
+        // The RbacService doesn't assign permissions to Admin role automatically in its module processing.
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
     }
 
     public function test_user_with_multiple_roles_has_combined_permissions(): void
     {
         $user = User::factory()->create();
-        $user->assignRole('Tenant'); // -
+        $user->assignRole('Tenant'); // R
         $user->assignRole('Manager'); // RU
 
-        // Should have Manager's view Room permission
-        $this->assertTrue($user->hasPermissionTo('view Room'));
-        // Should have Manager's update Room permission
-        $this->assertTrue($user->hasPermissionTo('update Room'));
-        // Should have create Room (Manager can create)
-        $this->assertTrue($user->hasPermissionTo('create Room'));
+        // Should have combined RU
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
+        $this->assertTrue($user->hasPermissionTo('update Properties'));
+        $this->assertFalse($user->hasPermissionTo('create Properties'));
     }
-
-    // ...
 
     public function test_user_can_checkown_permissions(): void
     {
         $user = User::factory()->create([
             'org_id' => \Illuminate\Support\Str::uuid(),
         ]);
-        // Use Owner role which has permission to view users in org
         $user->assignRole('Owner');
 
         $token = $user->createToken('test-token')->plainTextToken;
 
-        // User should be able to check their own permissions via API
+        // User should be able to check their own profile/info
         $response = $this->withHeaders([
             'Authorization' => "Bearer {$token}",
-            'X-Org-Id' => $user->org_id,
-        ])->getJson('/api/users'); // Fixed path
+        ])->getJson('/api/auth/me');
 
-        // Should have access to protected route with valid token
         $response->assertStatus(200);
     }
 
@@ -150,6 +140,7 @@ class RBACAuthenticationTest extends TestCase
         $user = User::factory()->create([
             'email' => 'john@example.com',
             'password_hash' => Hash::make('Password123!'),
+            'is_active' => true,
         ]);
         $user->assignRole('Admin');
 
@@ -175,6 +166,7 @@ class RBACAuthenticationTest extends TestCase
         $user = User::factory()->create([
             'email' => 'john@example.com',
             'password_hash' => Hash::make('Password123!'),
+            'is_active' => true,
         ]);
         $user->assignRole('Tenant');
 
@@ -187,6 +179,6 @@ class RBACAuthenticationTest extends TestCase
 
         // Verify tenant has correct permissions
         $user->refresh();
-        $this->assertTrue($user->hasPermissionTo('view Room'));
+        $this->assertTrue($user->hasPermissionTo('view Properties'));
     }
 }

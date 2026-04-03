@@ -430,7 +430,7 @@ class OrgSeeder extends Seeder
                         $room->update(['status' => 'occupied']);
                     } else {
                         /** @var \App\Features\Property\Models\Room $room */
-                        $room->update(['status' => 'draft']);
+                        $room->update(['status' => 'available']);
                     }
                 }
 
