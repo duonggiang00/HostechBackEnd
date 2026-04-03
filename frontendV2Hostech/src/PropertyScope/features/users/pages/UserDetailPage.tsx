@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 import { 
   ArrowLeft, Mail, Phone, ShieldAlert, 
   MapPin, Calendar, CreditCard, Clock, 
-  Lock, Unlock, ShieldCheck, BadgeCheck
+  Lock, Unlock, ShieldCheck, BadgeCheck, DoorOpen
 } from 'lucide-react';
 
 export default function UserDetailPage() {
@@ -144,6 +144,44 @@ export default function UserDetailPage() {
                 </span>
               </div>
             </div>
+          </motion.div>
+
+          {/* Phòng được gán */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4"
+          >
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 flex items-center gap-2">
+              <DoorOpen className="w-4 h-4 text-violet-500" />
+              Phòng đang ở
+            </h3>
+            
+            {user.assigned_rooms && user.assigned_rooms.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {user.assigned_rooms.map(room => (
+                  <div key={room.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/50 w-full">
+                    <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                      <DoorOpen className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-violet-800 dark:text-violet-300">{room.name || room.code}</p>
+                      {room.name && room.code && (
+                        <p className="text-xs font-semibold text-violet-500 dark:text-violet-400/70">Mã: {room.code}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
+                <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  <DoorOpen className="w-5 h-5" />
+                </div>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 italic">Chưa được gán phòng nào</p>
+              </div>
+            )}
           </motion.div>
 
           {/* Quick Stats / Info */}
