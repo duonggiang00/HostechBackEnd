@@ -97,7 +97,7 @@ class MeterReadingService
             $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
             // Dispatch notification after successful creation
-            $this->notificationService->notifyMeterReadingStatusChanged($reading, $reading->status);
+            $this->notificationService->notifyMeterReadingStatusChanged($reading, $reading->status ?? 'SUBMITTED');
 
             return $reading->fresh(['meter', 'submittedBy', 'approvedBy']);
         });
