@@ -31,6 +31,21 @@ class MeterReadingController extends Controller
     }
 
     /**
+     * Gửi duyệt hàng loạt (DRAFT → SUBMITTED).
+     */
+    public function bulkSubmit(Request $request)
+    {
+        $request->validate([
+            'reading_ids' => 'required|array|min:1',
+            'reading_ids.*' => 'string|exists:meter_readings,id',
+        ]);
+
+        $results = $this->service->bulkSubmit($request->input('reading_ids'));
+
+        return MeterReadingResource::collection($results);
+    }
+
+    /**
      * Lấy danh sách Lịch sử chốt chỉ số của một đồng hồ.
      *
         * @queryParam filter[status] string Trạng thái (DRAFT, SUBMITTED, APPROVED, REJECTED).

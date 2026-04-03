@@ -1,5 +1,9 @@
-import { X, Bell, MessageSquare, Megaphone, Trash2, CheckCircle2, FileSignature, CreditCard } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Bell, MessageSquare, Megaphone, Trash2, FileSignature, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { echo } from '@/shared/utils/echo';
+import toast from 'react-hot-toast';
 
 import type { Notification } from '../types';
 
@@ -9,7 +13,9 @@ interface NotificationCenterProps {
 }
 
 export default function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-  const notifications: Notification[] = [
+  const { user } = useAuthStore();
+
+  const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: '1',
       title: 'Hợp đồng đang chờ bạn ký',
@@ -34,7 +40,45 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
       unread: false,
       type: 'message',
     },
-  ];
+  ]);
+
+  // Listen for real-time WebSocket events on the user's private channel
+  useEffect(() => {
+    if (!user?.id || !echo) {
+      console.warn('[NotificationCenter] Echo not available or user not logged in');
+      return;
+    }
+
+    console.log(`[NotificationCenter] Subscribing to personal Notification channel App.Models.User.${user.id}`);
+    const channel = echo.private(`App.Models.User.${user.id}`);
+
+    channel.notification((e: any) => {
+      console.log('🔔 [WebSocket] Notification received:', e);
+      toast.success(e.message || `Bạn có thông báo mới`, {
+        duration: 5000,
+        position: 'top-right',
+      });
+
+      let type: 'alert' | 'update' | 'message' | 'announcement' = 'update';
+      if (e.type === 'meter_reading_rejected') type = 'alert';
+      if (e.type === 'meter_reading_submitted') type = 'message';
+
+      const newNotif: Notification = {
+        id: e.id || Date.now().toString(),
+        title: 'Thông báo',
+        description: e.message || `Đồng hồ ${e.meter_code} đã có cập nhật.`,
+        time: 'Vừa xong',
+        unread: true,
+        type: type,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    });
+
+    return () => {
+      console.log(`[NotificationCenter] Leaving channel App.Models.User.${user.id}`);
+      echo?.leave(`App.Models.User.${user.id}`);
+    };
+  }, [user?.id]);
 
   return (
     <AnimatePresence>
@@ -121,7 +165,10 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
                 <Trash2 className="w-4 h-4" />
                 Đánh dấu đã xem
               </button>
-              <button className="px-6 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-900 dark:hover:bg-slate-600 hover:text-white dark:hover:text-white transition-all shadow-sm">
+              <button
+                onClick={onClose}
+                className="px-6 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-900 dark:hover:bg-slate-600 hover:text-white dark:hover:text-white transition-all shadow-sm"
+              >
                 Đóng
               </button>
             </div>

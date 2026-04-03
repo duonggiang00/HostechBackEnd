@@ -75,12 +75,16 @@ class MeterReadingStoreRequest extends FormRequest
      */
     protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
     {
-        Log::error('MeterReadingStoreRequest validation failed', [
+        $logData = [
             'errors' => $validator->errors()->toArray(),
             'request_data' => $this->all(),
             'route_params' => $this->route()->parameters(),
-        ]);
-        
+        ];
+
+        file_put_contents('/Applications/XAMPP/xamppfiles/htdocs/datn/HostechBackEnd/backend/storage/logs/validation_debug.log', json_encode($logData, JSON_PRETTY_PRINT));
+
+        Log::error('MeterReadingStoreRequest validation failed', $logData);
+
         parent::failedValidation($validator);
     }
 }

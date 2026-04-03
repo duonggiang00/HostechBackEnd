@@ -61,15 +61,4 @@ class MeterReadingSubmitted extends Notification implements ShouldQueue
         return new BroadcastMessage($this->toArray($notifiable));
     }
 
-    /**
-     * Broadcast on property channel so all Managers of this property receive it.
-     */
-    public function broadcastOn(): array
-    {
-        $propertyId = $this->reading->meter->property_id;
-
-        return [
-            new \Illuminate\Broadcasting\PrivateChannel("property.{$propertyId}"),
-        ];
-    }
 }

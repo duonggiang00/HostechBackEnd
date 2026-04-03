@@ -64,6 +64,17 @@ class MeterReadingService
             $query->whereHas('meter.room.property.managers', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
+
+            // DRAFT visibility: Manager/Owner chỉ thấy SUBMITTED trở lên.
+            // Staff chỉ thấy DRAFT của chính mình.
+            if ($user->hasRole(['Manager', 'Owner'])) {
+                $query->where('status', '!=', 'DRAFT');
+            } elseif ($user->hasRole('Staff')) {
+                $query->where(function ($q) use ($user) {
+                    $q->where('status', '!=', 'DRAFT')
+                      ->orWhere('submitted_by_user_id', $user->id);
+                });
+            }
         }
 
         if ($search) {
@@ -83,7 +94,11 @@ class MeterReadingService
             $data['org_id'] = $data['org_id'] ?? Auth::user()?->org_id;
             $meterId = $data['meter_id'];
             $readingValue = $data['reading_value'];
-            $status = $data['status'] ?? 'DRAFT';
+            // Manager/Owner tạo chỉ số → tự động APPROVED (không cần rà soát).
+            // Staff tạo → DRAFT (cần rà soát trước khi gửi duyệt).
+            $actor = Auth::user();
+            $defaultStatus = ($actor && $actor->hasRole(['Manager', 'Owner'])) ? 'APPROVED' : 'DRAFT';
+            $status = $data['status'] ?? $defaultStatus;
 
             $data['status'] = $status;
             $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actorId;
@@ -184,6 +199,26 @@ class MeterReadingService
             $results = [];
             foreach ($readings as $readingData) {
                 $results[] = $this->create($readingData);
+            }
+            return $results;
+        });
+    }
+
+    /**
+     * Bulk submit DRAFT readings (DRAFT → SUBMITTED).
+     * Only the owning Staff can submit their own drafts.
+     */
+    public function bulkSubmit(array $readingIds): array
+    {
+        return DB::transaction(function () use ($readingIds) {
+            $readings = MeterReading::whereIn('id', $readingIds)
+                ->where('status', 'DRAFT')
+                ->where('submitted_by_user_id', Auth::id())
+                ->get();
+
+            $results = [];
+            foreach ($readings as $reading) {
+                $results[] = $this->update($reading, ['status' => 'SUBMITTED']);
             }
             return $results;
         });
@@ -434,7 +469,7 @@ class MeterReadingService
     protected function assertValidTransition(string $fromStatus, string $toStatus): void
     {
         $allowed = [
-            'DRAFT' => ['DRAFT', 'SUBMITTED'],
+            'DRAFT' => ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED'],
             'SUBMITTED' => ['SUBMITTED', 'APPROVED', 'REJECTED'],
             'REJECTED' => ['REJECTED', 'DRAFT', 'SUBMITTED'],
             // Keep correction flow for approved records (same status with value fix).

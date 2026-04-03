@@ -25,6 +25,7 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import MeterFormModal from '../components/MeterFormModal';
 
 import { BulkApproveReadingsModal } from '../components/BulkApproveReadingsModal';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 const METER_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   ELECTRIC: {
@@ -42,6 +43,8 @@ const METER_TYPE_LABELS: Record<string, { label: string; icon: React.ReactNode; 
 export default function MeterListPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
+  const hasRole = useAuthStore((state) => state.hasRole);
+  const isManager = hasRole(['Manager', 'Owner', 'Admin']);
 
   // Search state (Kept separate and debounced for real-time responsiveness)
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,7 +68,7 @@ export default function MeterListPage() {
   const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
   const monthEnd   = format(endOfMonth(new Date()), 'yyyy-MM-dd');
   const { data: pendingReadingsData } = usePropertyReadings(propertyId, {
-    status: 'PENDING',
+    status: 'SUBMITTED',
     period_start: monthStart,
     period_end: monthEnd,
   });
@@ -168,7 +171,7 @@ export default function MeterListPage() {
           <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
         </div>
         <div className="flex items-center gap-3">
-          {pendingCount > 0 && (
+          {isManager && pendingCount > 0 && (
             <button
               onClick={() => setShowBulkApprove(true)}
               className="relative inline-flex items-center gap-2 px-5 py-3 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all shadow-sm active:scale-95"

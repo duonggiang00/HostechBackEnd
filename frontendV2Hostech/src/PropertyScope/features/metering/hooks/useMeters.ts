@@ -219,3 +219,20 @@ export function useBulkApproveReadings(propertyId?: string | null) {
 
   return { approveMutation, rejectMutation };
 }
+
+// Hook gửi duyệt hàng loạt (DRAFT → SUBMITTED) cho Staff
+export function useBulkSubmitReadings(propertyId?: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (readingIds: string[]) => meteringApi.bulkSubmitReadings(readingIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      toast.success('Đã gửi duyệt hàng loạt thành công!');
+    },
+    onError: () => {
+      toast.error('Có lỗi xảy ra khi gửi duyệt.');
+    },
+  });
+}

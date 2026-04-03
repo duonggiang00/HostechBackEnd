@@ -224,6 +224,14 @@ export const meteringApi = {
     return response.data.data || response.data;
   },
 
+  bulkSubmitReadings: async (readingIds: string[]) => {
+    const response = await apiClient.post('/meter-readings/bulk-submit', {
+      reading_ids: readingIds,
+    });
+    console.log(`📡 API: POST bulk-submit:`, response.data);
+    return response.data.data || response.data;
+  },
+
   /**
    * Lấy readings theo status cho nhiều meters (song song).
    * Thành phần máy chủ không có endpoint property-level, nên
@@ -239,6 +247,7 @@ export const meteringApi = {
       meterIds.map(meterId =>
         apiClient.get(`/meters/${meterId}/readings`, {
           params: {
+            include: 'meter,meter.room,submittedBy',
             'filter[status]': params?.status || undefined,
             per_page: params?.per_page ?? 50,
           },
