@@ -62,6 +62,19 @@ class UserResource extends JsonResource
             // Scope context — property list for Manager/Staff, empty for others
             'properties' => $properties,
 
+            // Rooms assigned via active contracts (for Tenant display)
+            'assigned_rooms' => $this->whenLoaded('contractMembers', function () {
+                return $this->contractMembers
+                    ->filter(fn ($cm) => $cm->contract && $cm->contract->status?->value === 'ACTIVE' && $cm->contract->room)
+                    ->map(fn ($cm) => [
+                        'id'   => (string) $cm->contract->room->id,
+                        'name' => $cm->contract->room->name,
+                        'code' => $cm->contract->room->code,
+                    ])
+                    ->unique('id')
+                    ->values();
+            }, []),
+
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

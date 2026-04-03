@@ -15,7 +15,7 @@ class UserService
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false): LengthAwarePaginator
     {
         $query = QueryBuilder::for(User::class)
-            ->with(['roles', 'permissions'])
+            ->with(['roles', 'permissions', 'contractMembers.contract.room'])
             ->allowedFilters($allowedFilters)
             ->defaultSort('full_name');
 
@@ -57,7 +57,7 @@ class UserService
 
     public function find(string $id): ?User
     {
-        return User::find($id);
+        return User::with(['roles', 'permissions', 'contractMembers.contract.room'])->find($id);
     }
 
     public function create(array $data, User $performer): User
