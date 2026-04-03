@@ -41,6 +41,9 @@ import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage
 import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
 import QuickReadingPage from '@/PropertyScope/features/metering/pages/QuickReadingPage';
 import ProfilePage from '@/shared/features/profile/pages/ProfilePage';
+import ServiceListPage from '@/PropertyScope/features/services/pages/ServiceListPage';
+const ServiceCreatePage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceCreatePage'));
+const ServiceEditPage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceEditPage'));
 const ContractListPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractListPage'));
 const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractCreatePage'));
 const ContractDetailPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractDetailPage'));
@@ -274,6 +277,9 @@ export default function AppRoutes() {
           <Route path="users" element={<PropertyUsersPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
           <Route path="users/:userId" element={<UserDetailPage />} />
+          <Route path="services" element={<ServiceListPage />} />
+          <Route path="services/create" element={<ServiceCreatePage />} />
+          <Route path="services/:serviceId/edit" element={<ServiceEditPage />} />
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>

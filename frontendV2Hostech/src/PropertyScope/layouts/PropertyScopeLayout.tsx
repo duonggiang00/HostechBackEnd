@@ -16,6 +16,7 @@ import {
   CreditCard,
   Settings,
   Ticket,
+  DollarSign,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import PropertyTreeView from '@/OrgScope/features/properties/components/PropertyTreeView';
@@ -75,7 +76,15 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         { id: 'home', icon: Home, label: 'Tổng quan', path: dashboardPath, exact: true },
         { id: 'floors', icon: Layers, label: 'Tầng và sơ đồ', path: `/properties/${propertyId}/floors` },
         { id: 'rooms', icon: DoorOpen, label: 'Phòng', path: `/properties/${propertyId}/rooms` },
-        { id: 'templates', icon: Settings, label: 'Mẫu và cấu hình', path: `/properties/${propertyId}/templates` },
+        { id: 'finances', icon: DollarSign, label: 'Tài chính', path: `/properties/${propertyId}/invoices`, children: [
+          { id: 'invoices', label: 'Phiếu thu', path: `/properties/${propertyId}/invoices` },
+          { id: 'expenses', label: 'Phiếu chi / Hoàn cọc', path: `/properties/${propertyId}/expenses` },
+        ]},
+        { id: 'settings', icon: Settings, label: 'Cài đặt tòa nhà', path: `/properties/${propertyId}/settings`, children: [
+          { id: 'general', label: 'Thông tin chung', path: `/properties/${propertyId}/settings` },
+          { id: 'services', label: 'Dịch vụ & Bảng giá', path: `/properties/${propertyId}/services` },
+        ]},
+        { id: 'templates', icon: FileText, label: 'Mẫu và cấu hình', path: `/properties/${propertyId}/templates` },
       ],
     },
     {
