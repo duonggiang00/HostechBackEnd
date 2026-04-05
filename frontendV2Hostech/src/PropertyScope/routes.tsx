@@ -9,6 +9,7 @@ import { ticketRoutes } from './features/tickets/routes';
 import { contractsRoutes } from './features/contracts/routes';
 import { meteringRoutes } from './features/metering/routes';
 import { usersRoutes } from './features/users/routes';
+import { buildingOverviewRoutes } from './features/building-overview/routes';
 
 export default function PropertyScopeRoutes() {
   const allRoutes = [
@@ -22,6 +23,7 @@ export default function PropertyScopeRoutes() {
     ...contractsRoutes,
     ...meteringRoutes,
     ...usersRoutes,
+    ...buildingOverviewRoutes,
   ];
 
   return (

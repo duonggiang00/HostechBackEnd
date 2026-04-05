@@ -52,6 +52,7 @@ const PropertyUsersPage = lazy(() => import('@/PropertyScope/features/users/page
 const CreateUserPage = lazy(() => import('@/PropertyScope/features/users/pages/CreateUserPage'));
 const UserDetailPage = lazy(() => import('@/PropertyScope/features/users/pages/UserDetailPage'));
 const TicketListPage = lazy(() => import('@/PropertyScope/features/tickets/pages/TicketListPage'));
+const BuildingOverviewPage = lazy(() => import('@/PropertyScope/features/building-overview/pages/BuildingOverviewPage'));
 
 // Tenant Pages
 import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
@@ -284,6 +285,7 @@ export default function AppRoutes() {
           <Route path="services/create" element={<ServiceCreatePage />} />
           <Route path="services/:serviceId/edit" element={<ServiceEditPage />} />
           <Route path="templates" element={<TemplatesPage />} />
+          <Route path="building-view" element={<BuildingOverviewPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 

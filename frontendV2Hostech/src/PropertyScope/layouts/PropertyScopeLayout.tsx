@@ -14,6 +14,7 @@ import {
   User,
   FileText,
   CreditCard,
+  LayoutDashboard,
   Settings,
   Ticket,
   DollarSign,
@@ -76,6 +77,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         { id: 'home', icon: Home, label: 'Tổng quan', path: dashboardPath, exact: true },
         { id: 'floors', icon: Layers, label: 'Tầng và sơ đồ', path: `/properties/${propertyId}/floors` },
         { id: 'rooms', icon: DoorOpen, label: 'Phòng', path: `/properties/${propertyId}/rooms` },
+        { id: 'building-view', icon: LayoutDashboard, label: 'Mặt bằng tòa nhà (Beta)', path: `/properties/${propertyId}/building-view` },
         { id: 'finances', icon: DollarSign, label: 'Tài chính', path: `/properties/${propertyId}/invoices`, children: [
           { id: 'invoices', label: 'Phiếu thu', path: `/properties/${propertyId}/invoices` },
           { id: 'expenses', label: 'Phiếu chi / Hoàn cọc', path: `/properties/${propertyId}/expenses` },

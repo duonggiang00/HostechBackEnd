@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Property\BuildingOverviewController;
 use App\Http\Controllers\Api\Property\FloorController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomAssetController;
@@ -13,6 +14,10 @@ Route::apiResource('properties', PropertyController::class);
 Route::post('properties/{id}/restore', [PropertyController::class, 'restore']);
 Route::post('properties/{id}/trigger-billing', [PropertyController::class, 'triggerBilling']);
 Route::delete('properties/{id}/force', [PropertyController::class, 'forceDelete']);
+
+// Building Overview (Sub-Module)
+Route::get('properties/{id}/overview', [BuildingOverviewController::class, 'show']);
+Route::post('properties/{id}/overview/sync', [BuildingOverviewController::class, 'sync']);
 
 // Floors
 Route::get('floors/trash', [FloorController::class, 'trash']);
@@ -32,7 +37,6 @@ Route::post('rooms/batch-delete', [RoomController::class, 'destroyBatch']); // X
 Route::post('rooms/batch-restore', [RoomController::class, 'restoreBatch']); // Khôi phục nhiều
 Route::post('rooms/batch-force-delete', [RoomController::class, 'forceDeleteBatch']); // Xóa vĩnh viễn nhiều
 Route::post('rooms/batch-floor-plan', [RoomController::class, 'batchFloorPlan']); // Sửa floor plan nhiều phòng
-Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publish draft
 Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publish draft
 Route::get('rooms/{id}/availability', [RoomController::class, 'availability']); // Trạng thái thuê
 Route::put('rooms/{id}/floor-plan', [RoomController::class, 'setFloorPlan']);       // Gán floor plan

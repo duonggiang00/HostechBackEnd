@@ -24,6 +24,17 @@ class Room extends Model implements HasMedia
 
     protected $fillable = ['id', 'org_id', 'property_id', 'floor_id', 'code', 'name', 'type', 'area', 'floor_number', 'capacity', 'base_price', 'status', 'description', 'amenities', 'utilities'];
 
+    /**
+     * Runtime flag: cho Observer biết phòng được tạo từ Template
+     * (để tránh tạo duplicate Meters).
+     */
+    public bool $createdFromTemplate = false;
+
+    public function wasRecentlyCreatedFromTemplate(): bool
+    {
+        return $this->createdFromTemplate;
+    }
+
     // ─── Scopes ──────────────────────────────────────────────────────────
 
     public function scopeDraft($query)
@@ -71,20 +82,7 @@ class Room extends Model implements HasMedia
         return $this->status === 'draft';
     }
 
-    public function isOccupied(): bool
-    {
-        return $this->status === 'occupied';
-    }
-
-    protected function casts(): array
-    {
-        return [
-            'area' => 'decimal:2',
-            'base_price' => 'decimal:2',
-            'amenities' => 'array',
-            'utilities' => 'array',
-        ];
-    }
+    // ─── Relationships ───────────────────────────────────────────────────
 
     public function property()
     {
@@ -94,12 +92,6 @@ class Room extends Model implements HasMedia
     public function floor()
     {
         return $this->belongsTo(Floor::class);
-    }
-
-    public function registerMediaConversions(?Media $media = null): void
-    {
-        $this->addMediaConversion('thumb')->width(368)->height(232)->nonQueued();
-        $this->addMediaConversion('detail')->width(800)->height(500)->nonQueued();
     }
 
     public function assets()
@@ -112,11 +104,6 @@ class Room extends Model implements HasMedia
         return $this->hasMany(RoomPrice::class);
     }
 
-    public function roomServices()
-    {
-        return $this->hasMany(RoomService::class);
-    }
-
     public function statusHistories()
     {
         return $this->hasMany(RoomStatusHistory::class);
@@ -127,14 +114,9 @@ class Room extends Model implements HasMedia
         return $this->hasMany(\App\Models\Contract\Contract::class);
     }
 
-    public function floorPlanNode()
+    public function activeContract()
     {
-        return $this->hasOne(RoomFloorPlanNode::class);
-    }
-
-    public function priceHistories()
-    {
-        return $this->hasMany(RoomPrice::class)->orderBy('start_date', 'desc');
+        return $this->hasOne(\App\Models\Contract\Contract::class)->where('status', 'ACTIVE');
     }
 
     public function meters()
@@ -142,20 +124,40 @@ class Room extends Model implements HasMedia
         return $this->hasMany(\App\Models\Meter\Meter::class);
     }
 
-    public function services()
-    {
-        return $this->belongsToMany(\App\Models\Service\Service::class, 'room_services');
-    }
-
     public function invoices()
     {
         return $this->hasMany(\App\Models\Invoice\Invoice::class);
     }
 
-    public function activeContract()
+    public function floorPlanNode()
     {
-        return $this->hasOne(\App\Models\Contract\Contract::class)
-            ->where('status', 'ACTIVE')
-            ->latestOfMany();
+        return $this->hasOne(RoomFloorPlanNode::class);
+    }
+
+    public function services()
+    {
+        return $this->belongsToMany(\App\Models\Service\Service::class, 'room_services')
+            ->withPivot('override_price', 'is_active')
+            ->withTimestamps();
+    }
+
+    public function roomServices()
+    {
+        return $this->hasMany(RoomService::class);
+    }
+
+    // ─── Media ───────────────────────────────────────────────────────────
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('gallery');
+        $this->addMediaCollection('cover')->singleFile();
+    }
+
+    public function registerMediaConversions(Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(400)
+            ->height(300);
     }
 }

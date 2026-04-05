@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
+import { useTheme } from '@/shared/hooks/useTheme';
 
 interface StatCardProps {
   label: string;
@@ -22,6 +23,21 @@ const colorMap = {
 };
 
 export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: StatCardProps) => {
+  const { fontSize } = useTheme();
+  const isLargeFont = fontSize === 'lg';
+
+  const getFontSizeClass = () => {
+    const valStr = value.toString();
+    const len = valStr.length;
+    
+    // For very long numbers like currency billions
+    if (len > 15) return isLargeFont ? 'text-[13px]' : 'text-base';
+    if (len > 12) return isLargeFont ? 'text-base' : 'text-lg';
+    if (len > 10) return isLargeFont ? 'text-lg' : 'text-xl';
+    
+    return isLargeFont ? 'text-xl' : 'text-2xl';
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -31,22 +47,26 @@ export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: Sta
     >
       <div className="absolute -right-4 -top-4 w-24 h-24 bg-current opacity-[0.03] rounded-full blur-2xl group-hover:scale-125 transition-transform" />
       
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">{label}</p>
-          <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{value}</h3>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider truncate">{label}</p>
+          <h3 className={`font-bold text-slate-900 dark:text-white tracking-tight whitespace-nowrap overflow-hidden text-ellipsis ${getFontSizeClass()}`}>
+            {value}
+          </h3>
           
           {trend && (
-            <div className={`mt-2 flex items-center gap-1 text-xs font-bold ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
-              <span>{trend.isUp ? '↑' : '↓'}</span>
-              <span>{trend.value}%</span>
-              <span className="text-slate-400 font-medium ml-1">so với tháng trước</span>
+            <div className={`mt-2 flex items-center flex-wrap gap-1 text-[10px] font-bold ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className="flex items-center gap-0.5">
+                {trend.isUp ? '↑' : '↓'}
+                {trend.value}%
+              </span>
+              <span className="text-slate-400 font-medium whitespace-nowrap">vs tháng trước</span>
             </div>
           )}
         </div>
         
-        <div className={`p-3 rounded-2xl border ${colorMap[color]}`}>
-          <Icon className="w-6 h-6" />
+        <div className={`shrink-0 p-2.5 rounded-xl border ${colorMap[color]}`}>
+          <Icon className="w-5 h-5" />
         </div>
       </div>
     </motion.div>

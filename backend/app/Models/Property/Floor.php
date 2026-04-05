@@ -20,14 +20,15 @@ class Floor extends Model implements HasMedia
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'org_id', 'property_id', 'code', 'name', 'sort_order', 'area', 'shared_area'];
+    protected $fillable = ['id', 'org_id', 'property_id', 'code', 'name', 'floor_number', 'sort_order', 'area', 'shared_area'];
 
     protected function casts(): array
     {
         return [
-            'sort_order' => 'integer',
-            'area' => 'decimal:2',
-            'shared_area' => 'decimal:2',
+            'floor_number' => 'integer',
+            'sort_order'   => 'integer',
+            'area'         => 'decimal:2',
+            'shared_area'  => 'decimal:2',
         ];
     }
 

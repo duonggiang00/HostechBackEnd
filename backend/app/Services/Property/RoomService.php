@@ -220,6 +220,9 @@ class RoomService
 
             $room = $this->create($roomData, $performer);
 
+            // Flag: Template will handle Meters — tell Observer to skip default meter creation
+            $room->createdFromTemplate = true;
+
             // Assets: create from template if not provided in overrides
             if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
                 foreach ($template->assets as $tAsset) {
@@ -526,6 +529,11 @@ class RoomService
 
                 $roomData['code'] = $code;
                 $room = Room::create($roomData);
+
+                // Flag: if using template, Observer should skip default meter creation
+                if ($template) {
+                    $room->createdFromTemplate = true;
+                }
 
                 if ($template) {
                     // Sync Services
