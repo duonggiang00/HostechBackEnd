@@ -646,14 +646,19 @@ class InvoiceService
 
         $contract = $invoice->contract;
 
-        if (! $contract || $contract->status !== ContractStatus::PENDING_PAYMENT->value) {
+        if (! $contract || $contract->status !== ContractStatus::PENDING_PAYMENT) {
             return;
         }
 
         $contract->update([
-            'status' => ContractStatus::ACTIVE->value,
+            'status' => ContractStatus::ACTIVE,
             'signed_at' => now(),
         ]);
+        
+        // Cập nhật trạng thái phòng thành OCCUPIED
+        if ($contract->room) {
+            $contract->room->update(['status' => 'occupied']);
+        }
     }
     // ║  PAYMENT OPERATIONS                                     ║
     // ╠═══════════════════════════════════════════════════════╣

@@ -88,7 +88,21 @@ class ContractDocumentController extends Controller
         ]);
 
         try {
-            $storagePath = $this->documentService->generateDocument($contract, array_filter($extraData));
+            // Tải lại các file chữ ký nếu có để tránh bị xóa mất khi generate lại doc
+            $existingFiles = \Illuminate\Support\Facades\Storage::disk('local')->files('contracts/signatures');
+            $signatures = [];
+            foreach (['manager', 'tenant'] as $role) {
+                foreach ($existingFiles as $file) {
+                    if (str_starts_with(basename($file), 'signature_' . $role . '_' . $contract->id . '-')) {
+                        $key = $role === 'manager' ? 'signature_landlord' : 'signature_tenant';
+                        $signatures[$key] = \Illuminate\Support\Facades\Storage::disk('local')->path($file);
+                        break;
+                    }
+                }
+            }
+            $extraData = array_merge(array_filter($extraData), $signatures);
+
+            $storagePath = $this->documentService->generateDocument($contract, $extraData);
 
             // Lưu path vào contract
             $contract->update([

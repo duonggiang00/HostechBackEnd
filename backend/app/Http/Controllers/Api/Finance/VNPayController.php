@@ -275,12 +275,17 @@ class VNPayController extends Controller
         $receivedHash = $request->query('vnp_SecureHash', '');
         $hasSignedCallback = isset($params['vnp_TxnRef'], $params['vnp_SecureHash']);
 
+        \Illuminate\Support\Facades\Log::info('[VNPay] verifyReturn started', ['txn_ref' => $txnRef, 'hasSignedCallback' => $hasSignedCallback, 'shouldTrust' => $this->vnpayService->shouldTrustReturnAsIpn()]);
+
         if ($hasSignedCallback && $payment->provider_ref === null && $this->vnpayService->shouldTrustReturnAsIpn()) {
             if (! $this->vnpayService->verifySignature($params, $receivedHash)) {
+                \Illuminate\Support\Facades\Log::warning('[VNPay] verifyReturn Invalid signature', ['params' => $params]);
                 return response()->json(['message' => 'Chữ ký không hợp lệ.'], 400);
             }
 
             $data = $this->vnpayService->parseCallbackData($params);
+            
+            \Illuminate\Support\Facades\Log::info('[VNPay] verifyReturn signature valid. Processing...', ['data' => $data]);
             if ($data['txn_ref'] !== $payment->id) {
                 return response()->json(['message' => 'Mã giao dịch VNPay không khớp với payment hiện tại.'], 422);
             }

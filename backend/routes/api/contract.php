@@ -8,11 +8,15 @@ use Illuminate\Support\Facades\Route;
 // Contracts
 Route::get('contracts/my-pending', [ContractController::class, 'myPendingContracts']);
 Route::post('contracts/{contract}/accept-signature', [ContractController::class, 'acceptSignature']);
+Route::post('contracts/{contract}/sign', [ContractController::class, 'sign']);
 Route::post('contracts/{contract}/reject-signature', [ContractController::class, 'rejectSignature']);
 Route::get('contracts/{contract}/available-rooms', [ContractController::class, 'availableRooms']);
 Route::post('contracts/{contract}/room-transfer-request', [ContractController::class, 'roomTransferRequest']);
 Route::post('contracts/{contract}/confirm-payment', [ContractController::class, 'confirmPayment']);
 Route::post('contracts/{contract}/terminate', [ContractController::class, 'terminate']);
+Route::post('contracts/{contract}/request-termination', [ContractController::class, 'requestTermination']);   // Tenant báo dời đi
+Route::get('contracts/{contract}/status-histories', [ContractController::class, 'statusHistories']);           // Timeline lịch sử
+
 
 // Contract Documents
 Route::post('contracts/scan', [ContractDocumentController::class, 'scan']);

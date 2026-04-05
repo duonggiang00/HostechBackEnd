@@ -149,6 +149,7 @@ class RoomResource extends JsonResource
                     'id' => $rs->id,
                     'quantity' => (int) ($rs->quantity ?? 1),
                     'service' => [
+                        'id' => $rs->service_id ?? $rs->service?->id,
                         'name' => $rs->service?->name,
                         'price' => (float) ($rs->service?->current_price ?? 0),
                         'unit' => $rs->service?->unit,

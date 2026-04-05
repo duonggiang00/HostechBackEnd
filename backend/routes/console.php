@@ -9,3 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('media:cleanup-temp')->daily();
+Schedule::command('contracts:expire')->dailyAt('00:00'); // Tự động xử lý HĐ hết hạn
+

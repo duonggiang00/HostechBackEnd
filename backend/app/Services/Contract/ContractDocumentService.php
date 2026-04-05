@@ -293,7 +293,17 @@ class ContractDocumentService
         ], $extraData);
 
         foreach ($vars as $key => $value) {
-            $templateProcessor->setValue($key, (string) $value);
+            // Xử lý ảnh chữ ký
+            if (is_string($value) && str_starts_with($key, 'signature_') && file_exists($value)) {
+                $templateProcessor->setImageValue($key, [
+                    'path' => $value,
+                    'width' => 120,
+                    'height' => 60,
+                    'ratio' => false
+                ]);
+            } else {
+                $templateProcessor->setValue($key, (string) $value);
+            }
         }
 
         // Lưu file output
@@ -452,8 +462,8 @@ class ContractDocumentService
         $table->addCell(5000)->addText('BÊN CHO THUÊ (BÊN A)', ['bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $table->addCell(5000)->addText('BÊN THUÊ (BÊN B)', ['bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $table->addRow();
-        $table->addCell(5000)->addText('(Ký, ghi rõ họ tên)', ['italic' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
-        $table->addCell(5000)->addText('(Ký, ghi rõ họ tên)', ['italic' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $table->addCell(5000)->addText('${signature_landlord}', ['bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $table->addCell(5000)->addText('${signature_tenant}', ['bold' => true], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
 
         $objWriter = \PhpOffice\PhpWord\IOFactory::createWriter($phpWord, 'Word2007');
         $objWriter->save($outputPath);
