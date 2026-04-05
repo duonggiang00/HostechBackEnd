@@ -58,30 +58,40 @@ class Contract extends Model implements HasMedia
         'document_type',
         'scan_original_filename',
         'meta',
+        // ── Termination fields ─────────────────────────────────────────────────────
+        'cancellation_party',   // LANDLORD | TENANT | MUTUAL
+        'cancellation_reason',  // Lý do huỷ (text tự do)
+        'cancelled_at',         // Thời điểm chính thức hủy
+        'notice_days',          // Số ngày phải báo trước
+        'notice_given_at',      // Thời điểm Tenant gửi thông báo dời
     ];
 
     protected function casts(): array
     {
         return [
-            'status' => \App\Enums\ContractStatus::class,
-            'deposit_status' => \App\Enums\DepositStatus::class,
-            'start_date' => 'date',
-            'end_date' => 'date',
-            'next_billing_date' => 'date',
-            'base_rent' => 'decimal:2',
-            'fixed_services_fee' => 'decimal:2',
-            'total_rent' => 'decimal:2',
-            'cycle_months' => 'integer',
-            'rent_price' => 'decimal:2',
-            'deposit_amount' => 'decimal:2',
-            'refunded_amount' => 'decimal:2',
-            'forfeited_amount' => 'decimal:2',
-            'rent_token_balance' => 'integer',
+            'status'               => \App\Enums\ContractStatus::class,
+            'deposit_status'       => \App\Enums\DepositStatus::class,
+            'cancellation_party'   => \App\Enums\ContractCancellationParty::class,
+            'start_date'           => 'date',
+            'end_date'             => 'date',
+            'next_billing_date'    => 'date',
+            'base_rent'            => 'decimal:2',
+            'fixed_services_fee'   => 'decimal:2',
+            'total_rent'           => 'decimal:2',
+            'cycle_months'         => 'integer',
+            'notice_days'          => 'integer',
+            'rent_price'           => 'decimal:2',
+            'deposit_amount'       => 'decimal:2',
+            'refunded_amount'      => 'decimal:2',
+            'forfeited_amount'     => 'decimal:2',
+            'rent_token_balance'   => 'integer',
             'join_code_expires_at' => 'datetime',
             'join_code_revoked_at' => 'datetime',
-            'signed_at' => 'datetime',
-            'terminated_at' => 'datetime',
-            'meta' => 'array',
+            'signed_at'            => 'datetime',
+            'terminated_at'        => 'datetime',
+            'cancelled_at'         => 'datetime',
+            'notice_given_at'      => 'datetime',
+            'meta'                 => 'array',
         ];
     }
 
@@ -113,5 +123,22 @@ class Contract extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(ContractStatusHistory::class)->orderBy('created_at', 'asc');
+    }
+
+    /**
+     * Kiểm tra xem hợp đồng có đang kết thúc sớm không (Tenant hủy trước hạn).
+     */
+    public function isEarlyTermination(): bool
+    {
+        if (! $this->end_date) {
+            return false; // Hướng không hạn → không phải dời sớm
+        }
+
+        return now()->lt($this->end_date);
     }
 }

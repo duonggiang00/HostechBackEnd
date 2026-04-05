@@ -193,6 +193,22 @@ class ContractController extends Controller
     }
 
     /**
+     * Ký hợp đồng bằng chữ ký điện tử
+     */
+    public function sign(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $validated = $request->validate([
+            'signature_image' => 'required|string',
+        ]);
+
+        $this->service->signContract($contract, $validated['signature_image']);
+
+        return response()->json(['message' => 'Đã ký hợp đồng thành công.']);
+    }
+
+    /**
      * Từ chối hợp đồng
      *
      * Tenant từ chối tham gia hợp đồng.
@@ -282,8 +298,10 @@ class ContractController extends Controller
     /**
      * Thanh lý hợp đồng / Kết thúc sớm (Admin)
      *
-     * Kết thúc hợp đồng đang ACTIVE.
-     * Params: termination_date, reason, forfeit_deposit, refund_remaining_rent.
+     * Quy tắc xử lý tiền cọc:
+     * - Tenant hủy trước hạn + waive_penalty=false → Phạt toàn bộ cọc (FORFEITED, status CANCELLED)
+     * - Tenant hủy trước hạn + waive_penalty=true → Hoàn cọc (REFUND_PENDING, status TERMINATED)
+     * - Chủ nhà hủy hoặc kết thúc đúng hạn → Hoàn cọc (REFUND_PENDING)
      */
     public function terminate(Request $request, string $id): JsonResponse
     {
@@ -292,14 +310,56 @@ class ContractController extends Controller
         $this->authorize('update', $contract);
 
         $validated = $request->validate([
-            'termination_date' => 'nullable|date',
-            'reason' => 'nullable|string',
-            'forfeit_deposit' => 'nullable|boolean',
+            'termination_date'    => 'nullable|date',
+            'cancellation_party'  => 'nullable|string|in:LANDLORD,TENANT,MUTUAL',
+            'cancellation_reason' => 'nullable|string|max:1000',
+            'waive_penalty'       => 'nullable|boolean',
             'refund_remaining_rent' => 'nullable|boolean',
         ]);
 
         $this->service->terminate($contract, $validated);
 
         return response()->json(['message' => 'Đã thanh lý hợp đồng thành công.']);
+    }
+
+    /**
+     * Tenant gửi yêu cầu dời đi trước hạn
+     *
+     * Chuyển hợp đồng sang trạng thái PENDING_TERMINATION.
+     * Manager sẽ nhìn thấy yêu cầu này và quyết định xử lý cọc.
+     */
+    public function requestTermination(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('view', $contract);
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:1000',
+        ]);
+
+        $this->service->requestTermination($contract, $request->user(), $validated);
+
+        return response()->json([
+            'message' => 'Đã gửi yêu cầu dời đi. Quản lý sẽ xác nhận và xử lý tiền cọc sau khi kiểm tra.',
+        ]);
+    }
+
+    /**
+     * Lịch sử trạng thái của hợp đồng (Timeline)
+     *
+     * Trả về toàn bộ lịch sử chuyển trạng thái theo thời gian.
+     */
+    public function statusHistories(string $id): JsonResponse
+    {
+        $contract = Contract::with([
+            'statusHistories.changedBy:id,full_name,email',
+        ])->findOrFail($id);
+
+        $this->authorize('view', $contract);
+
+        return response()->json([
+            'data' => $contract->statusHistories,
+        ]);
     }
 }

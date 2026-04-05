@@ -596,7 +596,8 @@ class RoomService
             $room->prices()->create([
                 'org_id' => $room->org_id,
                 'price' => $data['base_price'],
-                'start_date' => now(),
+                'effective_from' => now()->toDateString(),
+                'created_by_user_id' => $performer->id,
             ]);
 
             // Attach services
@@ -621,9 +622,10 @@ class RoomService
             // Initial status history
             $room->statusHistories()->create([
                 'org_id' => $room->org_id,
-                'status' => $room->status,
-                'changed_at' => now(),
-                'note' => 'Initial status',
+                'from_status' => 'draft',
+                'to_status' => $room->status,
+                'reason' => 'Published from draft',
+                'changed_by_user_id' => $performer->id,
             ]);
 
             return $room;

@@ -3,7 +3,9 @@
 namespace App\Services\Contract;
 
 use App\Enums\ContractStatus;
-use App\Enums\InvoiceItemType;
+ use App\Enums\ContractCancellationParty;
+ use App\Enums\DepositStatus;
+ use App\Enums\InvoiceItemType;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Invoice\Invoice;
@@ -436,6 +438,62 @@ class ContractService
      * 2. Tạo Initial Invoice (tiền phòng tháng đầu + tiền cọc)
      * 3. Contract → PENDING_PAYMENT (chờ Admin xác nhận thanh toán)
      */
+    public function signContract(Contract $contract, string $base64Image): void
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(401, 'Unauthorized');
+        }
+
+        if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+            $base64Data = substr($base64Image, strpos($base64Image, ',') + 1);
+            $type = strtolower($type[1]);
+            
+            if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                abort(400, 'Định dạng ảnh chữ ký không hợp lệ');
+            }
+            
+            $isManager = $user->hasRole(['Admin', 'Manager', 'Staff']);
+            $rolePrefix = $isManager ? 'manager' : 'tenant';
+            $signatureKey = $isManager ? 'signature_landlord' : 'signature_tenant';
+
+            $imageName = 'signature_' . $rolePrefix . '_' . $contract->id . '-' . $user->id . '.' . $type;
+            $storageFilePath = 'contracts/signatures/' . $imageName;
+            \Illuminate\Support\Facades\Storage::disk('local')->put($storageFilePath, base64_decode($base64Data));
+            $imagePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storageFilePath);
+            
+            // Re-generate contract document to include the signature image
+            $extraData = [$signatureKey => $imagePath];
+            
+            // Đọc chữ ký của bên còn lại nếu có để chèn đồng thời
+            $otherRole = $isManager ? 'tenant' : 'manager';
+            $otherKey = $isManager ? 'signature_tenant' : 'signature_landlord';
+            $existingFiles = \Illuminate\Support\Facades\Storage::disk('local')->files('contracts/signatures');
+            foreach ($existingFiles as $file) {
+                if (str_starts_with(basename($file), 'signature_' . $otherRole . '_' . $contract->id . '-')) {
+                    $extraData[$otherKey] = \Illuminate\Support\Facades\Storage::disk('local')->path($file);
+                    break;
+                }
+            }
+
+            $contractDocService = app(ContractDocumentService::class);
+            $contractDocService->generateDocument($contract, $extraData);
+            
+            // Nếu người thuê ký thì mới gọi Accept Signature để xác nhận
+            if (!$isManager) {
+                $success = $this->acceptSignature($contract, $user);
+                if (!$success) {
+                    abort(403, 'Bạn không thể Ký do không nằm trong hợp đồng hoặc hợp đồng sai trạng thái.');
+                }
+            }
+        } else {
+            abort(400, 'Dữ liệu ảnh chữ ký không đúng định dạng');
+        }
+    }
+
+    /**
+     * Xác nhận ký hợp đồng (không có ảnh chữ ký mộc)
+     */
     public function acceptSignature(Contract $contract, User $user): bool
     {
         $member = ContractMember::where('contract_id', $contract->id)
@@ -807,106 +865,234 @@ class ContractService
     }
 
     /**
-     * Terminate Contract (Early Termination).
+     * Terminate Contract (Early Termination / Normal End).
      *
      * Params:
      * - termination_date (YYYY-MM-DD)
-     * - reason (string)
-     * - forfeit_deposit (bool)
+     * - cancellation_party (LANDLORD|TENANT|MUTUAL)
+     * - cancellation_reason (string)
+     * - waive_penalty (bool) — Manager chấp nhận miễn phạt cọc cho Tenant dời sớm
      * - refund_remaining_rent (bool)
      */
     public function terminate(Contract $contract, array $data): bool
     {
-        if ($contract->status !== ContractStatus::ACTIVE) {
-            throw new \Exception('Chỉ có thể thanh lý hợp đồng đang hoạt động.');
+        $allowedStatuses = array_map(
+            fn ($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
+            ContractStatus::allowTerminate()
+        );
+
+        $currentStatus = $contract->status instanceof \BackedEnum
+            ? $contract->status->value
+            : (string) $contract->status;
+
+        if (! in_array($currentStatus, $allowedStatuses)) {
+            throw new \Exception('Chỉ có thể thanh lý hợp đồng đang hoạt động, chờ thanh lý hoặc hết hạn.');
         }
 
         return DB::transaction(function () use ($contract, $data) {
-            $terminationDate = $data['termination_date'] ?? now()->toDateString();
-            $forfeitDeposit = (bool) ($data['forfeit_deposit'] ?? false);
+            $terminationDate     = $data['termination_date'] ?? now()->toDateString();
+            $cancellationParty   = $data['cancellation_party'] ?? null;
+            $cancellationReason  = $data['cancellation_reason'] ?? $data['reason'] ?? null;
+            $waivePenalty        = (bool) ($data['waive_penalty'] ?? false);
             $refundRemainingRent = (bool) ($data['refund_remaining_rent'] ?? false);
 
             $depositAmount = (float) $contract->deposit_amount;
-            $refundedAmount = 0;
+            $isEarlyTermination = $contract->isEarlyTermination();
+
+            // ── Smart Deposit Logic ─────────────────────────────────────────────
+            // Rule 1: Tenant tự ý dời trước hạn + Manager không miễn phạt → Phạt toàn bộ cọc
+            // Rule 2: Tenant dời trước hạn + Manager chấp nhận miễn phạt → Hoàn cọc
+            // Rule 3: Chủ nhà hủy / Hai bên thỏa thuận → Hoàn cọc
+            // Rule 4: Kết thúc đúng hạn → REFUND_PENDING (chời bác không phạt)
+
+            $forfeitDeposit = false;
+
+            if ($cancellationParty === 'TENANT' && $isEarlyTermination && ! $waivePenalty) {
+                $forfeitDeposit = true; // Rule 1: Phạt cọc
+            }
+
+            $refundedAmount  = 0;
             $forfeitedAmount = 0;
 
             if ($forfeitDeposit) {
                 $forfeitedAmount = $depositAmount;
-                $depositStatus = \App\Enums\DepositStatus::FORFEITED;
+                $depositStatus   = DepositStatus::FORFEITED;
+                $contractStatus  = ContractStatus::CANCELLED; // Huỷ ngang → CANCELLED
             } else {
                 $refundedAmount = $depositAmount;
-                $depositStatus = \App\Enums\DepositStatus::REFUND_PENDING;
+                $depositStatus  = DepositStatus::REFUND_PENDING;
+                $contractStatus = ContractStatus::TERMINATED; // Thỏa thuận / đương hạn → TERMINATED
             }
 
-            // Always use TERMINATED for termination method
-            $status = ContractStatus::TERMINATED;
-
-            $contract->status = $status;
-            $contract->deposit_status = $depositStatus;
-            $contract->end_date = $terminationDate;
-            $contract->terminated_at = now();
-            $contract->refunded_amount = $refundedAmount;
-            $contract->forfeited_amount = $forfeitedAmount;
-            $contract->meta = array_merge($contract->meta ?? [], [
+            $contract->status             = $contractStatus;
+            $contract->deposit_status     = $depositStatus;
+            $contract->end_date           = $terminationDate;
+            $contract->terminated_at      = now();
+            $contract->cancelled_at       = $forfeitDeposit ? now() : null;
+            $contract->cancellation_party = $cancellationParty;
+            $contract->cancellation_reason = $cancellationReason;
+            $contract->refunded_amount    = $refundedAmount;
+            $contract->forfeited_amount   = $forfeitedAmount;
+            $contract->meta               = array_merge($contract->meta ?? [], [
                 'termination_details' => [
-                    'reason' => $data['reason'] ?? null,
-                    'forfeit_deposit' => $forfeitDeposit,
+                    'is_early_termination'  => $isEarlyTermination,
+                    'cancellation_party'    => $cancellationParty,
+                    'cancellation_reason'   => $cancellationReason,
+                    'waive_penalty'         => $waivePenalty,
+                    'forfeit_deposit'       => $forfeitDeposit,
                     'refund_remaining_rent' => $refundRemainingRent,
-                    'original_end_date' => $contract->getOriginal('end_date'),
+                    'original_end_date'     => $contract->getOriginal('end_date'),
                 ],
             ]);
             $contract->save();
 
-            $items = [];
-            if ($forfeitDeposit && $depositAmount > 0) {
-                $items[] = [
-                    'type' => \App\Enums\InvoiceItemType::PENALTY->value,
-                    'description' => 'Tiền cọc bị phạt (đã thu trước đó, không hoàn lại)',
-                    'quantity' => 1,
-                    'unit_price' => 0,
-                    'amount' => 0,
-                ];
-            } else {
-                // For test_admin_can_terminate_contract_without_forfeiture, 
-                // it expects invoice total to be rent_price
-                $items[] = [
-                    'type' => \App\Enums\InvoiceItemType::RENT->value,
-                    'description' => 'Tiền thuê tháng cuối/phí thanh lý',
-                    'quantity' => 1,
-                    'unit_price' => $contract->rent_price,
-                    'amount' => $contract->rent_price,
-                ];
-
-                if ($depositAmount > 0) {
-                    $items[] = [
-                        'type' => \App\Enums\InvoiceItemType::ADJUSTMENT->value,
-                        'description' => 'Hoàn trả tiền cọc',
-                        'quantity' => 1,
-                        'unit_price' => 0,
-                        'amount' => 0,
-                    ];
-                }
-            }
+            // ── Settlement Invoice (is_termination = true) ────────────────────────
+            $items = $this->buildSettlementItems(
+                contract: $contract,
+                terminationDate: $terminationDate,
+                forfeitDeposit: $forfeitDeposit,
+                depositAmount: $depositAmount,
+                refundRemainingRent: $refundRemainingRent,
+            );
 
             $this->invoiceService->create([
-                'org_id' => $contract->org_id,
+                'org_id'      => $contract->org_id,
                 'property_id' => $contract->property_id,
-                'room_id' => $contract->room_id,
+                'room_id'     => $contract->room_id,
                 'contract_id' => $contract->id,
-                'status' => 'DRAFT', // Use standard string status
-                'issue_date' => $terminationDate,
-                'due_date' => $terminationDate,
+                'status'      => 'DRAFT',
+                'issue_date'  => $terminationDate,
+                'due_date'    => $terminationDate,
                 'period_start' => $terminationDate,
-                'period_end' => $terminationDate,
+                'period_end'  => $terminationDate,
                 'is_termination' => true,
-            ], $items); // Pass items as second argument
+                'snapshot'    => [
+                    'is_termination'     => true,
+                    'cancellation_party' => $cancellationParty,
+                    'forfeit_deposit'    => $forfeitDeposit,
+                    'is_early'           => $isEarlyTermination,
+                ],
+            ], $items);
 
             // Free the room
-            $contract->room->update(['status' => 'available']);
+            if ($contract->room) {
+                $contract->room->update(['status' => 'available']);
+            }
 
             return true;
         });
     }
+
+    /**
+     * Tenant gửi yêu cầu dời đi trước hạn.
+     *
+     * Contract chuyển sang PENDING_TERMINATION, ghi lại ngày báo trước.
+     */
+    public function requestTermination(Contract $contract, User $requester, array $data): bool
+    {
+        $allowedStatuses = array_map(
+            fn ($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
+            ContractStatus::allowRequestTermination()
+        );
+
+        $currentStatus = $contract->status instanceof \BackedEnum
+            ? $contract->status->value
+            : (string) $contract->status;
+
+        if (! in_array($currentStatus, $allowedStatuses)) {
+            throw new \Exception('Chỉ có thể gửi yêu cầu dời khi hợp đồng đang hiệu lực.');
+        }
+
+        return DB::transaction(function () use ($contract, $data) {
+            $contract->update([
+                'status'             => ContractStatus::PENDING_TERMINATION,
+                'notice_given_at'    => now(),
+                'cancellation_party' => ContractCancellationParty::TENANT->value,
+                'cancellation_reason' => $data['reason'] ?? null,
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Tự động đánh dấu các hợp đồng hết hạn nhưng chưa được thanh lý là EXPIRED.
+     *
+     * Dùng với Scheduler (chạy hàng ngày).
+     */
+    public function markExpiredContracts(): int
+    {
+        $contracts = Contract::where('status', 'ACTIVE')
+            ->whereNotNull('end_date')
+            ->where('end_date', '<', today())
+            ->get();
+
+        $count = 0;
+        foreach ($contracts as $contract) {
+            DB::transaction(function () use ($contract) {
+                $contract->update(['status' => ContractStatus::EXPIRED]);
+
+                // Nếu tiền cọc đang ở trạng thái HELD → chuyển sang REFUND_PENDING
+                if ($contract->deposit_status?->value === 'HELD') {
+                    $contract->update(['deposit_status' => DepositStatus::REFUND_PENDING]);
+                }
+            });
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Xây dựng danh sách các mục trong Settlement Invoice khi thanh lý.
+     */
+    private function buildSettlementItems(
+        Contract $contract,
+        string $terminationDate,
+        bool $forfeitDeposit,
+        float $depositAmount,
+        bool $refundRemainingRent,
+    ): array {
+        $items = [];
+
+        // Tiền thuê tháng cuối (nếu có)
+        $items[] = [
+            'type'        => InvoiceItemType::RENT->value,
+            'description' => 'Tiền thuê tháng cuối / phí thanh lý',
+            'quantity'    => 1,
+            'unit_price'  => (float) $contract->rent_price,
+            'amount'      => (float) $contract->rent_price,
+        ];
+
+        if ($depositAmount > 0) {
+            if ($forfeitDeposit) {
+                // Phạt cọc — ghi rõ lý do
+                $items[] = [
+                    'type'        => InvoiceItemType::PENALTY->value,
+                    'description' => 'Tiền cọc bị phạt thu (huỷ hợp đồng trước hạn)',
+                    'quantity'    => 1,
+                    'unit_price'  => $depositAmount,
+                    'amount'      => $depositAmount,
+                    'meta'        => ['note' => 'Đã thu trước, không hoàn lại'],
+                ];
+            } else {
+                // Hoàn cọc — ghi dương để rõ chuức năng
+                $items[] = [
+                    'type'        => InvoiceItemType::ADJUSTMENT->value,
+                    'description' => 'Hoàn trả tiền đặt cọc cho khách',
+                    'quantity'    => 1,
+                    'unit_price'  => -$depositAmount, // âm = cần trả lại cho khách
+                    'amount'      => -$depositAmount,
+                    'meta'        => ['note' => 'Chuyển sang trạng thái REFUND_PENDING'],
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+
+
 
     public function checkOverlap(string $roomId, string $startDate, ?string $endDate = null, ?string $excludeContractId = null): ?Contract
     {
