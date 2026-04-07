@@ -16,7 +16,8 @@ class MeterReadingController extends Controller
 {
     public function __construct(
         protected MeterReadingService $service
-    ) {}
+    ) {
+    }
 
     /**
      * Chốt số hàng loạt cho nhiều đồng hồ.
@@ -48,7 +49,7 @@ class MeterReadingController extends Controller
     /**
      * Lấy danh sách Lịch sử chốt chỉ số của một đồng hồ.
      *
-        * @queryParam filter[status] string Trạng thái (DRAFT, SUBMITTED, APPROVED, REJECTED).
+     * @queryParam filter[status] string Trạng thái (DRAFT, SUBMITTED, APPROVED, REJECTED).
      */
     public function index(Request $request, string $meterId)
     {

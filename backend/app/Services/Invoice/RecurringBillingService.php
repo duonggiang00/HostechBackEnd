@@ -15,7 +15,8 @@ class RecurringBillingService
     public function __construct(
         protected InvoiceService $invoiceService,
         protected ServiceService $serviceService
-    ) {}
+    ) {
+    }
 
     /**
      * Generate monthly invoices for all active contracts in an organization.
@@ -44,6 +45,42 @@ class RecurringBillingService
                 $this->generateInvoiceForContract($contract, $periodMonth);
                 $results['success']++;
             } catch (\Exception $e) {
+                $results['failed']++;
+                $results['errors'][] = "Contract {$contract->id}: " . $e->getMessage();
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Generate monthly invoices for all active contracts in a specific property.
+     */
+    public function generateMonthlyInvoicesForProperty(string $propertyId, Carbon $periodMonth)
+    {
+        $contracts = Contract::where('property_id', $propertyId)
+            ->where('status', 'ACTIVE')
+            ->where('start_date', '<=', $periodMonth->copy()->endOfMonth())
+            ->where(function ($query) use ($periodMonth) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $periodMonth->copy()->startOfMonth());
+            })
+            ->get();
+
+        $results = [
+            'total' => $contracts->count(),
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+        ];
+
+        foreach ($contracts as $contract) {
+            /** @var Contract $contract */
+            try {
+                $this->generateInvoiceForContract($contract, $periodMonth);
+                $results['success']++;
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to generate invoice for contract {$contract->id}: " . $e->getMessage());
                 $results['failed']++;
                 $results['errors'][] = "Contract {$contract->id}: " . $e->getMessage();
             }
@@ -84,8 +121,8 @@ class RecurringBillingService
             } else {
                 // Balance is 0, need to charge rent based on billing cycle
                 $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
-                
-                $desc = $cycleMonths === 1 
+
+                $desc = $cycleMonths === 1
                     ? 'Tiền phòng tháng ' . $periodMonth->format('m/Y')
                     : 'Tiền phòng chu kỳ ' . $cycleMonths . ' tháng';
 
@@ -164,7 +201,7 @@ class RecurringBillingService
                 // Xác định số tiền có thể cấn trừ tối đa
                 $availableCredit = (float) $meta['credit_balance'];
                 $currentTotal = $invoice->total_amount;
-                
+
                 if ($currentTotal > 0) {
                     $appliedCredit = min($availableCredit, $currentTotal);
 
@@ -210,7 +247,7 @@ class RecurringBillingService
             ->orderBy('period_end', 'desc')
             ->first();
 
-        if (! $currentReading) {
+        if (!$currentReading) {
             return null;
         }
 

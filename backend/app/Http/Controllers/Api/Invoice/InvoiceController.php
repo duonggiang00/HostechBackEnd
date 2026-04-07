@@ -29,7 +29,8 @@ class InvoiceController extends Controller
     public function __construct(
         protected InvoiceService $service,
         protected \App\Services\Finance\PaymentService $paymentService
-    ) {}
+    ) {
+    }
 
 
     // ╔═══════════════════════════════════════════════════════╗
@@ -115,7 +116,7 @@ class InvoiceController extends Controller
     public function show(string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Not Found');
         }
 
@@ -139,11 +140,11 @@ class InvoiceController extends Controller
 
         $validated = $request->validate([
             'org_id' => ['required', 'uuid'],
-            'month'  => ['required', 'date_format:Y-m'], // e.g. "2024-10"
+            'month' => ['required', 'date_format:Y-m'], // e.g. "2024-10"
         ]);
 
         $user = $request->user();
-        if (! $user->hasRole('Admin') && $user->org_id !== $validated['org_id']) {
+        if (!$user->hasRole('Admin') && $user->org_id !== $validated['org_id']) {
             abort(403, 'Unauthorized to run billing for this organization.');
         }
 
@@ -153,21 +154,21 @@ class InvoiceController extends Controller
 
         return response()->json([
             'message' => 'Invoice generation completed',
-            'data'    => $results,
+            'data' => $results,
         ], 200);
     }
 
     /**
      * Kích hoạt tạo hóa đơn định kỳ cho cụ thể 1 tòa nhà
      */
-    public function generateMonthlyForProperty(Request $request, string $property_id, \App\Services\Invoice\InvoiceService $invoiceService): JsonResponse
+    public function generateMonthlyForProperty(Request $request, string $property_id, \App\Services\Invoice\RecurringBillingService $recurringBillingService): JsonResponse
     {
         $this->authorize('create', Invoice::class);
 
         $property = \App\Models\Property\Property::findOrFail($property_id);
-        
+
         $user = $request->user();
-        if (! $user->hasRole('Admin') && $user->org_id !== $property->org_id) {
+        if (!$user->hasRole('Admin') && $user->org_id !== $property->org_id) {
             abort(403, 'Unauthorized to run billing for this organization.');
         }
 
@@ -175,13 +176,16 @@ class InvoiceController extends Controller
             'billing_date' => ['nullable', 'date'],
         ]);
 
-        $count = $invoiceService->createMonthlyInvoicesForProperty($property, [
-            'billing_date' => $validated['billing_date'] ?? now()->toDateString(),
-        ]);
+        $billingDate = $validated['billing_date'] ?? now()->toDateString();
+        $periodMonth = \Carbon\Carbon::parse($billingDate)->startOfMonth();
+
+        $results = $recurringBillingService->generateMonthlyInvoicesForProperty($property->id, $periodMonth);
 
         return response()->json([
             'message' => 'Đã chốt tiền tháng cho tòa nhà.',
-            'count'   => $count,
+            'count' => $results['success'],
+            'failed' => $results['failed'],
+            'errors' => $results['errors'],
         ], 200);
     }
 
@@ -212,7 +216,7 @@ class InvoiceController extends Controller
     public function update(InvoiceUpdateRequest $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Not Found');
         }
 
@@ -231,7 +235,7 @@ class InvoiceController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Not Found');
         }
 
@@ -262,7 +266,7 @@ class InvoiceController extends Controller
     public function issue(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -290,7 +294,7 @@ class InvoiceController extends Controller
     public function pay(Request $request, string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -299,10 +303,11 @@ class InvoiceController extends Controller
         // Lấy dữ liệu thanh toán từ request hoặc mặc định thanh toán hết bằng tiền mặt
         $amount = $request->input('amount') ?? ($invoice->total_amount - ($invoice->paid_amount ?? 0));
         $method = $request->input('payment_method') ?? ($request->input('method') ?? 'CASH');
-        
+
         // Chuẩn hóa phương thức (frontend có thể gửi 'transfer', 'cash')
         $method = strtoupper($method);
-        if ($method === 'TRANSFER') $method = 'BANK_TRANSFER';
+        if ($method === 'TRANSFER')
+            $method = 'BANK_TRANSFER';
 
         $paymentData = [
             'org_id' => $invoice->org_id,
@@ -378,7 +383,7 @@ class InvoiceController extends Controller
     public function cancel(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -407,7 +412,7 @@ class InvoiceController extends Controller
     public function restore(string $id): InvoiceResource
     {
         $invoice = $this->service->findTrashed($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Not Found');
         }
 
@@ -424,7 +429,7 @@ class InvoiceController extends Controller
     public function forceDelete(string $id): JsonResponse
     {
         $invoice = $this->service->findWithTrashed($id);
-        if (! $invoice) {
+        if (!$invoice) {
             abort(404, 'Not Found');
         }
 
@@ -448,7 +453,7 @@ class InvoiceController extends Controller
     public function storeItem(Request $request, string $invoice): JsonResponse
     {
         $invoiceModel = $this->service->find($invoice);
-        if (! $invoiceModel) {
+        if (!$invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -477,7 +482,7 @@ class InvoiceController extends Controller
     public function destroyItem(string $item): JsonResponse
     {
         $invoiceItem = InvoiceItem::with('invoice')->find($item);
-        if (! $invoiceItem) {
+        if (!$invoiceItem) {
             abort(404, 'Invoice Item Not Found');
         }
 
