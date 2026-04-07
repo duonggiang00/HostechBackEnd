@@ -14,10 +14,14 @@ import {
   Loader2,
   Users,
   XCircle,
+  PenTool,
+  Printer,
 } from 'lucide-react';
 import { useContract, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import SignatureModal from '@/PropertyScope/features/contracts/components/SignatureModal';
+import { ContractPreviewModal } from '@/PropertyScope/features/contracts/components/ContractPreviewModal';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -42,9 +46,34 @@ export default function TenantContractDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { data: contract, isLoading } = useContract(id);
-  const { acceptSignature, rejectSignature } = useContractActions();
+  const { signContract, acceptSignature, rejectSignature, downloadDocument } = useContractActions();
   const { createVnpayPayment } = useInvoice();
-  const [showModal, setShowModal] = useState<'accept' | 'reject' | null>(null);
+  const [showModal, setShowModal] = useState<'reject' | null>(null);
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const handlePrintContract = async () => {
+    if (!contract || !contract.id) return;
+    try {
+      setIsPrinting(true);
+      const blob = await downloadDocument.mutateAsync(contract.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `Hop-dong-${contract?.room?.code || contract.id.substring(0,8)}.docx`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Đã tải file hợp đồng thành công! Vui lòng mở file để in.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi tải file hợp đồng.');
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -72,24 +101,28 @@ export default function TenantContractDetailPage() {
     ? Math.max(0, (contract.initial_invoice.total_amount || 0) - (contract.initial_invoice.paid_amount || 0))
     : 0;
 
-  const handleAction = (action: 'accept' | 'reject') => {
-    const mutation = action === 'accept' ? acceptSignature : rejectSignature;
-
-    mutation.mutate(contract.id, {
+  const handleAction = (action: 'reject') => {
+    rejectSignature.mutate(contract.id, {
       onSuccess: () => {
         setShowModal(null);
-
-        if (action === 'accept') {
-          toast.success('Đã ký hợp đồng thành công. Hệ thống đang cập nhật trạng thái thanh toán.');
-          return;
-        }
-
         toast.success('Đã từ chối hợp đồng.');
         navigate('/app/contracts/pending', { replace: true });
       },
       onError: (error: any) => {
         toast.error(error?.response?.data?.message || 'Có lỗi khi thực hiện thao tác.');
       },
+    });
+  };
+
+  const handleSignConfirm = (base64Url: string) => {
+    signContract.mutate({ id: contract.id, signatureDataUrl: base64Url }, {
+      onSuccess: () => {
+        setIsSignatureModalOpen(false);
+        toast.success('Đã ký hợp đồng thành công. Hệ thống đang tiến hành cập nhật...');
+      },
+      onError: (error: any) => {
+        toast.error(error?.response?.data?.message || 'Có lỗi khi thực hiện thao tác.');
+      }
     });
   };
 
@@ -159,8 +192,16 @@ export default function TenantContractDetailPage() {
               Sau khi hợp đồng được ký đầy đủ, hóa đơn đầu kỳ sẽ xuất hiện ngay tại đây để bạn tiếp tục thanh toán qua VNPay.
             </p>
 
-            <div className="mt-7 inline-flex rounded-2xl bg-amber-500/15 px-4 py-2 text-sm font-black text-amber-300">
-              Trạng thái hiện tại: {contract.status === 'PENDING_PAYMENT' ? 'chờ thanh toán' : 'chờ ký điện tử'}
+            <div className={`mt-7 inline-flex rounded-2xl px-4 py-2 text-sm font-black ${
+              contract.status === 'PENDING_PAYMENT' ? 'bg-amber-500/15 text-amber-300' :
+              contract.status === 'PENDING_SIGNATURE' ? 'bg-amber-500/15 text-amber-300' :
+              contract.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' :
+              'bg-slate-500/15 text-slate-300'
+            }`}>
+              Trạng thái hiện tại:{' '}
+              {contract.status === 'PENDING_PAYMENT' ? 'chờ thanh toán' :
+               contract.status === 'PENDING_SIGNATURE' ? 'chờ ký điện tử' :
+               contract.status === 'ACTIVE' ? 'đang có hiệu lực' : 'đã kết thúc'}
             </div>
           </div>
         </div>
@@ -168,18 +209,37 @@ export default function TenantContractDetailPage() {
         <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Hành động chính</p>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-            {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' : 'Chờ thanh toán'}
+            {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' : 
+             contract.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' : 'Thông tin chung'}
           </h2>
 
           <div className="mt-6 space-y-3">
+            <button
+               onClick={() => setIsPreviewModalOpen(true)}
+               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-50 px-5 py-3.5 text-sm font-black text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:hover:bg-indigo-500/20"
+            >
+              <FileText className="h-5 w-5" />
+              Xem bản mềm Hợp đồng
+            </button>
+            <button
+               onClick={handlePrintContract}
+               disabled={isPrinting}
+               className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800 disabled:opacity-50"
+            >
+              {isPrinting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Printer className="h-5 w-5" />}
+              {isPrinting ? 'Đang tải về...' : 'Tải file / In ấn'}
+            </button>
+            
+            <div className="my-4 h-px w-full bg-slate-200 dark:bg-slate-800" />
+
             {contract.status === 'PENDING_SIGNATURE' ? (
               <>
                 <button
-                  onClick={() => setShowModal('accept')}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                  onClick={() => setIsSignatureModalOpen(true)}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                 >
-                  <CheckCircle className="h-5 w-5" />
-                  Ký xác nhận hợp đồng
+                  <PenTool className="h-5 w-5" />
+                  Vẽ chữ ký xác nhận
                 </button>
                 <button
                   onClick={() => setShowModal('reject')}
@@ -189,7 +249,7 @@ export default function TenantContractDetailPage() {
                   Từ chối hợp đồng
                 </button>
               </>
-            ) : (
+            ) : contract.status === 'PENDING_PAYMENT' ? (
               <>
                 <button
                   onClick={handlePayInitialInvoice}
@@ -206,15 +266,23 @@ export default function TenantContractDetailPage() {
                   Xem tất cả hóa đơn
                 </button>
               </>
+            ) : (
+              <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800/50">
+                 <p className="text-center text-sm font-medium text-slate-500">
+                   {contract.status === 'ACTIVE' ? 'Hợp đồng này đang có hiệu lực.' : 'Hợp đồng này đã kết thúc hoặc hủy bỏ.'}
+                 </p>
+              </div>
             )}
           </div>
 
-          <div className="mt-6 rounded-[24px] bg-amber-50 p-5 dark:bg-amber-500/10">
-            <p className="text-sm font-black text-amber-800 dark:text-amber-200">Lưu ý nghiệp vụ</p>
-            <p className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
-              Hóa đơn đầu kỳ chỉ xuất hiện khi tất cả thành viên trong hợp đồng đã hoàn tất ký điện tử.
-            </p>
-          </div>
+          {(contract.status === 'PENDING_SIGNATURE' || contract.status === 'PENDING_PAYMENT') && (
+            <div className="mt-6 rounded-[24px] bg-amber-50 p-5 dark:bg-amber-500/10">
+              <p className="text-sm font-black text-amber-800 dark:text-amber-200">Lưu ý nghiệp vụ</p>
+              <p className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
+                Hóa đơn đầu kỳ chỉ xuất hiện khi tất cả thành viên trong hợp đồng đã hoàn tất ký điện tử.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -414,19 +482,7 @@ export default function TenantContractDetailPage() {
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               className="relative z-10 w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
             >
-              {showModal === 'accept' ? (
-                <>
-                  <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    <CheckCircle className="h-10 w-10" />
-                  </div>
-                  <h3 className="mt-6 text-center text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-                    Xác nhận ký điện tử
-                  </h3>
-                  <p className="mt-3 text-center text-sm leading-6 text-slate-600 dark:text-slate-300">
-                    Bằng việc xác nhận, bạn đồng ý với các điều khoản trong hợp đồng và file scan đính kèm.
-                  </p>
-                </>
-              ) : (
+              {showModal === 'reject' && (
                 <>
                   <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
                     <XCircle className="h-10 w-10" />
@@ -442,15 +498,11 @@ export default function TenantContractDetailPage() {
 
               <div className="mt-8 space-y-3">
                 <button
-                  disabled={acceptSignature.isPending || rejectSignature.isPending}
-                  onClick={() => handleAction(showModal)}
-                  className={`inline-flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black text-white transition-colors ${
-                    showModal === 'accept'
-                      ? 'bg-slate-950 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200'
-                      : 'bg-rose-600 hover:bg-rose-700'
-                  }`}
+                  disabled={rejectSignature.isPending}
+                  onClick={() => handleAction('reject')}
+                  className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black text-white transition-colors bg-rose-600 hover:bg-rose-700"
                 >
-                  {acceptSignature.isPending || rejectSignature.isPending ? (
+                  {rejectSignature.isPending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     'Xác nhận'
@@ -467,6 +519,18 @@ export default function TenantContractDetailPage() {
           </div>
         )}
       </AnimatePresence>
+
+      <SignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        isLoading={signContract.isPending}
+        onConfirm={handleSignConfirm}
+      />
+      <ContractPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={() => setIsPreviewModalOpen(false)}
+        contractId={id || ''}
+      />
     </div>
   );
 }

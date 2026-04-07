@@ -2,8 +2,21 @@ import type { Property } from '@/OrgScope/features/properties/types';
 import type { Room } from '@/PropertyScope/features/rooms/types';
 import type { User } from '@/shared/features/auth/types';
 
-export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'ENDED' | 'TERMINATED' | 'CANCELLED';
+export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURE' | 'PENDING_PAYMENT' | 'ACTIVE' | 'PENDING_TERMINATION' | 'ENDED' | 'TERMINATED' | 'CANCELLED' | 'EXPIRED';
 export type ContractMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'LEFT';
+
+export type ContractCancellationParty = 'LANDLORD' | 'TENANT' | 'MUTUAL';
+
+export interface ContractStatusHistory {
+  id: string;
+  contract_id: string;
+  from_status: ContractStatus | null;
+  to_status: ContractStatus;
+  changed_by_user_id: string | null;
+  notes: string | null;
+  created_at: string;
+  changedBy?: User;
+}
 
 export interface RoomContract {
   id: string;
@@ -63,7 +76,7 @@ export interface Contract {
   cutoff_day: number | null;
   rent_price: number | null;
   deposit_amount: number | null;
-  deposit_status?: 'PENDING' | 'HELD' | 'REFUNDED' | 'PARTIAL_REFUND' | 'FORFEITED';
+  deposit_status?: 'PENDING' | 'HELD' | 'REFUND_PENDING' | 'REFUNDED' | 'PARTIAL_REFUND' | 'FORFEITED';
   refunded_amount?: number;
   forfeited_amount?: number;
   join_code: string | null;
@@ -71,6 +84,14 @@ export interface Contract {
   join_code_revoked_at: string | null;
   signed_at: string | null;
   terminated_at: string | null;
+
+  // Termination fields
+  cancellation_party?: ContractCancellationParty | null;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  notice_days?: number;
+  notice_given_at?: string | null;
+
   base_rent: number | null;
   fixed_services_fee: number | null;
   total_rent: number | null;
@@ -113,8 +134,10 @@ export interface StatusCounts {
   PENDING_SIGNATURE: number;
   PENDING_PAYMENT: number;
   ACTIVE: number;
+  PENDING_TERMINATION: number;
   ENDED: number;
   CANCELLED: number;
+  EXPIRED: number;
   expiring: number;
 }
 

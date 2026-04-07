@@ -52,15 +52,15 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
           per_page: 100,
         });
         console.log('📦 Rooms from API:', data);
-        
+
         // Data should already be Room[] from roomsApi
         const roomsList: Room[] = Array.isArray(data) ? data : [];
-        
+
         // Sort rooms by code
         const sortedRooms = roomsList.sort((a, b) => {
           return `${a.code}`.localeCompare(`${b.code}`);
         });
-        
+
         console.log('🏠 Sorted Rooms:', sortedRooms);
         setRooms(sortedRooms);
       } catch (error) {
@@ -160,11 +160,10 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 if (errors.code) setErrors({ ...errors, code: '' });
               }}
               placeholder="e.g., DH001, DH-001"
-              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${
-                errors.code 
-                  ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10' 
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${errors.code
+                  ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10'
                   : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
-              }`}
+                }`}
             />
             {errors.code && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.code}</p>}
           </div>
@@ -180,11 +179,10 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 setType(e.target.value as 'ELECTRIC' | 'WATER');
                 if (errors.type) setErrors({ ...errors, type: '' });
               }}
-              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${
-                errors.type 
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 ${errors.type
                   ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10'
                   : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
-              }`}
+                }`}
             >
               <option value="">Chọn loại</option>
               <option value="ELECTRIC">Điện</option>
@@ -232,11 +230,10 @@ export default function MeterFormModal({ meter, onClose, propertyId }: MeterForm
                 if (errors.baseReading) setErrors({ ...errors, baseReading: '' });
               }}
               placeholder="0.00"
-              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${
-                errors.baseReading 
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-slate-700/50 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 ${errors.baseReading
                   ? 'border-red-500 dark:border-red-500/70 focus:ring-red-100 dark:focus:ring-red-500/10'
                   : 'border-slate-200 dark:border-slate-600 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-100 dark:focus:ring-indigo-500/10'
-              }`}
+                }`}
             />
             {errors.baseReading && (
               <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.baseReading}</p>

@@ -16,8 +16,9 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
   const { terminateContract } = useContractActions();
   const queryClient = useQueryClient();
   const [terminationDate, setTerminationDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [cancellationParty, setCancellationParty] = useState<'LANDLORD' | 'TENANT' | 'MUTUAL'>('TENANT');
   const [reason, setReason] = useState('');
-  const [forfeitDeposit, setForfeitDeposit] = useState(false);
+  const [waivePenalty, setWaivePenalty] = useState(false);
   const [refundRemainingRent, setRefundRemainingRent] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -27,8 +28,9 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
         id: contract.id,
         data: {
           termination_date: terminationDate,
-          reason,
-          forfeit_deposit: forfeitDeposit,
+          cancellation_party: cancellationParty,
+          cancellation_reason: reason,
+          waive_penalty: waivePenalty,
           refund_remaining_rent: refundRemainingRent,
         },
       },
@@ -60,9 +62,9 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+            className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-[90vh] flex flex-col"
           >
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center shrink-0">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-rose-500" />
                 Thanh lý hợp đồng
@@ -75,7 +77,7 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
                   Ngày thanh lý
@@ -91,38 +93,60 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Lý do thanh lý
+                  Bên khởi xướng việc thanh lý
+                </label>
+                <select
+                  value={cancellationParty}
+                  onChange={(e) => setCancellationParty(e.target.value as any)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-colors"
+                  required
+                >
+                  <option value="TENANT">Khách thuê yêu cầu trả phòng (báo dời đi)</option>
+                  <option value="LANDLORD">Chủ nhà yêu cầu lấy lại phòng</option>
+                  <option value="MUTUAL">Thời hạn hợp đồng kết thúc / Thỏa thuận 2 bên</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Lý do chi tiết
                 </label>
                 <textarea
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={3}
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-colors"
-                  placeholder="Người thuê báo trả phòng trước hạn..."
+                  placeholder="Ví dụ: Khách muốn chuyển công tác, chủ lấy nhà sửa chữa..."
                   required
                 />
               </div>
 
               <div className="space-y-4">
-                <label className="flex items-center gap-3 p-4 border border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={forfeitDeposit}
-                    onChange={(e) => setForfeitDeposit(e.target.checked)}
-                    className="w-5 h-5 text-rose-600 border-slate-300 rounded focus:ring-rose-600"
-                  />
-                  <div>
-                    <span className="block font-semibold text-slate-900 dark:text-white">Mất cọc</span>
-                    <span className="block text-sm text-slate-500">Giữ lại số tiền cọc {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)}đ do vi phạm hợp đồng (trả phòng sớm).</span>
-                  </div>
-                </label>
+                {cancellationParty === 'TENANT' && (
+                  <label className="flex items-center gap-3 p-4 border border-emerald-200 dark:border-emerald-700/50 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl cursor-pointer hover:bg-emerald-50 dark:hover:bg-emerald-900/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={waivePenalty}
+                      onChange={(e) => setWaivePenalty(e.target.checked)}
+                      className="w-5 h-5 text-emerald-600 border-emerald-300 rounded focus:ring-emerald-600"
+                    />
+                    <div>
+                      <span className="block font-semibold text-slate-900 dark:text-white">Miễn phạt cọc</span>
+                      <span className="block text-sm text-slate-500">
+                        {waivePenalty 
+                          ? 'Sẽ hoàn trả tiền cọc cho khách.'
+                          : 'Nếu không được đánh dấu, hệ thống sẽ tự động PHẠT (thu) tiền cọc do khách thuê dời đi trước hạn.'}
+                      </span>
+                    </div>
+                  </label>
+                )}
 
                 <label className="flex items-center gap-3 p-4 border border-slate-200 dark:border-slate-700 rounded-2xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                   <input
                     type="checkbox"
                     checked={refundRemainingRent}
                     onChange={(e) => setRefundRemainingRent(e.target.checked)}
-                    className="w-5 h-5 text-rose-600 border-slate-300 rounded focus:ring-rose-600"
+                    className="w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-600"
                   />
                   <div>
                     <span className="block font-semibold text-slate-900 dark:text-white">Hoàn tiền thuê phòng còn lại</span>
@@ -131,7 +155,7 @@ export function TerminateContractModal({ isOpen, onClose, contract }: TerminateC
                 </label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700 shrink-0">
                 <button
                   type="button"
                   onClick={onClose}

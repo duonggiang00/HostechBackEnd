@@ -46,7 +46,7 @@ export default function QuickReadingPage() {
   // Default to this month
   const [periodStart, setPeriodStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [periodEnd, setPeriodEnd] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
-  
+
   // Keyed by meter ID
   const [readings, setReadings] = useState<Record<string, string>>({});
   const [proofFiles, setProofFiles] = useState<Record<string, File | null>>({});
@@ -142,7 +142,7 @@ export default function QuickReadingPage() {
   // Grouping meters by Floor -> Room with proper sorting
   const groupedMeters = useMemo(() => {
     if (!meters || meters.length === 0) return {};
-    
+
     const NO_FLOOR = 'Chưa phân tầng';
     const NO_ROOM = 'Chưa xếp phòng';
 
@@ -155,7 +155,7 @@ export default function QuickReadingPage() {
 
       if (!groups[floorName]) groups[floorName] = {};
       if (!groups[floorName][roomName]) groups[floorName][roomName] = [];
-      
+
       groups[floorName][roomName].push(meter);
     });
 
@@ -165,11 +165,11 @@ export default function QuickReadingPage() {
       // Extract numbers from floor names like "Tầng 1", "Tầng 2", etc.
       const aNum = parseInt(a.match(/\d+/)?.[0] || '999');
       const bNum = parseInt(b.match(/\d+/)?.[0] || '999');
-      
+
       // "Chưa phân tầng" (unassigned) goes to the end
       if (isNaN(aNum) || a === NO_FLOOR) return 1;
       if (isNaN(bNum) || b === NO_FLOOR) return -1;
-      
+
       return aNum - bNum;
     });
 
@@ -297,7 +297,7 @@ export default function QuickReadingPage() {
               <span className="text-indigo-600 dark:text-indigo-400" data-testid="reading-progress-text">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
             </div>
             <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-indigo-600 transition-all duration-500 ease-out shadow-[0_0_12px_rgba(79,70,229,0.4)]"
                 style={{ width: `${(Object.keys(readings).length / meters.length) * 100}%` }}
               />
@@ -324,23 +324,23 @@ export default function QuickReadingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Từ ngày</label>
-              <input
-                type="date"
-                value={periodStart}
-                data-testid="reading-period-start"
-                onChange={(e) => setPeriodStart(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
-              />
+            <input
+              type="date"
+              value={periodStart}
+              data-testid="reading-period-start"
+              onChange={(e) => setPeriodStart(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Đến ngày</label>
-              <input
-                type="date"
-                value={periodEnd}
-                data-testid="reading-period-end"
-                onChange={(e) => setPeriodEnd(e.target.value)}
-                className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
-              />
+            <input
+              type="date"
+              value={periodEnd}
+              data-testid="reading-period-end"
+              onChange={(e) => setPeriodEnd(e.target.value)}
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+            />
           </div>
         </div>
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
@@ -367,7 +367,7 @@ export default function QuickReadingPage() {
                 <div className="w-2 h-6 bg-indigo-500 rounded-full"></div>
                 {floorName}
               </h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {Object.entries(rooms).map(([roomName, roomMeters]) => (
                   <div key={roomName} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -392,18 +392,17 @@ export default function QuickReadingPage() {
                         const prevValue = meter.latest_reading ?? (typeof meter.last_reading === 'number' ? meter.last_reading : meter.base_reading) ?? 0;
                         const currentValue = readings[meter.id] || '';
                         const consumption = calculateConsumption(meter, currentValue);
-                        
+
                         return (
                           <div key={meter.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors space-y-2">
                             {/* Row 1: Icon, số cũ, input, tiêu thụ */}
                             <div className="flex items-center gap-3">
                               {/* Icon & Meter Code */}
                               <div className="flex items-center gap-2 w-28 shrink-0">
-                                <div className={`p-2 rounded-lg shrink-0 ${
-                                  isElectric
+                                <div className={`p-2 rounded-lg shrink-0 ${isElectric
                                     ? 'bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
                                     : 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                }`}>
+                                  }`}>
                                   {isElectric ? <Zap className="w-4 h-4" /> : <Droplet className="w-4 h-4" />}
                                 </div>
                                 <div className="min-w-0">
@@ -453,13 +452,12 @@ export default function QuickReadingPage() {
                                 <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Tiêu thụ</p>
                                 <div className="flex items-center justify-end gap-1.5">
                                   <p
-                                    className={`text-sm font-bold ${
-                                      consumption > 500
+                                    className={`text-sm font-bold ${consumption > 500
                                         ? 'text-orange-600 animate-pulse'
                                         : consumption > 0
-                                        ? 'text-indigo-600 dark:text-indigo-400'
-                                        : 'text-slate-400 dark:text-slate-500'
-                                    }`}
+                                          ? 'text-indigo-600 dark:text-indigo-400'
+                                          : 'text-slate-400 dark:text-slate-500'
+                                      }`}
                                     data-testid={`consumption-value-${meter.id}`}
                                   >
                                     {currentValue
@@ -467,16 +465,15 @@ export default function QuickReadingPage() {
                                       : '-'}
                                   </p>
                                   {currentValue && (
-                                    <div className={`p-0.5 rounded-full ${
-                                      consumption > 0
+                                    <div className={`p-0.5 rounded-full ${consumption > 0
                                         ? 'bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400'
                                         : consumption === 0
-                                        ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
-                                        : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                                    }`}>
+                                          ? 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                                          : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                                      }`}>
                                       {consumption > 0 ? <TrendingUp className="w-3 h-3" /> :
-                                       consumption === 0 ? <Minus className="w-3 h-3" /> :
-                                       <TrendingDown className="w-3 h-3" />}
+                                        consumption === 0 ? <Minus className="w-3 h-3" /> :
+                                          <TrendingDown className="w-3 h-3" />}
                                     </div>
                                   )}
                                 </div>

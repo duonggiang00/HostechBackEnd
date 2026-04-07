@@ -29,7 +29,7 @@ export const meteringApi = {
       per_page: perPage,
       include: 'room', // Load room relationship
     };
-    
+
     // Add filter parameters in bracket notation
     if (filters && Object.keys(filters).length > 0) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -38,15 +38,15 @@ export const meteringApi = {
         }
       });
     }
-    
+
     if (search) {
       params.search = search;
     }
-    
+
     console.log(`📡 Meter API Params:`, params);
     const response = await apiClient.get(`/properties/${propertyId}/meters`, { params });
     console.log(`📡 API Response:`, response.data);
-    
+
     // Return full response with pagination metadata
     if (response.data && response.data.data && Array.isArray(response.data.data)) {
       // Paginated response format
@@ -65,11 +65,11 @@ export const meteringApi = {
       console.log(`📡 Paginated Response:`, paginatedResponse);
       return paginatedResponse;
     }
-    
+
     // Fallback for direct array response
     const data = Array.isArray(response.data) ? response.data : [];
     console.log(`📡 Extracted Meters (${data?.length || 0}):`, data);
-    
+
     // Return as paginated format for consistency
     return {
       data,
@@ -122,7 +122,7 @@ export const meteringApi = {
       // Always filter by meter_id to get the correct meter's readings
       'filter[meter_id]': meterId,
     };
-    
+
     // Add custom filters if provided
     if (filters && Object.keys(filters).length > 0) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -131,7 +131,7 @@ export const meteringApi = {
         }
       });
     }
-    
+
     console.log(`📡 Meter Readings API Params:`, params);
     const response = await apiClient.get(`/meters/${meterId}/readings`, { params });
     console.log(`📡 API: GET /meters/${meterId}/readings:`, response.data);
@@ -155,7 +155,7 @@ export const meteringApi = {
       ...(data.meta && { meta: data.meta }),
       ...(data.proof_media_ids && data.proof_media_ids.length > 0 ? { proof_media_ids: data.proof_media_ids } : {}),
     };
-    
+
     console.log(`📤 Sending POST /meters/${meterId}/readings:`, JSON.stringify(payload, null, 2));
     console.log(`📊 Payload details:`, {
       meterId,
@@ -163,7 +163,7 @@ export const meteringApi = {
       period_start: `${payload.period_start} (type: ${typeof payload.period_start})`,
       period_end: `${payload.period_end} (type: ${typeof payload.period_end})`,
     });
-    
+
     try {
       const response = await apiClient.post(`/meters/${meterId}/readings`, payload);
       console.log(`📡 API: POST /meters/${meterId}/readings -Status ${response.status}:`, response.data);
@@ -202,7 +202,7 @@ export const meteringApi = {
   },
 
   rejectReading: async (meterId: string, readingId: string, reason?: string) => {
-    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, { 
+    const response = await apiClient.put(`/meters/${meterId}/readings/${readingId}`, {
       status: 'REJECTED',
       rejection_reason: reason,
       meta: reason ? { rejection_reason: reason } : undefined,
@@ -297,7 +297,7 @@ export const meteringApi = {
     if (photo) {
       formData.append('photo', photo);
     }
-    
+
     const response = await apiClient.post(`/meters/${meterId}/readings`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });

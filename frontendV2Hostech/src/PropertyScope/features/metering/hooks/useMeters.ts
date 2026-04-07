@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 export type { Meter, MeterReading };
 
-export function useMeters(propertyId?: string | null, options: { 
+export function useMeters(propertyId?: string | null, options: {
   enabled?: boolean;
   filters?: Record<string, any>;
   search?: string;
@@ -105,7 +105,7 @@ export function useMeterReadings(meterId?: string | null) {
   });
 
   const addReading = useMutation({
-    mutationFn: (newReading: { reading_value: number; reading_date: string; photo?: File }) => 
+    mutationFn: (newReading: { reading_value: number; reading_date: string; photo?: File }) =>
       meteringApi.addReading(meterId!, newReading.reading_value, newReading.reading_date, newReading.photo),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meter-readings', meterId] });
@@ -133,7 +133,7 @@ export function useMeterHistory(meterId?: string | null, months: number = 12) {
       try {
         // Fetch meter readings with proper pagination
         const response = await meteringApi.getMeterReadings(meterId, 1, months);
-        
+
         // Handle different response formats
         let readingsList = [];
         if (Array.isArray(response)) {
@@ -143,7 +143,7 @@ export function useMeterHistory(meterId?: string | null, months: number = 12) {
         } else if (response?.readings && Array.isArray(response.readings)) {
           readingsList = response.readings;
         }
-        
+
         return readingsList;
       } catch (error) {
         console.error('Error fetching meter history:', error);

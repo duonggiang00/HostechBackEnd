@@ -1,10 +1,10 @@
 import { format } from 'date-fns';
 import { AlertCircle, ArrowRight, Calendar, CheckCircle, FileSignature, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMyPendingContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useMyContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
 
 export default function PendingContractsPage() {
-  const { data: contracts, isLoading, isError } = useMyPendingContracts();
+  const { data: contracts, isLoading, isError } = useMyContracts();
   const navigate = useNavigate();
 
   if (isLoading) {
@@ -34,10 +34,10 @@ export default function PendingContractsPage() {
           Hợp đồng
         </p>
         <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-          {contractCount > 0 ? `${contractCount} hợp đồng đang chờ ký` : 'Không có hợp đồng chờ ký'}
+          {contractCount > 0 ? `Bạn đang có ${contractCount} hợp đồng` : 'Không có hợp đồng nào'}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-          Chỉ cần mở từng hợp đồng, kiểm tra thông tin chính rồi ký điện tử. Sau đó hóa đơn đầu kỳ sẽ xuất hiện ở mục thanh toán.
+          Danh sách các hợp đồng của bạn. Nhấn vào từng hợp đồng để xem chi tiết, ký xác nhận hoặc in ấn.
         </p>
       </section>
 
@@ -46,9 +46,9 @@ export default function PendingContractsPage() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle className="h-10 w-10" />
           </div>
-          <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Mọi thứ đã gọn</h3>
+          <h3 className="mt-5 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Thật gọn gàng</h3>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Khi có hợp đồng mới cần xác nhận, danh sách sẽ xuất hiện lại tại đây.
+            Hiện tại bạn chưa được gán vào hợp đồng nào.
           </p>
         </section>
       ) : (
@@ -62,10 +62,27 @@ export default function PendingContractsPage() {
             >
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                    <FileSignature className="h-4 w-4" />
-                    Chờ chữ ký
-                  </div>
+                  {contract.status === 'PENDING_SIGNATURE' ? (
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                      <FileSignature className="h-4 w-4" />
+                      Chờ chữ ký
+                    </div>
+                  ) : contract.status === 'PENDING_PAYMENT' ? (
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                      <AlertCircle className="h-4 w-4" />
+                      Chờ thanh toán
+                    </div>
+                  ) : contract.status === 'ACTIVE' ? (
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      <CheckCircle className="h-4 w-4" />
+                      Đang có hiệu lực
+                    </div>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      <AlertCircle className="h-4 w-4" />
+                      {contract.status}
+                    </div>
+                  )}
                   <h3 className="mt-3 text-lg font-black text-slate-950 dark:text-white">
                     {contract.property?.name || 'Cơ sở'} - {contract.room?.name || 'Phòng'}
                   </h3>
@@ -83,7 +100,7 @@ export default function PendingContractsPage() {
                     {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(contract.rent_price || 0)}
                   </p>
                   <span className="inline-flex items-center gap-2 text-sm font-black text-slate-700 dark:text-slate-200">
-                    Xem và ký
+                    Xem chi tiết
                     <ArrowRight className="h-4 w-4" />
                   </span>
                 </div>

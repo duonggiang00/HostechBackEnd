@@ -124,7 +124,7 @@ export default function MeterDetailPage() {
         setLoading(true);
         const meterData = await meteringApi.getMeter(meterId);
         setMeter(meterData);
-        
+
         // Fetch initial readings
         await _fetchReadings(meterId, 1);
       } catch (error: unknown) {
@@ -273,7 +273,7 @@ export default function MeterDetailPage() {
     } catch (error: unknown) {
       console.error('❌ Failed to add reading:', error);
       let errorMessage = 'Không thể thêm chốt số';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'object' && error !== null) {
@@ -281,9 +281,9 @@ export default function MeterDetailPage() {
         console.error('🔍 Full error object:', JSON.stringify(err, null, 2));
         const response = err.response as Record<string, unknown> | undefined;
         const data = response?.data as Record<string, unknown> | undefined;
-        
+
         console.error('Response data:', data);
-        
+
         // Try to get error message from validation errors
         if (data?.errors && typeof data.errors === 'object') {
           const errorList = Object.values(data.errors).flat() as string[];
@@ -295,7 +295,7 @@ export default function MeterDetailPage() {
           errorMessage = (err.message as string) || errorMessage;
         }
       }
-      
+
       setFormError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -510,7 +510,7 @@ export default function MeterDetailPage() {
     } catch (error: unknown) {
       console.error('❌ Failed to update reading:', error);
       let errorMessage = 'Không thể cập nhật chốt số';
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       } else if (typeof error === 'object' && error !== null) {
@@ -518,7 +518,7 @@ export default function MeterDetailPage() {
         console.error('🔍 Full error object:', JSON.stringify(err, null, 2));
         const response = err.response as Record<string, unknown> | undefined;
         const data = response?.data as Record<string, unknown> | undefined;
-        
+
         if (data?.errors && typeof data.errors === 'object') {
           const errorList = Object.values(data.errors).flat() as string[];
           errorMessage = errorList.join(', ');
@@ -526,7 +526,7 @@ export default function MeterDetailPage() {
           errorMessage = data.message as string;
         }
       }
-      
+
       setFormError(errorMessage);
       toast.error(errorMessage);
     }
@@ -545,7 +545,7 @@ export default function MeterDetailPage() {
       await _fetchReadings(meterId, readingsPage);
     } catch (error: unknown) {
       console.error('Failed to delete:', error);
-      
+
       let errorMessage = 'Không thể xóa chốt số';
       if (error instanceof Error) {
         errorMessage = error.message;
@@ -557,7 +557,7 @@ export default function MeterDetailPage() {
           errorMessage = data.message as string;
         }
       }
-      
+
       toast.error(errorMessage);
     }
   };
@@ -565,7 +565,7 @@ export default function MeterDetailPage() {
   // Manager/Owner full control, Staff can thao tác cho luồng nháp.
   const canManageReadings = hasRole(['Manager', 'Owner', 'Staff']);
   const canSubmitDraftReadings = hasRole(['Manager', 'Owner', 'Staff']);
-  
+
   // Check if user can approve readings (duyệt/từ chối) - Only Manager and Owner
   const canApproveReadings = hasRole(['Manager', 'Owner']);
 
@@ -725,7 +725,7 @@ export default function MeterDetailPage() {
           {showAddForm && (
             <form onSubmit={handleAddReading} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Thêm chốt số mới</h3>
-              
+
               {formError && (
                 <div className="mb-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg">
                   <p className="text-sm font-semibold text-red-700 dark:text-red-400">{formError}</p>
@@ -924,7 +924,7 @@ export default function MeterDetailPage() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400">
-                              {reading.consumption !== undefined 
+                              {reading.consumption !== undefined
                                 ? `+${reading.consumption.toLocaleString('vi-VN')} ${meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}`
                                 : '-'}
                             </span>
@@ -1009,7 +1009,7 @@ export default function MeterDetailPage() {
                                   </button>
                                 </>
                               )}
-                              
+
                               {/* Edit only for DRAFT */}
                               {reading.status === 'DRAFT' && canManageReadings && (
                                 <button
@@ -1057,11 +1057,10 @@ export default function MeterDetailPage() {
                         <button
                           key={p}
                           onClick={() => meterId && _fetchReadings(meterId, p)}
-                          className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${
-                            readingsPage === p
+                          className={`px-3 py-1.5 rounded-lg font-semibold transition-colors ${readingsPage === p
                               ? 'bg-indigo-600 text-white'
                               : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                          }`}
+                            }`}
                         >
                           {p}
                         </button>

@@ -131,6 +131,13 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     const newErrors: Record<string, string> = {};
     
     if (step === 0) {
+      if (!formData.name.trim()) {
+        newErrors.name = 'Vui lòng nhập tên phòng';
+      }
+      if (!formData.code.trim()) {
+        newErrors.code = 'Vui lòng nhập mã phòng';
+      }
+
       if (formData.area < 10) {
         newErrors.area = 'Diện tích tối thiểu phải từ 10 m²';
       }
