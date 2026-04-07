@@ -8,15 +8,13 @@ use Illuminate\Http\Resources\Json\JsonResource;
  * @property string $id ID phòng
  * @property string $code Mã phòng
  * @property string $name Tên phòng
- * @property string $type Loại phòng
  * @property float $area Diện tích
  * @property int $capacity Sức chứa
  * @property float $base_price Giá cơ bản
  * @property string $status Trạng thái
  * @property int $floor_number Số tầng
  * @property string $description Mô tả
- * @property array $amenities Tiện nghi
- * @property array $utilities Dịch vụ
+
  * @property string $created_at Thời gian tạo
  * @property string $updated_at Thời gian cập nhật
  * @property-read \App\Models\Contract\Contract[] $contracts Danh sách hợp đồng
@@ -33,15 +31,13 @@ class RoomResource extends JsonResource
             'floor_id' => $this->floor_id,
             'code' => $this->code,
             'name' => $this->name,
-            'type' => $this->type,
             'area' => $this->area,
             'capacity' => $this->capacity,
             'base_price' => $this->base_price,
             'status' => $this->status,
             'floor_number' => $this->floor_number,
             'description' => $this->description,
-            'amenities' => $this->amenities,
-            'utilities' => $this->utilities,
+
             'is_draft' => $this->status === 'draft',
             'floor_name' => $this->floor_name ?? $this->floor?->name,
             'property_name' => $this->property_name ?? $this->property?->name,
@@ -97,6 +93,7 @@ class RoomResource extends JsonResource
                     'deposit_amount' => (float) $contract->deposit_amount,
                     'members' => $contract->members->map(fn($m) => [
                         'id' => $m->id,
+                        'user_id' => $m->user_id,
                         'full_name' => $m->user?->full_name,
                         'role' => $m->role,
                         'status' => $m->status,

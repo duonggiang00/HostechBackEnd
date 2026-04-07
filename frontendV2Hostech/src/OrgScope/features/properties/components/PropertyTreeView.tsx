@@ -24,7 +24,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
-import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
+import { useProperties, type Property } from '@/OrgScope/features/properties/hooks/useProperties';
 import { AddFloorModal, AddRoomModal } from './PropertyModals';
 
 interface PropertyNodeProps {
@@ -233,12 +233,12 @@ export default function PropertyTreeView() {
   // when the query returns a referentially-new array with the same content.
   const prevPropsRef = React.useRef<string>('');
   React.useEffect(() => {
-    const serialized = JSON.stringify(properties.map(p => p.id + p.name));
+    const serialized = JSON.stringify(properties.map((p: Property) => p.id + p.name));
     if (serialized !== prevPropsRef.current) {
       prevPropsRef.current = serialized;
       setTreeData(
         properties.length > 0
-          ? properties.map(p => ({ id: p.id, name: p.name, type: 'property' as const }))
+          ? properties.map((p: Property) => ({ id: p.id, name: p.name, type: 'property' as const }))
           : []
       );
     }
@@ -291,7 +291,7 @@ export default function PropertyTreeView() {
   return (
     <div className="space-y-1">
       <div className="px-4 py-2 flex items-center justify-between mb-2">
-        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Navigator</h3>
+        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Điều hướng</h3>
         <button className="p-1.5 bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 rounded-lg hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 transition-all shadow-sm">
           <Plus className="w-4 h-4" />
         </button>
@@ -299,9 +299,9 @@ export default function PropertyTreeView() {
       
       <div className="px-2">
         {isLoading ? (
-          <div className="p-4 text-center text-xs text-slate-400 font-medium">Loading properties...</div>
+          <div className="p-4 text-center text-xs text-slate-400 font-medium">Đang tải danh sách...</div>
         ) : treeData.length === 0 ? (
-          <div className="p-4 text-center text-xs text-slate-400 font-medium">No properties found.</div>
+          <div className="p-4 text-center text-xs text-slate-400 font-medium">Không tìm thấy cơ sở nào.</div>
         ) : (
           <DndContext
             sensors={sensors}

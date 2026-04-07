@@ -14,7 +14,6 @@ import type { RoomTemplate } from '../../types';
 // Zod Schema
 export const roomTemplateSchema = z.object({
   name: z.string().min(1, 'Vui lòng nhập tên biểu mẫu'),
-  room_type: z.enum(['standard', 'studio', 'duplex', 'penthouse']),
   area: z.number().min(0.1, 'Diện tích phải lớn hơn 0'),
   capacity: z.number().min(1, 'Sức chứa tối thiểu 1 người'),
   base_price: z.number().min(0, 'Giá thuê không được âm'),
@@ -35,13 +34,6 @@ interface RoomTemplateFormProps {
   isSaving: boolean;
 }
 
-const ROOM_TYPES = [
-  { value: 'standard', label: 'Tiêu chuẩn (Standard)' },
-  { value: 'studio', label: 'Studio' },
-  { value: 'duplex', label: 'Căn hộ Duplex' },
-  { value: 'penthouse', label: 'Penthouse' },
-] as const;
-
 export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }: RoomTemplateFormProps) {
   const [step, setStep] = useState(1);
 
@@ -57,7 +49,6 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
     resolver: zodResolver(roomTemplateSchema),
     defaultValues: {
       name: initialData?.name ?? '',
-      room_type: (initialData?.room_type as any) ?? 'standard',
       area: initialData?.area ?? 25,
       capacity: initialData?.capacity ?? 2,
       base_price: initialData?.base_price ?? 0,
@@ -84,7 +75,7 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
 
   const handleNextStep = async () => {
     // Validate Step 1 before proceeding
-    const isStep1Valid = await trigger(['name', 'room_type', 'area', 'capacity', 'base_price']);
+    const isStep1Valid = await trigger(['name', 'area', 'capacity', 'base_price']);
     if (isStep1Valid) {
       setStep(2);
     }
@@ -158,20 +149,6 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Room Type */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Loại phòng <span className="text-rose-500">*</span></label>
-                        <select
-                          {...register('room_type')}
-                          className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
-                        >
-                          {ROOM_TYPES.map(t => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
-                          ))}
-                        </select>
-                        {errors.room_type && <p className="text-sm text-rose-500 ml-1">{errors.room_type.message}</p>}
-                      </div>
-
                       {/* Base Price */}
                       <div className="space-y-3">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Giá thuê mặc định (VNĐ) <span className="text-rose-500">*</span></label>
@@ -404,11 +381,6 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
 
               <div className="grid grid-cols-2 gap-4 border-b border-slate-800 pb-6">
                 <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Loại phòng</p>
-                  <p className="font-bold capitalize">{ROOM_TYPES.find(r => r.value === watchAll.room_type)?.label || 'Tiêu chuẩn'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sức chứa</p>
                   <p className="font-bold flex items-center gap-1"><Users className="w-4 h-4 text-blue-400" /> {watchAll.capacity || 0} người</p>
                 </div>
               </div>

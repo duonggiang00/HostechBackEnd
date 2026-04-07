@@ -12,6 +12,7 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes('/billing')) return 'Hóa đơn và thanh toán';
   if (pathname.includes('/requests')) return 'Yêu cầu hỗ trợ';
   if (pathname.includes('/messages')) return 'Tin nhắn';
+  if (pathname.includes('/building-overview')) return 'Sơ đồ tòa nhà';
   if (pathname.includes('/profile')) return 'Tài khoản cư dân';
   return 'Tổng quan cư dân';
 };
@@ -21,6 +22,7 @@ const getPageDescription = (pathname: string) => {
   if (pathname.includes('/billing')) return 'Xem các khoản đến hạn và đi thẳng tới bước thanh toán.';
   if (pathname.includes('/requests')) return 'Gửi yêu cầu mới hoặc kiểm tra tiến độ xử lý.';
   if (pathname.includes('/messages')) return 'Theo dõi các thông báo quan trọng từ ban quản lý.';
+  if (pathname.includes('/building-overview')) return 'Bố cục mặt bằng thực tế của các tầng và phòng tại nơi bạn ở.';
   if (pathname.includes('/profile')) return 'Cập nhật thông tin cá nhân và kiểm tra dữ liệu cư dân.';
   return 'Bắt đầu từ những việc quan trọng nhất trong hôm nay.';
 };

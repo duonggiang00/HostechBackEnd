@@ -95,7 +95,6 @@ export interface Room {
   floor_id: string | null;
   code: string;
   name: string;
-  type: string;
   area: number;
   capacity: number;
   base_price: number;
@@ -147,7 +146,6 @@ export interface RoomQueryParams {
   floor_id?: string;
   status?: RoomStatus;
   search?: string;
-  type?: string;
   code?: string;
   include?: string;
   sort?: string;
@@ -168,7 +166,6 @@ export interface CreateRoomPayload {
   floor_id?: string;
   code: string;
   name: string;
-  type: string;
   area: number;
   capacity: number;
   base_price?: number;
@@ -190,7 +187,6 @@ export interface RoomTemplate {
   id: string;
   property_id: string;
   name: string;
-  room_type: string;
   area: number;
   capacity: number;
   base_price: number;

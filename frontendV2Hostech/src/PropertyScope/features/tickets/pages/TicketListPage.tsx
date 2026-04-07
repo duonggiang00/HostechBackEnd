@@ -46,7 +46,7 @@ export default function TicketListPage() {
       {/* Page Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="p-3.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg shadow-amber-200 dark:shadow-none">
+          <div className="p-3.5 bg-linear-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg shadow-amber-200 dark:shadow-none">
             <Ticket className="w-7 h-7 text-white" />
           </div>
           <div>
@@ -56,7 +56,7 @@ export default function TicketListPage() {
             </p>
           </div>
         </div>
-        <PermissionGate role={['Admin', 'Owner', 'Manager', 'Staff']}>
+        <PermissionGate role={['Owner', 'Manager', 'Staff']}>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all"

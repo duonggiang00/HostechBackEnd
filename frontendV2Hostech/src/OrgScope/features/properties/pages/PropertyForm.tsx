@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePropertyActions, usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
+import { useServices } from '@/PropertyScope/features/services/hooks/useServices';
 import type { Property } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
-import { useOrganizations } from '@/adminSystem/features/organizations/hooks/useOrganizations';
-import { ArrowLeft, Save, Loader2, Building2, MapPin, Hash, Ruler, FileText, Settings, CreditCard, Users, Briefcase } from 'lucide-react';
+import { 
+  ArrowLeft, Save, Loader2, Building2, MapPin, Hash, 
+  Ruler, FileText, Settings, CreditCard, Users, CheckCircle2, PlusCircle
+} from 'lucide-react';
 
 export default function PropertyForm() {
   const { id } = useParams();
@@ -12,11 +15,12 @@ export default function PropertyForm() {
   const isEdit = !!id;
   const { user } = useAuth();
   const currentOrgId = user?.org_id;
-  const isAdmin = user?.role === 'Admin';
   
-  const { data: organizations, isLoading: isLoadingOrgs } = useOrganizations();
   const { data: existingProperty, isLoading: isFetching } = usePropertyDetail(id);
   const { createProperty, updateProperty } = usePropertyActions();
+  const { data: allServices } = useServices({ per_page: 100 });
+  
+  const servicesList = Array.isArray(allServices) ? allServices : (allServices as any)?.data || [];
 
   const [formData, setFormData] = useState<Partial<Property> & { org_id?: string }>({
     name: '',
@@ -30,18 +34,22 @@ export default function PropertyForm() {
     default_billing_cycle: 'monthly',
     default_due_day: 5,
     default_cutoff_day: 30,
-    status: 'active'
+    status: 'active',
+    default_services: []
   });
 
   useEffect(() => {
-    if (!isEdit && !isAdmin && currentOrgId) {
+    if (!isEdit && currentOrgId) {
       setFormData(prev => ({ ...prev, org_id: currentOrgId }));
     }
-  }, [isEdit, isAdmin, currentOrgId]);
+  }, [isEdit, currentOrgId]);
 
   useEffect(() => {
     if (existingProperty) {
-      setFormData(existingProperty);
+      setFormData({
+        ...existingProperty,
+        default_services: existingProperty.default_services?.map((s: any) => s.id || s) || []
+      });
     }
   }, [existingProperty]);
 
@@ -117,34 +125,6 @@ export default function PropertyForm() {
                 </div>
               </div>
 
-              {isAdmin && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Organization</label>
-                  <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      {isLoadingOrgs ? (
-                        <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-                      ) : (
-                        <Briefcase className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-                      )}
-                    </div>
-                    <select
-                      required
-                      disabled={isLoadingOrgs}
-                      value={formData.org_id || ''}
-                      onChange={(e) => setFormData({ ...formData, org_id: e.target.value })}
-                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium appearance-none"
-                    >
-                      <option value="">Select Organization</option>
-                      {organizations?.map((org) => (
-                        <option key={org.id} value={org.id}>
-                          {org.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 ml-1">Property Code</label>
@@ -217,14 +197,14 @@ export default function PropertyForm() {
           <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
             <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
               <Settings className="w-5 h-5 text-indigo-500" />
-              <h2 className="font-bold text-slate-800">Operational Settings</h2>
+              <h2 className="font-bold text-slate-800">Cài đặt vận hành</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <div className="space-y-0.5">
-                    <p className="text-sm font-bold text-slate-700">Multi-floor structure</p>
-                    <p className="text-xs text-slate-400">Organize rooms by levels</p>
+                    <p className="text-sm font-bold text-slate-700">Cấu trúc nhiều tầng</p>
+                    <p className="text-xs text-slate-400">Phân chia phòng theo từng tầng</p>
                   </div>
                   <button
                     type="button"
@@ -236,20 +216,20 @@ export default function PropertyForm() {
                </div>
 
                <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Default Billing Cycle</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">Chu kỳ thanh toán mặc định</label>
                 <select 
                   value={formData.default_billing_cycle}
                   onChange={(e) => setFormData({ ...formData, default_billing_cycle: e.target.value as any })}
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none font-medium appearance-none"
                 >
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="yearly">Yearly</option>
+                  <option value="monthly">Hàng tháng</option>
+                  <option value="quarterly">Hàng quý</option>
+                  <option value="yearly">Hàng năm</option>
                 </select>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Due Day (of month)</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">Ngày đến hạn (trong tháng)</label>
                 <input
                   type="number"
                   min="1" max="31"
@@ -260,7 +240,7 @@ export default function PropertyForm() {
               </div>
 
                <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Data Cut-off Day</label>
+                <label className="text-sm font-bold text-slate-700 ml-1">Ngày chốt dữ liệu</label>
                 <input
                   type="number"
                    min="1" max="31"
@@ -271,6 +251,77 @@ export default function PropertyForm() {
               </div>
             </div>
           </section>
+
+          {/* Default Services Section */}
+          <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-50">
+              <div className="flex items-center gap-3">
+                <PlusCircle className="w-5 h-5 text-indigo-500" />
+                <h2 className="font-bold text-slate-800">Dịch vụ mặc định của tòa nhà</h2>
+              </div>
+              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
+                Kế thừa tự động
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {servicesList.length === 0 && (
+                <div className="col-span-full py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <p className="text-slate-400 text-sm font-medium">Chưa có dịch vụ nào trong tổ chức.</p>
+                  <button 
+                    type="button"
+                    onClick={() => navigate('/property-scope/services/create')}
+                    className="mt-2 text-indigo-600 text-sm font-bold hover:underline"
+                  >
+                    + Tạo dịch vụ chung
+                  </button>
+                </div>
+              )}
+              {servicesList.map((service: any) => {
+                const isSelected = formData.default_services?.includes(service.id);
+                return (
+                  <div 
+                    key={service.id}
+                    onClick={() => {
+                      const current = formData.default_services || [];
+                      const next = isSelected 
+                        ? current.filter(sid => sid !== service.id)
+                        : [...current, service.id];
+                      setFormData({ ...formData, default_services: next });
+                    }}
+                    className={`group relative p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${
+                      isSelected 
+                        ? 'border-indigo-600 bg-indigo-50/30' 
+                        : 'border-slate-100 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-xl border transition-colors ${
+                        isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-50 border-slate-100'
+                      }`}>
+                        <CheckCircle2 className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-300'}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-bold truncate ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>
+                          {service.name}
+                        </p>
+                        <p className="text-xs text-slate-400 font-medium">{service.unit}</p>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-slate-100">
+              Lưu ý: Dịch vụ được chọn sẽ tự động áp dụng cho tất cả phòng thuộc tòa nhà này, trừ khi được ghi đè thủ công.
+            </p>
+          </section>
         </div>
 
         {/* Sidebar Settings */}
@@ -278,13 +329,13 @@ export default function PropertyForm() {
            <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <FileText className="w-4 h-4 text-indigo-500" />
-              Notes
+              Ghi chú
             </h3>
             <textarea
               value={formData.note || ''}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none text-sm resize-none font-medium"
-              placeholder="Internal management notes..."
+              placeholder="Ghi chú nội bộ cho ban quản lý..."
             />
           </section>
 
@@ -292,11 +343,11 @@ export default function PropertyForm() {
              <div className="space-y-1">
                 <h3 className="text-white font-bold flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-indigo-400" />
-                  Bank Accounts
+                  Tài khoản ngân hàng
                 </h3>
-                <p className="text-slate-500 text-xs">Used for automated invoicing</p>
+                <p className="text-slate-500 text-xs">Dùng cho hóa đơn tự động</p>
              </div>
-             <p className="text-slate-400 text-sm italic">Bank account configuration module coming soon.</p>
+             <p className="text-slate-400 text-sm italic">Tính năng cấu hình ngân hàng đang được phát triển.</p>
           </section>
 
           <div className="space-y-3">
@@ -310,7 +361,7 @@ export default function PropertyForm() {
               ) : (
                 <>
                   <Save className="w-6 h-6" />
-                  {isEdit ? 'Update Property' : 'Save Property'}
+                  {isEdit ? 'Cập nhật tòa nhà' : 'Lưu tòa nhà'}
                 </>
               )}
             </button>
@@ -319,7 +370,7 @@ export default function PropertyForm() {
               onClick={() => navigate('/org/properties')}
               className="w-full py-4 text-slate-500 font-bold hover:text-slate-700 transition-colors"
             >
-              Cancel
+              Hủy bỏ
             </button>
           </div>
         </div>

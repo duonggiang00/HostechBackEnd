@@ -1,4 +1,4 @@
-import { ClipboardList, CreditCard, FileSignature, Home, User } from 'lucide-react';
+import { ClipboardList, CreditCard, FileSignature, Home, Layers, User } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
 import SidebarDropdownSection from '@/shared/components/ui/SidebarDropdownSection';
@@ -9,6 +9,7 @@ const navItems = [
   { icon: FileSignature, label: 'Hợp đồng', path: '/app/contracts/pending' },
   { icon: CreditCard, label: 'Hóa đơn', path: '/app/billing' },
   { icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
+  { icon: Layers, label: 'Sơ đồ tòa nhà', path: '/app/building-overview' },
 ];
 
 const navSections = [
@@ -19,6 +20,7 @@ const navSections = [
     items: [
       { id: 'dashboard', icon: Home, label: 'Tổng quan', path: '/app/dashboard', exact: true },
       { id: 'contracts', icon: FileSignature, label: 'Hợp đồng', path: '/app/contracts/pending' },
+      { id: 'building-overview', icon: Layers, label: 'Sơ đồ tòa nhà', path: '/app/building-overview' },
     ],
   },
   {
@@ -38,7 +40,7 @@ export default function TenantNav() {
 
   return (
     <>
-      <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white/90 lg:px-4 lg:py-5 lg:backdrop-blur dark:lg:border-slate-800 dark:lg:bg-slate-950/85">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white/90 lg:px-4 lg:py-5 lg:backdrop-blur dark:lg:border-slate-800 dark:lg:bg-slate-950/85">
         <div className="px-3">
           <p className="text-[11px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
             Cổng cư dân

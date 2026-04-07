@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Plus, Minus, Eye, Trash2, ChevronDown, Layers } from 'lucide-react';
+import { Plus, Minus, Trash2, Layers, X, Info } from 'lucide-react';
 import type { BuildingFloor, BuildingRoom, RoomTemplateOption } from '../types';
 import type { RoomStatus } from '@/PropertyScope/features/rooms/types';
 
@@ -15,7 +15,7 @@ interface BuildingOverviewProps {
 }
 
 export function BuildingOverview({
-  floors,
+  floors = [],
   templates = [],
   isEditMode = false,
   isLoading = false,
@@ -28,8 +28,8 @@ export function BuildingOverview({
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
   // Calculate max columns for uniform grid (based on actual occupancy, not count)
-  const maxColumns = Math.max(4, ...floors.map(f => 
-    f.rooms.reduce((max, r) => Math.max(max, (r.layout?.column ?? 0) + (r.layout?.col_span ?? 1)), 0)
+  const maxColumns = Math.max(4, ...(floors || []).map(f => 
+    (f.rooms || []).reduce((max, r) => Math.max(max, (r.layout?.column ?? 0) + (r.layout?.col_span ?? 1)), 0)
   ));
 
   // ─── Handlers ───────────────────────────────────────────────────────────
@@ -71,14 +71,16 @@ export function BuildingOverview({
     const roomSuffix = roomSequence < 10 ? `0${roomSequence}` : `${roomSequence}`;
     const roomTempId = `temp-room-${Date.now()}`;
     
+    const template = templates.find(t => t.id === selectedTemplate);
+    
     const newRoom: BuildingRoom = {
       id: roomTempId,
       temp_id: roomTempId,
       code: `${floorNumber}${roomSuffix}`, // E.g., 101, 102, 201...
       floor_id: floorId,
       status: 'available' as RoomStatus,
-      area: 25,
-      base_price: 3000000,
+      area: template?.area || 25,
+      base_price: template?.base_price || 3000000,
       template_id: selectedTemplate || undefined,
       isDraft: true,
       layout: {
@@ -91,7 +93,7 @@ export function BuildingOverview({
     onFloorsChange(floors.map(f =>
       f.id === floorId ? { ...f, rooms: [...f.rooms, newRoom] } : f
     ));
-  }, [floors, onFloorsChange, selectedTemplate]);
+  }, [floors, onFloorsChange, selectedTemplate, templates]);
 
   const handleRemoveRoom = useCallback((roomId: string) => {
     if (!onFloorsChange) return;
@@ -150,35 +152,65 @@ export function BuildingOverview({
     <div className="flex-1 flex flex-col items-center p-8 bg-gray-50/50 overflow-auto">
       <div className="max-w-4xl w-full translate-y-4">
 
-        {/* Template Selector — chỉ trong Edit Mode */}
-        {isEditMode && templates.length > 0 && (
-          <div className="mb-4 flex items-center gap-3 bg-white px-4 py-3 rounded-xl border border-indigo-100 shadow-sm">
-            <Layers className="w-4 h-4 text-indigo-500 shrink-0" />
-            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">Template phòng:</span>
-            <div className="relative flex-1">
-              <select
-                value={selectedTemplate}
-                onChange={e => setSelectedTemplate(e.target.value)}
-                className="w-full appearance-none bg-indigo-50 border border-indigo-200 text-slate-700 text-xs font-semibold rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-              >
-                <option value="">— Không dùng template —</option>
-                {templates.map(tpl => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.name} {tpl.area ? `· ${tpl.area}m²` : ''} {tpl.base_price ? `· ${tpl.base_price.toLocaleString('vi-VN')}₫` : ''}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-indigo-400" />
+        {/* Template Selector — Premium Design */}
+        {isEditMode && (
+          <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="bg-white dark:bg-slate-900 p-1.5 rounded-[24px] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex items-center gap-2">
+              <div className="flex items-center gap-3 pl-4 pr-2 py-2 border-r border-slate-100 dark:border-slate-800">
+                <div className={`p-2 rounded-xl transition-colors ${selectedTemplate ? 'bg-indigo-600 text-white animate-pulse' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  <Layers className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Quy tắc vẽ</span>
+                  <span className="text-xs font-black text-slate-800 dark:text-white whitespace-nowrap">
+                    {selectedTemplate ? 'Chế độ vẽ tự động' : 'Chế độ thủ công'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 flex items-center gap-2 px-2">
+                <select
+                  value={selectedTemplate}
+                  onChange={e => setSelectedTemplate(e.target.value)}
+                  className="flex-1 bg-transparent border-none text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer py-2"
+                >
+                  <option value="">— Chọn mẫu phòng để vẽ nhanh —</option>
+                  {templates.map(tpl => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {tpl.name} ({tpl.area}m² · {tpl.base_price?.toLocaleString('vi-VN')}₫)
+                    </option>
+                  ))}
+                </select>
+                
+                {selectedTemplate && (
+                  <button 
+                    onClick={() => setSelectedTemplate('')}
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 hover:text-rose-500 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="pr-2">
+                {selectedTemplate ? (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-2xl">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                    <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Tự động: Bật</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Thủ công</span>
+                  </div>
+                )}
+              </div>
             </div>
+            
             {selectedTemplate && (
-              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-full whitespace-nowrap">
-                ✓ Sẽ tạo đồng hồ từ template
-              </span>
-            )}
-            {!selectedTemplate && (
-              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full whitespace-nowrap">
-                ⚡ Tự động tạo 2 đồng hồ Điện+Nước
-              </span>
+              <div className="mt-2 ml-6 flex items-center gap-2 text-[10px] text-slate-400 font-bold italic animate-in fade-in duration-700">
+                <Info className="w-3 h-3 text-indigo-400" />
+                Giá thuê, diện tích & dịch vụ sẽ được tự động kế thừa vào mỗi ô phòng bạn vẽ.
+              </div>
             )}
           </div>
         )}
@@ -257,27 +289,24 @@ export function BuildingOverview({
                             className={`w-full h-full rounded-lg border-2 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer ${getStatusColor(room.status, room.isDraft)}`}
                             onClick={() => onRoomSelect?.(room)}
                           >
-                            <span className="text-base font-bold leading-none">{room.code}</span>
-                            <span className="text-[9px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none">
-                              {room.isDraft ? 'Chưa lưu' :
+                            <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover/room:opacity-100 transition-opacity rounded-lg pointer-events-none" />
+                            <span className="text-base font-bold leading-none z-10">{room.code}</span>
+                            <span className="text-[9px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none z-10">
+                              {room.isDraft ? 'Draft' :
                                 room.status === 'occupied' ? 'Đã thuê' :
                               room.status === 'available' ? 'Trống' :
                               room.status === 'draft' ? 'Nháp/Chưa duyệt' : 'Bảo trì'}
                             </span>
+                            {room.template_id && isEditMode && (
+                              <div className="absolute bottom-1 right-1">
+                                <Layers className="w-2.5 h-2.5 text-indigo-400" />
+                              </div>
+                            )}
                           </div>
 
                           {/* Hover action buttons */}
                           {hoveredRoom === room.id && (
                             <div className="absolute top-1 right-1 flex gap-1 z-20 animate-in fade-in zoom-in duration-150">
-                              {!room.isDraft && (
-                                <button
-                                  onClick={e => { e.stopPropagation(); onRoomSelect?.(room); }}
-                                  className="p-1.5 rounded-md shadow-sm transition-all hover:scale-105 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                                  title="Xem nhanh"
-                                >
-                                  <Eye className="w-3 h-3" />
-                                </button>
-                              )}
                               {isEditMode && (
                                 <button
                                   onClick={e => { e.stopPropagation(); handleRemoveRoom(room.id); }}

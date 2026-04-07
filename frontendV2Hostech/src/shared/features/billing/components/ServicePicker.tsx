@@ -6,6 +6,7 @@ import { useService, type Service } from '@/shared/features/billing/hooks/useSer
 interface ServicePickerProps {
   selectedServiceIds: string[];
   onChange: (serviceIds: string[]) => void;
+  inheritedServiceIds?: string[];
   // Options for overriding prices per room
   servicePrices?: Record<string, number>;
   onPriceChange?: (serviceId: string, customPrice: number) => void;
@@ -14,6 +15,7 @@ interface ServicePickerProps {
 export default function ServicePicker({ 
   selectedServiceIds, 
   onChange,
+  inheritedServiceIds = [],
   servicePrices = {},
   onPriceChange
 }: ServicePickerProps) {
@@ -109,6 +111,11 @@ export default function ServicePicker({
                     {service.is_recurring && (
                       <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
                         Recurring
+                      </span>
+                    )}
+                    {inheritedServiceIds.includes(service.id) && (
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md border border-emerald-100 dark:border-emerald-800/50">
+                        Property Default
                       </span>
                     )}
                   </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Layers, Hash, Plus, AlertCircle } from 'lucide-react';
-import { useFloors } from '../../floors/hooks/useFloors';
+import { useFloors } from '@/PropertyScope/hooks/useFloors';
 import { useBulkCreateRooms } from '../hooks/useRooms';
 import type { RoomTemplate } from '../../templates/types';
 import { toast } from 'react-hot-toast';

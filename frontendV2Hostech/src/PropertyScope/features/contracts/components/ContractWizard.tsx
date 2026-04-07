@@ -7,7 +7,7 @@ import {
 import { useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useRoomDetail, useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
-import { useFloors } from '@/PropertyScope/features/floors/hooks/useFloors';
+import { useFloors } from '@/PropertyScope/hooks/useFloors';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { usePropertyUsers } from '@/PropertyScope/features/users/hooks/usePropertyUsers';
 import type { CreateContractPayload, CreateContractMemberPayload } from '@/PropertyScope/features/contracts/types';

@@ -15,7 +15,6 @@ class RoomTemplateUpdateRequest extends FormRequest
     {
         return [
             'name' => ['nullable', 'string', 'max:255'],
-            'room_type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other'],
             'area' => ['nullable', 'numeric', 'min:0'],
             'capacity' => ['nullable', 'integer', 'min:1'],
             'base_price' => ['nullable', 'numeric', 'min:0'],
@@ -26,8 +25,6 @@ class RoomTemplateUpdateRequest extends FormRequest
             'services.*' => ['uuid', 'exists:services,id'],
             'assets' => ['nullable', 'array'],
             'assets.*' => ['string', 'max:255'],
-            'meters' => ['nullable', 'array'],
-            'meters.*' => ['string', 'in:ELECTRIC,WATER'],
         ];
     }
 }

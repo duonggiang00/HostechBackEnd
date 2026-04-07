@@ -1,15 +1,17 @@
-import { motion } from 'framer-motion';
-import { LayoutDashboard, Info } from 'lucide-react';
+import { LayoutDashboard, Layers, Home } from 'lucide-react';
 
 interface PropertyTabSwitcherProps {
-  activeTab: 'dashboard' | 'info';
-  onTabChange: (tab: 'dashboard' | 'info') => void;
+  activeTab: 'dashboard' | 'layout' | 'rooms';
+  onTabChange: (tab: 'dashboard' | 'layout' | 'rooms') => void;
 }
+
+import { motion } from 'framer-motion';
 
 export function PropertyTabSwitcher({ activeTab, onTabChange }: PropertyTabSwitcherProps) {
   const tabs = [
-    { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-    { id: 'info', label: 'Thông báo & Cài đặt', icon: Info },
+    { id: 'dashboard', label: 'Trang chủ', icon: LayoutDashboard },
+    { id: 'layout', label: 'Sơ đồ', icon: Layers },
+    { id: 'rooms', label: 'Phòng', icon: Home },
   ] as const;
 
   return (

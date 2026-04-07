@@ -2,7 +2,6 @@ export interface RoomTemplate {
   id: string;
   property_id: string;
   name: string;
-  room_type: string;
   base_price: number;
   area?: number;
   capacity?: number;
@@ -38,7 +37,6 @@ export interface ServiceTemplate {
 
 export interface CreateRoomTemplatePayload {
   name: string;
-  room_type: string;
   base_price: number;
   area?: number;
   capacity?: number;

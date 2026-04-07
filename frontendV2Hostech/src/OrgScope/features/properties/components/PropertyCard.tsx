@@ -17,7 +17,13 @@ export default function PropertyCard({
   status,
   onClick 
 }: PropertyCardProps) {
-  const statusStyles = {
+  const statusLabels: Record<string, string> = {
+    active: 'Đang hoạt động',
+    inactive: 'Ngừng hoạt động',
+    maintenance: 'Bảo trì',
+  };
+
+  const statusStyles: Record<string, string> = {
     active: 'bg-green-100 text-green-700 border-green-200',
     inactive: 'bg-slate-100 text-slate-700 border-slate-200',
     maintenance: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -37,7 +43,7 @@ export default function PropertyCard({
             <Building2 className="w-6 h-6" />
           </div>
           <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${statusStyles[status]}`}>
-            {status}
+            {statusLabels[status] || status}
           </span>
         </div>
 
@@ -56,7 +62,7 @@ export default function PropertyCard({
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900">{roomCount}</p>
-              <p className="text-xs text-slate-500 uppercase font-medium">Rooms</p>
+              <p className="text-xs text-slate-500 uppercase font-medium text-nowrap">Phòng ngủ</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -65,7 +71,7 @@ export default function PropertyCard({
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900">{staffCount}</p>
-              <p className="text-xs text-slate-500 uppercase font-medium">Staff</p>
+              <p className="text-xs text-slate-500 uppercase font-medium text-nowrap">Nhân sự</p>
             </div>
           </div>
         </div>

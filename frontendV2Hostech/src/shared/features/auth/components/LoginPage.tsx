@@ -22,7 +22,7 @@ export default function LoginPage() {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [step, setStep] = useState<LoginStep>('IDENTIFY');
+  const [step, setStep] = useState<LoginStep>('LOGIN');
 
   useEffect(() => {
     let timer: any;
@@ -34,28 +34,11 @@ export default function LoginPage() {
     return () => clearInterval(timer);
   }, [otpCooldown, decrementCooldown]);
 
-  const validateIdentifier = () => {
+  const handleLogin = async () => {
     if (!identifier) {
       setError('Email or Phone is required');
-      return false;
+      return;
     }
-    setError(null);
-    return true;
-  };
-
-  const handleIdentify = () => {
-    if (!validateIdentifier()) return;
-    
-    // Unify flow: Everyone goes to password step first.
-    // The backend will determine if MFA is needed after password verification.
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setStep('PASSWORD');
-    }, 400);
-  };
-
-  const handlePasswordLogin = async () => {
     if (password.length < 8) {
       setError('Password must be at least 8 characters');
       return;
@@ -144,7 +127,7 @@ export default function LoginPage() {
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 dark:bg-slate-700">
              <motion.div 
                initial={{ width: 0 }}
-               animate={{ width: step === 'IDENTIFY' ? '33%' : step === 'PASSWORD' || step === 'OTP' ? '100%' : '66%' }}
+               animate={{ width: step === 'LOGIN' ? '50%' : '100%' }}
                className="h-full bg-indigo-600 dark:bg-indigo-500"
              />
           </div>
@@ -155,35 +138,50 @@ export default function LoginPage() {
           </div>
 
           <AnimatePresence mode="wait">
-            {step === 'IDENTIFY' && (
+            {step === 'LOGIN' && (
               <motion.div
-                key="identify"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                key="login"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
                 className="space-y-6"
               >
                 <div className="space-y-2 text-center mb-8">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Welcome Back</h2>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Enter your email or phone to continue</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Administrative Login</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Access your secure dashboard</p>
                 </div>
 
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
-                    <Mail className="w-5 h-5" />
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="Email or Phone Number"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleIdentify();
-                      }
-                    }}
-                    placeholder="Email or Phone Number"
-                    className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                  />
+
+                  <div className="relative group">
+                    <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleLogin();
+                        }
+                      }}
+                      placeholder="Security Password"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                    />
+                  </div>
                 </div>
 
                 {error && (
@@ -194,66 +192,11 @@ export default function LoginPage() {
                 )}
 
                 <button
-                  onClick={handleIdentify}
+                  onClick={handleLogin}
                   disabled={isLoading}
                   className="w-full py-5 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-5 h-5" /></>}
-                </button>
-              </motion.div>
-            )}
-
-            {step === 'PASSWORD' && (
-              <motion.div
-                key="password"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <button 
-                  onClick={() => setStep('IDENTIFY')}
-                  className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Change Account
-                </button>
-
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Administrative Login</h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Account: <span className="font-bold text-slate-900 dark:text-white">{identifier}</span></p>
-                </div>
-
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
-                    <Lock className="w-5 h-5" />
-                  </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handlePasswordLogin();
-                      }
-                    }}
-                    placeholder="Security Password"
-                    className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
-                  />
-                </div>
-
-                {error && (
-                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/20">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="text-xs font-bold">{error}</span>
-                  </div>
-                )}
-
-                <button
-                  onClick={handlePasswordLogin}
-                  disabled={isLoading}
-                  className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-slate-900 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-100 dark:shadow-none active:scale-[0.98] disabled:opacity-50"
-                >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In Securely'}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Log In Securely <ArrowRight className="w-5 h-5" /></>}
                 </button>
               </motion.div>
             )}
@@ -267,7 +210,7 @@ export default function LoginPage() {
                 className="space-y-8"
               >
                 <button 
-                  onClick={() => setStep('IDENTIFY')}
+                  onClick={() => setStep('LOGIN')}
                   className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
                   <ArrowLeft className="w-4 h-4" /> Change Details

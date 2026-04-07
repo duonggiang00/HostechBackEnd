@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Meter\Meter;
 use App\Models\Property\Room;
 use App\Models\Property\RoomFloorPlanNode;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class RoomObserver
@@ -17,19 +18,54 @@ class RoomObserver
     public function created(Room $room): void
     {
         $this->createDefaultFloorPlanNode($room);
+        $this->createDefaultMeters($room);
+    }
 
-        if (! $room->wasRecentlyCreatedFromTemplate()) {
-            $this->createDefaultMeters($room);
-        }
+    /**
+     * Clear Building Overview Cache on any change.
+     */
+    public function saved(Room $room): void
+    {
+        $this->invalidateCache($room);
+    }
+
+    public function deleted(Room $room): void
+    {
+        $this->invalidateCache($room);
+    }
+
+    public function restored(Room $room): void
+    {
+        $this->invalidateCache($room);
     }
 
     /**
      * Khi phòng bị xóa (soft-delete):
-     * Tự động xóa FloorPlanNode liên quan để giữ dữ liệu Grid sạch.
+     *
+     * XÓA:
+     *  - FloorPlanNode   — vị trí Grid phải được dọn ngay
+     *  - Media (gallery) — ảnh phòng không còn ý nghĩa khi phòng bị xóa
+     *  - RoomAsset       — tài sản gắn với phòng
+     *  - Meter           — đồng hồ điện/nước
+     *
+     * GIỮ LẠI (không xóa):
+     *  - Contracts  — hợp đồng là hồ sơ pháp lý, cần lưu trữ lịch sử
+     *  - Invoices   — hóa đơn tài chính, cần lưu trữ
      */
     public function deleting(Room $room): void
     {
+        // 1. FloorPlanNode
         RoomFloorPlanNode::where('room_id', $room->id)->delete();
+
+        // 2. Media (gallery, cover, etc.) — dùng Spatie Media Library
+        $room->clearMediaCollection();
+
+        // 3. RoomAssets
+        $room->assets()->delete();
+
+        // 4. Meters (đồng hồ điện/nước)
+        // Dùng Meter model để trigger bất kỳ Observer nào của Meter nếu có
+        Meter::where('room_id', $room->id)->delete();
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────
@@ -93,6 +129,16 @@ class RoomObserver
                 'is_active'    => true,
                 'base_reading' => 0,
             ]);
+        }
+    }
+
+    /**
+     * Xóa cache building overview của tòa nhà chứa phòng này.
+     */
+    private function invalidateCache(Room $room): void
+    {
+        if ($room->property_id) {
+            Cache::forget("building_overview_{$room->property_id}");
         }
     }
 }

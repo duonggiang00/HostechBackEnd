@@ -11,23 +11,9 @@ class RoomTemplateFactory extends Factory
 
     public function definition(): array
     {
-        $types = ['apartment', 'studio', 'room', 'office', 'shophouse'];
-        $type = $this->faker->randomElement($types);
-        
-        $areas = [
-            'apartment' => [45, 90],
-            'studio' => [25, 40],
-            'room' => [15, 30],
-            'office' => [30, 200],
-            'shophouse' => [100, 300],
-        ];
-
-        $range = $areas[$type];
-        $area = $this->faker->numberBetween($range[0], $range[1]);
-
+        $area = $this->faker->numberBetween(15, 30);
         return [
             'name' => $this->faker->words(3, true) . ' Template',
-            'room_type' => $type,
             'area' => $area,
             'capacity' => $this->faker->numberBetween(1, 4),
             'base_price' => $area * $this->faker->numberBetween(100, 250) * 1000,

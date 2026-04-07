@@ -25,27 +25,25 @@ export default function InvoicesPage() {
   const invoices = response?.data || [];
 
   const stats = [
-    { label: 'Total Revenue', value: '$45,230', change: '+12.5%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Pending Collections', value: '$8,120', change: '-2.4%', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Active Contracts', value: '142', change: '+5', icon: Receipt, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Tổng doanh thu', value: '45.230.000₫', change: '+12.5%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Đang chờ thu', value: '8.120.000₫', change: '-2.4%', icon: DollarSign, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Hợp đồng hiệu lực', value: '142', change: '+5', icon: Receipt, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   ];
-
-
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Billing & Finance</h1>
-          <p className="text-slate-500 mt-1">Monitor revenue, invoices, and payment statuses.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Hóa đơn & Tài chính</h1>
+          <p className="text-slate-500 mt-1">Theo dõi doanh thu, hóa đơn và trạng thái thanh toán.</p>
         </div>
         <div className="flex items-center gap-3">
           <button className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all">
             <Download className="w-4 h-4" />
-            Export CSV
+            Xuất dữ liệu
           </button>
           <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95">
-            Create Invoice
+            Tạo hóa đơn
           </button>
         </div>
       </div>
@@ -74,7 +72,7 @@ export default function InvoicesPage() {
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
              <input 
                type="text" 
-               placeholder="Search invoices, tenants or units..."
+               placeholder="Tìm kiếm hóa đơn, khách thuê hoặc phòng..."
                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
              />
            </div>
@@ -89,7 +87,7 @@ export default function InvoicesPage() {
                     onClick={() => setFilter(t)}
                     className={`px-4 py-1.5 text-xs font-bold rounded-lg capitalize transition-all ${filter === t ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
-                    {t}
+                    {t === 'all' ? 'Tất cả' : t === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
                   </button>
                 ))}
              </div>
@@ -100,11 +98,11 @@ export default function InvoicesPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Invoice</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Tenant</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Date</th>
-                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Hóa đơn</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Khách thuê</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Số tiền</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Ngày</th>
+                <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -113,13 +111,13 @@ export default function InvoicesPage() {
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-400">
                     <Loader2 className="w-8 h-8 animate-spin mx-auto text-indigo-500 mb-2" />
-                    Loading invoices...
+                    Đang tải hóa đơn...
                   </td>
                 </tr>
               ) : invoices.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-500 font-medium">
-                    No invoices found.
+                    Không tìm thấy hóa đơn nào.
                   </td>
                 </tr>
               ) : invoices.map((inv: any) => (
@@ -133,11 +131,11 @@ export default function InvoicesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <p className="text-sm font-bold text-slate-900">{inv.tenant?.name || 'Unknown'}</p>
-                    <p className="text-xs text-slate-500 font-medium">Unit {inv.tenant?.room || 'N/A'}</p>
+                    <p className="text-sm font-bold text-slate-900">{inv.tenant?.name || 'Không xác định'}</p>
+                    <p className="text-xs text-slate-500 font-medium">Phòng {inv.tenant?.room || 'N/A'}</p>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm font-black text-slate-900">${inv.total?.toLocaleString() || 0}</span>
+                    <span className="text-sm font-black text-slate-900">{inv.total?.toLocaleString('vi-VN') || 0}₫</span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-1.5 text-slate-500">
@@ -164,11 +162,11 @@ export default function InvoicesPage() {
         
         <div className="p-6 bg-slate-50/30 border-t border-slate-100 flex items-center justify-between">
            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-             Showing {invoices.length} Invoices
+             Hiển thị {invoices.length} hóa đơn
            </p>
            <div className="flex gap-2">
-              <button className="px-3 py-1 text-xs font-bold border border-slate-200 rounded-lg bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50" disabled>Prev</button>
-              <button className="px-3 py-1 text-xs font-bold border border-slate-200 rounded-lg bg-white text-slate-500 hover:bg-slate-50 outline-indigo-500" disabled>Next</button>
+              <button className="px-3 py-1 text-xs font-bold border border-slate-200 rounded-lg bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50" disabled>Trước</button>
+              <button className="px-3 py-1 text-xs font-bold border border-slate-200 rounded-lg bg-white text-slate-500 hover:bg-slate-50 outline-indigo-500" disabled>Sau</button>
            </div>
         </div>
       </div>
@@ -182,4 +180,3 @@ export default function InvoicesPage() {
     </div>
   );
 }
-

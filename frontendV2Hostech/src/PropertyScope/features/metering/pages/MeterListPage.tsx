@@ -44,7 +44,7 @@ export default function MeterListPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
   const hasRole = useAuthStore((state) => state.hasRole);
-  const isManager = hasRole(['Manager', 'Owner', 'Admin']);
+  const isManager = hasRole(['Manager', 'Owner']);
 
   // Search state (Kept separate and debounced for real-time responsiveness)
   const [searchTerm, setSearchTerm] = useState('');

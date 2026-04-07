@@ -199,16 +199,13 @@ class RoomService
     public function createFromTemplate(string $templateId, array $overrides, User $performer): Room
     {
         return DB::transaction(function () use ($templateId, $overrides, $performer) {
-            $template = RoomTemplate::with(['services', 'assets', 'meters'])->findOrFail($templateId);
+            $template = RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
 
             $roomData = array_merge([
-                'room_type' => $template->room_type,
                 'area' => $template->area,
                 'capacity' => $template->capacity,
                 'base_price' => $template->base_price,
                 'description' => $template->description,
-                'amenities' => $template->amenities,
-                'utilities' => $template->utilities,
                 'property_id' => $template->property_id,
                 'status' => 'available',
             ], $overrides);
@@ -220,9 +217,6 @@ class RoomService
 
             $room = $this->create($roomData, $performer);
 
-            // Flag: Template will handle Meters — tell Observer to skip default meter creation
-            $room->createdFromTemplate = true;
-
             // Assets: create from template if not provided in overrides
             if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
                 foreach ($template->assets as $tAsset) {
@@ -231,20 +225,6 @@ class RoomService
                         'org_id' => $room->org_id,
                         'room_id' => $room->id,
                         'name' => $tAsset->name,
-                    ]);
-                }
-            }
-
-            // Meters: create from template if not provided in overrides
-            if (! isset($overrides['meters']) && $template->meters->isNotEmpty()) {
-                foreach ($template->meters as $tMeter) {
-                    $room->meters()->create([
-                        'id' => Str::uuid()->toString(),
-                        'org_id' => $room->org_id,
-                        'property_id' => $room->property_id,
-                        'type' => $tMeter->type,
-                        'code' => $room->code.'-'.($tMeter->type === 'ELECTRIC' ? 'E' : 'W'),
-                        'is_active' => true,
                     ]);
                 }
             }
@@ -485,7 +465,7 @@ class RoomService
             $rooms = collect();
             $template = null;
             if (isset($data['template_id'])) {
-                $template = RoomTemplate::with(['services', 'assets', 'meters'])->find($data['template_id']);
+                $template = RoomTemplate::with(['services', 'assets'])->find($data['template_id']);
             }
 
             for ($i = 0; $i < $count; $i++) {
@@ -504,13 +484,10 @@ class RoomService
 
                 if ($template) {
                     $roomData = array_merge($roomData, [
-                        'room_type' => $template->room_type,
                         'area' => $template->area,
                         'capacity' => $template->capacity,
                         'base_price' => $template->base_price,
                         'description' => $template->description,
-                        'amenities' => $template->amenities,
-                        'utilities' => $template->utilities,
                         'status' => 'available', // Templates usually imply ready-to-use
                     ]);
                 }
@@ -530,11 +507,6 @@ class RoomService
                 $roomData['code'] = $code;
                 $room = Room::create($roomData);
 
-                // Flag: if using template, Observer should skip default meter creation
-                if ($template) {
-                    $room->createdFromTemplate = true;
-                }
-
                 if ($template) {
                     // Sync Services
                     if ($template->services->isNotEmpty()) {
@@ -550,17 +522,6 @@ class RoomService
                         ]);
                     }
 
-                    // Create Meters
-                    foreach ($template->meters as $tMeter) {
-                        $room->meters()->create([
-                            'id' => Str::uuid()->toString(),
-                            'org_id' => $room->org_id,
-                            'property_id' => $room->property_id,
-                            'type' => $tMeter->type,
-                            'code' => $room->code.'-'.($tMeter->type === 'ELECTRIC' ? 'E' : 'W'),
-                            'is_active' => true,
-                        ]);
-                    }
                 }
 
                 $rooms->push($room);

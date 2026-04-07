@@ -301,7 +301,7 @@ export default function ContractDetailPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Mã số phòng</p>
                     <p className="font-bold text-slate-900 dark:text-white text-lg transition-colors">{contract.room?.name || '---'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">{contract.room?.type || 'Phòng cho thuê'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">Phòng {contract.room?.code}</p>
                   </div>
                 </div>
               </div>
@@ -324,6 +324,7 @@ export default function ContractDetailPage() {
                       <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Vai trò</th>
                       <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Điện thoại</th>
                       <th className="px-6 py-4 text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Trạng thái</th>
+                      <th className="px-6 py-4 text-right text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Hành động</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700 transition-colors">
@@ -349,6 +350,16 @@ export default function ContractDetailPage() {
                           <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-colors ${member.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
                             {member.status === 'APPROVED' ? 'Đang ở' : 'Chờ duyệt'}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => navigate(`/properties/${propertyId}/users/${member.user_id || member.id}`, { 
+                              state: { from: 'contract-detail', contractId: contractId } 
+                            })}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-xs font-medium"
+                          >
+                            Chi tiết
+                          </button>
                         </td>
                       </tr>
                     ))}

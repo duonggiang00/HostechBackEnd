@@ -20,24 +20,24 @@ export default function FinanceDashboard() {
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-    { id: 'generation', label: 'Bill Generation', icon: Receipt },
-    { id: 'reconciliation', label: 'Reconciliation', icon: Wallet },
-    { id: 'catalog', label: 'Service Catalog', icon: Settings },
+    { id: 'overview', label: 'Tổng quan', icon: LayoutDashboard },
+    { id: 'generation', label: 'Tạo hóa đơn', icon: Receipt },
+    { id: 'reconciliation', label: 'Đối soát', icon: Wallet },
+    { id: 'catalog', label: 'Danh mục dịch vụ', icon: Settings },
   ];
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0A0A0B]">
       {/* Tab Navigation Bar */}
-      <div className="sticky top-0 z-40 bg-[#0A0A0B]/80 backdrop-blur-xl border-b border-white/10 px-6 py-4 flex items-center justify-between">
+      <div className="bg-[#0A0A0B] border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="bg-emerald-500 rounded-lg p-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Finance Engine</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Hệ thống tài chính</h1>
             <div className="flex items-center gap-2 text-xs text-slate-500 font-bold uppercase tracking-widest">
-              Admin Portal <ChevronRight className="w-3 h-3" /> {activeTab}
+              Cổng quản trị <ChevronRight className="w-3 h-3" /> {tabs.find(t => t.id === activeTab)?.label}
             </div>
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function FinanceDashboard() {
             onClick={() => setShowInvoicePreview(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-xs font-bold"
           >
-            <Printer className="w-4 h-4" /> Invoice Sample
+            <Printer className="w-4 h-4" /> Mẫu hóa đơn
           </button>
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function FinanceDashboard() {
               className="relative w-full max-w-5xl h-[90vh] bg-[#0A0A0B] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                <span className="text-xs font-black uppercase text-slate-500 tracking-widest">Single Invoice Preview Mode</span>
+                <span className="text-xs font-black uppercase text-slate-500 tracking-widest">Chế độ xem trước hóa đơn</span>
                 <button 
                   onClick={() => setShowInvoicePreview(false)}
                   className="p-2 rounded-xl hover:bg-white/10 text-slate-400 transition-colors"

@@ -16,7 +16,6 @@ class RoomTemplateStoreRequest extends FormRequest
         return [
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
             'name' => ['required', 'string', 'max:255'],
-            'room_type' => ['required', 'string', 'in:studio,apartment,house,dormitory,other'],
             'area' => ['required', 'numeric', 'min:0'],
             'capacity' => ['required', 'integer', 'min:1'],
             'base_price' => ['required', 'numeric', 'min:0'],
@@ -27,8 +26,6 @@ class RoomTemplateStoreRequest extends FormRequest
             'services.*' => ['uuid', 'exists:services,id'],
             'assets' => ['nullable', 'array'],
             'assets.*' => ['string', 'max:255'],
-            'meters' => ['nullable', 'array'],
-            'meters.*' => ['string', 'in:ELECTRIC,WATER'],
         ];
     }
 }

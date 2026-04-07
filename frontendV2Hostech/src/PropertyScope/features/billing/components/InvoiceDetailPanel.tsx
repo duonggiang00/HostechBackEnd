@@ -114,7 +114,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
 
             {/* Actions Bar */}
             <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <PermissionGate role={['Admin', 'Owner', 'Manager', 'Staff']}>
+              <PermissionGate role={['Owner', 'Manager', 'Staff']}>
                 {invoice.status === 'DRAFT' && (
                   <button
                     onClick={handleIssue}

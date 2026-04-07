@@ -118,9 +118,9 @@ export default function SidebarAccountMenu({
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-semibold text-slate-700 dark:text-slate-200">{userName || 'Guest'}</p>
+          <p className="truncate text-[14px] font-semibold text-slate-700 dark:text-slate-200">{userName || 'Khách'}</p>
           <p className={`mt-0.5 truncate text-[12px] font-medium capitalize ${roleClasses}`}>
-            {role?.replace('_', ' ') || 'No Role'}
+            {role?.replace('_', ' ') || 'Chưa phân quyền'}
           </p>
         </div>
 

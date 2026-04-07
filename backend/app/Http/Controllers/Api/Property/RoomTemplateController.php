@@ -19,7 +19,7 @@ class RoomTemplateController extends Controller
      * @param  string|null  $propertyId
      * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
-    public function index(Request $request, $propertyId = null)
+    public function index(Request $request, $propertyId = null): \Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Http\JsonResponse
     {
         // Support both nested route /properties/{property}/room-templates 
         // and flat URL /room-templates?filter[property_id]=...
@@ -32,7 +32,7 @@ class RoomTemplateController extends Controller
         }
 
         $templates = RoomTemplate::where('property_id', $id)
-            ->with(['services', 'assets', 'meters'])
+            ->with(['services', 'assets'])
             ->get();
 
         return RoomTemplateResource::collection($templates);
@@ -53,19 +53,14 @@ class RoomTemplateController extends Controller
                 }
             }
 
-            if ($request->has('meters')) {
-                foreach ($request->meters as $meterType) {
-                    $template->meters()->create(['type' => $meterType]);
-                }
-            }
 
-            return new RoomTemplateResource($template->load(['services', 'assets', 'meters']));
+            return new RoomTemplateResource($template->load(['services', 'assets']));
         });
     }
 
     public function show(RoomTemplate $roomTemplate)
     {
-        return new RoomTemplateResource($roomTemplate->load(['services', 'assets', 'meters']));
+        return new RoomTemplateResource($roomTemplate->load(['services', 'assets']));
     }
 
     public function update(RoomTemplateUpdateRequest $request, RoomTemplate $roomTemplate)
@@ -84,14 +79,8 @@ class RoomTemplateController extends Controller
                 }
             }
 
-            if ($request->has('meters')) {
-                $roomTemplate->meters()->delete();
-                foreach ($request->meters as $meterType) {
-                    $roomTemplate->meters()->create(['type' => $meterType]);
-                }
-            }
 
-            return new RoomTemplateResource($roomTemplate->load(['services', 'assets', 'meters']));
+            return new RoomTemplateResource($roomTemplate->load(['services', 'assets']));
         });
     }
 

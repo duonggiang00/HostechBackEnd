@@ -15,19 +15,14 @@ interface RoomTemplateDialogProps {
   isSaving?: boolean;
 }
 
-const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
-
 export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, isSaving }: RoomTemplateDialogProps) {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     name: initialData?.name ?? '',
-    room_type: initialData?.room_type ?? 'standard',
     area: initialData?.area ?? 25,
     capacity: initialData?.capacity ?? 2,
     base_price: initialData?.base_price ?? 0,
     description: initialData?.description ?? '',
-    amenities: initialData?.amenities ?? [],
-    utilities: initialData?.utilities ?? [],
   });
 
   const [assets, setAssets] = useState<RoomTemplateAsset[]>(initialData?.assets ?? []);
@@ -152,20 +147,6 @@ export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, i
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
-                      {/* Type */}
-                      <div className="space-y-3">
-                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Loại phòng</label>
-                        <div className="bg-slate-50/50 dark:bg-slate-900/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-800">
-                          <select
-                            value={formData.room_type}
-                            onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
-                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none font-bold text-slate-900 dark:text-white capitalize focus:border-indigo-500"
-                          >
-                            {ROOM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                          </select>
-                        </div>
-                      </div>
-
                       {/* Price */}
                       <div className="space-y-3">
                         <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Giá thuê mặc định</label>

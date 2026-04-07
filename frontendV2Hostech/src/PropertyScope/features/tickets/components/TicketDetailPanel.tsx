@@ -129,7 +129,7 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
             {/* Actions Bar */}
             <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-100 dark:border-slate-800">
               {/* Status Changer */}
-              <PermissionGate role={['Admin', 'Owner', 'Manager', 'Staff']}>
+              <PermissionGate role={['Owner', 'Manager', 'Staff']}>
                 <div className="relative">
                   <button
                     onClick={() => setStatusOpen(v => !v)}
@@ -160,7 +160,7 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
                 </div>
               </PermissionGate>
 
-              <PermissionGate role={['Admin', 'Owner', 'Manager']}>
+              <PermissionGate role={['Owner', 'Manager']}>
                 <button
                   onClick={() => setShowCostForm(v => !v)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 transition-all"

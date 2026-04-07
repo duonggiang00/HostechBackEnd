@@ -28,6 +28,9 @@ use Illuminate\Support\Str;
 
 class OrgSeeder extends Seeder
 {
+    private static $testTenantCounter = 1;
+    private static $freeTenantCounter = 1;
+
     public function run(): void
     {
         $this->command->info("\n================================");
@@ -50,12 +53,12 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgNames = [
-            'Mường Thanh',
-            'Nam Thanh',
-            'Thăng Long',
-            'Ngọc Ánh',
-            'Titanic',
-            'Love Street Hotel',
+            'test',
+            // 'Nam Thanh',
+            // 'Thăng Long',
+            // 'Ngọc Ánh',
+            // 'Titanic',
+            // 'Love Street Hotel',
         ];
         $orgCount = count($orgNames);
         $usersPerOrg = 10;
@@ -228,11 +231,12 @@ class OrgSeeder extends Seeder
 
                     for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
-                            'org_id' => $org->id,
-                            'property_id' => $property->id,
-                            'name' => "Tầng $i",
-                            'code' => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
-                            'sort_order' => $i,
+                            'org_id'       => $org->id,
+                            'property_id'  => $property->id,
+                            'name'         => "Tầng $i",
+                            'floor_number' => $i,
+                            'code'         => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
+                            'sort_order'   => $i,
                         ]);
 
                         $availableArea = $property->area - ($property->shared_area ?? 0);
@@ -259,7 +263,6 @@ class OrgSeeder extends Seeder
                                 'org_id' => $org->id,
                                 'property_id' => $property->id,
                                 'floor_id' => $floor->id,
-                                'type' => $template->room_type,
                                 'area' => $roomArea,
                                 'capacity' => $template->capacity,
                                 'base_price' => $template->base_price,
@@ -401,7 +404,7 @@ class OrgSeeder extends Seeder
                         );
                         $room->update(['status' => 'occupied']);
                     } else {
-                        $room->update(['status' => 'draft']);
+                        // $room->update(['status' => 'draft']);
                     }
                 }
 
@@ -492,7 +495,12 @@ class OrgSeeder extends Seeder
     for ($i = 0; $i < $numMembers; $i++) {
         // Dynamically create a tenant user for each contract member
         $fullName = fake('vi_VN')->name();
-        $email = Str::slug($fullName) . '.' . Str::random(5) . '@tenant.hostech.vn';
+        
+        $isActive = in_array($status, ['ACTIVE', 'PENDING_TERMINATION']);
+        $prefix = $isActive ? 'test_tenant_' : 'free_tenant_';
+        $counter = $isActive ? self::$testTenantCounter++ : self::$freeTenantCounter++;
+        
+        $email = $prefix . $counter . "@example.com";
         
         $memberUser = User::create([
             'id' => Str::uuid()->toString(),

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { type Room, useRoomActions, useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
-import { useFloorDetail, useFloors } from '@/PropertyScope/features/floors/hooks/useFloors';
+import { useFloorDetail, useFloors } from '@/PropertyScope/hooks/useFloors';
 import { toast } from 'react-hot-toast';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,8 +24,6 @@ interface RoomWizardProps {
   propertyId: string;
   floorId?: string | null;
 }
-
-const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
 
 const STEPS = [
   { id: 'basic', title: 'Cơ bản', icon: Home },
@@ -46,7 +44,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     name: initialData?.name ?? '',
     code: initialData?.code ?? '',
     floor_id: floorId ?? initialData?.floor_id ?? '',
-    type: initialData?.type ?? 'standard',
     capacity: initialData?.capacity ?? 2,
     area: initialData?.area ?? 25,
     base_price: initialData?.base_price ?? 5_000_000,
@@ -82,7 +79,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     setSelectedTemplateId(template.id);
     setFormData(prev => ({
       ...prev,
-      type: (template.room_type as any) || 'standard',
       capacity: template.capacity || 1,
       area: template.area || 0,
       base_price: template.base_price,
@@ -374,26 +370,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                             <ArrowRight className="w-4 h-4 rotate-90" />
                           </div>
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <label className="text-sm font-black text-slate-700 uppercase tracking-tight ml-1">Loại phòng</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          {ROOM_TYPES.map(t => (
-                            <button
-                              key={t}
-                              type="button"
-                              onClick={() => setFormData({ ...formData, type: t })}
-                              className={`py-3 px-2 rounded-2xl border-2 font-black transition-all capitalize text-xs sm:text-xs ${
-                                formData.type === t 
-                                  ? 'border-indigo-600 bg-indigo-50 text-indigo-700 shadow-md shadow-indigo-100' 
-                                  : 'border-slate-100 bg-white text-slate-400 hover:border-slate-200'
-                              }`}
-                            >
-                              {t}
-                            </button>
-                          ))}
                         </div>
                       </div>
                     </div>

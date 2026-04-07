@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractStatusHistory;
 use App\Models\Property\RoomStatusHistory;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class ContractObserver
@@ -15,6 +16,16 @@ class ContractObserver
     public function created(Contract $contract): void
     {
         $this->syncRoomStatus($contract);
+    }
+
+    public function saved(Contract $contract): void
+    {
+        $this->invalidateCache($contract);
+    }
+
+    public function deleted(Contract $contract): void
+    {
+        $this->invalidateCache($contract);
     }
 
     /**
@@ -115,6 +126,16 @@ class ContractObserver
                 'reason'             => 'Status auto-synced from Contract status (' . ($contract->status instanceof \BackedEnum ? $contract->status->value : $contract->status) . ')',
                 'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
             ]);
+        }
+    }
+
+    /**
+     * Xóa cache building overview của tòa nhà liên quan đến hợp đồng này.
+     */
+    private function invalidateCache(Contract $contract): void
+    {
+        if ($contract->property_id) {
+            Cache::forget("building_overview_{$contract->property_id}");
         }
     }
 }

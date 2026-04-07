@@ -10,29 +10,25 @@ import {
   Search,
   Shield,
   Menu,
-  X
 } from 'lucide-react';
-import OrgSwitcher from '@/adminSystem/features/organizations/components/OrgSwitcher';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
-import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
-import SidebarAccountMenu from '@/shared/components/ui/SidebarAccountMenu';
-import SidebarDropdownSection from '@/shared/components/ui/SidebarDropdownSection';
+import Sidebar from '@/shared/components/ui/Sidebar';
 
 interface OrgScopeLayoutProps {
   children: ReactNode;
 }
 
 export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner'] },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Owner'] },
     { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Admin', 'Owner'] },
-    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner'] },
-    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner'] },
+    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Owner'] },
+    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Owner'] },
+    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Owner'] },
   ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
 
   const menuSections = [
@@ -54,107 +50,20 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
     },
   ].filter((section) => section.items.length > 0);
 
-  const renderSidebarContent = () => (
-    <div className="flex h-full w-full flex-col bg-white dark:bg-slate-900">
-      <div className="flex shrink-0 items-center justify-between px-6 py-6 pb-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-[34px] w-[34px] items-center justify-center rounded-lg bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-200 dark:shadow-none">
-            <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
-          </div>
-          <h1 className="text-xl font-extrabold text-[#566a7f] dark:text-slate-200 tracking-tight">
-            Sneat
-          </h1>
-        </div>
-        <button 
-          onClick={() => setIsMobileMenuOpen(false)}
-          className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 lg:hidden transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-      
-      <div className="px-4 py-3">
-        {user?.role === 'Admin' ? (
-          <OrgSwitcher />
-        ) : (
-          <div className="bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-600 rounded-xl p-3 flex items-center justify-between group opacity-75">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-slate-400 shadow-sm">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">Tổ chức</p>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 truncate italic">Quản lý bởi hệ thống</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-2 custom-scrollbar">
-        <div className="mb-3 mt-1 px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
-           Phạm vi tổ chức
-        </div>
-
-        {menuSections.map((section) => (
-          <SidebarDropdownSection
-            key={section.id}
-            label={section.label}
-            items={section.items}
-            defaultOpen={section.defaultOpen}
-            onNavigate={() => setIsMobileMenuOpen(false)}
-          />
-        ))}
-      </nav>
-
-      <div className="w-full shrink-0 border-t border-slate-200/60 bg-white p-4 dark:border-white/10 dark:bg-slate-900">
-        <SidebarAccountMenu
-          profilePath="/org/profile"
-          userName={user?.full_name}
-          role={user?.role}
-          onLogout={() => {
-            logout();
-            setIsMobileMenuOpen(false);
-          }}
-          onActionComplete={() => setIsMobileMenuOpen(false)}
-        />
-      </div>
-    </div>
-  );
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
-      {/* Desktop Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[260px] flex-col border-r border-[#eceef1] bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex shadow-sm">
-        {renderSidebarContent()}
-      </aside>
-
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 lg:hidden"
-            />
-            <motion.aside 
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-white shadow-xl dark:bg-slate-900 lg:hidden"
-            >
-              {renderSidebarContent()}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      <Sidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        menuSections={menuSections}
+        switcher={<PropertySwitcher variant="sidebar" />}
+        profilePath="/org/profile"
+        scopeLabel="Phạm vi tổ chức"
+      />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-20 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-700/50 px-4 md:px-8 flex items-center justify-between shrink-0 sticky top-0 z-30">
+        <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-700/50 px-4 md:px-8 flex items-center justify-between shrink-0 sticky top-0 z-30 transition-all duration-300">
           <div className="flex items-center gap-3 md:gap-6 min-w-0">
             <button 
               onClick={() => setIsMobileMenuOpen(true)}
@@ -162,10 +71,9 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
             >
               <Menu className="w-6 h-6" />
             </button>
-            <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight hidden xl:block">Cổng thông tin tổ chức</h2>
-            <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 hidden xl:block" />
-            <div className="min-w-0">
-              <PropertySwitcher />
+            <div className="hidden xl:flex items-center gap-3">
+                <Shield className="w-5 h-5 text-indigo-500" />
+                <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Cổng Quản Trị</h2>
             </div>
           </div>
           

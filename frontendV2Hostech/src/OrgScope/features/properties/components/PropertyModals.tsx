@@ -34,7 +34,7 @@ const BaseModal = ({ isOpen, onClose, title, icon: Icon, children }: React.Props
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-                  <p className="text-xs text-slate-500 font-medium tracking-tight">Manage your property infrastructure</p>
+                  <p className="text-xs text-slate-500 font-medium tracking-tight">Quản lý cơ sở hạ tầng của bạn</p>
                 </div>
               </div>
               <button 
@@ -54,11 +54,11 @@ const BaseModal = ({ isOpen, onClose, title, icon: Icon, children }: React.Props
                 onClick={onClose}
                 className="px-5 py-2.5 text-slate-600 font-bold text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all active:scale-95"
               >
-                Cancel
+                Hủy
               </button>
               <button className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95">
                 <Save className="w-4 h-4" />
-                Save Changes
+                Lưu thay đổi
               </button>
             </div>
           </motion.div>
@@ -69,23 +69,23 @@ const BaseModal = ({ isOpen, onClose, title, icon: Icon, children }: React.Props
 };
 
 export const AddFloorModal = ({ isOpen, onClose, propertyName }: { isOpen: boolean; onClose: () => void; propertyName: string }) => (
-  <BaseModal isOpen={isOpen} onClose={onClose} title="Add New Floor" icon={Layers}>
+  <BaseModal isOpen={isOpen} onClose={onClose} title="Thêm tầng mới" icon={Layers}>
     <div className="space-y-4">
       <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-2">
-        <p className="text-xs text-indigo-700 font-medium">Adding floor to <span className="font-black">{propertyName}</span></p>
+        <p className="text-xs text-indigo-700 font-medium">Thêm tầng cho <span className="font-black">{propertyName}</span></p>
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Floor Name / Number</label>
+        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Tên tầng / Số tầng</label>
         <input 
           type="text" 
-          placeholder="e.g. Floor 01, Lobby, Rooftop"
+          placeholder="VD: Tầng 01, Sảnh, Sân thượng"
           className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-bold placeholder:font-medium placeholder:text-slate-300"
         />
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Description (Optional)</label>
+        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Mô tả (Tùy chọn)</label>
         <textarea 
-          placeholder="Describe any specific characteristics of this floor"
+          placeholder="Mô tả các đặc điểm cụ thể của tầng này"
           className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium h-24 resize-none"
         />
       </div>
@@ -94,34 +94,34 @@ export const AddFloorModal = ({ isOpen, onClose, propertyName }: { isOpen: boole
 );
 
 export const AddRoomModal = ({ isOpen, onClose, floorName }: { isOpen: boolean; onClose: () => void; floorName: string }) => (
-  <BaseModal isOpen={isOpen} onClose={onClose} title="Add New Room" icon={DoorOpen}>
+  <BaseModal isOpen={isOpen} onClose={onClose} title="Thêm phòng mới" icon={DoorOpen}>
     <div className="space-y-4">
       <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl mb-2">
-        <p className="text-xs text-indigo-700 font-medium">Adding unit to <span className="font-black">{floorName}</span></p>
+        <p className="text-xs text-indigo-700 font-medium">Thêm phòng vào <span className="font-black">{floorName}</span></p>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Room Number</label>
+          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Số phòng</label>
           <input 
             type="text" 
-            placeholder="e.g. 101"
+            placeholder="VD: 101"
             className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none font-bold"
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Loại phòng</label>
           <select className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none font-bold appearance-none bg-white">
-            <option>Studio</option>
-            <option>1 Bedroom</option>
-            <option>2 Bedroom</option>
-            <option>Suite</option>
+            <option>Phòng đơn (Studio)</option>
+            <option>Phòng 1 ngủ</option>
+            <option>Phòng 2 ngủ</option>
+            <option>Phòng cao cấp (Suite)</option>
           </select>
         </div>
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Base Price / Month</label>
+        <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Giá thuê cơ bản / Tháng</label>
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₫</span>
           <input 
             type="number" 
             placeholder="0.00"

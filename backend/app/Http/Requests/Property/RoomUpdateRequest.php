@@ -15,8 +15,7 @@ use Illuminate\Validation\Rule;
  * @bodyParam base_price number Giá cơ bản.
  * @bodyParam status string Trạng thái.
  * @bodyParam description string Mô tả.
- * @bodyParam amenities json Tiện nghi.
- * @bodyParam utilities json Dịch vụ.
+
  * @bodyParam media_ids string[] Mảng chứa danh sách ID của media (upload files). Example: ["uuid-1234"]
  * @bodyParam assets object[] Mảng cấu hình các thiết bị, tài sản trong phòng.
  * @bodyParam assets[].id string ID của tài sản (Nếu là tài sản cũ muốn update). Example: uuid-1234
@@ -55,8 +54,7 @@ class RoomUpdateRequest extends FormRequest
             'base_price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],
             'description' => ['nullable', 'string'],
-            'amenities' => ['nullable', 'json'],
-            'utilities' => ['nullable', 'json'],
+
 
             'service_ids' => ['nullable', 'array'],
             'service_ids.*' => ['uuid', 'exists:services,uuid'],

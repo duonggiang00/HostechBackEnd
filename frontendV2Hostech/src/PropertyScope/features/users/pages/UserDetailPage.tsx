@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useUser, usePropertyUsers } from '../hooks/usePropertyUsers';
 import { toast } from 'react-hot-toast';
@@ -12,10 +12,21 @@ import {
 export default function UserDetailPage() {
   const { propertyId, userId } = useParams<{ propertyId: string, userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const { data: user, isLoading, isError } = useUser(userId);
   const { updateUserMutation } = usePropertyUsers();
   const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleBack = () => {
+    if (location.state?.from === 'room-detail' && location.state?.roomId) {
+      navigate(`/properties/${propertyId}/rooms/${location.state.roomId}`, { 
+        state: { activeTab: 'tenants' } 
+      });
+    } else {
+      navigate(`/properties/${propertyId}/users`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -30,10 +41,10 @@ export default function UserDetailPage() {
       <div className="text-center py-20">
         <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300">Không tìm thấy người dùng</h2>
         <button 
-          onClick={() => navigate(`/properties/${propertyId}/users`)}
+          onClick={handleBack}
           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl"
         >
-          Quay lại danh sách
+          Quay lại
         </button>
       </div>
     );
@@ -64,13 +75,14 @@ export default function UserDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button 
-            onClick={() => navigate(`/properties/${propertyId}/users`)}
+            onClick={handleBack}
             className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all shadow-sm group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
           <div>
-            <h1 className="text-2xl font-black bg-gradient-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent flex items-center gap-3">
+            <div className="absolute inset-0 bg-linear-to-b from-white/10 to-transparent pointer-events-none" />
+            <h1 className="text-2xl font-black bg-linear-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent flex items-center gap-3">
               Hồ sơ người dùng
             </h1>
           </div>
@@ -80,7 +92,7 @@ export default function UserDetailPage() {
         <button
           onClick={handleToggleLock}
           disabled={isUpdating}
-          className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`group relative flex items-center gap-2 px-6 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
             isActive 
               ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 shadow-rose-600/10' 
               : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 shadow-emerald-600/10'
@@ -102,7 +114,7 @@ export default function UserDetailPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 hover:!translate-y-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 hover:translate-y-0!">
         
         {/* Cột trái: Thông tin tổng quan */}
         <div className="lg:col-span-1 space-y-6">
@@ -112,7 +124,7 @@ export default function UserDetailPage() {
             className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700 text-center relative overflow-hidden"
           >
             {/* Background decoration */}
-            <div className={`absolute top-0 left-0 right-0 h-32 ${isActive ? 'bg-gradient-to-b from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800' : 'bg-gradient-to-b from-rose-50 to-white dark:from-rose-900/20 dark:to-slate-800'}`} />
+            <div className={`absolute top-0 left-0 right-0 h-32 ${isActive ? 'bg-linear-to-b from-indigo-50 to-white dark:from-indigo-900/20 dark:to-slate-800' : 'bg-linear-to-b from-rose-50 to-white dark:from-rose-900/20 dark:to-slate-800'}`} />
 
             <div className="relative">
               {/* Avatar */}

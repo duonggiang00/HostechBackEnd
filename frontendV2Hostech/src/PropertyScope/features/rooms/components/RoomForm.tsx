@@ -1,11 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { 
   Home, Tag, Users, Maximize2, DollarSign, FileText, Check, Loader2, 
-  Settings, Image as ImageIcon, Zap, ShieldAlert, X, FileSignature
+  Image as ImageIcon, Zap, ShieldAlert, X, FileSignature
 } from 'lucide-react';
 import { type Room, type CreateRoomPayload, useRoomActions, useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
-import { useFloorDetail } from '@/PropertyScope/features/floors/hooks/useFloors';
+import { useFloorDetail } from '@/PropertyScope/hooks/useFloors';
 import { toast } from 'react-hot-toast';
 import MediaDropzone from '@/shared/features/media/components/MediaDropzone';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
@@ -15,12 +15,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { mediaApi } from '@/shared/features/media/api/media';
 
-const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
 
 const roomSchema = z.object({
   name: z.string().min(1, 'Tên phòng không được để trống'),
   code: z.string().min(1, 'Mã phòng không được để trống'),
-  type: z.enum(['standard', 'studio', 'duplex', 'penthouse']),
   capacity: z.number().min(1, 'Sức chứa phải ít nhất là 1'),
   area: z.number().positive('Diện tích phải lớn hơn 0'),
   base_price: z.number().min(0, 'Giá không được âm'),
@@ -49,7 +47,6 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     handleSubmit,
     control,
     watch,
-    setValue,
     setError,
     clearErrors,
     reset,
@@ -60,7 +57,6 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     defaultValues: {
       name: initialData?.name ?? '',
       code: initialData?.code ?? '',
-      type: (initialData?.type as typeof ROOM_TYPES[number]) ?? 'standard',
       capacity: initialData?.capacity ?? 2,
       area: initialData?.area ?? 25,
       base_price: initialData?.base_price ?? 0,
@@ -71,7 +67,6 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
   const isEditing = !!initialData?.id;
   const currentArea = watch('area');
   const currentBasePrice = watch('base_price');
-  const currentType = watch('type');
 
   // Related states for complex UI
   const [selectedServices, setSelectedServices] = useState<string[]>(
@@ -87,7 +82,6 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
         reset({
           name: initialData.name ?? '',
           code: initialData.code ?? '',
-          type: (initialData.type as any) ?? 'standard',
           capacity: initialData.capacity ?? 2,
           area: initialData.area ?? 25,
           base_price: initialData.base_price ?? 0,
@@ -483,33 +477,6 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
       {/* ─── Sidebar (Settings, Rules, Notes, Actions) ─── */}
       <div className="space-y-6">
         
-        {/* Settings & Type */}
-        <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">
-          <div className="flex items-center gap-3 pb-2 border-b border-slate-50 dark:border-slate-800/50">
-            <Settings className="w-5 h-5 text-indigo-500" />
-            <h2 className="font-bold text-slate-800 dark:text-white">Cài đặt</h2>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Loại phòng</label>
-            <div className="grid grid-cols-2 gap-3">
-              {ROOM_TYPES.map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setValue('type', type)}
-                  className={`px-4 py-3 text-sm font-bold rounded-xl transition-all border capitalize ${
-                    currentType === type
-                      ? 'border-indigo-500 bg-indigo-50/50 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)]'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm'
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
 
         {/* Rules & Description */}
         <section className="bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm space-y-6">

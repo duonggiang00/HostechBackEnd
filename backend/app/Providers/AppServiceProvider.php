@@ -17,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
     {
         \App\Models\Contract\Contract::observe(\App\Observers\ContractObserver::class);
         \App\Models\Property\Room::observe(\App\Observers\RoomObserver::class);
+        \App\Models\Property\Floor::observe(\App\Observers\FloorObserver::class);
 
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\Property\BuildingOverviewUpdated::class,

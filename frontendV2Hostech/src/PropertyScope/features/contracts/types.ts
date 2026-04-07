@@ -19,7 +19,9 @@ export interface RoomContract {
   };
   members?: Array<{ 
     id: string; 
+    user_id?: string;
     full_name: string; 
+    phone?: string;
     role: 'TENANT' | 'ROOMMATE' | string;
     status: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
     is_primary?: boolean;

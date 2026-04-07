@@ -30,7 +30,7 @@ export default function RoomTicketsTab({ propertyId, roomId }: Props) {
         <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
           Sự cố & Yêu cầu ({data?.meta.total || 0})
         </h3>
-        <PermissionGate role={['Admin', 'Owner', 'Manager', 'Staff', 'Tenant']}>
+        <PermissionGate role={['Owner', 'Manager', 'Staff', 'Tenant']}>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-xl text-xs font-bold transition-all"
@@ -100,7 +100,7 @@ export default function RoomTicketsTab({ propertyId, roomId }: Props) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowCreate(false)}
           >
             <motion.div

@@ -135,7 +135,7 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
                 Kỳ: {new Date(invoice.period_start).toLocaleDateString('vi-VN')} - {new Date(invoice.period_end).toLocaleDateString('vi-VN')}
               </div>
               <div className="flex items-center gap-3">
-                <PermissionGate role={['Admin', 'Manager', 'Staff', 'Owner']}>
+                <PermissionGate role={['Manager', 'Staff', 'Owner']}>
                   {invoice.status === 'DRAFT' && (
                     <button 
                       onClick={(e) => handleIssue(e, invoice.id)}

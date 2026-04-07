@@ -121,6 +121,47 @@ class BuildingOverviewService
     // ─── Private Helpers ─────────────────────────────────────────────────
 
     /**
+     * Sinh tên phòng tự động bằng cách tìm slot trống nhỏ nhất trong tầng.
+     *
+     * Quy tắc đặt tên: {floor_number}{sequence:02d}
+     *   Tầng 1, slot 1  → "101" | Tầng 4, slot 3  → "403"
+     *   Tầng trệt (0)   → "G01", "G02" ...
+     *
+     * Ví dụ: tầng 1 hiện có 104, 107, 105
+     *   → usedSlots = {4, 5, 7}  → slot trống = 1 → trả về "101"
+     *   Phòng tiếp theo → slot 2 → "102", rồi "103", "106"...
+     *
+     * Tên phòng hiện có KHÔNG BAO GIỜ bị đổi.
+     */
+    private function generateRoomName(string $floorId): string
+    {
+        $floor = Floor::find($floorId);
+        $floorNumber = $floor ? (int) $floor->floor_number : 0;
+        $prefix = $floorNumber === 0 ? 'G' : (string) $floorNumber;
+
+        // Tập hợp các slot đang được dùng trong tầng này
+        $existingNames = Room::where('floor_id', $floorId)->pluck('name')->toArray();
+        $usedSlots = [];
+        foreach ($existingNames as $name) {
+            // Parse tên theo pattern: prefix + số (ví dụ "104" → prefix "1", slot 4)
+            if (str_starts_with((string) $name, $prefix)) {
+                $suffix = ltrim(substr((string) $name, strlen($prefix)), '0');
+                if (is_numeric($suffix)) {
+                    $usedSlots[] = (int) $suffix;
+                }
+            }
+        }
+
+        // Tìm slot trống nhỏ nhất bắt đầu từ 1
+        $sequence = 1;
+        while (in_array($sequence, $usedSlots, true)) {
+            $sequence++;
+        }
+
+        return $prefix . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Trả về floor_id thực (tạo mới nếu là temp entry).
      */
     private function resolveFloorId(array $floorData, Property $property, array &$floorIdMap, array &$summary): ?string
@@ -170,12 +211,16 @@ class BuildingOverviewService
         if (! empty($roomData['temp_id'])) {
             $templateId = $roomData['template_id'] ?? $globalTemplateId;
 
+            // Auto-generate tên phòng theo floor_number + thứ tự
+            $autoName = $this->generateRoomName($floorId);
+
             if ($templateId) {
                 // Tạo từ Template — Observer sẽ tạo FloorPlanNode, Template tạo Meters
                 $room = $this->roomService->createFromTemplate($templateId, [
                     'property_id' => $property->id,
                     'floor_id'    => $floorId,
-                    'code'        => $roomData['code'] ?? null,
+                    'name'        => $autoName,
+                    'code'        => $roomData['code'] ?? $autoName,
                     'status'      => 'available',
                 ], $user);
             } else {
@@ -183,7 +228,8 @@ class BuildingOverviewService
                 $room = $this->roomService->quickCreate([
                     'property_id' => $property->id,
                     'floor_id'    => $floorId,
-                    'name'        => $roomData['code'] ?? 'Phòng mới',
+                    'name'        => $autoName,
+                    'code'        => $roomData['code'] ?? $autoName,
                 ], $user);
             }
 
@@ -285,9 +331,15 @@ class BuildingOverviewService
         ]);
 
         // Lấy danh sách Templates của property này
-        $templates = \App\Models\Property\RoomTemplate::where('property_id', $property->id)
-            ->select(['id', 'name', 'area', 'base_price', 'room_type'])
+        $templates = RoomTemplate::where('property_id', $property->id)
+            ->select(['id', 'name', 'area', 'base_price'])
             ->get()
+            ->map(fn ($tpl) => [
+                'id'         => $tpl->id,
+                'name'       => $tpl->name,
+                'area'       => (float) $tpl->area,
+                'base_price' => (float) $tpl->base_price,
+            ])
             ->toArray();
 
         return [

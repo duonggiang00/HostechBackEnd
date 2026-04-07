@@ -1,25 +1,47 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useDashboard, useGenerateMonthlyBilling } from '../../dashboard/hooks/useDashboard';
-import { PropertyHeader } from '../components/PropertyHeader';
-import { PropertyBillingPolicy } from '../components/PropertyBillingPolicy';
-import { PropertyTemplateConfig } from '../components/PropertyTemplateConfig';
-import { PropertyFloorsList } from '../components/PropertyFloorsList';
-import { PropertyTabSwitcher } from '../components/PropertyTabSwitcher';
 import { PropertyDashboardView } from '../../dashboard/components/PropertyDashboardView';
 import { Skeleton } from '@/shared/components/ui/skeleton';
-import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { LayoutDashboard, Layers, Home } from 'lucide-react';
+import { FeatureTabbedLayout } from '../../../components/FeatureTabbedLayout';
+
+import BuildingOverviewPage from '../../building-overview/pages/BuildingOverviewPage';
+import RoomListPage from '../../rooms/pages/RoomListPage';
 
 interface PropertyDetailPageProps {
-  defaultTab?: 'dashboard' | 'info';
+  defaultTab?: 'dashboard' | 'layout' | 'rooms';
 }
 
 export default function PropertyDetailPage({ defaultTab = 'dashboard' }: PropertyDetailPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'info'>(defaultTab);
-  
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab = useMemo(() => {
+    if (location.pathname.endsWith('/dashboard')) return 'dashboard';
+    if (location.pathname.endsWith('/building-view')) return 'layout';
+    if (location.pathname.endsWith('/rooms')) return 'rooms';
+    return defaultTab;
+  }, [location.pathname, defaultTab]);
+
+  const tabs = [
+    { id: 'dashboard', label: 'Trang chủ', icon: LayoutDashboard },
+    { id: 'layout', label: 'Sơ đồ', icon: Layers },
+    { id: 'rooms', label: 'Phòng', icon: Home },
+  ] as const;
+
+  const handleTabChange = (tab: 'dashboard' | 'layout' | 'rooms') => {
+    const pathMap = {
+      dashboard: `/properties/${propertyId}/dashboard`,
+      layout: `/properties/${propertyId}/building-view`,
+      rooms: `/properties/${propertyId}/rooms`,
+    };
+    navigate(pathMap[tab]);
+  };
+
   const { data: property, isLoading: isPropertyLoading } = usePropertyDetail(propertyId);
   const { data: dashboard, isLoading: isDashboardLoading, refetch: refetchDashboard } = useDashboard(propertyId);
   
@@ -61,21 +83,9 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     );
   }, [dashboard, isGenerating, propertyId]);
 
-  const detailView = useMemo(() => {
-    if (!property) return null;
-    return (
-      <div className="space-y-8">
-        <PropertyTemplateConfig property={property} />
-        <PropertyBillingPolicy property={property} />
-        <PropertyFloorsList property={property} />
-      </div>
-    );
-  }, [property]);
-
   if (isLoading && !property) {
     return (
       <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
-        <Skeleton className="h-[200px] w-full rounded-[2.5rem]" />
         <div className="flex justify-center">
           <Skeleton className="h-12 w-64 rounded-2xl" />
         </div>
@@ -101,28 +111,15 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
   }
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-8 space-y-8 max-w-[1600px] mx-auto pb-20"
+    <FeatureTabbedLayout
+      tabs={tabs as any}
+      activeTab={activeTab}
+      onTabChange={handleTabChange as any}
+      maxWidth="max-w-[1600px]"
     >
-      <PropertyHeader property={property} />
-
-      <div className="flex justify-center sticky top-4 z-50">
-        <PropertyTabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
-
-      <motion.div 
-        key={activeTab}
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        className="space-y-8"
-      >
-        <AnimatePresence mode="wait">
-          {activeTab === 'dashboard' ? dashboardView : detailView}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
+      {activeTab === 'dashboard' && dashboardView}
+      {activeTab === 'layout' && <BuildingOverviewPage />}
+      {activeTab === 'rooms' && <RoomListPage />}
+    </FeatureTabbedLayout>
   );
 }

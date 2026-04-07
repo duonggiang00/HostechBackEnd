@@ -10,7 +10,7 @@ import {
   ArrowUpRight
 } from 'lucide-react';
 
-import { useDashboard } from '@/adminSystem/features/dashboard/hooks/useDashboard';
+import { useDashboard } from '@/shared/hooks/useDashboard';
 import { Loader2 } from 'lucide-react';
 
 export default function ManagementAnalytics() {
@@ -34,11 +34,11 @@ export default function ManagementAnalytics() {
   let revenueTrend = '+0%';
 
   if (dashData) {
-    if ('properties' in dashData) {
+    if (dashData.properties) {
       occupancy = dashData.properties.occupancy_rate;
     }
     
-    if ('tickets' in dashData && 'mttr_hours' in dashData.tickets) {
+    if (dashData.tickets && 'mttr_hours' in dashData.tickets) {
       mttr = (dashData.tickets as any).mttr_hours;
     }
 

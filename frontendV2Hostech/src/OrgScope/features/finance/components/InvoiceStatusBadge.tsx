@@ -7,32 +7,32 @@ interface InvoiceStatusBadgeProps {
 export default function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
   const config: Record<string, { label: string; icon: any; classes: string }> = {
     paid: {
-      label: 'Paid',
+      label: 'Đã thanh toán',
       icon: CheckCircle2,
       classes: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     },
     unpaid: {
-      label: 'Unpaid',
+      label: 'Chưa thanh toán',
       icon: Clock,
       classes: 'bg-amber-50 text-amber-600 border-amber-100',
     },
     overdue: {
-      label: 'Overdue',
+      label: 'Quá hạn',
       icon: AlertCircle,
       classes: 'bg-rose-50 text-rose-600 border-rose-100',
     },
     draft: {
-      label: 'Draft',
+      label: 'Bản nháp',
       icon: Clock,
       classes: 'bg-slate-50 text-slate-500 border-slate-100',
     },
     issued: {
-      label: 'Issued',
+      label: 'Đã phát hành',
       icon: Clock,
       classes: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     },
     cancelled: {
-      label: 'Cancelled',
+      label: 'Đã hủy',
       icon: XCircle,
       classes: 'bg-slate-100 text-slate-400 border-slate-200',
     }

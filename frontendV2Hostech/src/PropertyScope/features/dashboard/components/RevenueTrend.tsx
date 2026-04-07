@@ -20,7 +20,7 @@ export const RevenueTrend = ({ data }: RevenueTrendProps) => {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full" />
-            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Doanh thu</span>
+            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">Doanh thu (VND)</span>
           </div>
         </div>
       </div>
@@ -45,10 +45,17 @@ export const RevenueTrend = ({ data }: RevenueTrendProps) => {
             <YAxis 
               axisLine={false} 
               tickLine={false} 
-              tick={{ fontSize: 12, fontWeight: 600, fill: '#64748b' }}
-              tickFormatter={(value) => `$${value / 1000}k`}
+              tick={{ fontSize: 10, fontWeight: 600, fill: '#64748b' }}
+              width={110}
+              tickFormatter={(value) => `${new Intl.NumberFormat('vi-VN').format(value)}`}
             />
             <Tooltip 
+              formatter={(value: any) => [
+                typeof value === 'number' 
+                  ? new Intl.NumberFormat('vi-VN').format(value) + ' VND' 
+                  : value, 
+                'Doanh thu'
+              ]}
               contentStyle={{ 
                 borderRadius: '16px', 
                 border: 'none', 
@@ -56,7 +63,7 @@ export const RevenueTrend = ({ data }: RevenueTrendProps) => {
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
                 backdropFilter: 'blur(8px)',
                 fontWeight: 'bold',
-                fontSize: '14px'
+                fontSize: '12px'
               }}
             />
             <Area 

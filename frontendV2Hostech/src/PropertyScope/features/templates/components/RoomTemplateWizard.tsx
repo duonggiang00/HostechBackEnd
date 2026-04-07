@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Home, Users, Maximize2, DollarSign, Zap, 
   ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
-  Package, Layout, FileText
+  Package, Layout, FileText, Info
 } from 'lucide-react';
 import { useRoomTemplateActions } from '../hooks/useTemplates';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
@@ -12,8 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
 import type { RoomTemplate } from '../types';
 import { useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
-import { useFloors } from '@/PropertyScope/features/floors/hooks/useFloors';
-import { useMemo } from 'react';
+import { useFloors } from '@/PropertyScope/hooks/useFloors';
+
 
 interface RoomTemplateWizardProps {
   initialData?: RoomTemplate | null;
@@ -42,7 +42,21 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
   // Data Fetching for Context (Rooms & Floors)
   const { data: rooms = [] } = useRooms({ property_id: propertyId });
   const { data: floors = [] } = useFloors(propertyId);
-  
+
+  const inheritedServiceIds = useMemo(() => {
+    return property?.default_services?.map((s: any) => s.id || s) || [];
+  }, [property]);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    name: initialData?.name ?? '',
+    room_type: initialData?.room_type ?? 'standard',
+    capacity: initialData?.capacity ?? 2,
+    area: initialData?.area ?? 25,
+    base_price: initialData?.base_price ?? 0,
+    description: initialData?.description ?? '',
+  });
+
   // Area Statistics Calculation
   const areaStats = useMemo(() => {
     const buildingArea = Number(property?.area || 0);
@@ -64,24 +78,18 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     // Calculation: Building Area - Building Shared Area - Rooms in 1 Floor
     const remainingArea = buildingArea - buildingSharedArea - roomsInSampleFloorArea;
 
+    // Price per m2 context
+    const pricePerM2 = formData.area > 0 ? formData.base_price / formData.area : 0;
+
     return {
       buildingArea,
       buildingSharedArea,
       roomsInSampleFloorArea,
       remainingArea,
-      sampleFloorName
+      sampleFloorName,
+      pricePerM2
     };
-  }, [property, rooms, floors]);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    name: initialData?.name ?? '',
-    room_type: initialData?.room_type ?? 'standard',
-    capacity: initialData?.capacity ?? 2,
-    area: initialData?.area ?? 25,
-    base_price: initialData?.base_price ?? 0,
-    description: initialData?.description ?? '',
-  });
+  }, [property, rooms, floors, formData.area, formData.base_price]);
 
   const [selectedServices, setSelectedServices] = useState<string[]>(
     initialData?.services?.map((s: any) => typeof s === 'string' ? s : s.id) ?? []
@@ -96,6 +104,13 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
   );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Auto-sync inherited services for NEW template
+  useEffect(() => {
+    if (!initialData && inheritedServiceIds.length > 0 && selectedServices.length === 0) {
+      setSelectedServices(inheritedServiceIds);
+    }
+  }, [inheritedServiceIds, initialData]);
 
   const validateStep = (step: number) => {
     const newErrors: Record<string, string> = {};
@@ -206,7 +221,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                       <div className="p-2.5 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                         <ShieldAlert className="w-5 h-5 text-indigo-500" />
                       </div>
-                      <h3 className="font-black text-sm uppercase tracking-[0.1em]">Bối cảnh diện tích tòa nhà</h3>
+                      <h3 className="font-black text-sm uppercase tracking-widest">Bối cảnh diện tích tòa nhà</h3>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -224,14 +239,14 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                       </div>
                       <div className="group p-6 bg-indigo-600 rounded-[28px] shadow-xl shadow-indigo-600/20 border border-indigo-500/30 transition-all hover:scale-[1.02] active:scale-95 cursor-default relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl group-hover:bg-white/20 transition-all" />
-                        <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-2 relative z-10">Khả dụng còn lại</p>
-                        <p className="text-2xl font-black text-white tabular-nums relative z-10">{formatNumber(areaStats.remainingArea)}<span className="text-sm font-bold opacity-60 ml-1">m²</span></p>
+                        <p className="text-[10px] font-black text-indigo-100 uppercase tracking-widest mb-2 relative z-10">Giá thuê / m²</p>
+                        <p className="text-2xl font-black text-white tabular-nums relative z-10">{formatCurrency(areaStats.pricePerM2).replace('₫', '')}<span className="text-sm font-bold opacity-60 ml-1">₫</span></p>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                    <div className="lg:col-span-12 space-y-10">
+                    <div className="lg:col-span-8 space-y-10">
                       {/* Section: Basic Info */}
                       <section className="bg-white dark:bg-slate-900/60 p-10 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-sm space-y-8">
                         <div className="flex items-center gap-3 pb-4 border-b border-slate-50 dark:border-slate-800">
@@ -256,7 +271,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
 
                           <div className="space-y-3">
                             <label className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight ml-1">Loại phòng</label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                               {ROOM_TYPES.map(t => (
                                 <button
                                   key={t.value}
@@ -341,6 +356,66 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                         </div>
                       </section>
                     </div>
+
+                    {/* ─── Premium Preview Card (Sidebar) ─── */}
+                    <div className="lg:col-span-4">
+                      <div className="sticky top-8 space-y-6">
+                        <section className="bg-indigo-600 rounded-[40px] p-8 text-white shadow-2xl shadow-indigo-200 dark:shadow-none overflow-hidden relative">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                          <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/20 rounded-full -ml-16 -mb-16 blur-2xl" />
+                          
+                          <div className="relative z-10 space-y-8">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Xem trước</span>
+                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
+                                {ROOM_TYPES.find(r => r.value === formData.room_type)?.icon && (
+                                  <div className="w-5 h-5 flex items-center justify-center">
+                                    {(ROOM_TYPES.find(r => r.value === formData.room_type)?.icon as any)({ className: "w-full h-full" })}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              <h3 className="text-2xl font-black truncate">{formData.name || 'Tên mẫu phòng'}</h3>
+                              <p className="text-indigo-100 text-xs font-bold uppercase tracking-wider">
+                                {ROOM_TYPES.find(r => r.value === formData.room_type)?.label || 'Tiêu chuẩn'}
+                              </p>
+                            </div>
+
+                            <div className="pt-6 border-t border-white/10 grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Giá thuê</p>
+                                <p className="text-lg font-black tabular-nums">{formatCurrency(formData.base_price)}</p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Diện tích</p>
+                                <p className="text-lg font-black tabular-nums">{formData.area} <span className="text-xs">m²</span></p>
+                              </div>
+                            </div>
+
+                            <div className="p-4 bg-white/10 rounded-2xl border border-white/10 backdrop-blur-sm">
+                              <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-2">Chỉ số tổng quan</p>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-medium text-indigo-100">Giá / m²</span>
+                                  <span className="font-black tabular-nums">{formatCurrency(areaStats.pricePerM2)}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="font-medium text-indigo-100">Sức chứa</span>
+                                  <span className="font-black tabular-nums">{formData.capacity} người</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </section>
+
+                        <div className="p-6 bg-slate-50 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800 text-xs text-slate-500 font-medium">
+                          <Info className="w-4 h-4 text-indigo-500 mb-2" />
+                          <p>Mẫu phòng này giúp bạn tạo nhanh hàng loạt phòng có cùng đặc điểm kỹ thuật và dịch vụ.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -359,6 +434,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                   <ServicePicker 
                     selectedServiceIds={selectedServices} 
                     onChange={setSelectedServices}
+                    inheritedServiceIds={inheritedServiceIds}
                   />
                 </div>
               )}

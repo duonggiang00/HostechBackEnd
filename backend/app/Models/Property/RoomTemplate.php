@@ -18,7 +18,7 @@ class RoomTemplate extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'id', 'org_id', 'property_id', 'name', 'room_type', 
+        'id', 'org_id', 'property_id', 'name', 
         'area', 'capacity', 'base_price', 'description', 
         'amenities', 'utilities'
     ];
@@ -43,10 +43,5 @@ class RoomTemplate extends Model
     public function assets()
     {
         return $this->hasMany(RoomTemplateAsset::class);
-    }
-
-    public function meters()
-    {
-        return $this->hasMany(RoomTemplateMeter::class);
     }
 }

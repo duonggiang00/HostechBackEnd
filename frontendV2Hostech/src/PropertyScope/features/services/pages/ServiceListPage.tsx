@@ -6,7 +6,11 @@ import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import type { Service } from '../types';
 
-export default function ServiceListPage() {
+interface ServiceListPageProps {
+  hideHeader?: boolean;
+}
+
+export default function ServiceListPage({ hideHeader = false }: ServiceListPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
   const [search, setSearch] = useState('');
   
@@ -51,25 +55,27 @@ export default function ServiceListPage() {
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <Settings className="w-6 h-6 text-indigo-500" />
-            Dịch vụ & Bảng giá
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Quản lý các loại hình dịch vụ tính phí như Điện, Nước, Rác, Internet...
-          </p>
-        </div>
+      {!hideHeader && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <Settings className="w-6 h-6 text-indigo-500" />
+              Dịch vụ & Bảng giá
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Quản lý các loại hình dịch vụ tính phí như Điện, Nước, Rác, Internet...
+            </p>
+          </div>
 
-        <Link
-          to={`/properties/${propertyId}/services/create`}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto font-medium"
-        >
-          <Plus className="w-5 h-5" />
-          Thêm dịch vụ mới
-        </Link>
-      </div>
+          <Link
+            to={`/properties/${propertyId}/services/create`}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-all focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 w-full sm:w-auto font-medium"
+          >
+            <Plus className="w-5 h-5" />
+            Thêm dịch vụ mới
+          </Link>
+        </div>
+      )}
 
       {/* Toolbar & Search */}
       <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
@@ -126,7 +132,7 @@ export default function ServiceListPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center shrink-0">
                             <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
                               {service.code.substring(0, 2).toUpperCase()}
                             </span>

@@ -17,8 +17,7 @@ use Illuminate\Validation\Rule;
  * @bodyParam base_price number Giá cơ bản. Example: 5000000
  * @bodyParam status string Trạng thái (available, occupied, maintenance, reserved). Example: available
  * @bodyParam description string Mô tả thêm.
- * @bodyParam amenities json Tiện nghi.
- * @bodyParam utilities json Dịch vụ/Tiện ích.
+
  * @bodyParam media_ids string[] Mảng chứa danh sách ID của media (upload files). Example: ["uuid-1234"]
  * @bodyParam assets object[] Mảng cấu hình các thiết bị, tài sản trong phòng.
  * @bodyParam assets[].name string required Tên tài sản. Example: Tivi Samsung
@@ -54,8 +53,7 @@ class RoomStoreRequest extends FormRequest
             'base_price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],
             'description' => ['nullable', 'string'],
-            'amenities' => ['nullable', 'json'],
-            'utilities' => ['nullable', 'json'],
+
 
             'service_ids' => ['nullable', 'array'],
             'service_ids.*' => ['uuid', 'exists:services,uuid'],

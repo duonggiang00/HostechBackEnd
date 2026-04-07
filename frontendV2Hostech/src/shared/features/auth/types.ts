@@ -20,7 +20,7 @@ export interface AuthResponse {
     email: string;
     phone?: string;
     /** Single role string — used for routing decisions */
-    role: 'Admin' | 'Owner' | 'Manager' | 'Staff' | 'Tenant';
+    role: 'Owner' | 'Manager' | 'Staff' | 'Tenant';
     /** Array alias kept for backwards compat */
     roles: string[];
     /** org_id returned at login (null for Admin) */
@@ -36,7 +36,7 @@ export interface AuthUser {
   full_name: string;
   email: string;
   phone?: string;
-  role: 'Admin' | 'Owner' | 'Manager' | 'Staff' | 'Tenant';
+  role: 'Owner' | 'Manager' | 'Staff' | 'Tenant';
   roles?: string[];
   org_id: string | null;
   /** Assigned properties for Manager/Staff. Empty for Admin/Owner/Tenant. */
@@ -44,6 +44,7 @@ export interface AuthUser {
   permissions?: string[];
   avatar_url?: string;
   is_active?: boolean;
+  created_at: string;
 }
 
 export type User = AuthUser;
@@ -66,4 +67,4 @@ export interface AuthState {
   hasRole: (role: string | string[]) => boolean;
 }
 
-export type LoginStep = 'IDENTIFY' | 'PASSWORD' | 'OTP';
+export type LoginStep = 'LOGIN' | 'OTP';

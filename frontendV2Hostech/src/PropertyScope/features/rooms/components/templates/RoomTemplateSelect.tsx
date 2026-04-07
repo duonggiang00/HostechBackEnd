@@ -24,8 +24,7 @@ export function RoomTemplateSelect({ propertyId, onSelect, selectedId }: RoomTem
   const selectedTemplate = templates.find(t => t.id === selectedId);
 
   const filteredTemplates = templates.filter(t => 
-    t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.room_type.toLowerCase().includes(searchTerm.toLowerCase())
+    t.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -47,7 +46,7 @@ export function RoomTemplateSelect({ propertyId, onSelect, selectedId }: RoomTem
                 {selectedTemplate.name}
               </p>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                {selectedTemplate.room_type} • {selectedTemplate.area} m² • {formatNumber(selectedTemplate.base_price)}đ
+                {selectedTemplate.area} m² • {formatNumber(selectedTemplate.base_price)}đ
               </p>
             </div>
           ) : (
@@ -105,7 +104,7 @@ export function RoomTemplateSelect({ propertyId, onSelect, selectedId }: RoomTem
                           <div className="text-left">
                             <p className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">{template.name}</p>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                              {template.room_type}
+                              {template.area} m²
                             </p>
                           </div>
                         </div>

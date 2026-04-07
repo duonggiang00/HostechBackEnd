@@ -63,6 +63,13 @@
   /* ── Typography ────────────────────────────────────────────────────── */
   --font-family-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-family-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* ── Sidebar & Navigation (Premium Spec) ─────────────────────────── */
+  --sidebar-width: 17rem;
+  --sidebar-width-collapsed: 5rem;
+  --sidebar-glass-bg: rgba(255, 255, 255, 0.7);
+  --sidebar-glass-border: rgba(226, 232, 240, 0.6);
+  --sidebar-active-glow: rgba(99, 102, 241, 0.15);
 }
 
 /* --------------------------------------------------------------------------
@@ -96,8 +103,34 @@ html {
    4. Base Layer – Light / Dark surface tokens
    -------------------------------------------------------------------------- */
 @layer base {
+  /* 
+     Global Typography Enforcement:
+     Force Inter on everything except icons to ensure absolute consistency.
+  */
+  *:not(i):not([class*='icon']):not([class*='Icon']) {
+    font-family: var(--font-family-sans) !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    border-color: var(--color-surface-200);
+  }
+
   body {
-    @apply bg-surface-50 text-surface-900 transition-colors duration-200;
+    @apply bg-surface-50 text-surface-900 transition-colors duration-200 antialiased;
+    font-family: var(--font-family-sans);
+  }
+
+  /* Specific resets for form elements to ensure consistent typography */
+  button, 
+  input, 
+  optgroup, 
+  select, 
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
   }
 
   .dark body {
@@ -130,5 +163,30 @@ html {
   }
   .dark ::-webkit-scrollbar-thumb {
     @apply bg-surface-700 rounded-full;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Utility Classes – Premium Aesthetics
+   -------------------------------------------------------------------------- */
+@layer utilities {
+  .glass-sidebar {
+    @apply bg-white/70 backdrop-blur-xl border-r border-slate-200/60 transition-all duration-300;
+  }
+  
+  .dark .glass-sidebar {
+    @apply bg-slate-900/80 backdrop-blur-xl border-r border-white/5 shadow-[20px_0_40px_-15px_rgba(0,0,0,0.3)];
+  }
+
+  .sidebar-active-pill {
+    @apply absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-brand-600 shadow-[0_0_12px_rgba(79,70,229,0.4)];
+  }
+
+  .dark .sidebar-active-pill {
+    @apply bg-brand-400 shadow-[0_0_15px_rgba(129,140,248,0.5)];
+  }
+
+  .noise-texture {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
   }
 }

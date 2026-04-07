@@ -1,13 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BuildingOverview } from '../components/BuildingOverview';
 import { useBuildingOverview, useSyncBuildingOverview } from '../hooks/useBuildingOverview';
-import { LayoutDashboard, Building2, Layers, Pencil, Save, X, RefreshCw } from 'lucide-react';
+import { Building2, Pencil, Save, X, RefreshCw } from 'lucide-react';
 import type { BuildingFloor } from '../types';
 import type { SyncBuildingOverviewPayload, SyncFloorEntry, SyncRoomEntry } from '../types';
 
-export default function BuildingOverviewPage() {
+interface BuildingOverviewPageProps {
+  hideHeader?: boolean;
+}
+
+export default function BuildingOverviewPage({ hideHeader = false }: BuildingOverviewPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
+  const navigate = useNavigate();
   const [isEditMode, setIsEditMode] = useState(false);
 
   // ─── Data fetching ────────────────────────────────────────────────────
@@ -28,7 +33,7 @@ export default function BuildingOverviewPage() {
   // Floors used for display
   const displayFloors = isEditMode ? localFloors : (overview?.floors ?? []);
 
-  // ─── Edit Mode handlers ───────────────────────────────────────────────
+  // ─── Handlers ───────────────────────────────────────────────────────────
 
   const handleEnterEdit = useCallback(() => {
     // Clone API state into local state for editing
@@ -101,67 +106,52 @@ export default function BuildingOverviewPage() {
   return (
     <div className="flex-1 flex flex-col bg-slate-50/30 overflow-hidden h-full">
       {/* Header */}
-      <div className="bg-white px-8 py-6 border-b border-slate-200 shadow-sm shrink-0 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Building2 className="w-5 h-5 text-indigo-600" />
-            <h1 className="text-slate-900 text-2xl font-black tracking-tight uppercase">Mặt bằng tòa nhà</h1>
-          </div>
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Trực quan hóa không gian & Trạng thái vận hành</p>
-        </div>
-
-        <div className="flex flex-col gap-2 scale-90 origin-right translate-y-1">
-          <div className="flex gap-3">
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 text-sm">
-              <Layers className="w-4 h-4" />
-              Chế độ mặt cắt
-            </button>
-            <button
-              onClick={() => refetch()}
-              disabled={isLoading}
-              className="flex items-center gap-2 px-5 py-2.5 text-slate-600 bg-white border-2 border-slate-100 rounded-xl font-bold hover:bg-slate-50 hover:border-slate-200 transition-all shadow-sm active:scale-95 text-sm disabled:opacity-50"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Thống kê
-            </button>
+      {!hideHeader && (
+        <div className="bg-white px-8 py-6 border-b border-slate-200 shadow-sm shrink-0 flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="w-5 h-5 text-indigo-600" />
+              <h1 className="text-slate-900 text-2xl font-black tracking-tight uppercase">Mặt bằng tòa nhà</h1>
+            </div>
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Trực quan hóa không gian & Trạng thái vận hành</p>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex items-center gap-3">
             {!isEditMode ? (
               <button
                 onClick={handleEnterEdit}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-all active:scale-95 text-xs shadow-md disabled:opacity-50"
+                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 text-sm disabled:opacity-50"
               >
-                <Pencil className="w-3.5 h-3.5" />
+                <Pencil className="w-4 h-4" />
                 Chỉnh sửa mặt bằng
               </button>
             ) : (
-              <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
-                <button
-                  onClick={handleCancel}
-                  disabled={syncMutation.isPending}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all active:scale-95 text-xs"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  Hủy bỏ
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={syncMutation.isPending}
-                  className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all active:scale-95 text-xs shadow-md shadow-emerald-100 disabled:opacity-70"
-                >
-                  {syncMutation.isPending
-                    ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    : <Save className="w-3.5 h-3.5" />
-                  }
-                  {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-              </div>
-            )}
+                <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+                  <button
+                    onClick={handleCancel}
+                    disabled={syncMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all active:scale-95 text-xs"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Hủy bỏ
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={syncMutation.isPending}
+                    className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all active:scale-95 text-xs shadow-md shadow-emerald-100 disabled:opacity-70"
+                  >
+                    {syncMutation.isPending
+                      ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      : <Save className="w-3.5 h-3.5" />
+                    }
+                    {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+      )}
 
       {/* Error State */}
       {error && (
@@ -179,6 +169,11 @@ export default function BuildingOverviewPage() {
             isEditMode={isEditMode}
             isLoading={isLoading}
             onFloorsChange={setLocalFloors}
+            onRoomSelect={(room) => {
+              if (!isEditMode && room) {
+                navigate(`/properties/${propertyId}/rooms/${room.id}`, { state: { from: 'building-view' } });
+              }
+            }}
           />
         </div>
       </div>

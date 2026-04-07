@@ -13,8 +13,7 @@ class RoomTemplateResource extends JsonResource
             'id' => $this->id,
             'property_id' => $this->property_id,
             'name' => $this->name,
-            'room_type' => $this->room_type,
-            'area' => $this->area,
+            'area' => (float) $this->area,
             'capacity' => $this->capacity,
             'base_price' => $this->base_price,
             'description' => $this->description,
@@ -22,7 +21,6 @@ class RoomTemplateResource extends JsonResource
             'utilities' => $this->utilities,
             'services' => $this->whenLoaded('services'),
             'assets' => $this->whenLoaded('assets'),
-            'meters' => $this->whenLoaded('meters'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

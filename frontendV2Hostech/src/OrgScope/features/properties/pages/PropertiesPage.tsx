@@ -2,7 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import PropertyCard from '@/OrgScope/features/properties/components/PropertyCard';
 import { Plus, Search, Filter, Loader2, DollarSign, Users, Activity, LogIn } from 'lucide-react';
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
-import { useDashboard } from '@/adminSystem/features/dashboard/hooks/useDashboard';
+import { useDashboard } from '@/shared/hooks/useDashboard';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
@@ -26,7 +26,7 @@ export default function PropertiesPage() {
   if (propsError) {
     return (
       <div className="p-8 text-center text-red-500">
-        Error loading properties. Please try again.
+        Lỗi tải danh sách cơ sở. Vui lòng thử lại.
       </div>
     );
   }
@@ -44,20 +44,20 @@ export default function PropertiesPage() {
     if ('revenue' in dashData && (role === 'owner' || role === 'manager')) {
       totalRevenue = (dashData as any).revenue.current_period || (dashData as any).revenue.total || 0;
     }
-    if ('properties' in dashData) {
+    if (dashData.properties) {
       occupancy = dashData.properties.occupancy_rate || 0;
       totalRooms = dashData.properties.total_rooms || 0;
     }
-    if ('contracts' in dashData) {
+    if (dashData.contracts) {
       activeContracts = dashData.contracts.total_active || 0;
     }
   }
 
   const stats = [
-    { label: 'Revenue (MTD)', value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Occupancy', value: `${occupancy}%`, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Active Leases', value: activeContracts, icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
-    { label: 'Total Units', value: totalRooms, icon: LogIn, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    { label: 'Doanh thu (Tháng)', value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    { label: 'Tỉ lệ lấp đầy', value: `${occupancy}%`, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
+    { label: 'Hợp đồng hoạt động', value: activeContracts, icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
+    { label: 'Tổng số phòng', value: totalRooms, icon: LogIn, color: 'text-indigo-500', bg: 'bg-indigo-50' },
   ];
 
   return (
@@ -85,15 +85,15 @@ export default function PropertiesPage() {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Properties</h1>
-          <p className="text-slate-500 mt-1">Manage all your properties and hospitality zones.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Cơ sở vận hành</h1>
+          <p className="text-slate-500 mt-1">Quản lý tất cả tài sản và khu vực lưu trú của bạn.</p>
         </div>
         <button 
           onClick={() => navigate('/org/properties/add')}
           className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
         >
           <Plus className="w-5 h-5" />
-          Add Property
+          Thêm cơ sở
         </button>
       </div>
 
@@ -102,13 +102,13 @@ export default function PropertiesPage() {
           <Search className="w-4 h-4 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search properties by name or address..."
+            placeholder="Tìm kiếm cơ sở theo tên hoặc địa chỉ..."
             className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400"
           />
         </div>
         <button className="flex items-center gap-2 px-4 py-2.5 text-slate-600 font-bold text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
           <Filter className="w-4 h-4" />
-          Filters
+          Bộ lọc
         </button>
       </div>
 
@@ -131,7 +131,7 @@ export default function PropertiesPage() {
           <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
             <Plus className="w-6 h-6 text-slate-400 group-hover:text-indigo-600" />
           </div>
-          <p className="text-sm font-bold text-slate-600">Register New Property</p>
+          <p className="text-sm font-bold text-slate-600">Đăng ký cơ sở mới</p>
         </div>
       </div>
     </div>

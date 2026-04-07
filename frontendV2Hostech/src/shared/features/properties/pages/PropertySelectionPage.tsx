@@ -40,7 +40,7 @@ export default function PropertySelectionPage() {
                <Building className="w-5 h-5" />
             </div>
             <div>
-               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Properties Available</p>
+               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cơ sở hiện có</p>
                <p className="text-lg font-bold text-slate-900 dark:text-slate-100">{displayProperties.length}</p>
             </div>
          </div>
@@ -50,8 +50,8 @@ export default function PropertySelectionPage() {
                <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Active Workspace</p>
-               <p className="text-lg font-bold text-slate-900 dark:text-slate-100">Your Organization</p>
+               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Trạng thái</p>
+               <p className="text-lg font-bold text-slate-900 dark:text-slate-100">Đã xác thực</p>
             </div>
          </div>
          <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 hidden md:block" />
@@ -60,8 +60,10 @@ export default function PropertySelectionPage() {
                <Sparkles className="w-5 h-5" />
             </div>
             <div>
-               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Your Role</p>
-               <p className="text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">{user?.role}</p>
+               <p className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Vai trò</p>
+               <p className="text-lg font-bold text-slate-900 dark:text-slate-100 capitalize">
+                {user?.role === 'Owner' ? 'Chủ sở hữu' : user?.role === 'Manager' ? 'Quản lý' : 'Nhân viên'}
+               </p>
             </div>
          </div>
       </div>

@@ -57,7 +57,6 @@ class BuildingOverviewResource extends JsonResource
                 'name'       => $tpl['name'],
                 'area'       => $tpl['area'],
                 'base_price' => $tpl['base_price'],
-                'room_type'  => $tpl['room_type'] ?? null,
             ]),
         ];
     }

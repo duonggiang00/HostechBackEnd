@@ -10,7 +10,6 @@ import {
   MoreVertical,
   Edit2,
   RefreshCw,
-  Layers,
   LayoutGrid,
   History,
   ArrowDownUp,
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useRooms, useRoomActions, useTrashRooms } from '../hooks/useRooms';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
-import { useFloors } from '../../floors/hooks/useFloors';
+import { useFloors } from '@/PropertyScope/hooks/useFloors';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import type { RoomStatus } from '../types';
@@ -27,15 +26,6 @@ import toast from 'react-hot-toast';
 import QuickRoomManager from '../components/QuickRoomManager';
 
 import { useDebounce } from '@/shared/hooks/useDebounce';
-
-const ROOM_TYPES = ['standard', 'studio', 'duplex', 'penthouse'] as const;
-
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  standard: 'Tiêu chuẩn',
-  studio: 'Phòng Studio',
-  duplex: 'Phòng Duplex',
-  penthouse: 'Penthouse',
-};
 
 const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
   available: 'Sẵn có',
@@ -45,7 +35,11 @@ const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
   draft: 'Nháp',
 };
 
-export default function RoomListPage() {
+interface RoomListPageProps {
+  hideHeader?: boolean;
+}
+
+export default function RoomListPage({ hideHeader = false }: RoomListPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,7 +58,6 @@ export default function RoomListPage() {
   type RoomFiltersState = {
     floorId: string;
     status: RoomStatus | '';
-    type: string;
     priceMin: number | '';
     priceMax: number | '';
     areaMin: number | '';
@@ -77,7 +70,6 @@ export default function RoomListPage() {
   const [pendingFilters, setPendingFilters] = useState<RoomFiltersState>({
     floorId: searchParams.get('floor_id') || '',
     status: (searchParams.get('status') as RoomStatus) || '',
-    type: searchParams.get('type') || '',
     priceMin: getNumberParam('price_min'),
     priceMax: getNumberParam('price_max'),
     areaMin: getNumberParam('area_min'),
@@ -103,7 +95,6 @@ export default function RoomListPage() {
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (appliedFilters.floorId) params.set('floor_id', appliedFilters.floorId);
     if (appliedFilters.status) params.set('status', appliedFilters.status);
-    if (appliedFilters.type) params.set('type', appliedFilters.type);
     if (appliedFilters.priceMin) params.set('price_min', appliedFilters.priceMin.toString());
     if (appliedFilters.priceMax) params.set('price_max', appliedFilters.priceMax.toString());
     if (appliedFilters.areaMin) params.set('area_min', appliedFilters.areaMin.toString());
@@ -121,7 +112,6 @@ export default function RoomListPage() {
     property_id: propertyId || undefined,
     floor_id: appliedFilters.floorId || undefined,
     status: (appliedFilters.status as RoomStatus) || undefined,
-    type: appliedFilters.type || undefined,
     search: debouncedSearch || undefined,
     sort: sort || undefined,
     page,
@@ -149,7 +139,6 @@ export default function RoomListPage() {
     const cleared = {
       floorId: '',
       status: '' as RoomStatus | '',
-      type: '',
       priceMin: '' as number | '',
       priceMax: '' as number | '',
       areaMin: '' as number | '',
@@ -283,29 +272,31 @@ export default function RoomListPage() {
   return (
     <div className="space-y-6 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Danh mục phòng</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
+      {!hideHeader && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Danh mục phòng</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsQuickCreateOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95"
+            >
+              <Zap className="w-5 h-5 text-amber-500" />
+              Tạo nhanh
+            </button>
+            <ActionButton 
+              onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
+              label="Thêm phòng"
+              icon={Plus}
+              variant="primary"
+              size="md"
+              className="shadow-xl"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsQuickCreateOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all shadow-sm active:scale-95"
-          >
-            <Zap className="w-5 h-5 text-amber-500" />
-            Tạo nhanh
-          </button>
-          <ActionButton 
-            onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
-            label="Thêm phòng"
-            icon={Plus}
-            variant="primary"
-            size="md"
-            className="shadow-xl"
-          />
-        </div>
-      </div>
+      )}
 
       {/* Stats Summary */}
       {stats && (
@@ -365,18 +356,6 @@ export default function RoomListPage() {
             <option value="">Tất cả trạng thái</option>
             {Object.entries(ROOM_STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-
-          {/* Type Filter */}
-          <select 
-            className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-100 dark:focus:border-indigo-500/50"
-            value={pendingFilters.type}
-            onChange={(e) => setPendingFilters(prev => ({ ...prev, type: e.target.value }))}
-          >
-            <option value="">Tất cả loại phòng</option>
-            {ROOM_TYPES.map(t => (
-              <option key={t} value={t}>{ROOM_TYPE_LABELS[t] || t}</option>
             ))}
           </select>
 
@@ -631,17 +610,6 @@ export default function RoomListPage() {
                 <th className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest">Tầng</th>
                 <th 
                   className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
-                  onClick={() => toggleSort('type')}
-                >
-                  <div className="flex items-center gap-1">
-                    Loại
-                    {sort.includes('type') && (
-                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
-                    )}
-                  </div>
-                </th>
-                <th 
-                  className="p-4 text-xs font-black uppercase text-slate-400 tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
                   onClick={() => toggleSort('base_price')}
                 >
                   <div className="flex items-center gap-1">
@@ -697,12 +665,9 @@ export default function RoomListPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400 font-bold">
-                       <Layers className="w-3 h-3 text-slate-300 dark:text-slate-600" />
+                       <LayoutGrid className="w-3 h-3 text-slate-300 dark:text-slate-600" />
                        {room.floor_name || room.floor?.name || 'N/A'}
                     </div>
-                  </td>
-                  <td className="p-4 text-xs font-bold text-slate-500 dark:text-slate-400 capitalize">
-                    {ROOM_TYPE_LABELS[room.type] || room.type}
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col">
@@ -825,7 +790,7 @@ export default function RoomListPage() {
       </div>
       {/* Quick Room Manager Modal */}
       {isQuickCreateOpen && propertyId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsQuickCreateOpen(false)} />
           <div className="relative bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl w-full max-w-lg p-8 space-y-6 overflow-hidden border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between">
