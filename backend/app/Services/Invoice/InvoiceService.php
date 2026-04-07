@@ -122,7 +122,7 @@ class InvoiceService
             $query->where(function ($q) use ($search) {
                 $q->whereHas(
                     'room',
-                    fn ($rq) => $rq->where('code', 'like', "%{$search}%")
+                    fn($rq) => $rq->where('code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                 )
                     ->orWhereHas('property', function ($pq) use ($search) {
@@ -297,11 +297,11 @@ class InvoiceService
         $user = request()->user();
 
         // Auto-assign org_id if not explicitly provided or by non-admin
-        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
+        if ($user && !$user->hasRole('Admin') && $user->org_id) {
             $data['org_id'] = $user->org_id;
         } else {
             // Admin: lấy org_id từ room nếu không truyền
-            if (! isset($data['org_id'])) {
+            if (!isset($data['org_id'])) {
                 $room = Room::find($data['room_id'] ?? null);
                 $data['org_id'] = $room?->org_id;
             }
@@ -336,7 +336,7 @@ class InvoiceService
     public function update(string $id, array $data): ?Invoice
     {
         $invoice = $this->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             return null;
         }
 
@@ -355,7 +355,7 @@ class InvoiceService
     public function delete(string $id): bool
     {
         $invoice = $this->find($id);
-        if (! $invoice) {
+        if (!$invoice) {
             return false;
         }
 
@@ -368,7 +368,7 @@ class InvoiceService
     public function restore(string $id): bool
     {
         $invoice = $this->findTrashed($id);
-        if (! $invoice) {
+        if (!$invoice) {
             return false;
         }
 
@@ -381,7 +381,7 @@ class InvoiceService
     public function forceDelete(string $id): bool
     {
         $invoice = $this->findWithTrashed($id);
-        if (! $invoice) {
+        if (!$invoice) {
             return false;
         }
 
@@ -613,7 +613,7 @@ class InvoiceService
 
             // 4. Nếu bằng 0 thì chuyển luôn thành PAID
             $finalStatus = $totalAmount <= 0 ? 'PAID' : 'ISSUED';
-            
+
             $invoice->update([
                 'status' => $finalStatus,
                 'issue_date' => now(),
@@ -640,13 +640,13 @@ class InvoiceService
 
         $isInitial = is_array($snapshot) && ($snapshot['is_initial'] ?? false) === true;
 
-        if (! $isInitial) {
+        if (!$isInitial) {
             return;
         }
 
         $contract = $invoice->contract;
 
-        if (! $contract || $contract->status !== ContractStatus::PENDING_PAYMENT) {
+        if (!$contract || $contract->status !== ContractStatus::PENDING_PAYMENT) {
             return;
         }
 
@@ -654,7 +654,7 @@ class InvoiceService
             'status' => ContractStatus::ACTIVE,
             'signed_at' => now(),
         ]);
-        
+
         // Cập nhật trạng thái phòng thành OCCUPIED
         if ($contract->room) {
             $contract->room->update(['status' => 'occupied']);
@@ -771,7 +771,7 @@ class InvoiceService
 
             // 2. Fixed Services
             if ($contract->fixed_services_fee > 0) {
-                 $serviceItem = $invoice->items()->create([
+                $serviceItem = $invoice->items()->create([
                     'org_id' => $contract->org_id,
                     'type' => 'SERVICE',
                     'name' => 'Phí dịch vụ cố định',

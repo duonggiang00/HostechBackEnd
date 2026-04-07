@@ -12,6 +12,7 @@ Route::get('properties/{property_id}/floors/{floor_id}/meters', [MeterController
 Route::apiResource('meters', MeterController::class);
 
 // Meter Readings
+Route::post('tenant/meter-readings', [\App\Http\Controllers\Api\Meter\TenantMeterController::class, 'submit']);
 Route::post('properties/{property_id}/meters/bulk-readings', [MeterReadingController::class, 'bulkStore']);
 Route::post('meter-readings/bulk-submit', [MeterReadingController::class, 'bulkSubmit']);
 Route::apiResource('meters.readings', MeterReadingController::class)->scoped();
