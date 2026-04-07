@@ -18,7 +18,11 @@ export const mediaApi = {
         }
       },
     });
-    
-    return response.data;
+    const result = response.data?.data || response.data;
+    return {
+      url: result.url,
+      id: result.temporary_upload_id || result.id,
+      name: result.file_name || result.name,
+    };
   },
 };

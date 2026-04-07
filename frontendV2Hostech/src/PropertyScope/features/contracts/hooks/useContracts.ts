@@ -13,6 +13,7 @@ export const CONTRACTS_KEY = 'contracts';
 export const CONTRACT_KEY = 'contract';
 export const TRASH_CONTRACTS_KEY = 'contracts-trash';
 export const PENDING_CONTRACTS_KEY = 'contracts-pending';
+export const MY_CONTRACTS_KEY = 'contracts-my';
 
 // ─── List Hooks ───────────────────────────────────────────────────────────────
 
@@ -74,7 +75,31 @@ export const useMyPendingContracts = () => {
   });
 };
 
+/**
+ * GET /api/contracts/{id}/status-histories
+ */
+export const useContractStatusHistories = (id?: string) => {
+  return useQuery({
+    queryKey: [CONTRACT_KEY, id, 'status-histories'],
+    queryFn: async () => {
+      if (!id) return [];
+      return contractsApi.getStatusHistories(id);
+    },
+    enabled: isUuid(id),
+  });
+};
+
 // ─── Mutation Actions ─────────────────────────────────────────────────────────
+
+/**
+ * GET /api/contracts/my-contracts
+ */
+export const useMyContracts = () => {
+  return useQuery({
+    queryKey: [MY_CONTRACTS_KEY],
+    queryFn: () => contractsApi.getMyContracts(),
+  });
+};
 
 export const useContractActions = () => {
   const queryClient = useQueryClient();
@@ -128,6 +153,16 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/{id}/sign */
+  const signContract = useMutation({
+    mutationFn: ({ id, signatureDataUrl }: { id: string, signatureDataUrl: string }) => contractsApi.signContract(id, signatureDataUrl),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      invalidateContracts();
+    },
+  });
+
   /** POST /api/contracts/{id}/reject-signature */
   const rejectSignature = useMutation({
     mutationFn: (id: string) => contractsApi.rejectSignature(id),
@@ -146,11 +181,22 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/{id}/request-termination */
+  const requestTermination = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.requestTermination(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      invalidateContracts();
+    },
+  });
+
   /** POST /api/contracts/{id}/terminate */
   const terminateContract = useMutation({
     mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.terminateContract(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
       invalidateContracts();
     },
   });
@@ -177,8 +223,10 @@ export const useContractActions = () => {
     restoreContract,
     forceDeleteContract,
     acceptSignature,
+    signContract,
     rejectSignature,
     requestRoomTransfer,
+    requestTermination,
     terminateContract,
     scanContract,
     generateDocument,

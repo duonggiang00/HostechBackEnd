@@ -84,8 +84,18 @@ export const contractsApi = {
     return (response.data?.data || response.data) as Contract[];
   },
 
+  getMyContracts: async () => {
+    const response = await apiClient.get('/contracts/my-contracts');
+    return (response.data?.data || response.data) as Contract[];
+  },
+
   acceptSignature: async (id: string) => {
     const response = await apiClient.post(`/contracts/${id}/accept-signature`);
+    return response.data;
+  },
+
+  signContract: async (id: string, signature_image: string) => {
+    const response = await apiClient.post(`/contracts/${id}/sign`, { signature_image });
     return response.data;
   },
 
@@ -104,7 +114,29 @@ export const contractsApi = {
     return response.data;
   },
 
-  terminateContract: async (id: string, data: { termination_date?: string, reason?: string, forfeit_deposit?: boolean, refund_remaining_rent?: boolean }) => {
+  executeRoomTransfer: async (id: string, data: { 
+    target_room_id: string; 
+    transfer_date: string; 
+    rent_price?: number; 
+    deposit_amount?: number; 
+    transfer_unused_rent: boolean;
+    excess_handling_method?: 'CASH_REFUND' | 'KEEP_AS_CREDIT';
+  }) => {
+    const response = await apiClient.post(`/contracts/${id}/execute-transfer`, data);
+    return response.data;
+  },
+
+  requestTermination: async (id: string, data: { reason?: string }) => {
+    const response = await apiClient.post(`/contracts/${id}/request-termination`, data);
+    return response.data;
+  },
+
+  getStatusHistories: async (id: string) => {
+    const response = await apiClient.get(`/contracts/${id}/status-histories`);
+    return response.data?.data;
+  },
+
+  terminateContract: async (id: string, data: { termination_date?: string, cancellation_party?: string, cancellation_reason?: string, waive_penalty?: boolean, refund_remaining_rent?: boolean }) => {
     const response = await apiClient.post(`/contracts/${id}/terminate`, data);
     return response.data;
   },
