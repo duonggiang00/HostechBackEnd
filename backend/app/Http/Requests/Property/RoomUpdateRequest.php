@@ -47,12 +47,12 @@ class RoomUpdateRequest extends FormRequest
                     ->ignore($this->route('room'))
             ],
             'name' => ['sometimes', 'string', 'max:255'],
-            'type' => ['nullable', 'string', 'in:studio,apartment,house,dormitory,other', 'max:20'],
+            'type' => ['nullable', 'string', 'in:standard,studio,apartment,house,dormitory,other,duplex,penthouse', 'max:50'],
             'area' => ['nullable', 'numeric', 'min:0'],
             'floor_number' => ['nullable', 'integer'],
             'capacity' => ['sometimes', 'integer', 'min:1'],
             'base_price' => ['nullable', 'numeric', 'min:0'],
-            'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved', 'max:20'],
+            'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved,draft', 'max:20'],
             'description' => ['nullable', 'string'],
 
 

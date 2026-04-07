@@ -19,6 +19,7 @@ class ExecuteRoomTransferRequest extends FormRequest
             'rent_price'           => 'nullable|numeric|min:0',
             'deposit_amount'       => 'nullable|numeric|min:0',
             'transfer_unused_rent' => 'required|boolean',
+            'excess_handling_method' => 'nullable|string|in:CASH_REFUND,KEEP_AS_CREDIT',
         ];
     }
 }
