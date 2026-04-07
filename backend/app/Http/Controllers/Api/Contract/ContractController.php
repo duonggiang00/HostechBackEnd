@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Contract\ContractIndexRequest;
 use App\Http\Requests\Contract\ContractStoreRequest;
 use App\Http\Requests\Contract\ContractUpdateRequest;
+use App\Http\Requests\Contract\ExecuteRoomTransferRequest;
 use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Models\Contract\Contract;
@@ -360,6 +361,24 @@ class ContractController extends Controller
 
         return response()->json([
             'data' => $contract->statusHistories,
+        ]);
+    }
+
+    /**
+     * Thực hiện chuyển phòng cho khách hàng
+     *
+     * Chấm dứt hợp đồng cũ, tạo hợp đồng mới và thực hiện điều chuyển cọc, tiền nhà thừa.
+     */
+    public function executeTransfer(ExecuteRoomTransferRequest $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('update', $contract);
+
+        $this->service->executeTransfer($contract, $request->validated(), $request->user());
+
+        return response()->json([
+            'message' => 'Đã thực hiện chuyển phòng thành công.',
         ]);
     }
 }

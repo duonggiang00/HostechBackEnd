@@ -714,7 +714,7 @@ class ContractService
      *
      * Invoice được tạo và tự động phát hành (ISSUED).
      */
-    private function createInitialInvoice(Contract $contract, User $tenant): Invoice
+    public function createInitialInvoice(Contract $contract, User $tenant): Invoice
     {
         $periodStart = \Carbon\Carbon::parse($contract->start_date);
         
@@ -1012,6 +1012,114 @@ class ContractService
             ]);
 
             return true;
+        });
+    }
+
+    /**
+     * Thực hiện chuyển phòng (Execute Room Transfer).
+     *
+     * 1. Thanh lý hợp đồng A.
+     * 2. Tạo hợp đồng B, copy các thành viên.
+     * 3. Tính dư và chuyển cọc -> Invoice Adjustment Credit cho hóa đơn B.
+     */
+    public function executeTransfer(Contract $oldContract, array $data, User $performer): Contract
+    {
+        return DB::transaction(function () use ($oldContract, $data, $performer) {
+            $transferDate = \Carbon\Carbon::parse($data['transfer_date']);
+            $targetRoomId = $data['target_room_id'];
+            $transferUnusedRent = $data['transfer_unused_rent'] ?? false;
+
+            // 1. Tính toán tiền dư nếu transfer_unused_rent = true
+            $unusedRentAmount = 0;
+            if ($transferUnusedRent && $oldContract->next_billing_date) {
+                // Tính số ngày dư từ ngày chuyển đến next_billing_date
+                $nextBilling = \Carbon\Carbon::parse($oldContract->next_billing_date);
+                if ($transferDate->lt($nextBilling)) {
+                    $daysInCurrentCycle = 30; // Mặc định 30 ngày để tính giá trị ngày
+                    $unusedDays = $nextBilling->diffInDays($transferDate);
+                    
+                    if ($unusedDays > 0) {
+                        $dailyRent = $oldContract->rent_price / $daysInCurrentCycle;
+                        $unusedRentAmount = round($dailyRent * $unusedDays, 0); // Làm tròn số tiền
+                    }
+                }
+            }
+
+            $oldDeposit = (float) $oldContract->deposit_amount;
+            $totalCreditAmount = $oldDeposit + $unusedRentAmount;
+
+            // 2. Chấm dứt hợp đồng cũ (MUTUAL agree, waive_penalty = true)
+            $this->terminate($oldContract, [
+                'termination_date' => $transferDate->toDateString(),
+                'cancellation_party' => 'MUTUAL',
+                'cancellation_reason' => 'Chuyển sang phòng mới ID: ' . $targetRoomId,
+                'waive_penalty' => true,
+                'refund_remaining_rent' => false, // Ta không trả về client mà chuyển thành Credit cho HD mới
+            ]);
+
+            // 3. Tạo hợp đồng mới
+            $targetRoom = \App\Models\Property\Room::findOrFail($targetRoomId);
+            
+            $newContractData = [
+                'org_id' => $oldContract->org_id,
+                'property_id' => $targetRoom->property_id,
+                'room_id' => $targetRoomId,
+                'start_date' => $transferDate->toDateString(),
+                'rent_price' => $data['rent_price'] ?? null,
+                'deposit_amount' => $data['deposit_amount'] ?? null,
+                // Kế thừa chu kỳ thanh toán
+                'billing_cycle' => $oldContract->billing_cycle,
+                'due_day' => $oldContract->due_day,
+                'cutoff_day' => $oldContract->cutoff_day,
+            ];
+
+            // Thiết lập user members
+            $membersData = [];
+            foreach ($oldContract->members as $member) {
+                $membersData[] = [
+                    'user_id' => $member->user_id,
+                    'is_primary' => $member->is_primary,
+                    'status' => 'APPROVED', // Thành viên từ HD cũ tự động APPROVED
+                    'joined_at' => $transferDate->toDateTimeString(),
+                ];
+            }
+            $newContractData['members'] = $membersData;
+
+            $newContract = $this->create($newContractData, $performer);
+
+            // Bỏ qua PENDING_SIGNATURE, set PENDING_PAYMENT
+            $newContract->update([
+                'status' => \App\Enums\ContractStatus::PENDING_PAYMENT,
+                'signed_at' => now(),
+            ]);
+
+            // 4. Tạo Initial Invoice cho hợp đồng mới
+            $primaryMember = $newContract->members->firstWhere('is_primary', true)?->user;
+            $initialInvoice = $this->createInitialInvoice($newContract, $primaryMember ?? $performer);
+
+            // 5. Tạo Credit Adjustment cho hóa đơn ban đầu
+            if ($totalCreditAmount > 0) {
+                \App\Models\Invoice\InvoiceAdjustment::create([
+                    'org_id' => $newContract->org_id,
+                    'invoice_id' => $initialInvoice->id,
+                    'type' => 'CREDIT',
+                    'amount' => $totalCreditAmount,
+                    'reason' => 'Chuyển cọc (' . number_format($oldDeposit) . ') & tiền dư (' . number_format($unusedRentAmount) . ') từ phòng cũ.',
+                    'created_by_user_id' => $performer->id,
+                    'approved_by_user_id' => $performer->id, // Tự động duyệt
+                    'approved_at' => now(),
+                ]);
+
+                // Tính lại bill
+                $this->invoiceService->recalculateTotalAmount($initialInvoice);
+                
+                // Nếu hóa đơn trả về 0 sau khi bù trừ, tự động đóng (PAID) hóa đơn và kích hoạt HD
+                if ($initialInvoice->total_amount <= 0) {
+                    $this->invoiceService->payInvoice($initialInvoice, 'Thanh toán bằng cấn trừ từ phòng cũ.');
+                }
+            }
+
+            return $newContract->refresh();
         });
     }
 
