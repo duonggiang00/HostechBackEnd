@@ -582,7 +582,7 @@ class ContractService
     {
         return Contract::whereHas('members', function ($q) use ($user) {
             $q->where('user_id', $user->id);
-        })->with('property:id,name', 'room:id,code,name,type')->orderBy('created_at', 'desc')->get();
+        })->with('property:id,name', 'room:id,code,name')->orderBy('created_at', 'desc')->get();
     }
 
     /**
