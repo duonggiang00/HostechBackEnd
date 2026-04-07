@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 // Contracts
 Route::get('contracts/my-pending', [ContractController::class, 'myPendingContracts']);
+Route::get('contracts/my-contracts', [ContractController::class, 'myContracts']);
 Route::post('contracts/{contract}/accept-signature', [ContractController::class, 'acceptSignature']);
 Route::post('contracts/{contract}/sign', [ContractController::class, 'sign']);
 Route::post('contracts/{contract}/reject-signature', [ContractController::class, 'rejectSignature']);

@@ -175,6 +175,18 @@ class ContractController extends Controller
     }
 
     /**
+     * Danh sách hợp đồng của tôi (Tất cả - Dành cho Tenant)
+     *
+     * Liệt kê các hợp đồng mà user hiện tại đang được gán không phân biệt pending, active hay expired.
+     */
+    public function myContracts(Request $request): AnonymousResourceCollection
+    {
+        $contracts = $this->service->myContracts($request->user());
+
+        return ContractResource::collection($contracts);
+    }
+
+    /**
      * Xác nhận ký hợp đồng
      *
      * Tenant đồng ý và tiến hành tham gia hợp đồng.
