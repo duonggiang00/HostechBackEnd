@@ -73,6 +73,7 @@ function SidebarNavLink({ item, onNavigate, level = 0 }: { item: SidebarDropdown
       <div className="flex flex-col">
         <button
           type="button"
+          data-testid={`sidebar-item-${item.id}`}
           onClick={() => setIsOpen(!isOpen)}
           className={`group relative flex items-center justify-between px-4 py-[10px] mx-2 rounded-xl text-[0.875rem] transition-all duration-300 ${
             shouldBeOpen || isChildActive
@@ -104,6 +105,7 @@ function SidebarNavLink({ item, onNavigate, level = 0 }: { item: SidebarDropdown
                     key={child.id}
                     to={child.path}
                     end={child.exact ?? false}
+                    data-testid={`sidebar-item-${child.id}`}
                     onClick={onNavigate}
                     className={({ isActive: childActive }) =>
                       `group relative flex items-center justify-between px-4 py-[8px] mx-2 rounded-xl text-[0.8125rem] transition-all duration-300 ${
@@ -135,6 +137,7 @@ function SidebarNavLink({ item, onNavigate, level = 0 }: { item: SidebarDropdown
     <NavLink
       to={item.path}
       end={item.exact ?? false}
+      data-testid={`sidebar-item-${item.id}`}
       onClick={onNavigate}
       className={`group relative flex items-center justify-between px-4 py-[10px] mx-2 rounded-xl text-[0.875rem] transition-all duration-300 ${
         isActive

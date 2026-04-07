@@ -28,7 +28,7 @@ class Meter extends Model implements HasMedia
     protected $keyType = 'string';
 
     protected $fillable = [
-        'org_id', 'room_id', 'property_id', 'service_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
+        'org_id', 'room_id', 'property_id', 'code', 'type', 'base_reading', 'is_master', 'installed_at', 'is_active', 'meta',
     ];
 
     protected function casts(): array
@@ -56,10 +56,7 @@ class Meter extends Model implements HasMedia
         return $this->belongsTo(\App\Models\Property\Property::class);
     }
 
-    public function service()
-    {
-        return $this->belongsTo(\App\Models\Service\Service::class);
-    }
+    // service() đã được gỡ bỏ - Dynamic Linking: tra cứu dịch vụ qua room_services + type
 
     public function readings()
     {

@@ -294,9 +294,9 @@ class MeterReadingService
             return null;
         }
 
-        // Find the master meter for this property and service type
+        // Find the master meter for this property and meter type (Dynamic Linking)
         $masterMeter = \App\Models\Meter\Meter::where('property_id', $meter->property_id)
-            ->where('service_id', $meter->service_id)
+            ->where('type', $meter->type)
             ->where('is_master', true)
             ->first();
 
@@ -307,10 +307,10 @@ class MeterReadingService
         $periodStart = $reading->period_start;
         $periodEnd = $reading->period_end;
 
-        // Sum up the consumption for all room meters for the given period
+        // Sum up the consumption for all room meters for the given period (matched by type)
         $totalPropertyUsage = MeterReading::whereHas('meter', function ($query) use ($masterMeter) {
                 $query->where('property_id', $masterMeter->property_id)
-                    ->where('service_id', $masterMeter->service_id)
+                    ->where('type', $masterMeter->type)
                     ->where('is_master', false);
             })
             ->where('period_start', $periodStart)
@@ -398,7 +398,7 @@ class MeterReadingService
         // 2. If it's a room meter, also ensure the master meter's base_reading is current
         if (!$meter->is_master) {
             $masterMeter = \App\Models\Meter\Meter::where('property_id', $meter->property_id)
-                ->where('service_id', $meter->service_id)
+                ->where('type', $meter->type)
                 ->where('is_master', true)
                 ->first();
 

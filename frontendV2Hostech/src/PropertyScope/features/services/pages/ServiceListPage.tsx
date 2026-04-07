@@ -53,7 +53,7 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div data-testid="services-page" className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       {!hideHeader && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -172,7 +172,7 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                       <td className="px-6 py-4 text-center">
                         <button
                           onClick={() => handleToggleActive(service)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                             service.is_active ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-700'
                           }`}
                         >

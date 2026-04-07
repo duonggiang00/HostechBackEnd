@@ -20,6 +20,13 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->json('amenities')->nullable();
             $table->json('utilities')->nullable();
+
+            // Dynamic Service Linking: Chỉ định dịch vụ điện/nước cố định cho mẫu phòng
+            $table->uuid('electric_service_id')->nullable()->comment('Dịch vụ điện mặc định');
+            $table->foreign('electric_service_id')->references('id')->on('services')->onDelete('set null');
+            $table->uuid('water_service_id')->nullable()->comment('Dịch vụ nước mặc định');
+            $table->foreign('water_service_id')->references('id')->on('services')->onDelete('set null');
+
             $table->timestamps();
             $table->softDeletes();
 
@@ -39,17 +46,11 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('room_template_meters', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('room_template_id')->constrained('room_templates')->cascadeOnDelete();
-            $table->string('type', 20); // ELECTRIC, WATER
-            $table->timestamps();
-        });
+        // Không tạo room_template_meters nữa (đồng hồ luôn tự sinh: 1 ELECTRIC + 1 WATER khi publish)
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('room_template_meters');
         Schema::dropIfExists('room_template_assets');
         Schema::dropIfExists('room_template_services');
         Schema::dropIfExists('room_templates');

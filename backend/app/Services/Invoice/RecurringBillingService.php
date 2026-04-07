@@ -125,11 +125,11 @@ class RecurringBillingService
 
             foreach ($meters as $meter) {
                 /** @var Meter $meter */
-                $usageData = $this->calculateMeterUsage($meter, $periodStart, $periodEnd);
+                $usageData = $this->calculateMeterUsage($meter, $periodStart, $periodEnd, $contract->room_id, $contract->org_id);
                 if ($usageData) {
                     $items[] = [
                         'type' => InvoiceItemType::SERVICE->value,
-                        'description' => "Tiền {$meter->service->name} ({$usageData['usage']} unit)",
+                        'description' => "Tiền {$usageData['service_name']} ({$usageData['usage']} {$meter->type})",
                         'quantity' => $usageData['usage'],
                         'unit_price' => $usageData['average_price'],
                         'amount' => $usageData['total_amount'],
@@ -162,8 +162,9 @@ class RecurringBillingService
 
     /**
      * Calculate usage and cost for a meter during a period.
+     * Dynamic Linking: Tra cứu dịch vụ qua room_services + type.
      */
-    protected function calculateMeterUsage(Meter $meter, Carbon $periodStart, Carbon $periodEnd)
+    protected function calculateMeterUsage(Meter $meter, Carbon $periodStart, Carbon $periodEnd, ?string $roomId = null, ?string $orgId = null)
     {
         // Find the reading for this period
         $currentReading = MeterReading::where('meter_id', $meter->id)
@@ -191,7 +192,14 @@ class RecurringBillingService
             $usage = 0;
         }
 
-        $service = $meter->service;
+        // ── Dynamic Service Linking ──
+        // Tìm dịch vụ phù hợp qua type của đồng hồ + room_services của phòng
+        $service = $this->resolveServiceForMeter($meter, $roomId, $orgId);
+
+        if (! $service) {
+            return null; // Không tìm thấy dịch vụ phù hợp cho loại đồng hồ này
+        }
+
         $currentRate = $service->currentRate;
 
         // Eager load tiered rates if not already
@@ -200,7 +208,7 @@ class RecurringBillingService
         $totalAmount = 0;
         $tiersBreakdown = [];
 
-        if ($meter->is_master && $currentRate->tieredRates->count() > 0) {
+        if ($currentRate->tieredRates->count() > 0) {
             $remainingUsage = $usage;
             foreach ($currentRate->tieredRates as $tier) {
                 // Determine limits for this tier
@@ -233,58 +241,27 @@ class RecurringBillingService
             'total_amount' => $totalAmount,
             'average_price' => $usage > 0 ? $totalAmount / $usage : (float) $currentRate->price,
             'tiers_breakdown' => $tiersBreakdown,
+            'service_name' => $service->name,
         ];
     }
 
-    /**
-     * Calculate Master Meter Profit for a period.
-     */
-    public function calculateMasterMeterProfit(string $propertyId, Carbon $periodMonth)
+    protected function resolveServiceForMeter(Meter $meter, ?string $roomId = null, ?string $orgId = null)
     {
-        $periodStart = $periodMonth->copy()->startOfMonth();
-        $periodEnd = $periodMonth->copy()->endOfMonth();
+        $targetRoomId = $roomId ?? $meter->room_id;
+        $targetOrgId = $orgId ?? $meter->org_id;
 
-        // 1. Get Master Meters for the property
-        $masterMeters = Meter::where('property_id', $propertyId)
-            ->where('is_master', true)
-            ->where('is_active', true)
-            ->get();
-
-        $profitData = [];
-
-        foreach ($masterMeters as $masterMeter) {
-            /** @var Meter $masterMeter */
-            // Cost from provider (Master Meter usage)
-            $masterUsage = $this->calculateMeterUsage($masterMeter, $periodStart, $periodEnd);
-
-            // Revenue from rooms for the same service
-            $roomMeters = Meter::where('property_id', $propertyId)
-                ->where('service_id', $masterMeter->service_id)
-                ->where('is_master', false)
-                ->where('is_active', true)
-                ->get();
-
-            $totalRevenue = 0;
-            foreach ($roomMeters as $rm) {
-                /** @var Meter $rm */
-                $usage = $this->calculateMeterUsage($rm, $periodStart, $periodEnd);
-                if ($usage) {
-                    $totalRevenue += $usage['total_amount'];
-                }
-            }
-
-            $cost = $masterUsage ? $masterUsage['total_amount'] : 0;
-
-            $profitData[] = [
-                'service_name' => $masterMeter->service->name,
-                'master_usage' => $masterUsage ? $masterUsage['usage'] : 0,
-                'cost' => $cost,
-                'revenue' => $totalRevenue,
-                'profit' => $totalRevenue - $cost,
-            ];
+        if ($targetRoomId) {
+            // Phòng: Tìm dịch vụ trong room_services có type trùng với meter.type
+            return \App\Models\Service\Service::where('type', $meter->type)
+                ->where('org_id', $targetOrgId)
+                ->whereHas('roomServices', function ($q) use ($targetRoomId) {
+                    $q->where('room_id', $targetRoomId);
+                })
+                ->first();
         }
 
-        return $profitData;
+        // Master meter: Trả về null vì không tham gia luồng tính tiền/hóa đơn
+        return null;
     }
 
     private function resolveBillingCycleMonths(string|int|null $billingCycle): int

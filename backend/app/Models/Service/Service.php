@@ -15,10 +15,17 @@ class Service extends Model
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
+    // ── Service Type Constants (Dynamic Linking) ──
+    const TYPE_ELECTRIC = 'ELECTRIC';
+    const TYPE_WATER    = 'WATER';
+    const TYPE_OTHER    = 'OTHER';
+
     protected $fillable = [
         'org_id',
+        'property_id',
         'code',
         'name',
+        'type',
         'calc_mode',
         'unit',
         'is_recurring',
@@ -61,5 +68,18 @@ class Service extends Model
     public function getCurrentPriceAttribute()
     {
         return $this->currentRate?->price ?? 0;
+    }
+
+    public function property()
+    {
+        return $this->belongsTo(\App\Models\Property\Property::class);
+    }
+
+    /**
+     * Dynamic Linking: Các phòng đang sử dụng dịch vụ này.
+     */
+    public function roomServices(): HasMany
+    {
+        return $this->hasMany(RoomService::class);
     }
 }
