@@ -576,6 +576,16 @@ class ContractService
     }
 
     /**
+     * Logic for listing ALL contracts for a specific user (Tenant view)
+     */
+    public function myContracts(User $user): \Illuminate\Database\Eloquent\Collection
+    {
+        return Contract::whereHas('members', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })->with('property:id,name', 'room:id,code,name,type')->orderBy('created_at', 'desc')->get();
+    }
+
+    /**
      * Get available rooms for transfer within the same property
      */
     public function getAvailableRoomsForTransfer(Contract $contract): \Illuminate\Database\Eloquent\Collection
@@ -1097,13 +1107,47 @@ class ContractService
             $primaryMember = $newContract->members->firstWhere('is_primary', true)?->user;
             $initialInvoice = $this->createInitialInvoice($newContract, $primaryMember ?? $performer);
 
-            // 5. Tạo Credit Adjustment cho hóa đơn ban đầu
+            // 5. Tính toán và tạo Credit Adjustment cho hóa đơn ban đầu
             if ($totalCreditAmount > 0) {
+                // Xác định số tiền hóa đơn trước khi giảm trừ (Tổng Cọc + Phí + Thuê)
+                $invoiceTotalBeforeCredit = $initialInvoice->total_amount;
+                
+                $excessHandlingMethod = $data['excess_handling_method'] ?? 'CASH_REFUND';
+                
+                // Mức tín dụng thực tế sẽ cấn trừ vào hóa đơn (không vượt quá tổng hóa đơn)
+                $appliedCredit = 0;
+                $excessCredit = 0;
+
+                if ($totalCreditAmount > $invoiceTotalBeforeCredit) {
+                    $appliedCredit = clone $invoiceTotalBeforeCredit;
+                    $excessCredit = $totalCreditAmount - $invoiceTotalBeforeCredit;
+                } else {
+                    $appliedCredit = $totalCreditAmount;
+                }
+
+                // Xử lý lưu Số dư dư nợ nếu chọn KEEP_AS_CREDIT
+                if ($excessCredit > 0 && $excessHandlingMethod === 'KEEP_AS_CREDIT') {
+                    $meta = $newContract->meta ?? [];
+                    $meta['credit_balance'] = ($meta['credit_balance'] ?? 0) + $excessCredit;
+                    $newContract->update(['meta' => $meta]);
+                } else if ($excessCredit > 0) {
+                    // Nếu là CASH_REFUND hoặc thiếu tiền thì chỉ trừ khoản đã apply,
+                    // phần thừa do kế toán trả tay.
+                    // Nếu không muốn tự động chặt về 0 mà muốn để Hóa đơn -1tr để Kế toán nhìn thấy,
+                    // thì thay vì tính $appliedCredit, ta đẩy thẳng $totalCreditAmount vào
+                    // Nhưng Hostech thiết kế "total >= 0", vì vậy ta vẫn phải push $appliedCredit.
+                    // Để bảo toàn giá trị sổ sách, ta vẫn ghi nhận full amount vào Adjustment
+                    // dù invoice total sẽ kẹp bằng 0.
+                    $appliedCredit = $totalCreditAmount; 
+                } else {
+                    $appliedCredit = $totalCreditAmount;
+                }
+
                 \App\Models\Invoice\InvoiceAdjustment::create([
                     'org_id' => $newContract->org_id,
                     'invoice_id' => $initialInvoice->id,
                     'type' => 'CREDIT',
-                    'amount' => $totalCreditAmount,
+                    'amount' => $appliedCredit,
                     'reason' => 'Chuyển cọc (' . number_format($oldDeposit) . ') & tiền dư (' . number_format($unusedRentAmount) . ') từ phòng cũ.',
                     'created_by_user_id' => $performer->id,
                     'approved_by_user_id' => $performer->id, // Tự động duyệt

@@ -144,7 +144,7 @@ class RecurringBillingService
             }
 
             // 4. Create Invoice using the InvoiceService
-            return $this->invoiceService->create(
+            $invoice = $this->invoiceService->create(
                 data: [
                     'org_id' => $contract->org_id,
                     'property_id' => $contract->property_id,
@@ -157,6 +157,44 @@ class RecurringBillingService
                 ],
                 itemsData: $items
             );
+
+            // 5. Automatic Credit Offset handling (Dùng Ví Dư nợ)
+            $meta = $contract->meta ?? [];
+            if (isset($meta['credit_balance']) && $meta['credit_balance'] > 0) {
+                // Xác định số tiền có thể cấn trừ tối đa
+                $availableCredit = (float) $meta['credit_balance'];
+                $currentTotal = $invoice->total_amount;
+                
+                if ($currentTotal > 0) {
+                    $appliedCredit = min($availableCredit, $currentTotal);
+
+                    // Sinh phiếu giảm trừ
+                    \App\Models\Invoice\InvoiceAdjustment::create([
+                        'org_id' => $invoice->org_id,
+                        'invoice_id' => $invoice->id,
+                        'type' => 'CREDIT',
+                        'amount' => $appliedCredit,
+                        'reason' => 'Tự động cấn trừ từ Ví Hợp đồng (Credit Balance)',
+                        'created_by_user_id' => null, // Hệ thống thực hiện
+                        'approved_by_user_id' => null,
+                        'approved_at' => now(),
+                    ]);
+
+                    // Cập nhật lại số dư ví cho Khách
+                    $meta['credit_balance'] -= $appliedCredit;
+                    $contract->update(['meta' => $meta]);
+
+                    // Tính lại bill
+                    $this->invoiceService->recalculateTotalAmount($invoice);
+
+                    // Tự động gạch nợ (PAID) nếu hóa đơn đã trừ sạch về 0
+                    if ($invoice->refresh()->total_amount <= 0) {
+                        $this->invoiceService->payInvoice($invoice, 'Thanh toán tự động bằng cấn trừ Ví.');
+                    }
+                }
+            }
+
+            return $invoice;
         });
     }
 
