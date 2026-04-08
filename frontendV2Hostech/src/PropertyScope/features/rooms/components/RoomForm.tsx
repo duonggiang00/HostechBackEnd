@@ -19,9 +19,9 @@ import { mediaApi } from '@/shared/features/media/api/media';
 const roomSchema = z.object({
   name: z.string().min(1, 'Tên phòng không được để trống'),
   code: z.string().min(1, 'Mã phòng không được để trống'),
-  capacity: z.number().min(1, 'Sức chứa phải ít nhất là 1'),
-  area: z.number().positive('Diện tích phải lớn hơn 0'),
-  base_price: z.number().min(0, 'Giá không được âm'),
+  capacity: z.coerce.number().min(1, 'Sức chứa phải ít nhất là 1'),
+  area: z.coerce.number().positive('Diện tích phải lớn hơn 0'),
+  base_price: z.coerce.number().min(0, 'Giá không được âm'),
   description: z.string().optional()
 });
 
@@ -57,9 +57,9 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
     defaultValues: {
       name: initialData?.name ?? '',
       code: initialData?.code ?? '',
-      capacity: initialData?.capacity ?? 2,
-      area: initialData?.area ?? 25,
-      base_price: initialData?.base_price ?? 0,
+      capacity: Number(initialData?.capacity ?? 2),
+      area: Number(initialData?.area ?? 25),
+      base_price: Number(initialData?.base_price ?? 0),
       description: initialData?.description ?? '',
     }
   });
@@ -82,9 +82,9 @@ export default function RoomForm({ initialData, onSuccess, onCancel, propertyId,
         reset({
           name: initialData.name ?? '',
           code: initialData.code ?? '',
-          capacity: initialData.capacity ?? 2,
-          area: initialData.area ?? 25,
-          base_price: initialData.base_price ?? 0,
+          capacity: Number(initialData.capacity ?? 2),
+          area: Number(initialData.area ?? 25),
+          base_price: Number(initialData.base_price ?? 0),
           description: initialData.description ?? '',
         });
 

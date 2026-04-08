@@ -183,4 +183,10 @@ export const roomsApi = {
     console.log(`📡 API: POST /rooms/${roomId}/price-histories:`, response.data);
     return response.data;
   },
+
+  createQuickInvoice: async (roomId: string, data: { period_start: string; period_end: string; readings: { meter_id: string; value: number }[] }) => {
+    const response = await apiClient.post(`/rooms/${roomId}/quick-invoice`, data);
+    console.log(`📡 API: POST /rooms/${roomId}/quick-invoice:`, response.data);
+    return response.data;
+  },
 };

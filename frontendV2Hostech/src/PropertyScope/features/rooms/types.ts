@@ -30,7 +30,10 @@ export interface RoomReading {
 export interface RoomMeter {
   id: string;
   code: string;
+  name?: string;
+  serial_number?: string;
   type: 'ELECTRIC' | 'WATER' | string;
+  base_reading?: number;
   last_reading?: number;
   last_reading_date?: string;
   installed_at?: string;

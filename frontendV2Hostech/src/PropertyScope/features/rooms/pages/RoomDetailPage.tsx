@@ -25,6 +25,7 @@ import {
 import { useRoomDetail, useRoomActions } from '../hooks/useRooms';
 import ManagementModal from '@/shared/features/management/components/ManagementModal';
 import RoomForm from '../components/RoomForm';
+import { QuickInvoiceModal } from '../components/QuickInvoiceModal';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
 import UtilityManager from '@/PropertyScope/features/operations/components/UtilityManager';
 import RoomImageGallery from '../components/RoomImageGallery';
@@ -89,6 +90,7 @@ export default function RoomDetailPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isQuickInvoiceOpen, setIsQuickInvoiceOpen] = useState(false);
 
   const handleBack = () => {
     if (location.state?.from === 'building-view') {
@@ -215,6 +217,15 @@ export default function RoomDetailPage() {
                         <Zap className="w-4 h-4" />
                         Tạo hợp đồng
                       </button>
+                      {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
+                        <button
+                          onClick={() => setIsQuickInvoiceOpen(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                        >
+                          <Receipt className="w-4 h-4" />
+                          Chốt hóa đơn
+                        </button>
+                      )}
                       <button
                         onClick={handleDelete}
                         disabled={deleteRoom.isPending}
@@ -565,7 +576,6 @@ export default function RoomDetailPage() {
 
       </div>
 
-      {/* ── Edit Modal ───────────────────────────────────────────────────── */}
       <ManagementModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
@@ -583,6 +593,12 @@ export default function RoomDetailPage() {
           onCancel={() => setIsEditOpen(false)}
         />
       </ManagementModal>
+
+      <QuickInvoiceModal
+        isOpen={isQuickInvoiceOpen}
+        onClose={() => setIsQuickInvoiceOpen(false)}
+        room={room}
+      />
     </div>
   );
 }

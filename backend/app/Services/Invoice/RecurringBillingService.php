@@ -91,12 +91,13 @@ class RecurringBillingService
 
     /**
      * Generate a recurring invoice for a specific contract.
+     * Optionally accepts custom period start and end dates.
      */
-    public function generateInvoiceForContract(Contract $contract, Carbon $periodMonth)
+    public function generateInvoiceForContract(Contract $contract, Carbon $periodMonth, ?Carbon $customPeriodStart = null, ?Carbon $customPeriodEnd = null)
     {
-        return DB::transaction(function () use ($contract, $periodMonth) {
-            $periodStart = $periodMonth->copy()->startOfMonth();
-            $periodEnd = $periodMonth->copy()->endOfMonth();
+        return DB::transaction(function () use ($contract, $periodMonth, $customPeriodStart, $customPeriodEnd) {
+            $periodStart = $customPeriodStart ?? $periodMonth->copy()->startOfMonth();
+            $periodEnd = $customPeriodEnd ?? $periodMonth->copy()->endOfMonth();
 
             // ── Duplicate check: tránh tạo 2 hóa đơn cho cùng kỳ ──────────────
             $existing = \App\Models\Invoice\Invoice::where('contract_id', $contract->id)
@@ -106,7 +107,7 @@ class RecurringBillingService
 
             if ($existing) {
                 throw new \Exception(
-                    "Hóa đơn cho kỳ {$periodStart->format('m/Y')} đã tồn tại (ID: {$existing->id}, trạng thái: {$existing->status})."
+                    "Hóa đơn trùng lặp cho chu kỳ {$periodStart->format('d/m/Y')} - {$periodEnd->format('d/m/Y')} (ID: {$existing->id}, trạng thái: {$existing->status})."
                 );
             }
             // ───────────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ class RecurringBillingService
                 $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
 
                 $desc = $cycleMonths === 1
-                    ? 'Tiền phòng tháng ' . $periodMonth->format('m/Y')
+                    ? 'Tiền phòng chu kỳ ' . $periodStart->format('d/m') . ' - ' . $periodEnd->format('d/m/Y')
                     : 'Tiền phòng chu kỳ ' . $cycleMonths . ' tháng';
 
                 $items[] = [
@@ -254,7 +255,7 @@ class RecurringBillingService
 
         // Find the previous reading
         $previousReading = MeterReading::where('meter_id', $meter->id)
-            ->where('period_end', '<', $currentReading->period_start)
+            ->where('period_end', '<', $currentReading->period_end)
             ->where('status', 'APPROVED')
             ->orderBy('period_end', 'desc')
             ->first();
