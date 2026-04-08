@@ -57,7 +57,7 @@ class RoomUpdateRequest extends FormRequest
 
 
             'service_ids' => ['nullable', 'array'],
-            'service_ids.*' => ['uuid', 'exists:services,uuid'],
+            'service_ids.*' => ['uuid', 'exists:services,id'],
 
             // Thêm các trường upload/relation
             'media_ids' => ['nullable', 'array'],

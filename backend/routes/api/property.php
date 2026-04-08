@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Property\FloorController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomAssetController;
 use App\Http\Controllers\Api\Property\RoomController;
+use App\Http\Controllers\Api\Property\RoomQuickInvoiceController;
 use App\Http\Controllers\Api\Property\RoomTemplateController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,7 @@ Route::post('rooms/{id}/publish', [RoomController::class, 'publish']); // Publis
 Route::get('rooms/{id}/availability', [RoomController::class, 'availability']); // Trạng thái thuê
 Route::put('rooms/{id}/floor-plan', [RoomController::class, 'setFloorPlan']);       // Gán floor plan
 Route::delete('rooms/{id}/floor-plan', [RoomController::class, 'removeFloorPlan']); // Xóa floor plan
+Route::post('rooms/{id}/quick-invoice', [RoomQuickInvoiceController::class, 'create']); // Tạo hóa đơn nhanh
 Route::apiResource('rooms', RoomController::class);
 Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
 Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);

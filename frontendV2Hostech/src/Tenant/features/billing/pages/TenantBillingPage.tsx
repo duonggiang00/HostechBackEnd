@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import type { Invoice } from '@/shared/features/billing/types';
+import { TenantInvoiceDetailModal } from '../components/TenantInvoiceDetailModal';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
@@ -19,6 +20,7 @@ export default function TenantBillingPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   const { user } = useAuthStore();
   const { useInvoices, createVnpayPayment } = useInvoice();
@@ -217,7 +219,8 @@ export default function TenantBillingPage() {
             return (
               <article
                 key={invoice.id}
-                className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                onClick={() => setSelectedInvoiceId(invoice.id)}
+                className="cursor-pointer rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm hover:border-indigo-300 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/50 transition-colors"
               >
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
@@ -244,7 +247,7 @@ export default function TenantBillingPage() {
 
                     {['ISSUED', 'OVERDUE'].includes(invoice.status) && outstandingAmount > 0 ? (
                       <button
-                        onClick={() => handlePayInvoice(invoice)}
+                        onClick={(e) => { e.stopPropagation(); handlePayInvoice(invoice); }}
                         disabled={isPaying}
                         className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                       >
@@ -263,6 +266,12 @@ export default function TenantBillingPage() {
           })
         )}
       </section>
+
+      {/* Invoice Detail Modal */}
+      <TenantInvoiceDetailModal 
+        invoiceId={selectedInvoiceId}
+        onClose={() => setSelectedInvoiceId(null)}
+      />
     </div>
   );
 }

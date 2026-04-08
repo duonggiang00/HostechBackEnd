@@ -36,7 +36,7 @@ const STEPS = [
 
 export default function RoomWizard({ initialData, onSuccess, onCancel, propertyId, floorId }: RoomWizardProps) {
   const [activeStep, setActiveStep] = useState<number>(0);
-  const { createRoom } = useRoomActions();
+  const { createRoom, updateRoom } = useRoomActions();
   const { data: property } = usePropertyDetail(propertyId);
   const { data: floors = [] } = useFloors(propertyId);
   const { useServices } = useService();
@@ -48,9 +48,9 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     name: initialData?.name ?? '',
     code: initialData?.code ?? '',
     floor_id: floorId ?? initialData?.floor_id ?? '',
-    capacity: initialData?.capacity ?? 2,
-    area: initialData?.area ?? 25,
-    base_price: initialData?.base_price ?? 5_000_000,
+    capacity: Number(initialData?.capacity ?? 2),
+    area: Number(initialData?.area ?? 25),
+    base_price: Number(initialData?.base_price ?? 5_000_000),
     description: initialData?.description ?? '',
   });
 
@@ -259,7 +259,12 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
 
     setIsUploading(true);
     try {
-      const room = await createRoom.mutateAsync(payload);
+      let room;
+      if (initialData?.id) {
+        room = await updateRoom.mutateAsync({ id: initialData.id, ...payload });
+      } else {
+        room = await createRoom.mutateAsync(payload);
+      }
       
       // Handle media uploads if any
       if (mediaFiles.length > 0) {
@@ -273,13 +278,13 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       onSuccess?.();
     } catch (error) {
       console.error('Submit failed:', error);
-      toast.error('Có lỗi xảy ra khi tạo phòng');
+      toast.error(initialData?.id ? 'Không thể cập nhật phòng' : 'Có lỗi xảy ra khi tạo phòng');
     } finally {
       setIsUploading(false);
     }
   };
 
-  const isMutating = createRoom.isPending || isUploading;
+  const isMutating = createRoom.isPending || updateRoom.isPending || isUploading;
 
   return (
     <div className="max-w-5xl mx-auto">

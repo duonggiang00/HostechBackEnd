@@ -56,7 +56,7 @@ class RoomStoreRequest extends FormRequest
 
 
             'service_ids' => ['nullable', 'array'],
-            'service_ids.*' => ['uuid', 'exists:services,uuid'],
+            'service_ids.*' => ['uuid', 'exists:services,id'],
             'media_ids' => ['nullable', 'array'],
             'media_ids.*' => ['uuid'],
 
