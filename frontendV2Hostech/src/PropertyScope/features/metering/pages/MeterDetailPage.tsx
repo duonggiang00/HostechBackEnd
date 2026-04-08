@@ -228,18 +228,27 @@ export default function MeterDetailPage() {
       return;
     }
 
+    const readingValue = parseInt(formData.reading_value);
+    if (isNaN(readingValue)) {
+      setFormError('Chỉ số phải là số nguyên');
+      return;
+    }
+
+    if (readingValue < 0) {
+      setFormError('Chỉ số không được âm');
+      return;
+    }
+
+    // Monotonic check: Cannot be smaller than latest reading
+    const prevValue = meter?.latest_reading ?? meter?.base_reading ?? 0;
+    if (readingValue < prevValue) {
+      setFormError(`Chỉ số mới (${readingValue}) không thể nhỏ hơn chỉ số cũ (${prevValue})`);
+      return;
+    }
+
     try {
       setIsAddingReading(true);
       const readingValue = parseInt(formData.reading_value);
-      if (isNaN(readingValue)) {
-        setFormError('Chỉ số phải là số nguyên');
-        return;
-      }
-
-      if (readingValue < 0) {
-        setFormError('Chỉ số không được âm');
-        return;
-      }
 
       console.log('📝 Creating reading:', {
         meter_id: meterId,
@@ -661,6 +670,19 @@ export default function MeterDetailPage() {
               </p>
             </div>
 
+            {/* Latest Reading */}
+            <div>
+              <p className="text-sm font-semibold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-2">
+                Chỉ số hiện tại
+              </p>
+              <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 transition-colors">
+                {(meter.latest_reading ?? meter.base_reading)?.toLocaleString('vi-VN') || '0'}
+                <span className="text-sm text-slate-500 dark:text-slate-400 ml-2">
+                  {meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}
+                </span>
+              </p>
+            </div>
+
             {/* Room */}
             <div>
               <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
@@ -733,17 +755,39 @@ export default function MeterDetailPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
-                    Chỉ số <span className="text-red-600 dark:text-red-400">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.reading_value}
-                    onChange={(e) => setFormData({ ...formData, reading_value: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
-                    placeholder="0"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">
+                      Chỉ số <span className="text-red-600 dark:text-red-400">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.reading_value}
+                      onChange={(e) => setFormData({ ...formData, reading_value: e.target.value })}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors font-mono text-lg font-bold"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">
+                      Tiêu thụ dự kiến
+                    </label>
+                    <div className="h-[46px] flex items-center px-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <span className={`text-lg font-black ${
+                        formData.reading_value && parseInt(formData.reading_value) >= (meter.latest_reading ?? meter.base_reading)
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-slate-300'
+                      }`}>
+                        {formData.reading_value 
+                          ? Math.max(0, parseInt(formData.reading_value) - (meter.latest_reading ?? meter.base_reading)).toLocaleString()
+                          : '0'
+                        }
+                      </span>
+                      <span className="ml-2 text-xs text-slate-500 font-medium">
+                        {meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <div>

@@ -7,11 +7,14 @@ export interface Meter {
   is_active: boolean;
   is_master?: boolean;
   installed_at?: string;
-  base_reading?: number;
-  meta?: Record<string, any>;
-  last_reading?: number;
-  latest_reading?: number;
+  
+  base_reading: number;
+  latest_reading: number;
+  consumption?: number;
   last_read_at?: string;
+  
+  meta?: Record<string, any>;
+  
   property_name?: string;
   room_name?: string;
   room?: { id: string; code: string; name: string; property?: { id: string; name: string } };

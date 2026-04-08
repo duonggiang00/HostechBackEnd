@@ -5,14 +5,18 @@ import { useDashboard, useGenerateMonthlyBilling } from '../../dashboard/hooks/u
 import { PropertyDashboardView } from '../../dashboard/components/PropertyDashboardView';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import toast from 'react-hot-toast';
-import { LayoutDashboard, Layers, Home } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  Layers, 
+  Home
+} from 'lucide-react';
 import { FeatureTabbedLayout } from '../../../components/FeatureTabbedLayout';
 
 import BuildingOverviewPage from '../../building-overview/pages/BuildingOverviewPage';
 import RoomListPage from '../../rooms/pages/RoomListPage';
 
 interface PropertyDetailPageProps {
-  defaultTab?: 'dashboard' | 'layout' | 'rooms';
+  defaultTab?: 'dashboard' | 'layout' | 'rooms' | 'details';
 }
 
 export default function PropertyDetailPage({ defaultTab = 'dashboard' }: PropertyDetailPageProps) {
@@ -83,6 +87,7 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     );
   }, [dashboard, isGenerating, propertyId]);
 
+
   if (isLoading && !property) {
     return (
       <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
@@ -123,3 +128,4 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     </FeatureTabbedLayout>
   );
 }
+

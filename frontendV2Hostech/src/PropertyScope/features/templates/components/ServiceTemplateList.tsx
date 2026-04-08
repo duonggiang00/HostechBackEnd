@@ -38,76 +38,81 @@ export function ServiceTemplateList({ propertyId }: ServiceTemplateListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Mẫu Dịch Vụ</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Mẫu Dịch Vụ</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Quản lý các dịch vụ tiêu chuẩn cho khu trọ (điện, nước, rác...)
           </p>
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           <span>Thêm mẫu dịch vụ</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template) => (
-          <div
-            key={template.id}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate" title={template.name}>
-                  {template.name}
-                </h3>
-                <span className="inline-block mt-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">
-                  {template.type}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(template)}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Đơn giá</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {Intl.NumberFormat('vi-VN').format(template.unit_price)}đ / {template.unit}
-                </span>
-              </div>
-              
-              {template.description && (
-                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
-                    {template.description}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Tên mẫu dịch vụ</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Đơn giá</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Mô tả</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {templates.map((template) => (
+                <tr key={template.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors">
+                  <td className="px-6 py-4">
+                    <span className="font-medium text-gray-900 dark:text-white">{template.name}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                      {template.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {Intl.NumberFormat('vi-VN').format(template.unit_price)}đ / {template.unit}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 max-w-xs" title={template.description}>
+                      {template.description || '--'}
+                    </p>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => handleEdit(template)}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(template.id)}
+                        className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {templates.length === 0 && (
-          <div className="col-span-full p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-            <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có mẫu dịch vụ nào</p>
+          <div className="p-12 text-center">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Chưa có mẫu dịch vụ nào</p>
             <button
               onClick={handleCreate}
-              className="px-4 py-2 text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-xl transition-colors"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all active:scale-95"
             >
               + Tạo mẫu đầu tiên
             </button>

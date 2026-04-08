@@ -11,8 +11,8 @@ export function TemplatesPage() {
 
   const tabs = [
     { 
-      id: 'building', 
-      label: 'Cấu hình tòa nhà', 
+      id: 'info', 
+      label: 'Thông tin tòa nhà', 
       icon: Building2,
     },
     { 
@@ -28,8 +28,8 @@ export function TemplatesPage() {
   ];
 
   // Derive active tab from the last segment of the path
-  const currentPath = location.pathname.split('/').pop() || 'building';
-  const activeTab = tabs.some(tab => tab.id === currentPath) ? currentPath : 'building';
+  const currentPath = location.pathname.split('/').pop() || 'info';
+  const activeTab = tabs.some(tab => tab.id === currentPath) ? currentPath : 'info';
 
   const handleTabChange = (tabId: string) => {
     navigate(`/properties/${propertyId}/templates/${tabId}`);

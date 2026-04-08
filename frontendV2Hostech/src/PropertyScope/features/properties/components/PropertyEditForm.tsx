@@ -26,7 +26,6 @@ export function PropertyEditForm({ property, onSuccess }: PropertyEditFormProps)
     area: 0,
     shared_area: 0,
     note: '',
-    use_floors: true,
     default_billing_cycle: 'monthly',
     default_due_day: 5,
     default_cutoff_day: 30,
@@ -160,21 +159,7 @@ export function PropertyEditForm({ property, onSuccess }: PropertyEditFormProps)
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-bold text-slate-700 dark:text-white">Cấu trúc nhiều tầng</p>
-                    <p className="text-xs text-slate-400">Phân chia phòng theo từng tầng</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, use_floors: !formData.use_floors })}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${formData.use_floors ? 'bg-indigo-600' : 'bg-slate-300'}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData.use_floors ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-               </div>
-
-               <div className="space-y-2">
+               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Chu kỳ thanh toán mặc định</label>
                 <select 
                   value={formData.default_billing_cycle}

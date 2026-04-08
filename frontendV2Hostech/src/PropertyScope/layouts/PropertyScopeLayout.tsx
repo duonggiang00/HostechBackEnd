@@ -12,7 +12,6 @@ import {
   User,
   CreditCard,
   LayoutDashboard,
-  Settings,
   Ticket,
   DollarSign,
   ArrowLeftCircle,
@@ -84,9 +83,9 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
     {
       id: 'building_config',
       label: 'Cấu hình & Thiết lập',
-      path: `/properties/${propertyId}/templates/building`,
+      path: `/properties/${propertyId}/templates/info`,
       items: [
-        { id: 'details', icon: Settings, label: 'Chi tiết tòa nhà', path: `/properties/${propertyId}/templates/building`, exact: true },
+        { id: 'details', icon: Building2, label: 'Chi tiết tòa nhà', path: `/properties/${propertyId}/templates/info`, exact: true },
         { id: 'services', icon: DollarSign, label: 'Dịch vụ', path: `/properties/${propertyId}/templates/services`, exact: true },
         { id: 'templates', icon: LayoutTemplate, label: 'Phòng Mẫu', path: `/properties/${propertyId}/templates/rooms`, exact: true },
       ],

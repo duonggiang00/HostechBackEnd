@@ -188,8 +188,8 @@ export default function QuickReadingPage() {
 
   const calculateConsumption = (meter: Meter, newValue: string) => {
     if (!newValue) return 0;
-    // Use latest_reading from the meter (most recent approved reading)
-    const prev = meter.latest_reading ?? (typeof meter.last_reading === 'number' ? meter.last_reading : meter.base_reading) ?? 0;
+    // latest_reading from API already falls back to base_reading if no approved readings exist
+    const prev = meter.latest_reading ?? meter.base_reading ?? 0;
     const current = parseFloat(newValue);
     return Math.max(0, current - prev);
   };
@@ -214,7 +214,7 @@ export default function QuickReadingPage() {
     let hasError = false;
     for (const item of basePayload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
-      const prevReading = meter?.last_reading ?? meter?.base_reading ?? 0;
+      const prevReading = meter?.latest_reading ?? meter?.base_reading ?? 0;
       if (item.reading_value < prevReading) {
         toast.error(`Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`);
         hasError = true;
@@ -389,9 +389,9 @@ export default function QuickReadingPage() {
                     <div className="p-2">
                       {roomMeters.map(meter => {
                         const isElectric = meter.type === 'ELECTRIC';
-                        const prevValue = meter.latest_reading ?? (typeof meter.last_reading === 'number' ? meter.last_reading : meter.base_reading) ?? 0;
                         const currentValue = readings[meter.id] || '';
                         const consumption = calculateConsumption(meter, currentValue);
+                        const prevValue = meter.latest_reading ?? meter.base_reading ?? 0;
 
                         return (
                           <div key={meter.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors space-y-2">
@@ -422,7 +422,7 @@ export default function QuickReadingPage() {
                                   className="text-sm font-bold text-slate-700 dark:text-slate-300"
                                   data-testid={`prev-reading-value-${meter.id}`}
                                 >
-                                  {prevValue.toLocaleString('vi-VN')}
+                                  {(meter.latest_reading ?? meter.base_reading ?? 0).toLocaleString('vi-VN')}
                                   <span className="text-[10px] text-slate-400 ml-0.5 font-normal">
                                     {isElectric ? 'kWh' : 'm³'}
                                   </span>

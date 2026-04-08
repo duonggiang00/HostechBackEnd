@@ -1,18 +1,21 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
-  Home, Users, Maximize2, DollarSign, Zap, 
+  Users, Maximize2, DollarSign, Zap, 
   ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
-  Package, Layout, FileText, Info
+  Package, Layout, FileText, Info, Image as ImageIcon, Trash2
 } from 'lucide-react';
 import { useRoomTemplateActions } from '../hooks/useTemplates';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { toast } from 'react-hot-toast';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
-import { motion, AnimatePresence } from 'framer-motion';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
-import type { RoomTemplate } from '../types';
+import MediaDropzone from '@/shared/features/media/components/MediaDropzone';
+import { useMediaUpload } from '@/shared/features/media/hooks/useMedia';
+import type { RoomTemplate, RoomTemplateImage, CreateRoomTemplatePayload } from '../types';
 import { useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { useFloors } from '@/PropertyScope/hooks/useFloors';
+import { useService } from '@/shared/features/billing/hooks/useService';
+import type { Service } from '@/shared/features/billing/types';
 
 
 interface RoomTemplateWizardProps {
@@ -22,17 +25,11 @@ interface RoomTemplateWizardProps {
   propertyId: string;
 }
 
-const ROOM_TYPES = [
-  { value: 'apartment', label: 'Căn hộ dịch vụ', icon: Home },
-  { value: 'studio', label: 'Studio', icon: Layout },
-  { value: 'dorm', label: 'Ký túc xá', icon: Users },
-  { value: 'house', label: 'Nhà nguyên căn', icon: Package },
-];
-
 const STEPS = [
   { id: 'basic', title: 'Thông tin mẫu', icon: Layout },
   { id: 'services', title: 'Dịch vụ', icon: Zap },
   { id: 'assets', title: 'Tài sản', icon: Package },
+  { id: 'images', title: 'Hình ảnh', icon: ImageIcon },
 ];
 
 export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyId }: RoomTemplateWizardProps) {
@@ -47,10 +44,13 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     return property?.default_services?.map((s: any) => s.id || s) || [];
   }, [property]);
 
+  const { useServices } = useService();
+  const { data: allServicesResponse, isLoading: isLoadingServices } = useServices({ 'filter[is_active]': 1, per_page: 100 });
+  const allServices = useMemo(() => Array.isArray(allServicesResponse) ? allServicesResponse : allServicesResponse?.data || [], [allServicesResponse]);
+
   // Form State
   const [formData, setFormData] = useState({
     name: initialData?.name ?? '',
-    room_type: initialData?.room_type ?? 'standard',
     capacity: initialData?.capacity ?? 2,
     area: initialData?.area ?? 25,
     base_price: initialData?.base_price ?? 0,
@@ -91,19 +91,41 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     };
   }, [property, rooms, floors, formData.area, formData.base_price]);
 
-  const [selectedServices, setSelectedServices] = useState<string[]>(
-    initialData?.services?.map((s: any) => typeof s === 'string' ? s : s.id) ?? []
-  );
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
   
-  const [assets, setAssets] = useState<Array<{ name: string; condition: string; note: string }>>(
-    initialData?.assets?.map((a: any) => ({
-      name: a.name,
-      condition: a.condition || 'new',
-      note: a.note || ''
-    })) ?? []
-  );
+  const [assets, setAssets] = useState<Array<{ name: string; condition: string; note: string }>>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Media upload state
+  const { uploadFile, isUploading } = useMediaUpload();
+  const [uploadedImages, setUploadedImages] = useState<RoomTemplateImage[]>([]);
+  const [pendingMediaIds, setPendingMediaIds] = useState<string[]>([]);
+
+  // Sync initialData
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name,
+        capacity: initialData.capacity || 2,
+        area: Number(initialData.area ?? 25),
+        base_price: Number(initialData.base_price || 0),
+        description: initialData.description || '',
+      });
+      setSelectedServices(initialData.services?.map((s: any) => typeof s === 'string' ? s : s.id) ?? []);
+      setAssets(initialData.assets?.map((a: any) => ({
+        name: a.name,
+        condition: a.condition || 'new',
+        note: a.note || ''
+      })) ?? []);
+      setUploadedImages(initialData.media?.map(m => ({
+        uuid: m.id,
+        url: m.original_url,
+        thumb_url: m.original_url,
+        name: m.name
+      })) ?? []);
+    }
+  }, [initialData]);
 
   // Auto-sync inherited services for NEW template
   useEffect(() => {
@@ -117,8 +139,70 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     
     if (step === 0) {
       if (!formData.name.trim()) newErrors.name = 'Tên mẫu không được để trống';
-      if (formData.area < 10) newErrors.area = 'Diện tích tối thiểu phải từ 10 m²';
+      
+      // Area & Capacity Validation sync with RoomWizard
+      if (formData.area < 10) {
+        newErrors.area = 'Diện tích tối thiểu phải từ 10 m²';
+      }
+      
+      if (formData.capacity < 1 || formData.capacity > 6) {
+        newErrors.capacity = 'Sức chứa phải từ 1 đến 6 người';
+      }
+
+      // Capacity to Area scaling rules
+      if (formData.capacity >= 3 && formData.capacity <= 4 && formData.area < 18) {
+        newErrors.area = 'Sức chứa 3-4 người yêu cầu tối thiểu 18 m²';
+      }
+      if (formData.capacity >= 5 && formData.capacity <= 6 && formData.area < 25) {
+        newErrors.area = 'Sức chứa 5-6 người yêu cầu tối thiểu 25 m²';
+      }
+
       if (formData.base_price <= 0) newErrors.base_price = 'Giá thuê không hợp lệ';
+    }
+
+    if (step === 1) {
+      if (isLoadingServices) {
+        toast.error('Đang tải danh sách dịch vụ, vui lòng đợi...');
+        return false;
+      }
+
+      const selectedFullServices = allServices.filter((s: Service) => selectedServices.includes(s.id));
+      
+      // Phân loại dịch vụ dựa trên type hoặc code (fallback)
+      const electrics = selectedFullServices.filter((s: Service) => 
+        s.type === 'ELECTRIC' || s.code?.toUpperCase().includes('DIEN')
+      );
+      const waters = selectedFullServices.filter((s: Service) => 
+        s.type === 'WATER' || s.code?.toUpperCase().includes('NUOC')
+      );
+
+      console.log('RoomTemplateWizard Validation Debug:', {
+        selectedIds: selectedServices,
+        selectedFullServices,
+        electricsFound: electrics.length,
+        watersFound: waters.length,
+        sampleCodes: selectedFullServices.map((s: Service) => s.code)
+      });
+
+      if (electrics.length === 0) {
+        toast.error('Vui lòng chọn 1 dịch vụ Điện');
+        return false;
+      }
+      
+      if (waters.length === 0) {
+        toast.error('Vui lòng chọn 1 dịch vụ Nước');
+        return false;
+      }
+
+      if (electrics.length > 1) {
+        toast.error('Chỉ được phép chọn duy nhất 1 dịch vụ Điện');
+        return false;
+      }
+
+      if (waters.length > 1) {
+        toast.error('Chỉ được phép chọn duy nhất 1 dịch vụ Nước');
+        return false;
+      }
     }
 
     setErrors(newErrors);
@@ -129,11 +213,29 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     if (validateStep(activeStep)) {
       setActiveStep(prev => Math.min(prev + 1, STEPS.length - 1));
     } else {
-      toast.error('Vui lòng hoàn thành các thông tin bắt buộc');
+      // Toast handles if step 1 validation fails inside validateStep
     }
   };
 
   const handleBack = () => setActiveStep(prev => Math.max(prev - 1, 0));
+
+  const handleFileDrop = async (files: File[]) => {
+    for (const file of files) {
+      const response = await uploadFile(file, 'room-templates');
+      if (response) {
+        setPendingMediaIds(prev => [...prev, response.id]);
+        setUploadedImages(prev => [
+          ...prev,
+          { uuid: response.id, url: response.url, thumb_url: response.url, name: response.name }
+        ]);
+      }
+    }
+  };
+
+  const handleRemoveImage = (uuid: string) => {
+    setUploadedImages(prev => prev.filter(img => img.uuid !== uuid));
+    setPendingMediaIds(prev => prev.filter(id => id !== uuid));
+  };
 
   const handleSubmit = async () => {
     if (!validateStep(0)) {
@@ -142,10 +244,16 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
       return;
     }
 
-    const payload = {
+    if (!validateStep(1)) {
+      setActiveStep(1);
+      return;
+    }
+
+    const payload: CreateRoomTemplatePayload = {
       ...formData,
       services: selectedServices,
       assets: assets.filter(a => a.name.trim()),
+      ...(pendingMediaIds.length > 0 ? { media_ids: pendingMediaIds } : {}),
     };
 
     try {
@@ -205,14 +313,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
       <div className="bg-white dark:bg-slate-800 rounded-[40px] border border-slate-100 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden min-h-[500px] flex flex-col">
         {/* ─── Step Content ─── */}
         <div className="p-8 md:p-12 flex-1">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeStep}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
+          <div>
               {activeStep === 0 && (
                 <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   {/* ─── Area Context Integrated (Top Banner) ─── */}
@@ -268,31 +369,6 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                             </div>
                             {errors.name && <p className="text-xs text-rose-500 font-bold flex items-center gap-1 ml-1">{errors.name}</p>}
                           </div>
-
-                          <div className="space-y-3">
-                            <label className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-tight ml-1">Loại phòng</label>
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                              {ROOM_TYPES.map(t => (
-                                <button
-                                  key={t.value}
-                                  type="button"
-                                  onClick={() => setFormData({ ...formData, room_type: t.value })}
-                                  className={`p-3 rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 group/btn ${
-                                    formData.room_type === t.value 
-                                      ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20' 
-                                      : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200'
-                                  }`}
-                                >
-                                  <div className={`p-2 rounded-xl transition-colors ${formData.room_type === t.value ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 group-hover/btn:bg-indigo-100'}`}>
-                                    <t.icon className="w-4 h-4" />
-                                  </div>
-                                  <span className={`font-black uppercase tracking-widest text-[8px] text-center leading-tight ${formData.room_type === t.value ? 'text-indigo-600' : 'text-slate-400'}`}>
-                                    {t.label}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -317,8 +393,31 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                                 type="text"
                                 value={formatNumber(formData.capacity)}
                                 onChange={e => setFormData({ ...formData, capacity: Number(parseNumber(e.target.value)) })}
-                                className="w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 transition-all font-bold text-slate-800 dark:text-white"
+                                className={`w-full pl-12 pr-4 py-4 bg-slate-50 dark:bg-slate-900/50 border ${errors.capacity ? 'border-rose-500' : 'border-slate-100 dark:border-slate-700'} rounded-2xl outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 transition-all font-bold text-slate-800 dark:text-white`}
                               />
+                            </div>
+                            {errors.capacity && <p className="text-xs text-rose-500 font-bold flex items-center gap-1 ml-1">{errors.capacity}</p>}
+                          </div>
+                        </div>
+
+                        {/* Area & Capacity Guide */}
+                        <div className="p-6 bg-indigo-50 dark:bg-indigo-900/10 rounded-3xl border border-indigo-100 dark:border-indigo-900/40">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Info className="w-4 h-4 text-indigo-600" />
+                            <h4 className="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-widest">Tiêu chuẩn diện tích & sức chứa</h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className={`p-3 rounded-2xl border transition-all ${formData.capacity <= 2 ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}>
+                              <p className="text-[10px] font-bold uppercase mb-1">1-2 Người</p>
+                              <p className="text-xs font-black">≥ 10 m²</p>
+                            </div>
+                            <div className={`p-3 rounded-2xl border transition-all ${formData.capacity >= 3 && formData.capacity <= 4 ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}>
+                              <p className="text-[10px] font-bold uppercase mb-1">3-4 Người</p>
+                              <p className="text-xs font-black">≥ 18 m²</p>
+                            </div>
+                            <div className={`p-3 rounded-2xl border transition-all ${formData.capacity >= 5 ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400'}`}>
+                              <p className="text-[10px] font-bold uppercase mb-1">5-6 Người</p>
+                              <p className="text-xs font-black">≥ 25 m²</p>
                             </div>
                           </div>
                         </div>
@@ -365,21 +464,10 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                           <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/20 rounded-full -ml-16 -mb-16 blur-2xl" />
                           
                           <div className="relative z-10 space-y-8">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-widest bg-white/20 px-3 py-1 rounded-full">Xem trước</span>
-                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                                {ROOM_TYPES.find(r => r.value === formData.room_type)?.icon && (
-                                  <div className="w-5 h-5 flex items-center justify-center">
-                                    {(ROOM_TYPES.find(r => r.value === formData.room_type)?.icon as any)({ className: "w-full h-full" })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
                             <div className="space-y-1">
                               <h3 className="text-2xl font-black truncate">{formData.name || 'Tên mẫu phòng'}</h3>
                               <p className="text-indigo-100 text-xs font-bold uppercase tracking-wider">
-                                {ROOM_TYPES.find(r => r.value === formData.room_type)?.label || 'Tiêu chuẩn'}
+                                TIÊU CHUẨN
                               </p>
                             </div>
 
@@ -422,14 +510,29 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
 
               {activeStep === 1 && (
                 <div className="space-y-8">
-                  <div className="flex items-center gap-4 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border border-slate-100 dark:border-slate-700 mb-8">
-                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                      <Zap className="w-6 h-6" />
+                  <div className="flex items-center justify-between gap-4 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border border-slate-100 dark:border-slate-700 mb-8">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                        <Zap className="w-6 h-6" />
+                      </div>
+                      <div className="flex flex-col">
+                        <h3 className="text-lg font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                          Cấu hình dịch vụ
+                        </h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          Chọn các dịch vụ sẽ được áp dụng cho mẫu phòng này. (Bắt buộc 1 Điện, 1 Nước)
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-black text-slate-800 dark:text-white">Dịch vụ mặc định</h4>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Chọn các dịch vụ sẽ được tự động áp dụng khi tạo phòng từ mẫu này.</p>
-                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setSelectedServices(inheritedServiceIds)}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-brand-600 bg-brand-50 hover:bg-brand-100 dark:bg-brand-900/20 dark:text-brand-400 rounded-lg transition-colors border border-brand-100 dark:border-brand-800"
+                    >
+                      <Check className="w-4 h-4" />
+                      Sử dụng dịch vụ mặc định
+                    </button>
                   </div>
                   <ServicePicker 
                     selectedServiceIds={selectedServices} 
@@ -494,9 +597,51 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                   </div>
                 </div>
               )}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+              {/* Step 3 — Images */}
+              {activeStep === 3 && (
+                <div className="space-y-8">
+                  <div className="flex items-center gap-4 p-6 bg-slate-50 dark:bg-slate-900/50 rounded-[32px] border border-slate-100 dark:border-slate-700 mb-8">
+                    <div className="w-12 h-12 bg-violet-100 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-slate-800 dark:text-white">Hình ảnh mẫu phòng</h4>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Ảnh sẽ được tự động kế thừa sang các phòng tạo từ mẫu này.</p>
+                    </div>
+                  </div>
+
+                  <MediaDropzone
+                    onDrop={handleFileDrop}
+                    maxFiles={8}
+                    accept="image/*"
+                    isUploading={isUploading}
+                  />
+
+                  {uploadedImages.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {uploadedImages.map(img => (
+                        <div key={img.uuid} className="relative group rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-700 aspect-square">
+                          <img src={img.thumb_url || img.url} alt={img.name} className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => handleRemoveImage(img.uuid)}
+                            className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {uploadedImages.length === 0 && !isUploading && (
+                    <div className="text-center py-4">
+                      <p className="text-xs text-slate-400 font-medium">Chưa có ảnh nào được thêm. Kéo thả hoặc click để tải lên.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
 
         {/* ─── Footer Actions ─── */}
         <div className="p-8 md:p-12 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
@@ -513,10 +658,20 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
             {activeStep < STEPS.length - 1 ? (
               <button 
                 onClick={handleNext}
-                className="flex items-center gap-2 px-10 py-4 bg-slate-900 dark:bg-slate-700 text-white rounded-2xl font-black hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-xl shadow-slate-200 dark:shadow-none active:scale-95"
+                disabled={activeStep === 1 && !allServicesResponse}
+                className="flex items-center gap-2 px-10 py-4 bg-slate-900 dark:bg-slate-700 text-white rounded-2xl font-black hover:bg-slate-800 dark:hover:bg-slate-600 transition-all shadow-xl shadow-slate-200 dark:shadow-none active:scale-95 disabled:opacity-50"
               >
-                Tiếp tục
-                <ArrowRight className="w-5 h-5" />
+                {activeStep === 1 && !allServicesResponse ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Đang tải...
+                  </>
+                ) : (
+                  <>
+                    Tiếp tục
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
               </button>
             ) : (
               <button 

@@ -17,7 +17,23 @@ class Property extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'org_id', 'code', 'name', 'address', 'area', 'shared_area', 'note', 'use_floors', 'default_billing_cycle', 'default_due_day', 'default_cutoff_day', 'bank_accounts', 'default_rent_price_per_m2', 'default_deposit_months'];
+    protected $fillable = [
+        'id',
+        'org_id',
+        'code',
+        'name',
+        'address',
+        'area',
+        'shared_area',
+        'note',
+        'use_floors',
+        'default_billing_cycle',
+        'default_due_day',
+        'default_cutoff_day',
+        'bank_accounts',
+        'default_rent_price_per_m2',
+        'default_deposit_months'
+    ];
 
     protected function casts(): array
     {

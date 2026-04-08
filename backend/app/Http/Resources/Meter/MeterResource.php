@@ -36,6 +36,7 @@ class MeterResource extends JsonResource
             // Latest APPROVED reading for quick reading "số cũ"
             'latest_reading' => $this->latestApprovedReading?->reading_value ?? $this->base_reading,
             'last_read_at' => $this->latestApprovedReading?->period_end ? $this->latestApprovedReading->period_end->format('Y-m-d') : null,
+            'consumption' => $this->latestApprovedReading?->consumption ?? 0,
             'room' => new RoomResource($this->whenLoaded('room')),
             'media' => $this->getMedia('meter_attachments')->map(fn($media) => [
                 'id' => $media->id,

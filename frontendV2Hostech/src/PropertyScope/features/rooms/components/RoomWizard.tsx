@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   Home, Tag, Users, Maximize2, DollarSign, ImageIcon, Zap, 
   ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
-  Package, Activity, CloudUpload, Layout, ChevronDown, ChevronUp,
+  Package, CloudUpload, Layout, ChevronDown, ChevronUp,
   FileText, Hash, Calendar, Shield
 } from 'lucide-react';
 import { type Room, useRoomActions, useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
@@ -16,6 +16,8 @@ import ServicePicker from '@/shared/features/billing/components/ServicePicker';
 import { mediaApi } from '@/shared/features/media/api/media';
 import { RoomTemplateSelector } from './RoomTemplateSelector';
 import type { RoomTemplate } from '@/PropertyScope/features/templates/types';
+import { useService } from '@/shared/features/billing/hooks/useService';
+import type { Service } from '@/shared/features/billing/types';
 
 interface RoomWizardProps {
   initialData?: Room | null;
@@ -30,7 +32,6 @@ const STEPS = [
   { id: 'media', title: 'Hình ảnh', icon: ImageIcon },
   { id: 'services', title: 'Dịch vụ', icon: Zap },
   { id: 'assets', title: 'Tài sản', icon: Package },
-  { id: 'meters', title: 'Đồng hồ', icon: Activity },
 ];
 
 export default function RoomWizard({ initialData, onSuccess, onCancel, propertyId, floorId }: RoomWizardProps) {
@@ -38,6 +39,9 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
   const { createRoom } = useRoomActions();
   const { data: property } = usePropertyDetail(propertyId);
   const { data: floors = [] } = useFloors(propertyId);
+  const { useServices } = useService();
+  const { data: allServicesResponse, isLoading: isLoadingServices } = useServices({ 'filter[is_active]': 1, per_page: 100 });
+  const allServices = useMemo(() => Array.isArray(allServicesResponse) ? allServicesResponse : allServicesResponse?.data || [], [allServicesResponse]);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -67,13 +71,10 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [assets, setAssets] = useState<Array<{ name: string; serial: string; condition: string; purchased_at: string; warranty_end: string; note: string }>>([]);
   const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
-  const [meters, setMeters] = useState<Array<{ type: 'ELECTRIC' | 'WATER'; code: string; initial_reading: number }>>([
-    { type: 'ELECTRIC', code: '', initial_reading: 0 },
-    { type: 'WATER', code: '', initial_reading: 0 },
-  ]);
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleTemplateSelect = (template: RoomTemplate) => {
     setSelectedTemplateId(template.id);
@@ -102,6 +103,12 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       })));
     }
 
+    console.log('RoomWizard Template Selected:', {
+      id: template.id,
+      name: template.name,
+      servicesCount: template.services?.length,
+      services: template.services
+    });
     toast.success(`Đã áp dụng mẫu: ${template.name}`);
   };
 
@@ -167,10 +174,47 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       }
     }
 
-    if (step === 4) {
-      meters.forEach((m, i) => {
-        if (m.code.trim() && !m.type) newErrors[`meter_${i}_type`] = 'Vui lòng chọn loại đồng hồ';
+    if (step === 2) {
+      if (isLoadingServices) {
+        toast.error('Đang tải danh sách dịch vụ, vui lòng đợi...');
+        return false;
+      }
+
+      const selectedFullServices = allServices.filter((s: Service) => selectedServices.includes(s.id));
+      
+      const electrics = selectedFullServices.filter((s: Service) => 
+        s.type === 'ELECTRIC' || s.code?.toUpperCase().includes('DIEN')
+      );
+      const waters = selectedFullServices.filter((s: Service) => 
+        s.type === 'WATER' || s.code?.toUpperCase().includes('NUOC')
+      );
+
+      console.log('RoomWizard Service Validation Debug:', {
+        selectedIds: selectedServices,
+        allServicesCount: allServices.length,
+        electricsFound: electrics.length,
+        watersFound: waters.length
       });
+
+      if (electrics.length === 0) {
+        toast.error('Vui lòng chọn ít nhất 1 dịch vụ Điện');
+        return false;
+      }
+      
+      if (waters.length === 0) {
+        toast.error('Vui lòng chọn ít nhất 1 dịch vụ Nước');
+        return false;
+      }
+
+      if (electrics.length > 1) {
+        toast.error('Chỉ được phép chọn duy nhất 1 dịch vụ Điện');
+        return false;
+      }
+
+      if (waters.length > 1) {
+        toast.error('Chỉ được phép chọn duy nhất 1 dịch vụ Nước');
+        return false;
+      }
     }
 
     setErrors(newErrors);
@@ -181,7 +225,9 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     if (validateStep(activeStep)) {
       setActiveStep(prev => Math.min(prev + 1, STEPS.length - 1));
     } else {
-      toast.error('Vui lòng hoàn thành các thông tin bắt buộc');
+      if (Object.keys(errors).length > 0) {
+        toast.error('Vui lòng hoàn thành các thông tin bắt buộc');
+      }
     }
   };
 
@@ -198,7 +244,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       ...formData,
       property_id: propertyId,
       status: isDraft ? 'draft' : 'available',
-      services: selectedServices,
+      service_ids: selectedServices,
       assets: assets
         .filter(a => a.name.trim())
         .map(({ name, serial, condition, purchased_at, warranty_end, note }) => ({
@@ -209,7 +255,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
           ...(warranty_end ? { warranty_end } : {}),
           ...(note?.trim() ? { note: note.trim() } : {}),
         })),
-      meters: meters.filter(m => m.code.trim()),
     };
 
     setIsUploading(true);
@@ -234,7 +279,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     }
   };
 
-  const [isUploading, setIsUploading] = useState(false);
   const isMutating = createRoom.isPending || isUploading;
 
   return (
@@ -532,12 +576,14 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                 <div className="space-y-8">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-black text-slate-800">Danh mục tài sản</h3>
-                    <button 
-                      onClick={() => setAssets([...assets, { name: '', serial: '', condition: 'good', purchased_at: '', warranty_end: '', note: '' }])}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-black hover:bg-slate-900 transition-all active:scale-95"
-                    >
-                      + Thêm tài sản
-                    </button>
+                    <div className="flex items-center gap-3">
+                       <button 
+                        onClick={() => setAssets([...assets, { name: '', serial: '', condition: 'good', purchased_at: '', warranty_end: '', note: '' }])}
+                        className="px-4 py-2 bg-slate-800 text-white rounded-xl text-sm font-black hover:bg-slate-900 transition-all active:scale-95"
+                      >
+                        + Thêm tài sản
+                      </button>
+                    </div>
                   </div>
                   
                   <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-hide">
@@ -674,61 +720,6 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                         </div>
                       );
                     })}
-                  </div>
-                </div>
-              )}
-
-              {activeStep === 4 && (
-                <div className="space-y-8">
-                  <div className="text-center mb-8">
-                    <Activity className="w-12 h-12 text-indigo-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-black text-slate-800">Đồng hồ Điện & Nước</h3>
-                    <p className="text-slate-500 font-medium">Khai báo mã đồng hồ và chỉ số chốt đầu tiên cho phòng.</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {meters.map((m, i) => (
-                      <div key={i} className={`p-8 rounded-[32px] border-2 transition-all ${m.code ? 'border-indigo-500 bg-indigo-50/30' : 'border-slate-100 bg-slate-50'}`}>
-                        <div className="flex items-center gap-3 mb-6">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${m.type === 'ELECTRIC' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
-                            <Zap className="w-5 h-5" />
-                          </div>
-                          <span className="font-black uppercase tracking-widest text-sm text-slate-700">
-                            Đồng hồ {m.type === 'ELECTRIC' ? 'ĐIỆN' : 'NƯỚC'}
-                          </span>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-xs font-black text-slate-400 uppercase ml-1">Mã đồng hồ</label>
-                            <input 
-                              placeholder="Nhập mã (e.g. D001)"
-                              value={m.code}
-                              onChange={e => {
-                                const newMeters = [...meters];
-                                newMeters[i].code = e.target.value;
-                                setMeters(newMeters);
-                              }}
-                              className="w-full bg-white border border-slate-100 px-4 py-3 rounded-2xl outline-none focus:border-indigo-500 font-bold"
-                            />
-                            {errors[`meter_${i}_code`] && <p className="text-xs text-rose-500 mt-1">{errors[`meter_${i}_code`]}</p>}
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-black text-slate-400 uppercase ml-1">Chỉ số đầu</label>
-                            <input 
-                              type="text"
-                              value={formatNumber(m.initial_reading)}
-                              onChange={e => {
-                                const newMeters = [...meters];
-                                newMeters[i].initial_reading = Number(parseNumber(e.target.value));
-                                setMeters(newMeters);
-                              }}
-                              className="w-full bg-white border border-slate-100 px-4 py-3 rounded-2xl outline-none focus:border-indigo-500 font-bold"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
 
                   <div className="p-6 bg-slate-50 rounded-[32px] border border-slate-100">

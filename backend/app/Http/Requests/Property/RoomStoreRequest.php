@@ -67,14 +67,6 @@ class RoomStoreRequest extends FormRequest
             'assets.*.purchased_at' => ['nullable', 'date'],
             'assets.*.warranty_end' => ['nullable', 'date'],
             'assets.*.note' => ['nullable', 'string'],
-
-            'services' => ['nullable', 'array'],
-            'services.*' => ['uuid', 'exists:services,id'],
-
-            'meters' => ['nullable', 'array'],
-            'meters.*.type' => ['required', 'string', 'in:ELECTRIC,WATER'],
-            'meters.*.code' => ['required', 'string', 'max:50'],
-            'meters.*.initial_reading' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

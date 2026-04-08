@@ -174,7 +174,7 @@ export default function TenantContractDetailPage() {
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
         <div className="relative overflow-hidden rounded-[32px] bg-slate-950 p-7 text-white shadow-2xl shadow-slate-900/10 lg:p-8">
-          <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.35),_transparent_65%)]" />
+          <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.35),transparent_65%)]" />
           <div className="relative">
             <button
               onClick={() => navigate(-1)}

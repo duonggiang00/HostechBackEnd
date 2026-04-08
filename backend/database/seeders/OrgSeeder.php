@@ -53,12 +53,7 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgNames = [
-            'test',
-            // 'Nam Thanh',
-            // 'Thăng Long',
-            // 'Ngọc Ánh',
-            // 'Titanic',
-            // 'Love Street Hotel',
+            'test'
         ];
         $orgCount = count($orgNames);
         $usersPerOrg = 10;
@@ -96,6 +91,7 @@ class OrgSeeder extends Seeder
                     [
                         'org_id' => $org->id,
                         'full_name' => fake()->name(),
+                        'phone' => fake('vi_VN')->phoneNumber(),
                         'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
                         'email_verified_at' => now(),
                         'is_active' => true,
@@ -109,14 +105,14 @@ class OrgSeeder extends Seeder
             // ---------------------------------------------------------
             $this->command->info("\n🔧 Tạo Dịch vụ cơ bản cho tổ chức...");
             $serviceDataList = [
-                ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 4000],
-                ['code' => 'NUOC', 'name' => 'Tiền nước', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 30000],
-                ['code' => 'DIEN_BT', 'name' => 'Điện bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 1984],
-                ['code' => 'NUOC_BT', 'name' => 'Nước bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 5973],
-                ['code' => 'INTERNET', 'name' => 'Internet', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 100000],
-                ['code' => 'QL', 'name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 50000],
-                ['code' => 'GUIXE', 'name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY', 'unit' => 'bike', 'price' => 100000],
-                ['code' => 'VS', 'name' => 'Vệ sinh', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 30000],
+                ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 4000, 'type' => 'ELECTRIC'],
+                ['code' => 'NUOC', 'name' => 'Tiền nước', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 30000, 'type' => 'WATER'],
+                ['code' => 'DIEN_BT', 'name' => 'Điện bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 1984, 'type' => 'ELECTRIC'],
+                ['code' => 'NUOC_BT', 'name' => 'Nước bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 5973, 'type' => 'WATER'],
+                ['code' => 'INTERNET', 'name' => 'Internet', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 100000, 'type' => 'OTHER'],
+                ['code' => 'QL', 'name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 50000, 'type' => 'OTHER'],
+                ['code' => 'GUIXE', 'name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY', 'unit' => 'bike', 'price' => 100000, 'type' => 'OTHER'],
+                ['code' => 'VS', 'name' => 'Vệ sinh', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 30000, 'type' => 'OTHER'],
             ];
 
             $serviceIds = [];
@@ -222,6 +218,23 @@ class OrgSeeder extends Seeder
                         // Realistic Vietnamese room sizes: 15-50m2, mostly 20-30m2
                         'area' => fn() => min(rand(15, 30), $availableAreaPerFloor),
                     ]);
+
+                    // Attach mandatory services (DIEN, NUOC) and some assets to every template
+                    foreach ($templates as $template) {
+                        $template->services()->attach([
+                            $serviceIds['DIEN'],
+                            $serviceIds['NUOC'],
+                            $serviceIds['INTERNET'],
+                        ]);
+
+                        // Add some default assets
+                        $template->assets()->createMany([
+                            ['name' => 'Giường 1m6'],
+                            ['name' => 'Tủ quần áo'],
+                            ['name' => 'Máy lạnh'],
+                        ]);
+                    }
+
                     $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</>");
 
                     // Create floors
@@ -400,6 +413,7 @@ class OrgSeeder extends Seeder
                         $this->createContractWithInvoices(
                             $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
+                        /** @var \App\Models\Property\Room $room */
                         $room->update(['status' => 'occupied']);
                     } else {
                         // $room->update(['status' => 'draft']);
@@ -414,9 +428,8 @@ class OrgSeeder extends Seeder
                         ->first();
                     
                     if ($masterMeter) {
+                        /** @var \App\Models\Meter\Meter $masterMeter */
                         $masterMeter->update(['base_reading' => $sum]);
-                        
-                        // Initial reading placeholder (vốn dĩ đã ở dial này rồi)
                     }
                 }
             }
@@ -499,12 +512,14 @@ class OrgSeeder extends Seeder
         $counter = $isActive ? self::$testTenantCounter++ : self::$freeTenantCounter++;
         
         $email = $prefix . $counter . "@example.com";
+        $phone = fake('vi_VN')->phoneNumber();
         
         $memberUser = User::create([
             'id' => Str::uuid()->toString(),
             'org_id' => $org->id,
             'full_name' => $fullName,
             'email' => $email,
+            'phone' => $phone,
             'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
             'email_verified_at' => now(),
             'is_active' => true,
@@ -517,6 +532,7 @@ class OrgSeeder extends Seeder
             'contract_id' => $contract->id,
             'user_id' => $memberUser->id,
             'full_name' => $fullName,
+            'phone' => $phone,
             'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
             'is_primary' => $i === 0,
             'left_at' => $status === 'ENDED' ? $endDate : null,

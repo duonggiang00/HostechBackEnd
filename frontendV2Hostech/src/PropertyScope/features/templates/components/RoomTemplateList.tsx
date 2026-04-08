@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Zap, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import { useRoomTemplates, useRoomTemplateActions } from '../hooks/useTemplates';
 import { RoomTemplateWizard } from './RoomTemplateWizard';
-import { BulkRoomCreateModal } from '../../rooms/components/BulkRoomCreateModal';
 import type { RoomTemplate } from '../types';
 
 interface RoomTemplateListProps {
@@ -13,7 +12,6 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const { data: templates = [], isLoading } = useRoomTemplates(propertyId);
   const { deleteTemplate } = useRoomTemplateActions(propertyId);
   const [showWizard, setShowWizard] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate | null>(null);
 
   const handleEdit = (template: RoomTemplate) => {
@@ -24,11 +22,6 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const handleCreate = () => {
     setSelectedTemplate(null);
     setShowWizard(true);
-  };
-
-  const handleBulkCreate = (template: RoomTemplate) => {
-    setSelectedTemplate(template);
-    setIsBulkModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -72,95 +65,93 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Mẫu Phòng</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Mẫu Phòng</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Quản lý các loại phòng để tạo phòng nhanh chóng
           </p>
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           <span>Thêm mẫu phòng</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {templates.map((template) => (
-          <div
-            key={template.id}
-            className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex flex-col"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="font-bold text-lg text-slate-900 dark:text-white truncate pr-2" title={template.name}>
-                {template.name}
-              </h3>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => handleEdit(template)}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 bg-slate-50 dark:bg-slate-700/50 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 flex-1">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Giá thuê (Tháng)</span>
-                <span className="font-semibold text-slate-900 dark:text-white">
-                  {Intl.NumberFormat('vi-VN').format(template.base_price)}đ
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Diện tích</span>
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {template.area ? `${template.area} m²` : '--'}
-                </span>
-              </div>
-              
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-500 dark:text-slate-400">Số người ở tối đa</span>
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {template.capacity ? `${template.capacity} người` : '--'}
-                </span>
-              </div>
-              
-              {template.description && (
-                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700">
-                  <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
-                    {template.description}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <button
-                onClick={() => handleBulkCreate(template)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-black dark:hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95"
-              >
-                <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-                Tạo nhanh phòng
-              </button>
-            </div>
-          </div>
-        ))}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Mẫu phòng</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Giá thuê</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Diện tích</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Sức chứa</th>
+                <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {templates.map((template) => (
+                <tr key={template.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden shrink-0 flex items-center justify-center">
+                        {template.media && template.media.length > 0 ? (
+                          <img 
+                            src={template.media[0].original_url} 
+                            alt={template.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[10px] text-gray-400 font-medium uppercase">No Img</span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">{template.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1 max-w-[200px]">
+                          {template.description || 'Không có mô tả'}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                    {Intl.NumberFormat('vi-VN').format(template.base_price)}đ
+                  </td>
+                  <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    {template.area ? `${template.area} m²` : '--'}
+                  </td>
+                  <td className="px-6 py-4 text-gray-600 dark:text-gray-400">
+                    {template.capacity ? `${template.capacity} người` : '--'}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(template)}
+                        className="p-1.5 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(template.id)}
+                        className="p-1.5 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {templates.length === 0 && (
-          <div className="col-span-full p-12 text-center bg-slate-50 dark:bg-slate-800/30 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-            <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có mẫu phòng nào</p>
+          <div className="p-12 text-center">
+            <p className="text-gray-500 dark:text-gray-400 mb-4">Chưa có mẫu phòng nào</p>
             <button
               onClick={handleCreate}
-              className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl hover:shadow-md transition-all active:scale-95"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all active:scale-95"
             >
               + Tạo mẫu đầu tiên
             </button>
@@ -168,12 +159,7 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
         )}
       </div>
 
-      <BulkRoomCreateModal
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-        propertyId={propertyId}
-        template={selectedTemplate}
-      />
+      <div />
     </div>
   );
 }

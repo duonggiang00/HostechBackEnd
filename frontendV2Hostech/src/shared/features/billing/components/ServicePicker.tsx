@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo } from 'react';
-import { Check, Info, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, Info, AlertCircle, Loader2, Zap, Waves } from 'lucide-react';
 import { useService, type Service } from '@/shared/features/billing/hooks/useService';
 
 interface ServicePickerProps {
@@ -28,11 +28,25 @@ export default function ServicePicker({
   // Let's handle both.
   const services: Service[] = Array.isArray(response) ? response : response?.data || [];
 
-  const handleToggle = (id: string) => {
-    if (selectedServiceIds.includes(id)) {
+  const handleToggle = (service: Service) => {
+    const id = service.id;
+    const isSelected = selectedServiceIds.includes(id);
+
+    if (isSelected) {
+      // Toggle off
       onChange(selectedServiceIds.filter(sId => sId !== id));
     } else {
-      onChange([...selectedServiceIds, id]);
+      // Toggle on: If it's ELECTRIC or WATER, remove other services of the same type first
+      if (service.type === 'ELECTRIC' || service.type === 'WATER') {
+        const otherServicesOfSameType = services
+          .filter(s => s.type === service.type && s.id !== id)
+          .map(s => s.id);
+        
+        const newSelection = selectedServiceIds.filter(sId => !otherServicesOfSameType.includes(sId));
+        onChange([...newSelection, id]);
+      } else {
+        onChange([...selectedServiceIds, id]);
+      }
     }
   };
 
@@ -88,7 +102,7 @@ export default function ServicePicker({
         return (
           <div 
             key={service.id}
-            onClick={() => handleToggle(service.id)}
+            onClick={() => handleToggle(service)}
             className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
               isSelected 
                 ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-900/10' 
@@ -104,25 +118,35 @@ export default function ServicePicker({
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{service.name}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
-                      {getCalculationLabel(service.calc_mode)}
-                    </span>
-                    {service.is_recurring && (
-                      <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
-                        Recurring
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+                        {getCalculationLabel(service.calc_mode)}
                       </span>
-                    )}
-                    {inheritedServiceIds.includes(service.id) && (
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md border border-emerald-100 dark:border-emerald-800/50">
-                        Property Default
-                      </span>
-                    )}
+                      {service.type === 'ELECTRIC' && (
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-black uppercase tracking-wider bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-md border border-amber-100 dark:border-amber-800/50 flex items-center gap-1">
+                          <Zap className="w-3 h-3" /> Điện
+                        </span>
+                      )}
+                      {service.type === 'WATER' && (
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-wider bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-md border border-blue-100 dark:border-blue-800/50 flex items-center gap-1">
+                          <Waves className="w-3 h-3" /> Nước
+                        </span>
+                      )}
+                      {service.is_recurring && (
+                        <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-md">
+                          Recurring
+                        </span>
+                      )}
+                      {inheritedServiceIds.includes(service.id) && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-md border border-emerald-100 dark:border-emerald-800/50">
+                          Property Default
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="text-right" onClick={e => e.stopPropagation()}>
+                <div className="text-right" onClick={e => e.stopPropagation()}>
                 {isSelected && onPriceChange && service.calc_mode !== 'tiered' ? (
                   <div className="flex items-center gap-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all">
                     <span className="text-sm font-bold text-slate-400">₫</span>

@@ -47,6 +47,23 @@ class MeterReadingController extends Controller
     }
 
     /**
+     * Lấy danh sách Lịch sử chốt chỉ số (Toàn cục).
+     * Hỗ trợ lọc theo property_id, status, v.v.
+     */
+    public function indexGlobal(Request $request)
+    {
+        $this->authorize('viewAny', MeterReading::class);
+
+        $readings = $this->service->paginate(
+            $request->query('filter', []),
+            $request->query('per_page', 15),
+            $request->query('search')
+        );
+
+        return MeterReadingResource::collection($readings);
+    }
+
+    /**
      * Lấy danh sách Lịch sử chốt chỉ số của một đồng hồ.
      *
      * @queryParam filter[status] string Trạng thái (DRAFT, SUBMITTED, APPROVED, REJECTED).
