@@ -61,6 +61,9 @@ class OrgSeeder extends Seeder
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
 
+        $orgIndex = 1;
+        $staffGlobalIndex = 1;
+
         foreach ($orgNames as $name) {
             $org = Org::factory()->create(['name' => $name]);
             // Create staff users for this org (Owners, Managers, Staff)
@@ -69,19 +72,19 @@ class OrgSeeder extends Seeder
             $this->command->line("└─ Số lượng: <fg=cyan>$usersPerOrg</>");
 
             for ($index = 0; $index < $usersPerOrg; $index++) {
-                $orgSlug = Str::slug($org->name);
                 $email = "";
                 $role = "";
 
                 if ($index === 0) {
                     $role = 'Owner';
-                    $email = "owner@{$orgSlug}.com";
+                    $email = "owner{$orgIndex}@example.com";
                 } elseif ($index === 1) {
                     $role = 'Manager';
-                    $email = "manager@{$orgSlug}.com";
+                    $email = "manager{$orgIndex}@example.com";
                 } else {
                     $role = 'Staff';
-                    $email = "staff" . ($index - 1) . "@{$orgSlug}.com";
+                    $email = "staff{$staffGlobalIndex}@example.com";
+                    $staffGlobalIndex++;
                 }
 
                 $fullName = fake('vi_VN')->name();
@@ -363,6 +366,7 @@ class OrgSeeder extends Seeder
                     }
                 }
             }
+            $orgIndex++;
         }
 
         $this->command->info("\n================================");
