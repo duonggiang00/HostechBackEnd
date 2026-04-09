@@ -26,33 +26,33 @@ interface KPICardProps {
 
 const KPICard = ({ title, value, icon: Icon, trend, description, color }: KPICardProps) => {
   const colorMap = {
-    indigo: 'from-indigo-500/20 to-indigo-500/5 dark:from-indigo-500/10 dark:to-indigo-500/5 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-500/20',
+    indigo: 'from-indigo-500/20 to-indigo-500/5 dark:from-indigo-500/10 dark:to-indigo-500/5 text-blue-900 dark:text-blue-400 border-blue-100 dark:border-blue-500/20',
     emerald: 'from-emerald-500/20 to-emerald-500/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20',
     amber: 'from-amber-500/20 to-amber-500/5 dark:from-amber-500/10 dark:to-amber-500/5 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-500/20',
-    slate: 'from-slate-500/20 to-slate-500/5 dark:from-slate-500/10 dark:to-slate-500/5 text-slate-600 dark:text-slate-400 border-slate-100 dark:border-slate-500/20',
+    slate: 'from-slate-500/20 to-slate-500/5 dark:from-slate-500/10 dark:to-slate-500/5 text-gray-600 dark:text-gray-400 border-gray-100 dark:border-gray-500/20',
     red: 'from-red-500/20 to-red-500/5 dark:from-red-500/10 dark:to-red-500/5 text-red-600 dark:text-red-400 border-red-100 dark:border-red-500/20',
     purple: 'from-purple-500/20 to-purple-500/5 dark:from-purple-500/10 dark:to-purple-500/5 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-500/20',
   };
 
   return (
     <motion.div
-      whileHover={{ y: -4 }}
-      className={`relative overflow-hidden bg-linear-to-br ${colorMap[color]} border rounded-3xl p-6 transition-all shadow-sm hover:shadow-xl hover:shadow-primary/5 group`}
+      whileHover={{ y: -2 }}
+      className={`relative overflow-hidden bg-linear-to-br ${colorMap[color]} border rounded-[12px] p-5 transition-all shadow-sm hover:shadow-md group`}
     >
       <div className="flex justify-between items-start relative z-10">
         <div className="space-y-1">
-          <p className="text-xs font-black uppercase tracking-widest opacity-70">{title}</p>
-          <p className="text-3xl font-black tracking-tight">{value}</p>
+          <p className="text-[12px] font-semibold opacity-80">{title}</p>
+          <p className="text-2xl font-bold tracking-tight">{value}</p>
         </div>
-        <div className="p-3 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-2xl border border-white/50 dark:border-slate-700 group-hover:scale-110 transition-transform">
-          <Icon className="h-6 w-6" />
+        <div className="p-2.5 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md rounded-lg border border-white/50 dark:border-gray-700 group-hover:scale-110 transition-transform">
+          <Icon className="h-5 w-5" />
         </div>
       </div>
       
       {(trend || description) && (
-        <div className="mt-4 flex items-center gap-2 relative z-10">
+        <div className="mt-3 flex items-center gap-1.5 relative z-10">
           <div className="h-1 w-1 rounded-full bg-current opacity-50" />
-          <p className="text-xs font-extrabold uppercase tracking-tight opacity-60">
+          <p className="text-[11px] font-medium opacity-70">
             {trend || description}
           </p>
         </div>
@@ -173,20 +173,21 @@ export default function ContractListPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#f8fafc] dark:bg-slate-900 transition-colors">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header Section */}
-      <div className="px-6 lg:px-8 py-8 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800 shadow-sm relative z-20 transition-colors">
-        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="px-6 lg:px-8 py-5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-800 shadow-sm relative z-20 transition-colors">
+        <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
           >
-            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
-              <FileText className="h-10 w-10 text-indigo-600 dark:text-indigo-400" />
-              Hợp Đồng Thuê
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-bold text-sm uppercase tracking-widest mt-2 flex items-center gap-2">
-              <span className="w-8 h-[2px] bg-indigo-500 dark:bg-indigo-400 rounded-full" />
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center shadow-sm">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="text-gray-900 dark:text-white text-[20px] font-bold tracking-tight">Hợp Đồng Thuê</h1>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 text-[12px] font-medium tracking-wide ml-11">
               Quản lý pháp lý & chu kỳ thuê
             </p>
           </motion.div>
@@ -198,10 +199,9 @@ export default function ContractListPage() {
             >
               <Button 
                 onClick={() => navigate(`/properties/${propertyId}/contracts/create`)}
-                size="lg"
-                className="rounded-2xl px-8 h-14 text-base font-black shadow-xl shadow-indigo-100 dark:shadow-indigo-900/20 hover:shadow-indigo-200 dark:hover:shadow-indigo-900/40 active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white"
+                className="rounded-[6px] px-5 h-10 text-[13px] font-semibold shadow-sm active:scale-95 transition-colors bg-amber-500 hover:bg-amber-600 text-white border-0 focus-visible:ring-2 focus-visible:ring-amber-500/50"
               >
-                <Plus className="mr-2 h-6 w-6" />
+                <Plus className="mr-2 h-4 w-4" />
                 Ký Hợp Đồng Mới
               </Button>
             </motion.div>
@@ -257,7 +257,7 @@ export default function ContractListPage() {
             transition={{ delay: 0.2 }}
           >
             {isLoading ? (
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-6 space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-[10px] border border-gray-200/80 dark:border-gray-700/80 p-6 space-y-4">
                 {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-14 w-full rounded-lg" />
                 ))}
@@ -282,12 +282,12 @@ export default function ContractListPage() {
 
           {/* Pagination */}
           {!isLoading && currentData.length > 0 && (
-            <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 p-4 shadow-sm transition-colors">
+            <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-[10px] border border-gray-200/80 dark:border-gray-700/80 p-4 shadow-sm transition-colors">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg flex items-center justify-center text-xs font-black text-slate-700 dark:text-slate-300">
+                <div className="w-8 h-8 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg flex items-center justify-center text-xs font-black text-gray-700 dark:text-gray-300">
                   {currentData.length}
                 </div>
-                <span className="text-xs font-black uppercase text-slate-400 tracking-widest">kết quả trang {page}</span>
+                <span className="text-xs font-black uppercase text-gray-400 tracking-widest">kết quả trang {page}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -300,7 +300,7 @@ export default function ContractListPage() {
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Trước
                 </Button>
-                <div className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 rounded-lg text-xs font-black">
+                <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-500/20 text-blue-900 dark:text-blue-400 rounded-lg text-xs font-black">
                   {page}
                 </div>
                 <Button

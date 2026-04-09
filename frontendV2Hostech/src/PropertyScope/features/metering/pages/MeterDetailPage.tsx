@@ -594,18 +594,18 @@ export default function MeterDetailPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors mb-4"
+            className="flex items-center gap-2 text-[#1E3A8A] hover:text-blue-900 transition-colors mb-4 text-sm font-semibold"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
             Quay lại
           </button>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white transition-colors">Chi tiết đồng hồ</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white transition-colors">Chi tiết đồng hồ</h1>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {/* Meter Info Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 transition-colors">
+        <div className="bg-white dark:bg-slate-800 rounded-[12px] shadow-sm border border-slate-200 dark:border-slate-700 p-6 transition-colors">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Code */}
             <div>
@@ -711,20 +711,20 @@ export default function MeterDetailPage() {
         {/* Readings Section */}
         <div>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 dark:text-white transition-colors">Lịch sử chốt số</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white transition-colors">Lịch sử chốt số</h2>
             <button
               onClick={() => showAddForm ? setShowAddForm(false) : handleOpenAddForm()}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white font-semibold rounded-[8px] text-sm hover:bg-[#D97706] transition-colors shadow-sm active:scale-95"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Thêm chốt số mới
             </button>
           </div>
 
           {/* Add Reading Form */}
           {showAddForm && (
-            <form onSubmit={handleAddReading} className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Thêm chốt số mới</h3>
+            <form onSubmit={handleAddReading} className="bg-white dark:bg-slate-800 rounded-[12px] shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6 transition-colors">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Thêm chốt số mới</h3>
 
               {formError && (
                 <div className="mb-4 p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-lg">
@@ -856,7 +856,7 @@ export default function MeterDetailPage() {
                 <button
                   type="submit"
                   disabled={isAddingReading}
-                  className="px-6 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm inline-flex items-center gap-2"
+                  className="px-6 py-2.5 bg-[#1E3A8A] text-white font-semibold rounded-[8px] hover:bg-blue-900 disabled:opacity-60 disabled:cursor-not-allowed transition-colors shadow-sm inline-flex items-center gap-2 text-sm"
                 >
                   {isAddingReading && <Loader2 className="w-4 h-4 animate-spin" />}
                   {isAddingReading ? 'Đang lưu...' : 'Lưu'}
@@ -868,7 +868,7 @@ export default function MeterDetailPage() {
                     setFormError('');
                     clearProofSelection();
                   }}
-                  className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
+                  className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-[8px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm text-sm"
                 >
                   Hủy
                 </button>
@@ -877,10 +877,10 @@ export default function MeterDetailPage() {
           )}
 
           {/* Readings Table */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+          <div className="bg-white dark:bg-slate-800 rounded-[12px] shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors text-sm">
             {readingsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
+                <Loader2 className="w-6 h-6 animate-spin text-[#1E3A8A] dark:text-blue-400" />
               </div>
             ) : readings.length === 0 ? (
               <div className="p-12 text-center">
@@ -892,12 +892,12 @@ export default function MeterDetailPage() {
                   <table className="w-full">
                     <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 transition-colors">
                       <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Thời gian</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Chỉ số</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 text-right">Mức sử sử dụng</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Ảnh</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
-                        <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Thời gian</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 text-right">Chỉ số</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 text-right">Mức sử sử dụng</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Ảnh</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Trạng thái</th>
+                        <th className="px-6 py-3 text-right font-semibold text-slate-900 dark:text-slate-300">Hành động</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">

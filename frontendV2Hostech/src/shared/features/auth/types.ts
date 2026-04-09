@@ -20,7 +20,7 @@ export interface AuthResponse {
     email: string;
     phone?: string;
     /** Single role string — used for routing decisions */
-    role: 'Owner' | 'Manager' | 'Staff' | 'Tenant';
+    role: 'Admin' | 'Owner' | 'Manager' | 'Staff' | 'Tenant';
     /** Array alias kept for backwards compat */
     roles: string[];
     /** org_id returned at login (null for Admin) */
@@ -36,7 +36,7 @@ export interface AuthUser {
   full_name: string;
   email: string;
   phone?: string;
-  role: 'Owner' | 'Manager' | 'Staff' | 'Tenant';
+  role: 'Admin' | 'Owner' | 'Manager' | 'Staff' | 'Tenant';
   roles?: string[];
   org_id: string | null;
   /** Assigned properties for Manager/Staff. Empty for Admin/Owner/Tenant. */

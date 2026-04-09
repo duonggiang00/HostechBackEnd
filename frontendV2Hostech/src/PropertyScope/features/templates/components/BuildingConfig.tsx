@@ -5,9 +5,6 @@ import {
   Ruler, 
   Combine, 
   Layers, 
-  Coins, 
-  ShieldCheck, 
-  Calendar,
   Save,
   Loader2,
   AlertCircle,
@@ -287,87 +284,7 @@ export function BuildingConfig({ propertyId }: BuildingConfigProps) {
           </div>
         </motion.div>
 
-        {/* Default Values & Standards */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-xl lg:col-span-2"
-        >
-          <SectionHeader 
-            icon={Coins} 
-            title="Tiêu chuẩn vận hành mặc định" 
-            description="Các giá trị tự động áp dụng khi tạo phòng hoặc hợp đồng mới" 
-            colorClass="bg-violet-500/10 text-violet-600"
-          />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Coins className="w-3 h-3 text-indigo-500" /> Đơn giá / m²
-              </label>
-              <div className="relative">
-                <Input 
-                  type="number"
-                  name="default_rent_price_per_m2" 
-                  value={formData?.default_rent_price_per_m2} 
-                  onChange={handleChange}
-                  className="rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:ring-indigo-500/20 font-bold h-12 pr-10"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">đ</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3 text-emerald-500" /> Số tháng cọc
-              </label>
-              <Input 
-                type="number"
-                name="default_deposit_months" 
-                value={formData?.default_deposit_months} 
-                onChange={handleChange}
-                className="rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:ring-indigo-500/20 font-bold h-12"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar className="w-3 h-3 text-blue-500" /> Ngày thu tiền
-              </label>
-              <div className="relative">
-                <Input 
-                  type="number"
-                  min="1"
-                  max="31"
-                  name="default_due_day" 
-                  value={formData?.default_due_day} 
-                  onChange={handleChange}
-                  className="rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:ring-indigo-500/20 font-bold h-12 pr-10"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase italic">Hàng tháng</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Calendar className="w-3 h-3 text-amber-500" /> Ngày chốt chỉ số
-              </label>
-              <div className="relative">
-                <Input 
-                  type="number"
-                  min="1"
-                  max="31"
-                  name="default_cutoff_day" 
-                  value={formData?.default_cutoff_day} 
-                  onChange={handleChange}
-                  className="rounded-2xl border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 focus:ring-indigo-500/20 font-bold h-12 pr-10"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 uppercase italic">Hàng tháng</span>
-              </div>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   );

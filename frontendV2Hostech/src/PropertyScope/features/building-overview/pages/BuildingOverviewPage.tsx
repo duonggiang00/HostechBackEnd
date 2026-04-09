@@ -104,16 +104,18 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50/30 overflow-hidden h-full">
+    <div className="flex-1 flex flex-col bg-gray-50 overflow-hidden h-full">
       {/* Header */}
       {!hideHeader && (
-        <div className="bg-white px-8 py-6 border-b border-slate-200 shadow-sm shrink-0 flex items-center justify-between">
+        <div className="bg-white px-8 py-5 border-b border-gray-200 shadow-sm shrink-0 flex items-center justify-between z-10 relative">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="w-5 h-5 text-indigo-600" />
-              <h1 className="text-slate-900 text-2xl font-black tracking-tight uppercase">Mặt bằng tòa nhà</h1>
+            <div className="flex items-center gap-3 mb-1.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center shadow-sm">
+                <Building2 className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="text-gray-900 text-[20px] font-bold tracking-tight">Mặt Bằng Tòa Nhà</h1>
             </div>
-            <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Trực quan hóa không gian & Trạng thái vận hành</p>
+            <p className="text-gray-500 text-[12px] font-medium tracking-wide ml-11">Trực quan hóa không gian & trạng thái hiện tại</p>
           </div>
 
           <div className="flex items-center gap-3">
@@ -121,7 +123,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
               <button
                 onClick={handleEnterEdit}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 hover:scale-105 active:scale-95 text-sm disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-amber-500 text-white rounded-[6px] font-semibold hover:bg-amber-600 transition-colors shadow-sm text-[13px] disabled:opacity-50 focus-visible:outline-none focus:ring-2 focus:ring-amber-500/50"
               >
                 <Pencil className="w-4 h-4" />
                 Chỉnh sửa mặt bằng
@@ -131,19 +133,19 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
                   <button
                     onClick={handleCancel}
                     disabled={syncMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg font-bold hover:bg-slate-50 transition-all active:scale-95 text-xs"
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors text-[13px] focus-visible:outline-none focus:ring-2 focus:ring-gray-300"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <X className="w-4 h-4" />
                     Hủy bỏ
                   </button>
                   <button
                     onClick={handleSave}
                     disabled={syncMutation.isPending}
-                    className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all active:scale-95 text-xs shadow-md shadow-emerald-100 disabled:opacity-70"
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-[6px] font-semibold hover:bg-green-700 transition-colors text-[13px] shadow-sm disabled:opacity-70 focus-visible:outline-none focus:ring-2 focus:ring-green-600/50"
                   >
                     {syncMutation.isPending
-                      ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      : <Save className="w-3.5 h-3.5" />
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Save className="w-4 h-4" />
                     }
                     {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
@@ -155,14 +157,14 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
 
       {/* Error State */}
       {error && (
-        <div className="mx-8 mt-4 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-sm font-medium">
+        <div className="mx-8 mt-4 p-4 bg-red-50 border border-red-200 rounded-[8px] text-red-700 text-sm font-medium">
           Không thể tải mặt bằng. <button onClick={() => refetch()} className="underline font-bold">Thử lại</button>
         </div>
       )}
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 overflow-auto custom-scrollbar bg-pattern-dots">
+        <div className="flex-1 overflow-auto custom-scrollbar">
           <BuildingOverview
             floors={displayFloors}
             templates={overview?.templates ?? []}

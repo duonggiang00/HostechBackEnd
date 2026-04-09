@@ -167,8 +167,8 @@ export default function MeterListPage() {
       {/* Header */}
       <div className="flex items-center justify-between pt-6">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Quản lý Đồng hồ</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Quản lý Đồng hồ</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Theo dõi và quản lý đồng hồ điện, nước của tòa nhà</p>
         </div>
         <div className="flex items-center gap-3">
           {isManager && pendingCount > 0 && (
@@ -185,9 +185,9 @@ export default function MeterListPage() {
           )}
           <button
             onClick={() => navigate(`/properties/${propertyId}/meters/quick`)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 text-[#1E3A8A] border border-slate-200 dark:border-slate-700 rounded-[8px] text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm active:scale-95"
           >
-            <Zap className="w-5 h-5 text-yellow-500" />
+            <Zap className="w-4 h-4 text-[#F59E0B]" />
             Chốt số nhanh
           </button>
           <button
@@ -195,9 +195,9 @@ export default function MeterListPage() {
               setEditingMeter(null);
               setShowFormModal(true);
             }}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-lg active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white rounded-[8px] text-sm font-semibold hover:bg-[#D97706] transition-all shadow-sm active:scale-95"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
             Thêm đồng hồ
           </button>
         </div>
@@ -205,36 +205,36 @@ export default function MeterListPage() {
 
       {/* Stats Cards - derived from meter list */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tổng số</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{pagination?.total ?? meters.length}</p>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] p-4 shadow-sm flex flex-col justify-center">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Tổng số</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{pagination?.total ?? meters.length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đang hoạt động</p>
-          <p className="text-2xl font-black text-green-600 dark:text-green-400 mt-1">{meters.filter((m: any) => m.is_active !== false).length}</p>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] p-4 shadow-sm flex flex-col justify-center border-l-4 border-l-[#10B981]">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Đang hoạt động</p>
+          <p className="text-2xl font-bold text-[#10B981] dark:text-[#10B981] mt-1">{meters.filter((m: any) => m.is_active !== false).length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Điện</p>
-          <p className="text-2xl font-black text-yellow-600 dark:text-yellow-400 mt-1">{meters.filter((m: any) => m.type === 'ELECTRIC').length}</p>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] p-4 shadow-sm flex flex-col justify-center border-l-4 border-l-[#1E3A8A]">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Đồng hồ Điện</p>
+          <p className="text-2xl font-bold text-[#1E3A8A] dark:text-blue-400 mt-1">{meters.filter((m: any) => m.type === 'ELECTRIC').length}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Đồng hồ Nước</p>
-          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{meters.filter((m: any) => m.type === 'WATER').length}</p>
+        <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] p-4 shadow-sm flex flex-col justify-center border-l-4 border-l-blue-400">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Đồng hồ Nước</p>
+          <p className="text-2xl font-bold text-blue-500 dark:text-blue-400 mt-1">{meters.filter((m: any) => m.type === 'WATER').length}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] p-4 shadow-sm space-y-4">
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
               type="text"
               placeholder="Tìm kiếm mã đồng hồ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:outline-none focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] text-slate-900 dark:text-white placeholder:text-slate-400 text-sm"
             />
           </div>
 
@@ -247,7 +247,7 @@ export default function MeterListPage() {
                 type: (e.target.value as 'ELECTRIC' | 'WATER' | '') || '',
               })
             }
-            className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
+            className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:outline-none focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] text-slate-900 dark:text-white text-sm"
           >
             <option value="">Loại - Tất cả</option>
             <option value="ELECTRIC">Điện</option>
@@ -272,7 +272,7 @@ export default function MeterListPage() {
                     : e.target.value === 'true',
               });
             }}
-            className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-slate-900 dark:text-white"
+            className="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:outline-none focus:border-[#1E3A8A] focus:ring-1 focus:ring-[#1E3A8A] text-slate-900 dark:text-white text-sm"
           >
             <option value="">Trạng thái - Tất cả</option>
             <option value="true">Đang hoạt động</option>
@@ -285,14 +285,14 @@ export default function MeterListPage() {
           <button
             onClick={handleApplyFilters}
             disabled={!isFilterChanged}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E3A8A] text-white rounded-[8px] text-sm font-semibold hover:bg-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
           >
             <Filter className="w-4 h-4" />
             Áp dụng
           </button>
           <button
             onClick={handleClearFilters}
-            className="inline-flex items-center gap-2 px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-[8px] text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
           >
             <RotateCcw className="w-4 h-4" />
             Xóa bộ lọc
@@ -301,11 +301,11 @@ export default function MeterListPage() {
       </div>
 
       {/* Meters Table */}
-      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mx-auto mb-3" />
+              <Loader2 className="w-8 h-8 text-[#1E3A8A] animate-spin mx-auto mb-3" />
               <p className="text-slate-500">Đang tải...</p>
             </div>
           </div>
@@ -317,17 +317,17 @@ export default function MeterListPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-linear-to-r from-slate-50 to-slate-100 dark:from-slate-800/80 dark:to-slate-800/40 border-b border-slate-200 dark:border-slate-700">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300 w-12">STT</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Mã đồng hồ</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Loại</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Master</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Mã phòng</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700 dark:text-slate-300">Chỉ số hiện tại</th>
-                  <th className="px-6 py-4 text-right text-sm font-semibold text-slate-700 dark:text-slate-300">Hành động</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 w-12">STT</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Mã đồng hồ</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Loại</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Master</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Trạng thái</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Phòng</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Chỉ số hiện tại</th>
+                  <th className="px-6 py-3 text-right font-semibold text-slate-900 dark:text-slate-300">Hành động</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -372,7 +372,7 @@ export default function MeterListPage() {
                       {/* Master */}
                       <td className="px-6 py-4">
                         {meter.is_master ? (
-                          <div className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                          <div className="flex items-center gap-1 text-[#F59E0B] dark:text-[#F59E0B]">
                             <Crown className="w-4 h-4" />
                             <span className="text-xs font-semibold">Có</span>
                           </div>

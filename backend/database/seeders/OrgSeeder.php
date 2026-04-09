@@ -53,17 +53,10 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgNames = [
-            'test',
-            // 'Nam Thanh',
-            // 'Thăng Long',
-            // 'Ngọc Ánh',
-            // 'Titanic',
-            // 'Love Street Hotel',
+            'Công ty TNHH Bất Động Sản An Khang',
+            'Ban quản lý Tòa nhà Sao Mai',
         ];
         $orgCount = count($orgNames);
-        $usersPerOrg = 10;
-        $propertiesPerOrg = rand(2, 3);
-        $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
@@ -71,7 +64,7 @@ class OrgSeeder extends Seeder
         foreach ($orgNames as $name) {
             $org = Org::factory()->create(['name' => $name]);
             // Create staff users for this org (Owners, Managers, Staff)
-            $usersPerOrg = 10;
+            $usersPerOrg = 4;
             $this->command->info("\n👥 Tạo đội ngũ quản lý cho tổ chức: <fg=yellow>{$org->name}</>");
             $this->command->line("└─ Số lượng: <fg=cyan>$usersPerOrg</>");
 
@@ -80,25 +73,32 @@ class OrgSeeder extends Seeder
                 $email = "";
                 $role = "";
 
-                if ($index < 2) {
+                if ($index === 0) {
                     $role = 'Owner';
-                    $email = "{$orgSlug}_owner_" . ($index + 1) . "@example.com";
-                } elseif ($index < 5) {
+                    $email = "owner@{$orgSlug}.com";
+                } elseif ($index === 1) {
                     $role = 'Manager';
-                    $email = "{$orgSlug}_manager_" . ($index - 1) . "@example.com";
+                    $email = "manager@{$orgSlug}.com";
                 } else {
                     $role = 'Staff';
-                    $email = "{$orgSlug}_staff_" . ($index - 4) . "@example.com";
+                    $email = "staff" . ($index - 1) . "@{$orgSlug}.com";
                 }
 
+                $fullName = fake('vi_VN')->name();
                 $user = User::updateOrCreate(
                     ['email' => $email],
                     [
                         'org_id' => $org->id,
-                        'full_name' => fake()->name(),
+                        'full_name' => $fullName,
                         'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
                         'email_verified_at' => now(),
                         'is_active' => true,
+                        'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+                        'identity_number' => fake()->numerify('0############'),
+                        'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+                        'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+                        'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+                        'address' => fake('vi_VN')->address(),
                     ]
                 );
                 $user->syncRoles([$role]);
@@ -186,48 +186,39 @@ class OrgSeeder extends Seeder
 
             // Create properties
             $this->command->info("\n🏢 Tạo bất động sản (Properties)...");
+            $propertiesPerOrg = 1;
             $this->command->line("└─ Số lượng bất động sản: <fg=cyan>$propertiesPerOrg</>");
 
-            Property::factory(rand(2, 3))
+            Property::factory($propertiesPerOrg)
                 ->state(['org_id' => $org->id])
                 ->sequence(fn ($sequence) => [
-                    'area' => rand(70, 200),
-                    'shared_area' => rand(7, 20), // ~10% shared area
+                    'area' => 150,
+                    'shared_area' => 15, // ~10% shared area
                 ])
                 ->create()
                 ->each(function (Property $property, $index) use ($org, $serviceIds) {
-                    $floorsCount = rand(3, 4);
+                    $floorsCount = 1;
                     // Get all managers and staff for this org
                     $managers = User::where('org_id', $org->id)->role('Manager')->get();
                     $staffs = User::where('org_id', $org->id)->role('Staff')->get();
 
-                    // Assign 1 Manager and 2 Staff per property (round-robin if needed)
-                    // If we have 3 managers and 5 properties, some managers will have 2 buildings.
-                    $manager = $managers[$index % $managers->count()];
-                    $staff1 = $staffs[($index * 2) % $staffs->count()];
-                    $staff2 = $staffs[($index * 2 + 1) % $staffs->count()];
+                    // Assign 1 Manager and all Staff per property
+                    $manager = $managers->first();
+                    $propertyStaffs = $staffs;
                     
                     if ($manager) $property->managers()->attach($manager->id);
-                    if ($staff1) $property->managers()->attach($staff1->id);
-                    if ($staff2) $property->managers()->attach($staff2->id);
+                    foreach ($propertyStaffs as $ps) {
+                        $property->managers()->attach($ps->id);
+                    }
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
-                    // Create 1-3 Room templates for this property
-                    $templateCount = rand(1, 3);
-                    $availableAreaPerFloor = $property->area - ($property->shared_area ?? 5);
-                    $templates = RoomTemplate::factory($templateCount)->create([
+                    // Create 1 Room template
+                    $templates = RoomTemplate::factory(1)->create([
                         'org_id' => $org->id,
                         'property_id' => $property->id,
-                        // Realistic Vietnamese room sizes: 15-50m2, mostly 20-30m2
-                        'area' => fn() => min(rand(15, 30), $availableAreaPerFloor),
+                        'area' => 25,
                     ]);
-                    $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</>");
-
-                    // Create floors
-                    $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
-
-                    $totalRoomsInProperty = 0; 
 
                     for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
@@ -239,37 +230,20 @@ class OrgSeeder extends Seeder
                             'sort_order'   => $i,
                         ]);
 
-                        $availableArea = $property->area - ($property->shared_area ?? 0);
-                        // Realistic room count based on area (min 15m2 per room)
-                        $maxRoomsByArea = max(1, floor($availableArea / 15));
-                        $roomsOnFloor = rand(max(1, floor($maxRoomsByArea / 2)), min(6, $maxRoomsByArea)); 
-                        
-                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích khả dụng: {$availableArea}m2)");
+                        $roomsOnFloor = 5; 
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng");
 
-                        $remainingArea = $availableArea;
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
-                            // Pick a random template
                             $template = $templates->random();
-                            
-                            // Ensure each room leaves enough area for remaining rooms (min 15m2 each)
-                            $minAreaForOthers = ($roomsOnFloor - $j - 1) * 15;
-                            $maxAllowedForThis = $remainingArea - $minAreaForOthers;
-                            
-                            $roomArea = min($template->area, $maxAllowedForThis);
-                            if ($roomArea < 15) $roomArea = 15;
-                            if ($roomArea > $remainingArea) $roomArea = $remainingArea;
-
                             Room::factory()->create([
                                 'org_id' => $org->id,
                                 'property_id' => $property->id,
                                 'floor_id' => $floor->id,
-                                'area' => $roomArea,
+                                'area' => 25,
                                 'capacity' => $template->capacity,
                                 'base_price' => $template->base_price,
                                 'floor_number' => $i,
                             ]);
-
-                            $remainingArea -= $roomArea;
                         }
                     }
 
@@ -291,7 +265,7 @@ class OrgSeeder extends Seeder
                             'code' => $mConfig['prefix'] . $property->code,
                             'type' => $mConfig['type'],
                             'is_master' => true,
-                            'base_reading' => 0, // Will be updated if sum is needed
+                            'base_reading' => 0,
                             'installed_at' => '2025-01-01',
                             'is_active' => true,
                             'created_at' => '2025-01-01',
@@ -304,26 +278,14 @@ class OrgSeeder extends Seeder
             // 3. ASSIGN ROOM SERVICES, CONTRACTS, INVOICES
             // ---------------------------------------------------------
             $properties = Property::where('org_id', $org->id)->get();
-            $baseCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
             $ownerId = User::where('org_id', $org->id)->first()->id;
 
             foreach ($properties as $property) {
-                $masterMeterIds = DB::table('meters')
-                    ->where('property_id', $property->id)
-                    ->where('is_master', true)
-                    ->pluck('id', 'type')
-                    ->toArray();
-
-                $propertyMonthlyUsage = []; // [month_string][type] => sum_usage
+                $roomsInProperty = Room::where('property_id', $property->id)->get();
+                $propertyMonthlyUsage = [];
                 $initialMeterSum = ['ELECTRIC' => 0, 'WATER' => 0];
 
-                $roomsInProperty = Room::where('property_id', $property->id)->get();
-                $occupancyRate = rand(50, 80) / 100;
-                $numOccupiedRooms = round($roomsInProperty->count() * $occupancyRate);
-                $occupiedRoomIds = $roomsInProperty->random($numOccupiedRooms)->pluck('id')->toArray();
-
                 foreach ($roomsInProperty as $room) {
-                    // A. Assign Room Services & Meters (Ensure every room has meters)
                     $propertyStaffId = DB::table('property_user')
                         ->join('model_has_roles', 'property_user.user_id', '=', 'model_has_roles.model_id')
                         ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
@@ -356,12 +318,9 @@ class OrgSeeder extends Seeder
                             'updated_at' => '2025-01-01',
                         ]);
                         $meters[] = ['id' => $meterId, 'config' => $mConfig, 'last_value' => $initialValue];
-                        $initialMeterSum[$mConfig['type']] += $initialValue;
                     }
 
-                    $mandatoryCodes = ['DIEN', 'NUOC'];
-                    $otherCodes = ['INTERNET', 'QL', 'VS'];
-                    $selectedCodes = array_merge($mandatoryCodes, fake()->randomElements($otherCodes, fake()->numberBetween(1, 3)));
+                    $selectedCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
                     foreach ($selectedCodes as $code) {
                         DB::table('room_services')->insert([
                             'id' => Str::uuid()->toString(),
@@ -375,34 +334,18 @@ class OrgSeeder extends Seeder
                         ]);
                     }
 
-                    // B. Sequential Contracts
-                    $currentDate = Carbon::parse('2025-01-01');
-                    $cutoffDate = Carbon::parse('2026-03-31');
-                    $numEndedContracts = rand(1, 2);
-                    $isActiveRoom = in_array($room->id, $occupiedRoomIds);
+                    // Only 1 Active Contract
+                    $startDate = Carbon::parse('2026-01-01');
+                    $endDate = Carbon::parse('2027-01-01');
+                    $this->createContractWithInvoices(
+                        $org, $room, $ownerId, $startDate, $endDate, 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
+                    );
+                    $room->update(['status' => 'occupied']);
 
-                    // 1. Ended Contracts
-                    for ($k = 0; $k < $numEndedContracts; $k++) {
-                        if ($currentDate->gt($cutoffDate->copy()->subMonths(6))) break;
-
-                        $duration = rand(3, 6);
-                        $endDate = $currentDate->copy()->addMonths($duration);
-                        
-                        $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId, $propertyMonthlyUsage
-                        );
-
-                        $currentDate = $endDate->copy()->addMonths(1)->startOfMonth();
-                    }
-
-                    // 2. Active Contract
-                    if ($isActiveRoom && $currentDate->lt($cutoffDate)) {
-                        $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
-                        );
-                        $room->update(['status' => 'occupied']);
-                    } else {
-                        // $room->update(['status' => 'draft']);
+                    // Track usage for master meter
+                    foreach ($meters as $m) {
+                        $type = $m['config']['type'] === 'ELECTRIC' ? 'ELECTRIC' : 'WATER';
+                        $initialMeterSum[$type] = ($initialMeterSum[$type] ?? 0) + ($m['last_value'] - $m['config']['min']);
                     }
                 }
 
@@ -489,16 +432,13 @@ class OrgSeeder extends Seeder
         $this->createHandoverForContract($contract, 'OUT', $endDate);
     }
     
-    $numMembers = rand(2, 3);
+    $numMembers = rand(1, 2);
     for ($i = 0; $i < $numMembers; $i++) {
         // Dynamically create a tenant user for each contract member
         $fullName = fake('vi_VN')->name();
         
-        $isActive = in_array($status, ['ACTIVE', 'PENDING_TERMINATION']);
-        $prefix = $isActive ? 'test_tenant_' : 'free_tenant_';
-        $counter = $isActive ? self::$testTenantCounter++ : self::$freeTenantCounter++;
-        
-        $email = $prefix . $counter . "@example.com";
+        $emailName = Str::slug($fullName, '.');
+        $email = $emailName . fake()->numberBetween(10, 99) . "@gmail.com";
         
         $memberUser = User::create([
             'id' => Str::uuid()->toString(),
@@ -508,6 +448,12 @@ class OrgSeeder extends Seeder
             'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
             'email_verified_at' => now(),
             'is_active' => true,
+            'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+            'identity_number' => fake()->numerify('0############'),
+            'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+            'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+            'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+            'address' => fake('vi_VN')->address(),
         ]);
         $memberUser->assignRole('Tenant');
 

@@ -14,7 +14,8 @@ import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import SignatureModal from '../components/SignatureModal';
-import { PenTool } from 'lucide-react';
+import { AddMemberModal } from '../components/AddMemberModal';
+import { PenTool, UserPlus } from 'lucide-react';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -47,6 +48,7 @@ export default function ContractDetailPage() {
   const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const { signContract } = useContractActions();
@@ -356,10 +358,22 @@ export default function ContractDetailPage() {
 
             {/* Members / Occupants */}
             <section>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
-                <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                Thành viên & Cư dân
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 italic transition-colors">
+                  <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  Thành viên & Cư dân
+                </h3>
+
+                {['DRAFT', 'PENDING_SIGNATURE', 'PENDING_PAYMENT', 'ACTIVE'].includes(contract.status as string) && (
+                  <button
+                    onClick={() => setIsAddMemberOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/30"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Thêm cư dân
+                  </button>
+                )}
+              </div>
               
               <div className="overflow-hidden bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-4xl shadow-sm transition-colors">
                 <table className="w-full text-left border-collapse">
@@ -544,6 +558,11 @@ export default function ContractDetailPage() {
             }
           });
         }}
+      />
+      <AddMemberModal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        contractId={contractId || ''}
       />
     </div>
   );

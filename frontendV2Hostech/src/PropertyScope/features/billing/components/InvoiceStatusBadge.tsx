@@ -14,37 +14,37 @@ const STATUS_CONFIG: Record<
     label: 'Nháp',
     icon: <FileText className="w-3 h-3" />,
     className:
-      'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600',
+      'bg-[#F3F4F6] text-[#4B5563] border border-[#E5E7EB]',
   },
   ISSUED: {
     label: 'Đã phát hành',
     icon: <Clock className="w-3 h-3" />,
     className:
-      'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30',
+      'bg-[#FEF3C7] text-[#F59E0B] border border-[#FDE68A]',
   },
   PAID: {
     label: 'Đã thanh toán',
     icon: <CheckCircle2 className="w-3 h-3" />,
     className:
-      'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30',
+      'bg-[#D1FAE5] text-[#10B981] border border-[#A7F3D0]',
   },
   PARTIALLY_PAID: {
     label: 'Thanh toán 1 phần',
     icon: <CreditCard className="w-3 h-3" />,
     className:
-      'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30',
+      'bg-[#DBEAFE] text-[#1E3A8A] border border-[#BFDBFE]',
   },
   OVERDUE: {
     label: 'Quá hạn',
     icon: <AlertCircle className="w-3 h-3" />,
     className:
-      'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30',
+      'bg-[#FEE2E2] text-[#EF4444] border border-[#FECACA]',
   },
   CANCELLED: {
     label: 'Đã hủy',
     icon: <Ban className="w-3 h-3" />,
     className:
-      'bg-slate-100 dark:bg-slate-700/60 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600 line-through',
+      'bg-[#F3F4F6] text-[#9CA3AF] border border-[#E5E7EB] line-through',
   },
 };
 
@@ -54,7 +54,7 @@ export function InvoiceStatusBadge({ status, size = 'sm' }: InvoiceStatusBadgePr
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-black uppercase tracking-widest ${sizeClass} ${config.className} transition-colors`}
+      className={`inline-flex items-center gap-1.5 rounded-[6px] font-black uppercase tracking-widest ${sizeClass} ${config.className} transition-colors`}
     >
       {config.icon}
       {config.label}

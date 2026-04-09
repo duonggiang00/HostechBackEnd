@@ -30,5 +30,12 @@ class RBACSeeder extends Seeder
         $this->command->info("   - Modules scanned: {$stats['modules']}");
         $this->command->info("   - Permissions: {$stats['permissions_created']}");
         $this->command->info("   - Roles synced: {$stats['roles_synced']}");
+
+        // 3. SPECIAL: Grant FULL permissions to Staff role as requested
+        $this->command->info("\n🛡️ Granting FULL permissions to Staff role...");
+        $staffRole = Role::firstOrCreate(['name' => 'Staff', 'guard_name' => 'web']);
+        $allPermissions = \Spatie\Permission\Models\Permission::all();
+        $staffRole->syncPermissions($allPermissions);
+        $this->command->info('✅ Staff role now has full system permissions.');
     }
 }

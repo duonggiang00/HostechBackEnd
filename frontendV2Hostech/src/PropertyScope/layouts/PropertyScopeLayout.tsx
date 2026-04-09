@@ -19,6 +19,7 @@ import {
   LayoutGrid,
   LayoutTemplate,
   ScrollText,
+  type LucideIcon,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import { useScopeExitPath } from '@/shared/hooks/useDashboardHomePath';
@@ -39,6 +40,7 @@ interface PropertyScopeLayoutProps {
 interface SidebarSection {
   id: string;
   label: string;
+  icon?: LucideIcon;
   defaultOpen?: boolean;
   items: SidebarDropdownItem[];
   path?: string;
@@ -71,73 +73,76 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const menuSections: SidebarSection[] = [
     {
-      id: 'building_overview',
-      label: 'Vận hành Tòa nhà',
+      id: 'overview',
+      label: '', // Không hiển thị nhãn sẽ khiến Trang Chủ hiển thị ở cấp thư mục gốc (Root)
       defaultOpen: true,
       path: `/properties/${propertyId}/dashboard`,
       items: [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Trang chủ', path: `/properties/${propertyId}/dashboard`, exact: true },
-        { id: 'floorplan', icon: Layers, label: 'Sơ đồ', path: `/properties/${propertyId}/building-view` },
-        { id: 'rooms', icon: DoorOpen, label: 'Phòng', path: `/properties/${propertyId}/rooms` },
       ],
     },
     {
-      id: 'building_config',
-      label: 'Cấu hình & Thiết lập',
-      path: `/properties/${propertyId}/templates/building`,
+      id: 'spaces',
+      label: 'Không Gian Cho Thuê',
+      icon: LayoutGrid,
+      defaultOpen: true,
       items: [
-        { id: 'details', icon: Settings, label: 'Chi tiết tòa nhà', path: `/properties/${propertyId}/templates/building`, exact: true },
-        { id: 'services', icon: DollarSign, label: 'Dịch vụ', path: `/properties/${propertyId}/templates/services`, exact: true },
-        { id: 'templates', icon: LayoutTemplate, label: 'Phòng Mẫu', path: `/properties/${propertyId}/templates/rooms`, exact: true },
+        { id: 'floorplan', icon: Layers, label: 'Mặt bằng tòa nhà', path: `/properties/${propertyId}/building-view` },
+        { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: `/properties/${propertyId}/rooms` },
+        { id: 'templates', icon: LayoutTemplate, label: 'Cấu hình mẫu phòng', path: `/properties/${propertyId}/templates/rooms`, exact: true },
       ],
     },
-
     {
-      id: 'building_ops',
-      label: 'Vận hành tòa nhà',
+      id: 'finance_business',
+      label: 'Tài Chính & Kinh Doanh',
+      icon: DollarSign,
+      defaultOpen: true,
       items: [
-        { 
-          id: 'meters', 
-          icon: Gauge, 
-          label: 'Đồng hồ', 
-          path: `/properties/${propertyId}/meters`,
-          children: [
-            { id: 'meters-list', label: 'Quản lý chỉ số', path: `/properties/${propertyId}/meters`, exact: true },
-            { id: 'meters-quick', label: 'Nhập chỉ số nhanh', path: `/properties/${propertyId}/meters/quick` }
-          ]
-        },
         { 
           id: 'contracts', 
           icon: ScrollText, 
-          label: 'Hợp đồng', 
+          label: 'Quản lý hợp đồng', 
           path: `/properties/${propertyId}/contracts`,
           badge: contractAttentionCount > 0 ? contractAttentionCount : undefined,
-          children: [
-            { id: 'contracts-list', label: 'Danh sách hợp đồng', path: `/properties/${propertyId}/contracts`, exact: true },
-            { id: 'contracts-create', label: 'Tạo hợp đồng nhanh', path: `/properties/${propertyId}/contracts/create` }
-          ]
+        },
+        { 
+          id: 'meters', 
+          icon: Gauge, 
+          label: 'Chỉ số điện nước', 
+          path: `/properties/${propertyId}/meters`,
         },
         { 
           id: 'invoices', 
           icon: CreditCard, 
-          label: 'Hóa đơn', 
+          label: 'Hóa đơn & Thu tiền', 
           path: `/properties/${propertyId}/billing`,
           badge: issuedInvoiceCount > 0 ? issuedInvoiceCount : undefined,
+        },
+        { id: 'services', icon: DollarSign, label: 'Bảng giá dịch vụ', path: `/properties/${propertyId}/templates/services`, exact: true },
+      ],
+    },
+    {
+      id: 'operations',
+      label: 'Cư dân & Vận Hành',
+      icon: Building2,
+      defaultOpen: true,
+      items: [
+        { id: 'users', icon: User, label: 'Danh sách cư dân', path: `/properties/${propertyId}/users` },
+        { 
+          id: 'tickets', 
+          icon: Ticket, 
+          label: 'Yêu cầu hỗ trợ', 
+          path: `/properties/${propertyId}/tickets`,
+          badge: openCount > 0 ? openCount : undefined,
         },
       ],
     },
     {
-      id: 'user_management',
-      label: 'Nhóm người dùng',
+      id: 'settings',
+      label: 'Cài Đặt Tòa nhà',
+      icon: Settings,
       items: [
-        { id: 'users', icon: User, label: 'Người dùng', path: `/properties/${propertyId}/users` },
-        { 
-          id: 'tickets', 
-          icon: Ticket, 
-          label: 'Ticket', 
-          path: `/properties/${propertyId}/tickets`,
-          badge: openCount > 0 ? openCount : undefined,
-        },
+        { id: 'details', icon: Settings, label: 'Thông tin tòa nhà', path: `/properties/${propertyId}/templates/building`, exact: true },
       ],
     },
   ];
@@ -146,21 +151,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const scopeExitPath = useScopeExitPath();
 
-  const exitLink = (
-    <div className="px-2 pb-2">
-      <Link
-        to={scopeExitPath}
-        className="group flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-500 transition-all hover:bg-slate-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-indigo-400 border border-transparent hover:border-slate-100 dark:hover:border-slate-700 shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none bg-white dark:bg-slate-900"
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-400 transition-colors group-hover:bg-indigo-50 group-hover:text-indigo-600 dark:bg-slate-800 dark:text-slate-500 dark:group-hover:bg-indigo-900/30 dark:group-hover:text-indigo-400">
-          {user?.role === 'Owner' ? <ArrowLeftCircle className="h-4.5 w-4.5" /> : <LayoutGrid className="h-4.5 w-4.5" />}
-        </div>
-        <span className="text-left leading-tight">
-          {user?.role === 'Owner' ? 'Về Dashboard Tổ chức' : 'Đổi cơ sở làm việc'}
-        </span>
-      </Link>
-    </div>
-  );
+  const exitLink = null;
 
   const extraContent = null;
 
@@ -171,7 +162,6 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         menuSections={propertyId ? menuSections : []}
-        switcher={<PropertySwitcher variant="sidebar" />}
         extraContent={extraContent}
         profilePath={`/properties/${propertyId}/profile`}
         exitLink={exitLink}
@@ -197,7 +187,8 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             <div className="relative hidden md:block group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
-                type="text"
+                type="text" 
+                hidden
                 placeholder="Tìm kiếm nhanh..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
@@ -212,7 +203,11 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
             <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 mx-1 hidden md:block" />
 
-            <ThemeToggle />
+            <div className="hidden md:block w-[180px] lg:w-[220px]">
+              <PropertySwitcher variant="header" />
+            </div>
+
+            <ThemeToggle compact={true} />
           </div>
         </header>
 

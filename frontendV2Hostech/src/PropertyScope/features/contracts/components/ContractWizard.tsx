@@ -235,10 +235,10 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
   const roomStatusClass: Record<RoomStatus, string> = {
     available: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
-    occupied: 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300',
+    occupied: 'bg-blue-50 text-blue-900 dark:bg-blue-500/15 dark:text-blue-300',
     maintenance: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
     reserved: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
-    draft: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+    draft: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
   };
 
   const normalizeRoomStatus = (status?: string | null): RoomStatus => {
@@ -579,7 +579,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
     return (
       <div className="flex items-center justify-between relative mb-12 px-4 select-none">
-        <div className="absolute left-8 right-8 top-5 h-0.5 bg-slate-100/50 z-0" />
+        <div className="absolute left-8 right-8 top-5 h-0.5 bg-gray-100/50 z-0" />
         <motion.div
           className="absolute left-8 top-5 h-0.5 bg-linear-to-r from-indigo-500 to-indigo-400 z-0"
           initial={{ width: 0 }}
@@ -596,17 +596,17 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
               <motion.div
                 animate={{
                   scale: isCurrent ? 1.15 : 1,
-                  backgroundColor: isActive ? '#4f46e5' : '#ffffff',
-                  borderColor: isActive ? '#4f46e5' : '#f1f5f9',
+                  backgroundColor: isActive ? '#1E3A8A' : '#ffffff',
+                  borderColor: isActive ? '#1E3A8A' : '#e5e7eb',
                 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all shadow-sm ${isActive ? 'text-white' : 'text-slate-300'
-                  } ${isCurrent ? 'shadow-lg shadow-indigo-100 ring-4 ring-indigo-500/10' : ''}`}
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center border-2 transition-all shadow-sm ${isActive ? 'text-white' : 'text-gray-300'
+                  } ${isCurrent ? 'shadow-lg shadow-blue-100 ring-4 ring-blue-500/10' : ''}`}
               >
                 <s.icon className={`w-4 h-4 ${isCurrent ? 'animate-pulse' : ''}`} />
               </motion.div>
               <span
-                className={`text-xs font-black uppercase tracking-widest transition-colors duration-200 ${isCurrent ? 'text-indigo-600' : isActive ? 'text-slate-600' : 'text-slate-300'
+                className={`text-xs font-black uppercase tracking-widest transition-colors duration-200 ${isCurrent ? 'text-blue-900' : isActive ? 'text-gray-600' : 'text-gray-300'
                   }`}
               >
                 {s.label}
@@ -621,30 +621,30 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
   StepIndicator.displayName = 'StepIndicator';
 
   return (
-    <div className="flex flex-col h-full bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl rounded-xl overflow-hidden shadow-sm border border-white/40 dark:border-slate-800 p-4 md:p-6 relative transition-colors">
+    <div className="flex flex-col h-full bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl rounded-xl overflow-hidden shadow-sm border border-white/40 dark:border-gray-800 p-4 md:p-6 relative transition-colors">
       {/* Decorative background elements */}
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight uppercase transition-colors">Tạo Hợp Đồng</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight uppercase transition-colors">Tạo Hợp Đồng</h2>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="px-1.5 py-0.5 bg-indigo-500 text-white text-[8px] font-bold uppercase tracking-wider rounded">Bản nháp</span>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Bước {step} / 4</p>
+              <span className="px-1.5 py-0.5 bg-blue-500 text-white text-[8px] font-bold uppercase tracking-wider rounded">Bản nháp</span>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Bước {step} / 4</p>
             </div>
           </div>
           <motion.div
             whileHover={{ scale: 1.02 }}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-white dark:border-slate-700 shadow-sm transition-colors"
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-gray-800/50 backdrop-blur-md rounded-xl border border-white dark:border-gray-700 shadow-sm transition-colors"
           >
-            <div className="p-1.5 bg-indigo-50 dark:bg-indigo-500/10 rounded-lg shadow-inner text-indigo-500 dark:text-indigo-400 transition-colors">
+            <div className="p-1.5 bg-blue-50 dark:bg-blue-500/10 rounded-lg shadow-inner text-blue-900 dark:text-blue-400 transition-colors">
               <Home className="w-3.5 h-3.5" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none transition-colors">Phòng đang chọn</p>
-              <p className="text-xs font-bold text-slate-700 dark:text-slate-300 mt-0.5 uppercase tracking-tight transition-colors">
+              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none transition-colors">Phòng đang chọn</p>
+              <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mt-0.5 uppercase tracking-tight transition-colors">
                 {room ? `${room.code || room.name}` : (selectedRoomId ? `ID: ${selectedRoomId.substring(0, 8)}` : 'Chưa chọn')}
               </p>
             </div>
@@ -671,29 +671,29 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Chọn cư dân đã đăng ký</p>
-                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">Chỉ các user đã có tài khoản mới được thêm vào hợp đồng để ký điện tử.</p>
+                    <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Chọn cư dân đã đăng ký</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-1">Chỉ các user đã có tài khoản mới được thêm vào hợp đồng để ký điện tử.</p>
                   </div>
-                  <span className="text-xs font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
+                  <span className="text-xs font-black text-blue-900 dark:text-blue-400 uppercase tracking-widest">
                     {selectedTenants.length} cư dân
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.6fr)_180px_130px] gap-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                       value={tenantFilters.search}
                       onChange={(e) => updateTenantFilter('search', e.target.value)}
                       placeholder="Tìm tên, email..."
-                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                      className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                     />
                   </div>
 
                   <select
                     value={tenantFilters.is_active}
                     onChange={(e) => updateTenantFilter('is_active', e.target.value as 'all' | 'true' | 'false')}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                   >
                     <option value="all">Tất cả trạng thái</option>
                     <option value="true">Đang hoạt động</option>
@@ -703,7 +703,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                   <select
                     value={tenantFilters.per_page}
                     onChange={(e) => updateTenantFilter('per_page', Number(e.target.value))}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                   >
                     <option value={6}>6 / trang</option>
                     <option value={8}>8 / trang</option>
@@ -712,12 +712,12 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                 </div>
 
                 {selectedTenants.length > 0 && (
-                  <div className="p-3 rounded-xl border border-indigo-100 dark:border-indigo-500/20 bg-indigo-50/60 dark:bg-indigo-500/5 space-y-2">
+                  <div className="p-3 rounded-xl border border-blue-100 dark:border-blue-500/20 bg-blue-50/60 dark:bg-blue-500/5 space-y-2">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">
+                      <p className="text-[10px] font-bold text-blue-900 dark:text-blue-400 uppercase tracking-widest">
                         Cư dân đã thêm vào hợp đồng
                       </p>
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                      <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                         {selectedTenants.length} người
                       </span>
                     </div>
@@ -725,14 +725,14 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       {selectedTenants.map((tenant) => (
                         <div
                           key={tenant.id}
-                          className="flex items-center justify-between gap-3 rounded-xl border border-white/70 dark:border-slate-700 bg-white/90 dark:bg-slate-800/80 px-3 py-1.5 shadow-sm"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-white/70 dark:border-gray-700 bg-white/90 dark:bg-gray-800/80 px-3 py-1.5 shadow-sm"
                         >
                           <div className="min-w-0 flex items-center gap-2">
-                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[120px]">
+                            <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px]">
                               {tenant.full_name}
                             </p>
                             {tenant.id === formData.primary_tenant_id && (
-                              <span className="text-[9px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded select-none">Chính</span>
+                              <span className="text-[9px] px-1.5 py-0.5 bg-blue-100 text-blue-900 rounded select-none">Chính</span>
                             )}
                           </div>
                           <button
@@ -750,12 +750,12 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {usersQuery.isLoading ? (
-                    <div className="md:col-span-full p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-400 dark:text-slate-500 text-center flex items-center justify-center gap-2">
+                    <div className="md:col-span-full p-6 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 dark:text-gray-500 text-center flex items-center justify-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Đang tải danh sách cư dân...
                     </div>
                   ) : tenantOptions.length === 0 ? (
-                    <div className="md:col-span-full p-6 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-400 dark:text-slate-500 text-center">
+                    <div className="md:col-span-full p-6 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-400 dark:text-gray-500 text-center">
                       Chưa có cư dân nào trong tòa nhà này. Hãy tạo tài khoản cư dân trước khi lập hợp đồng.
                     </div>
                   ) : (
@@ -769,24 +769,24 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                           type="button"
                           onClick={() => toggleTenantSelection(tenant)}
                           className={`p-3 rounded-xl border text-left transition-all ${isSelected
-                            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10'
-                            : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200 shadow-sm'
+                            ? 'border-blue-400 bg-blue-50 dark:bg-blue-500/10'
+                            : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-200 shadow-sm'
                             }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 leading-tight">{tenant.full_name}</p>
-                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{tenant.phone || 'Chưa có SĐT'}</p>
+                              <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-tight">{tenant.full_name}</p>
+                              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{tenant.phone || 'Chưa có SĐT'}</p>
                             </div>
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300'
                               }`}>
                               {isSelected ? 'Đã chọn' : 'Chọn'}
                             </span>
                           </div>
 
                           {isSelected && (
-                            <div className="mt-2 pt-2 border-t border-indigo-100 dark:border-indigo-500/20">
-                              <label className="flex items-center gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                            <div className="mt-2 pt-2 border-t border-blue-100 dark:border-blue-500/20">
+                              <label className="flex items-center gap-2 text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-widest cursor-pointer" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="radio"
                                   name="primary_tenant"
@@ -805,8 +805,8 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                 </div>
 
                 {tenantMeta && tenantMeta.last_page > 1 && (
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-2xl border border-slate-100 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/60 px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-[10px] border border-gray-100 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 px-4 py-3">
+                    <p className="text-xs font-bold text-gray-500 dark:text-gray-400">
                       Hien thi {tenantMeta.from} - {tenantMeta.to} trong {tenantMeta.total} cu dan
                     </p>
                     <div className="flex items-center gap-2">
@@ -814,18 +814,18 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                         type="button"
                         onClick={() => updateTenantFilter('page', Math.max(1, tenantMeta.current_page - 1))}
                         disabled={tenantMeta.current_page === 1}
-                        className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                        className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-gray-700 transition-colors"
                       >
                         Truoc
                       </button>
-                      <span className="px-3 text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                      <span className="px-3 text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">
                         Trang {tenantMeta.current_page}/{tenantMeta.last_page}
                       </span>
                       <button
                         type="button"
                         onClick={() => updateTenantFilter('page', Math.min(tenantMeta.last_page, tenantMeta.current_page + 1))}
                         disabled={tenantMeta.current_page === tenantMeta.last_page}
-                        className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                        className="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white dark:hover:bg-gray-700 transition-colors"
                       >
                         Sau
                       </button>
@@ -848,27 +848,27 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className="space-y-4"
             >
-              <div className="p-4 border border-slate-100 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 space-y-3">
+              <div className="p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Tìm phòng</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">Tìm phòng</label>
                     <div className="relative mt-1">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         value={roomFilters.search}
                         onChange={(e) => setRoomFilters((prev) => ({ ...prev, search: e.target.value }))}
                         placeholder="Mã phòng..."
-                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Lọc theo tầng</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">Lọc theo tầng</label>
                     <select
                       value={roomFilters.floor_id}
                       onChange={(e) => setRoomFilters((prev) => ({ ...prev, floor_id: e.target.value }))}
-                      className="mt-1 w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                      className="mt-1 w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                     >
                       <option value="">Tất cả tầng</option>
                       {floors.map((floor) => (
@@ -880,11 +880,11 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Trạng thái phòng</label>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-1">Trạng thái phòng</label>
                     <select
                       value={roomFilters.status}
                       onChange={(e) => setRoomFilters((prev) => ({ ...prev, status: e.target.value as 'all' | RoomStatus }))}
-                      className="mt-1 w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 text-sm font-bold outline-none focus:border-indigo-400 dark:focus:border-indigo-500"
+                      className="mt-1 w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 text-sm font-bold outline-none focus:border-blue-400 dark:focus:border-blue-500"
                     >
                       <option value="all">Tất cả (trừ Đã thuê, Nháp)</option>
                       <option value="available">Phòng trống</option>
@@ -896,11 +896,11 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
                 <div className="max-h-60 overflow-y-auto pr-1 flex-1 custom-scrollbar">
                   {isRoomsLoading || isContractsLoading ? (
-                    <p className="text-sm font-bold text-slate-400 px-2 py-4">Đang tải danh sách phòng...</p>
+                    <p className="text-sm font-bold text-gray-400 px-2 py-4">Đang tải danh sách phòng...</p>
                   ) : roomsError ? (
                     <p className="text-sm font-bold text-rose-500 px-2 py-4">Không thể tải danh sách phòng. Vui lòng thử tải lại trang.</p>
                   ) : filteredRooms.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-400 px-2 py-4">Không có phòng phù hợp với bộ lọc hiện tại.</p>
+                    <p className="text-sm font-bold text-gray-400 px-2 py-4">Không có phòng phù hợp với bộ lọc hiện tại.</p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                       {filteredRooms.map((r) => {
@@ -920,16 +920,16 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                               setErrors((prev) => ({ ...prev, room_id: undefined }));
                             }}
                             className={`text-left p-2.5 rounded-xl border transition-all duration-300 transform ${isSelected
-                                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/15 shadow-md shadow-indigo-500/20 ring-1 ring-indigo-500 scale-[1.02] z-10 relative'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/15 shadow-md shadow-blue-500/20 ring-1 ring-blue-500 scale-[1.02] z-10 relative'
                                 : isUnavailable
-                                  ? 'border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 opacity-60 cursor-not-allowed'
-                                  : 'border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-300 hover:shadow-sm'
+                                  ? 'border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 opacity-60 cursor-not-allowed'
+                                  : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-300 hover:shadow-sm'
                               }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div>
-                                <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{r.code || r.name}</p>
-                                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{r.code || r.name}</p>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
                                   {r.name} - {floorName}
                                 </p>
                                 {isMaintenance ? (
@@ -953,10 +953,10 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
               <div className="relative overflow-hidden group">
                 <div className="absolute inset-0 bg-linear-to-br from-indigo-600/5 to-emerald-600/5 transition-opacity pointer-events-none" />
-                <div className="relative p-4 border border-slate-100 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 shadow-sm transition-all flex flex-col md:flex-row gap-4 items-start">
-                  <div className="w-24 h-24 shrink-0 bg-slate-50 dark:bg-slate-800/80 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 transition-colors">
-                    <Home className="w-5 h-5 text-slate-300 dark:text-slate-500 group-hover:text-indigo-400 transition-colors" />
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">No Photo</span>
+                <div className="relative p-4 border border-gray-100 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 shadow-sm transition-all flex flex-col md:flex-row gap-4 items-start">
+                  <div className="w-24 h-24 shrink-0 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center gap-1 group-hover:bg-blue-50 dark:group-hover:bg-blue-500/10 transition-colors">
+                    <Home className="w-5 h-5 text-gray-300 dark:text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center">No Photo</span>
                   </div>
 
                   <div className="flex-1 text-left min-w-0 w-full">
@@ -964,29 +964,29 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       {(() => {
                         const normalizedStatus = normalizeRoomStatus(room?.status);
                         return (
-                          <span className={`inline-block border-none font-bold text-[9px] uppercase tracking-widest rounded px-1.5 py-0.5 transition-colors ${room ? roomStatusClass[normalizedStatus] : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                          <span className={`inline-block border-none font-bold text-[9px] uppercase tracking-widest rounded px-1.5 py-0.5 transition-colors ${room ? roomStatusClass[normalizedStatus] : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                             }`}>
                             {room ? roomStatusLabel[normalizedStatus] : 'Chưa chọn'}
                           </span>
                         );
                       })()}
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white truncate transition-colors">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate transition-colors">
                       {room ? `${room.code || room.name}` : 'Mã phòng chưa xác định'}
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate transition-colors">
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate transition-colors">
                       {room ? `Tầng: ${room.floor?.name || room.floor_name || 'N/A'}` : 'Vui lòng chọn phòng phía trên'}
                     </p>
 
                     {room && (
                       <div className="grid grid-cols-2 gap-3 mt-3">
-                        <div className="p-2 bg-slate-50/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700 transition-colors">
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors mb-0.5">Loại giao dịch</p>
-                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase transition-colors">Cho thuê</p>
+                        <div className="p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors mb-0.5">Loại giao dịch</p>
+                          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase transition-colors">Cho thuê</p>
                         </div>
-                        <div className="p-2 bg-slate-50/50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700 transition-colors">
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors mb-0.5">Diện tích</p>
-                          <p className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase transition-colors">{room.area} m²</p>
+                        <div className="p-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700 transition-colors">
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors mb-0.5">Diện tích</p>
+                          <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase transition-colors">{room.area} m²</p>
                         </div>
                       </div>
                     )}
@@ -1019,16 +1019,16 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
             >
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-1">
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-widest ml-1 italic transition-colors">
+                  <label className="text-[11px] font-bold text-blue-900 dark:text-blue-400 uppercase tracking-widest ml-1 italic transition-colors">
                     Bắt đầu từ ngày
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400 dark:text-indigo-500 transition-colors" />
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-400 dark:text-blue-900 transition-colors" />
                     <input
                       type="date"
                       value={formData.start_date}
                       onChange={(e) => updateField('start_date', e.target.value)}
-                      className={`w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border rounded-xl outline-none focus:ring-4 transition-all text-sm font-bold shadow-sm ${errors.start_date ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
+                      className={`w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 dark:text-gray-100 border rounded-xl outline-none focus:ring-4 transition-all text-sm font-bold shadow-sm ${errors.start_date ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-gray-100 dark:border-gray-700 ring-blue-50 dark:ring-blue-500/20'
                         }`}
                     />
                   </div>
@@ -1036,32 +1036,32 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1 transition-colors">
+                  <label className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest ml-1 transition-colors">
                     Thời hạn dự kiến
                   </label>
                   <div className="relative">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-500 transition-colors" />
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 dark:text-gray-500 transition-colors" />
                     <input
                       type="date"
                       value={formData.end_date}
                       onChange={(e) => updateField('end_date', e.target.value)}
                       min={minimumEndDate || formData.start_date}
-                      className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50/30 dark:focus:ring-indigo-500/20 transition-all text-sm font-bold shadow-sm"
+                      className="w-full pl-9 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-4 focus:ring-blue-50/30 dark:focus:ring-blue-500/20 transition-all text-sm font-bold shadow-sm"
                     />
                   </div>
                   {minimumEndDate && (
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-2 ml-2 italic">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 mt-2 ml-2 italic">
                       * Toi thieu: {new Date(`${minimumEndDate}T00:00:00`).toLocaleDateString('vi-VN')} ({minimumEndDate})
                     </p>
                   )}
                   <FieldError message={errors.end_date} />
                 </div>
                 <div className="space-y-1.5 text-left">
-                  <label className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest ml-1 transition-colors">
+                  <label className="text-[11px] font-bold text-blue-900 dark:text-blue-400 uppercase tracking-widest ml-1 transition-colors">
                     Giá thuê (VNĐ/th) <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <div className="relative">
-                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-black text-indigo-500 dark:text-indigo-400 transition-colors">₫</div>
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-black text-blue-900 dark:text-blue-400 transition-colors">₫</div>
                     <input
                       type="text"
                       value={isRentFocused ? (formData.rent_price || '') : (formData.rent_price ? formData.rent_price.toLocaleString('vi-VN') : '')}
@@ -1076,18 +1076,18 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                         }
                       }}
                       placeholder={room?.base_price === 0 ? "Tự động tính theo diện tích..." : "0"}
-                      className={`w-full pl-8 pr-4 py-2.5 bg-white dark:bg-slate-800 dark:text-slate-100 border rounded-xl outline-none focus:ring-4 transition-all text-sm font-black shadow-sm ${errors.rent_price ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-slate-100 dark:border-slate-700 ring-indigo-50 dark:ring-indigo-500/20'
+                      className={`w-full pl-8 pr-4 py-2.5 bg-white dark:bg-gray-800 dark:text-gray-100 border rounded-xl outline-none focus:ring-4 transition-all text-sm font-black shadow-sm ${errors.rent_price ? 'border-rose-200 dark:border-rose-900/50 ring-rose-50 dark:ring-rose-900/20' : 'border-gray-100 dark:border-gray-700 ring-blue-50 dark:ring-blue-500/20'
                         }`}
                     />
                     {room?.base_price === 0 && formData.rent_price === 0 && (
-                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-500/10 rounded-full border border-indigo-100 dark:border-indigo-500/20">
-                        <Clock className="w-3 h-3 text-indigo-500 dark:text-indigo-400 animate-spin-slow" />
-                        <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">Auto-calc</span>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-3 py-1 bg-blue-50 dark:bg-blue-500/10 rounded-full border border-blue-100 dark:border-blue-500/20">
+                        <Clock className="w-3 h-3 text-blue-900 dark:text-blue-400 animate-spin-slow" />
+                        <span className="text-[10px] font-black text-blue-900 dark:text-blue-400 uppercase tracking-tighter">Auto-calc</span>
                       </div>
                     )}
                   </div>
                   {room?.base_price === 0 && (
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-2 ml-2 italic">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 mt-2 ml-2 italic">
                       * Phòng này được cấu hình tự động tính giá theo diện tích ({room.area} m²)
                     </p>
                   )}
@@ -1114,7 +1114,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                         }
                       }}
                       placeholder="0"
-                      className="w-full pl-8 pr-4 py-2.5 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-4 focus:ring-emerald-50/50 dark:focus:ring-emerald-500/20 transition-all text-sm font-black shadow-sm"
+                      className="w-full pl-8 pr-4 py-2.5 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-4 focus:ring-emerald-50/50 dark:focus:ring-emerald-500/20 transition-all text-sm font-black shadow-sm"
                     />
                   </div>
                 </div>
@@ -1122,13 +1122,13 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-1 text-left">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1 transition-colors">
+                  <label className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1 transition-colors">
                     Chu kỳ đóng tiền
                   </label>
                   <select
                     value={formData.billing_cycle}
                     onChange={(e) => updateField('billing_cycle', Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-slate-50/50 dark:bg-slate-800/50 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-4 focus:ring-indigo-50/50 dark:focus:ring-indigo-500/20 transition-all text-sm font-bold cursor-pointer shadow-sm"
+                    className="w-full px-4 py-2.5 bg-gray-50/50 dark:bg-gray-800/50 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-4 focus:ring-blue-50/50 dark:focus:ring-blue-500/20 transition-all text-sm font-bold cursor-pointer shadow-sm"
                   >
                     {Array.from({ length: 12 }, (_, index) => {
                       const months = index + 1;
@@ -1151,13 +1151,13 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     max={31}
                     value={formData.due_day}
                     onChange={(e) => updateField('due_day', Number(e.target.value))}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-4 focus:ring-rose-50/50 dark:focus:ring-rose-500/20 transition-all text-sm font-bold shadow-sm"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-4 focus:ring-rose-50/50 dark:focus:ring-rose-500/20 transition-all text-sm font-bold shadow-sm"
                   />
                   <FieldError message={errors.due_day} />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest pl-1 transition-colors">
+                  <label className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1 transition-colors">
                     Chốt số (Ngày)
                   </label>
                   <input
@@ -1166,7 +1166,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     max={25}
                     value={formData.cutoff_day}
                     onChange={(e) => updateField('cutoff_day', Math.min(Number(e.target.value), 25))}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-700 rounded-xl outline-none focus:ring-4 focus:ring-slate-50 dark:focus:ring-slate-700 transition-all text-sm font-bold shadow-sm"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-100 dark:border-gray-700 rounded-xl outline-none focus:ring-4 focus:ring-gray-50 dark:focus:ring-gray-700 transition-all text-sm font-bold shadow-sm"
                   />
                   <FieldError message={errors.cutoff_day} />
                 </div>
@@ -1187,15 +1187,15 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
               <div className="flex flex-col lg:flex-row gap-8 items-stretch">
                 <div className="flex-1 space-y-6 text-left">
                   <div className="flex items-center justify-between px-2">
-                    <h4 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] transition-colors">Bản xem trước thỏa thuận</h4>
-                    <span className="text-xs font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 transition-colors">
+                    <h4 className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] transition-colors">Bản xem trước thỏa thuận</h4>
+                    <span className="text-xs font-black text-blue-900 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1 transition-colors">
                       <ShieldAlert className="w-3 h-3" /> Chế độ an toàn
                     </span>
                   </div>
 
 
                   {contractWarnings.length > 0 && (
-                    <div className="rounded-3xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/70 dark:bg-amber-500/5 p-5 space-y-3 transition-colors">
+                    <div className="rounded-[12px] border border-amber-200 dark:border-amber-500/20 bg-amber-50/70 dark:bg-amber-500/5 p-5 space-y-3 transition-colors">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                           <AlertCircle className="w-4 h-4" />
@@ -1207,77 +1207,77 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                       </div>
                       <div className="space-y-3">
                         {contractWarnings.map((warning) => (
-                          <div key={warning.id} className="rounded-2xl border border-amber-100 dark:border-amber-500/10 bg-white/70 dark:bg-slate-900/30 px-4 py-3">
-                            <p className="text-sm font-black text-slate-900 dark:text-slate-100">{warning.title}</p>
-                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">{warning.description}</p>
+                          <div key={warning.id} className="rounded-[10px] border border-amber-100 dark:border-amber-500/10 bg-white/70 dark:bg-gray-900/30 px-4 py-3">
+                            <p className="text-sm font-black text-gray-900 dark:text-gray-100">{warning.title}</p>
+                            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{warning.description}</p>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-5xl p-10 space-y-8 shadow-xl shadow-slate-200/20 dark:shadow-none relative overflow-hidden group transition-colors">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full -translate-y-32 translate-x-32 blur-3xl pointer-events-none" />
+                  <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-5xl p-10 space-y-8 shadow-xl shadow-gray-200/20 dark:shadow-none relative overflow-hidden group transition-colors">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -translate-y-32 translate-x-32 blur-3xl pointer-events-none" />
 
-                    <div className="flex justify-between items-start pb-8 border-b border-slate-100 dark:border-slate-700 transition-colors">
+                    <div className="flex justify-between items-start pb-8 border-b border-gray-100 dark:border-gray-700 transition-colors">
                       <div>
-                        <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 transition-colors">Bên thuê (Tenant)</p>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">
+                        <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 transition-colors">Bên thuê (Tenant)</p>
+                        <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight transition-colors">
                           {primaryTenant?.full_name || 'CHƯA XÁC ĐỊNH'}
                         </h3>
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mt-1 transition-colors">{primaryTenant?.phone || 'Chưa có số điện thoại'}</p>
+                        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-1 transition-colors">{primaryTenant?.phone || 'Chưa có số điện thoại'}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 transition-colors">Mã tham chiếu</p>
-                        <p className="text-sm font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-700/50 px-3 py-1 rounded-lg uppercase transition-colors">#DRAFT-{new Date().getFullYear()}</p>
+                        <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1 transition-colors">Mã tham chiếu</p>
+                        <p className="text-sm font-black text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700/50 px-3 py-1 rounded-lg uppercase transition-colors">#DRAFT-{new Date().getFullYear()}</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                       <div className="space-y-6">
                         <div className="flex flex-col gap-2">
-                          <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Hiệu lực hợp đồng</span>
+                          <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors">Hiệu lực hợp đồng</span>
                           <div className="flex items-center gap-3">
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase italic transition-colors">Từ ngày</span>
-                              <span className="text-sm font-black text-slate-700 dark:text-slate-300 transition-colors">{new Date(formData.start_date).toLocaleDateString('vi-VN')}</span>
+                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase italic transition-colors">Từ ngày</span>
+                              <span className="text-sm font-black text-gray-700 dark:text-gray-300 transition-colors">{new Date(formData.start_date).toLocaleDateString('vi-VN')}</span>
                             </div>
-                            <ChevronRight className="w-4 h-4 text-slate-200 dark:text-slate-600 transition-colors" />
+                            <ChevronRight className="w-4 h-4 text-gray-200 dark:text-gray-600 transition-colors" />
                             <div className="flex flex-col">
-                              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase italic transition-colors">Đến ngày</span>
-                              <span className="text-sm font-black text-slate-700 dark:text-slate-300 transition-colors">{formData.end_date ? new Date(formData.end_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}</span>
+                              <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase italic transition-colors">Đến ngày</span>
+                              <span className="text-sm font-black text-gray-700 dark:text-gray-300 transition-colors">{formData.end_date ? new Date(formData.end_date).toLocaleDateString('vi-VN') : 'Vô thời hạn'}</span>
                             </div>
                           </div>
                         </div>
 
                         <div className="flex flex-col gap-2">
-                          <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Tiền thuê hàng tháng</span>
+                          <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors">Tiền thuê hàng tháng</span>
                           <div className="flex items-baseline gap-1">
-                            <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter transition-colors">
+                            <span className="text-3xl font-black text-blue-900 dark:text-blue-400 tracking-tighter transition-colors">
                               {formatCurrencyVND(monthlyRent).replace('₫', '')}
                             </span>
-                            <span className="text-sm font-black text-indigo-400 dark:text-indigo-500 transition-colors">VNĐ / tháng</span>
+                            <span className="text-sm font-black text-blue-400 dark:text-blue-900 transition-colors">VNĐ / tháng</span>
                           </div>
                         </div>
 
-                        <div className="p-5 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-3 transition-colors">
+                        <div className="p-5 bg-gray-50 dark:bg-gray-900/50 rounded-[10px] border border-gray-100 dark:border-gray-700 space-y-3 transition-colors">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Chi tiết tiền thuê</span>
-                            <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 transition-colors" />
+                            <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors">Chi tiết tiền thuê</span>
+                            <Clock className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 transition-colors" />
                           </div>
-                          <div className="space-y-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 transition-colors">
-                            <p>Chu kỳ thanh toán: <span className="font-black text-slate-800 dark:text-slate-200">{formatBillingCycleLabel(formData.billing_cycle)}</span></p>
-                            <p>Tiền thuê phòng hàng tháng: <span className="font-black text-indigo-700 dark:text-indigo-400">{formatCurrencyVND(monthlyRent)}</span></p>
-                            <p>Tổng tiền thuê chu kỳ này: <span className="font-black text-indigo-700 dark:text-indigo-400">{formatCurrencyVND(monthlyRent)} x {billingCycleMonths} = {formatCurrencyVND(recurringRentTotal)}</span></p>
+                          <div className="space-y-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 transition-colors">
+                            <p>Chu kỳ thanh toán: <span className="font-black text-gray-800 dark:text-gray-200">{formatBillingCycleLabel(formData.billing_cycle)}</span></p>
+                            <p>Tiền thuê phòng hàng tháng: <span className="font-black text-blue-900 dark:text-blue-400">{formatCurrencyVND(monthlyRent)}</span></p>
+                            <p>Tổng tiền thuê chu kỳ này: <span className="font-black text-blue-900 dark:text-blue-400">{formatCurrencyVND(monthlyRent)} x {billingCycleMonths} = {formatCurrencyVND(recurringRentTotal)}</span></p>
                           </div>
                         </div>
 
-                        <div className="p-5 bg-white dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-2 transition-colors">
-                          <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Danh sách người ký</span>
-                          <div className="space-y-1.5 text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <div className="p-5 bg-white dark:bg-gray-900/40 rounded-[10px] border border-gray-100 dark:border-gray-700 space-y-2 transition-colors">
+                          <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors">Danh sách người ký</span>
+                          <div className="space-y-1.5 text-xs font-bold text-gray-600 dark:text-gray-400">
                             {selectedTenants.map((tenant) => (
                               <p key={tenant.id}>
                                 {tenant.full_name}
-                                <span className="font-black text-slate-800 dark:text-slate-200"> {tenant.id === formData.primary_tenant_id ? '(Người thuê chính)' : '(Thành viên hợp đồng)'}</span>
+                                <span className="font-black text-gray-800 dark:text-gray-200"> {tenant.id === formData.primary_tenant_id ? '(Người thuê chính)' : '(Thành viên hợp đồng)'}</span>
                               </p>
                             ))}
                           </div>
@@ -1286,43 +1286,43 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
 
                       <div className="space-y-6">
                         <div className="flex flex-col gap-2">
-                          <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest transition-colors">Khoản đặt cọc</span>
+                          <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest transition-colors">Khoản đặt cọc</span>
                           <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-sm shadow-emerald-200 dark:shadow-emerald-900 transition-colors" />
-                            <span className="text-lg font-black text-slate-800 dark:text-slate-200 transition-colors">{formatCurrencyVND(formData.deposit_amount)}</span>
+                            <span className="text-lg font-black text-gray-800 dark:text-gray-200 transition-colors">{formatCurrencyVND(formData.deposit_amount)}</span>
                           </div>
                         </div>
 
-                        <div className="p-5 bg-emerald-50/60 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100/70 dark:border-emerald-500/20 space-y-3 transition-colors">
+                        <div className="p-5 bg-emerald-50/60 dark:bg-emerald-500/5 rounded-[10px] border border-emerald-100/70 dark:border-emerald-500/20 space-y-3 transition-colors">
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-emerald-500 dark:text-emerald-400 uppercase tracking-widest transition-colors">Tổng thanh toán ban đầu</span>
                             <FileText className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 transition-colors" />
                           </div>
-                          <div className="space-y-1.5 text-xs font-bold text-slate-600 dark:text-slate-400 transition-colors">
-                            <p>Tiền thuê phòng hàng tháng x số tháng: <span className="font-black text-slate-800 dark:text-slate-200">{formatCurrencyVND(monthlyRent)} x {billingCycleMonths} = {formatCurrencyVND(recurringRentTotal)}</span></p>
-                            <p>Tiền cọc: <span className="font-black text-slate-800 dark:text-slate-200">{formatCurrencyVND(depositAmount)}</span></p>
+                          <div className="space-y-1.5 text-xs font-bold text-gray-600 dark:text-gray-400 transition-colors">
+                            <p>Tiền thuê phòng hàng tháng x số tháng: <span className="font-black text-gray-800 dark:text-gray-200">{formatCurrencyVND(monthlyRent)} x {billingCycleMonths} = {formatCurrencyVND(recurringRentTotal)}</span></p>
+                            <p>Tiền cọc: <span className="font-black text-gray-800 dark:text-gray-200">{formatCurrencyVND(depositAmount)}</span></p>
                             <p className="pt-2 border-t border-emerald-100 dark:border-emerald-500/20">Tổng tiền phải thu ban đầu: <span className="font-black text-emerald-700 dark:text-emerald-400">{formatCurrencyVND(agreementGrandTotal)}</span></p>
                           </div>
                         </div>
 
-                        <div className="p-5 bg-indigo-50/50 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100/50 dark:border-indigo-500/20 space-y-3 transition-colors">
+                        <div className="p-5 bg-blue-50/50 dark:bg-blue-500/5 rounded-[10px] border border-blue-100/50 dark:border-blue-500/20 space-y-3 transition-colors">
                           <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-indigo-400 dark:text-indigo-500 uppercase tracking-widest transition-colors">Lịch thanh toán</span>
-                            <Clock className="w-3.5 h-3.5 text-indigo-400 dark:text-indigo-500 transition-colors" />
+                            <span className="text-xs font-black text-blue-400 dark:text-blue-900 uppercase tracking-widest transition-colors">Lịch thanh toán</span>
+                            <Clock className="w-3.5 h-3.5 text-blue-400 dark:text-blue-900 transition-colors" />
                           </div>
                           <div className="flex flex-col gap-1">
-                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 transition-colors">Hạn nộp: <span className="font-black text-indigo-700 dark:text-indigo-400 underline decoration-indigo-200 dark:decoration-indigo-800 decoration-2 underline-offset-4 transition-colors">Ngày {formData.due_day}</span> hàng kỳ</p>
-                            <p className="text-xs font-bold text-slate-600 dark:text-slate-400 transition-colors">Chốt nợ: <span className="font-black text-slate-700 dark:text-slate-300 transition-colors">Ngày {formData.cutoff_day}</span> hàng kỳ</p>
+                            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 transition-colors">Hạn nộp: <span className="font-black text-blue-900 dark:text-blue-400 underline decoration-indigo-200 dark:decoration-indigo-800 decoration-2 underline-offset-4 transition-colors">Ngày {formData.due_day}</span> hàng kỳ</p>
+                            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 transition-colors">Chốt nợ: <span className="font-black text-gray-700 dark:text-gray-300 transition-colors">Ngày {formData.cutoff_day}</span> hàng kỳ</p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="pt-8 border-t border-slate-100 dark:border-slate-700 flex items-center gap-4 transition-colors">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-300 dark:text-slate-500 transition-colors">
+                    <div className="pt-8 border-t border-gray-100 dark:border-gray-700 flex items-center gap-4 transition-colors">
+                      <div className="w-12 h-12 rounded-[10px] bg-gray-50 dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 flex items-center justify-center text-gray-300 dark:text-gray-500 transition-colors">
                         <FileSignature className="w-6 h-6" />
                       </div>
-                      <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 leading-relaxed max-w-md italic transition-colors">
+                      <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 leading-relaxed max-w-md italic transition-colors">
                         * Đây là bản tóm tắt nội dung chính. Hợp đồng pháp lý đầy đủ sẽ được tạo sau khi bạn nhấn xác nhận và chuyển sang trạng thái ký kết.
                       </p>
                     </div>
@@ -1330,14 +1330,14 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                 </div>
 
                 <div className="w-full lg:w-80 shrink-0">
-                  <div className="sticky top-0 p-10 bg-slate-900 rounded-6xl flex flex-col justify-between text-left h-full min-h-[450px] shadow-2xl shadow-indigo-200/30 group">
+                  <div className="sticky top-0 p-10 bg-gray-900 rounded-6xl flex flex-col justify-between text-left h-full min-h-[450px] shadow-2xl shadow-blue-200/30 group">
                     <div className="space-y-8">
-                      <div className="w-16 h-16 bg-white/10 backdrop-blur-2xl rounded-3xl flex items-center justify-center text-white border border-white/10 group-hover:rotate-6 transition-transform">
+                      <div className="w-16 h-16 bg-white/10 backdrop-blur-2xl rounded-[12px] flex items-center justify-center text-white border border-white/10 group-hover:rotate-6 transition-transform">
                         <ShieldAlert className="w-8 h-8" />
                       </div>
                       <div className="space-y-4">
                         <h4 className="text-xl font-black text-white leading-tight">Cam kết bảo mật & Pháp lý</h4>
-                        <p className="text-sm font-medium text-slate-400 leading-relaxed">
+                        <p className="text-sm font-medium text-gray-400 leading-relaxed">
                           Mọi thông tin trong bản nháp này đều được mã hóa theo chuẩn <span className="text-white font-bold">AES-256</span>.
                         </p>
                       </div>
@@ -1348,8 +1348,8 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                           'Kiểm soát phiên bản thay đổi',
                           'Sẵn sàng xuất file PDF'
                         ].map((item, idx) => (
-                          <li key={idx} className="flex items-center gap-3 text-xs font-bold text-slate-400">
-                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          <li key={idx} className="flex items-center gap-3 text-xs font-bold text-gray-400">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                             {item}
                           </li>
                         ))}
@@ -1357,14 +1357,14 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
                     </div>
 
                     <div className="pt-8 border-t border-white/10 mt-auto">
-                      <p className="text-xs font-black text-indigo-400 uppercase tracking-widest mb-2">Hostech Verified</p>
+                      <p className="text-xs font-black text-blue-400 uppercase tracking-widest mb-2">Hostech Verified</p>
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
                           {[1, 2, 3].map(i => (
-                            <div key={i} className="w-6 h-6 rounded-full bg-slate-700 border-2 border-slate-900" />
+                            <div key={i} className="w-6 h-6 rounded-full bg-gray-700 border-2 border-gray-900" />
                           ))}
                         </div>
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter cursor-default">+1k Managers trusted</span>
+                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-tighter cursor-default">+1k Managers trusted</span>
                       </div>
                     </div>
                   </div>
@@ -1376,12 +1376,12 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
       </div>
 
       {/* ─────── NAVIGATION ─────── */}
-      <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100/50 dark:border-slate-800 shrink-0 transition-colors">
+      <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100/50 dark:border-gray-800 shrink-0 transition-colors">
         <div>
           {step === 1 && onCancel && (
             <button
               onClick={onCancel}
-              className="px-4 py-2 text-xs font-bold text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors uppercase tracking-widest"
+              className="px-4 py-2 text-xs font-bold text-gray-400 dark:text-gray-500 hover:text-rose-500 dark:hover:text-rose-400 transition-colors uppercase tracking-widest"
             >
               Hủy bỏ
             </button>
@@ -1392,7 +1392,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
           {step > 1 && (
             <button
               onClick={prevStep}
-              className="flex items-center gap-1.5 px-5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 px-5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-black text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all active:scale-95 shadow-sm"
             >
               <ChevronLeft className="w-4 h-4" />
               Quay lại
@@ -1402,7 +1402,7 @@ export default function ContractWizard({ propertyId, roomId, onSuccess, onCancel
           {step < 4 ? (
             <button
               onClick={nextStep}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-black shadow shadow-indigo-100 dark:shadow-none hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-blue-600 dark:bg-blue-500 text-white rounded-xl text-sm font-black shadow shadow-blue-100 dark:shadow-none hover:bg-blue-700 dark:hover:bg-blue-600 transition-all active:scale-95"
             >
               Tiếp tục
               <ChevronRight className="w-4 h-4" />

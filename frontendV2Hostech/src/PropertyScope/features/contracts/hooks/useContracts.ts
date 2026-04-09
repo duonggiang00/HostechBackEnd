@@ -216,6 +216,15 @@ export const useContractActions = () => {
     mutationFn: (id: string) => contractsApi.downloadDocument(id),
   });
 
+  /** POST /api/contracts/{id}/members */
+  const addContractMember = useMutation({
+    mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.addContractMember(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] }); // To refresh room detail tenants list
+    },
+  });
+
   return {
     createContract,
     updateContract,
@@ -231,5 +240,6 @@ export const useContractActions = () => {
     scanContract,
     generateDocument,
     downloadDocument,
+    addContractMember,
   };
 };

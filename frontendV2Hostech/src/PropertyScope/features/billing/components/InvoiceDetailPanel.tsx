@@ -90,7 +90,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
               </div>
               <button
                 onClick={onClose}
-                className="ml-3 p-2 rounded-xl text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                className="ml-3 p-2 rounded-[8px] text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -119,7 +119,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                   <button
                     onClick={handleIssue}
                     disabled={isIssuing}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-black transition-all disabled:opacity-50"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] text-sm font-black transition-all disabled:opacity-50"
                   >
                     <Zap className="w-4 h-4" /> 
                     {isIssuing ? 'Đang xử lý...' : 'Phát hành hóa đơn'}
@@ -129,7 +129,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                 {['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && invoice.debt > 0 && (
                   <button
                     onClick={() => setShowPaymentModal(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-black transition-all"
+                    className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] text-sm font-black transition-all"
                   >
                     <CreditCard className="w-4 h-4" /> Nhận thanh toán
                   </button>
@@ -139,7 +139,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                   <button
                     onClick={handleCancel}
                     disabled={isCancelling}
-                    className="ml-auto flex items-center gap-2 px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-rose-600 rounded-xl text-sm font-black transition-all disabled:opacity-50"
+                    className="ml-auto flex items-center gap-2 px-4 py-2 hover:bg-rose-50 dark:hover:bg-rose-500/10 text-[#EF4444] rounded-[8px] text-sm font-black transition-all disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" /> 
                     {isCancelling ? '...' : 'Hủy hóa đơn'}
@@ -154,7 +154,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                 onClick={() => setActiveTab('items')}
                 className={`flex-1 py-3.5 text-xs font-black uppercase tracking-widest transition-all ${
                   activeTab === 'items'
-                    ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5'
+                    ? 'text-[#1E3A8A] dark:text-blue-400 border-b-2 border-[#1E3A8A] dark:border-blue-400 bg-[#1E3A8A]/5 dark:bg-blue-500/5'
                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
               >
@@ -164,7 +164,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                 onClick={() => setActiveTab('timeline')}
                 className={`flex-1 py-3.5 text-xs font-black uppercase tracking-widest transition-all ${
                   activeTab === 'timeline'
-                    ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/5'
+                    ? 'text-[#1E3A8A] dark:text-blue-400 border-b-2 border-[#1E3A8A] dark:border-blue-400 bg-[#1E3A8A]/5 dark:bg-blue-500/5'
                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
                 }`}
               >
@@ -177,7 +177,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
               {activeTab === 'items' && (
                 <div className="p-6 space-y-3">
                   {(invoice.items ?? []).map(item => (
-                    <div key={item.id} className="flex justify-between items-start p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-sm">
+                    <div key={item.id} className="flex justify-between items-start p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[12px] shadow-sm">
                       <div>
                         <p className="font-bold text-slate-900 dark:text-white capitalize">{item.description}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -226,7 +226,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                       </div>
                       
                       {history.note && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 italic">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 bg-white dark:bg-slate-800 p-3 rounded-[8px] border border-slate-100 dark:border-slate-700 italic">
                           "{history.note}"
                         </p>
                       )}

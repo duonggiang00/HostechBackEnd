@@ -155,29 +155,24 @@ export default function PropertySwitcher({ variant = 'header' }: { variant?: 'he
           className={`group flex w-full items-center justify-between gap-3 rounded-xl border transition-all duration-300 ${
             variant === 'sidebar'
               ? 'border-transparent bg-transparent px-2.5 py-2 hover:bg-slate-500/5 dark:hover:bg-white/5'
-              : 'border-white/80 bg-white/80 px-3.5 py-3 shadow-[0_10px_28px_rgba(15,23,42,0.06)] hover:border-brand-100 hover:bg-white dark:border-slate-800/70 dark:bg-slate-900/80 dark:hover:border-slate-700 dark:hover:bg-slate-900'
+              : 'border border-slate-200 bg-white px-3 py-1.5 shadow-sm hover:border-indigo-200 hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800 dark:hover:border-indigo-500/30'
           }`}
         >
           <div className="flex min-w-0 items-center gap-3">
             <div
-              className={`flex shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-[0_12px_24px_rgba(99,102,241,0.24)] dark:bg-brand-500 dark:shadow-none ${
-                variant === 'sidebar' ? 'h-9 w-9' : 'h-10 w-10'
+              className={`flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm dark:bg-indigo-500 dark:shadow-none ${
+                variant === 'sidebar' ? 'h-9 w-9' : 'h-8 w-8'
               }`}
             >
               <Building2 className={`${variant === 'sidebar' ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
             </div>
-            <div className="min-w-0 text-left">
-              <p className="mb-0.5 text-[9px] font-bold uppercase leading-none tracking-[0.18em] text-slate-400">
-                {variant === 'sidebar' ? 'Cơ sở' : 'Cơ sở hoạt động'}
+            <div className="min-w-0 text-left flex flex-col justify-center">
+              <p className="mb-0.5 text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+                Cơ sở hiện tại
               </p>
-              <p className="truncate text-[13px] font-semibold tracking-[-0.01em] text-slate-900 dark:text-white">
+              <p className="truncate text-[13px] font-bold tracking-tight text-slate-900 dark:text-white">
                 {selectedProperty?.name || 'Chọn cơ sở'}
               </p>
-              {variant === 'header' && (
-                <p className="mt-0.5 truncate text-[11px] font-medium text-slate-400 dark:text-slate-500">
-                  {selectedProperty?.address || selectedProperty?.code || 'Chuyển phạm vi'}
-                </p>
-              )}
             </div>
           </div>
           <div

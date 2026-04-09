@@ -10,16 +10,16 @@ interface StatCardProps {
     value: number;
     isUp: boolean;
   };
-  color: 'indigo' | 'emerald' | 'amber' | 'rose' | 'sky';
+  color: 'blue' | 'emerald' | 'amber' | 'rose' | 'gray';
   testId?: string;
 }
 
 const colorMap = {
-  indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/50',
-  emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/50',
+  blue: 'bg-blue-50 text-blue-900 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/50',
+  emerald: 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/50',
   amber: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
-  rose: 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/50',
-  sky: 'bg-sky-50 text-sky-600 border-sky-100 dark:bg-sky-900/20 dark:text-sky-400 dark:border-sky-800/50',
+  rose: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50',
+  gray: 'bg-gray-50 text-gray-600 border-gray-100 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800/50',
 };
 
 export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: StatCardProps) => {
@@ -31,41 +31,41 @@ export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: Sta
     const len = valStr.length;
     
     // For very long numbers like currency billions
-    if (len > 15) return isLargeFont ? 'text-[13px]' : 'text-base';
-    if (len > 12) return isLargeFont ? 'text-base' : 'text-lg';
-    if (len > 10) return isLargeFont ? 'text-lg' : 'text-xl';
+    if (len > 15) return isLargeFont ? 'text-[13px]' : 'text-[16px]';
+    if (len > 12) return isLargeFont ? 'text-[16px]' : 'text-[18px]';
+    if (len > 10) return isLargeFont ? 'text-[18px]' : 'text-[20px]';
     
-    return isLargeFont ? 'text-xl' : 'text-2xl';
+    return isLargeFont ? 'text-[20px]' : 'text-[24px]';
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       data-testid={testId}
-      className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
+      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-[12px] shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group"
     >
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-current opacity-[0.03] rounded-full blur-2xl group-hover:scale-125 transition-transform" />
+      <div className="absolute -right-4 -top-4 w-20 h-20 bg-current opacity-[0.03] rounded-full blur-xl group-hover:scale-125 transition-transform" />
       
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase tracking-wider truncate">{label}</p>
-          <h3 className={`font-bold text-slate-900 dark:text-white tracking-tight whitespace-nowrap overflow-hidden text-ellipsis ${getFontSizeClass()}`}>
+          <p className="text-[12px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{label}</p>
+          <h3 className={`font-bold text-gray-900 dark:text-white tracking-tight whitespace-nowrap overflow-hidden text-ellipsis ${getFontSizeClass()}`}>
             {value}
           </h3>
           
           {trend && (
-            <div className={`mt-2 flex items-center flex-wrap gap-1 text-[10px] font-bold ${trend.isUp ? 'text-emerald-500' : 'text-rose-500'}`}>
-              <span className="flex items-center gap-0.5">
+            <div className={`mt-2 flex items-center flex-wrap gap-1 text-[12px] font-medium ${trend.isUp ? 'text-green-600' : 'text-red-500'}`}>
+              <span className="flex items-center gap-0.5 font-bold">
                 {trend.isUp ? '↑' : '↓'}
                 {trend.value}%
               </span>
-              <span className="text-slate-400 font-medium whitespace-nowrap">vs tháng trước</span>
+              <span className="text-gray-500 font-normal whitespace-nowrap">so với tháng trước</span>
             </div>
           )}
         </div>
         
-        <div className={`shrink-0 p-2.5 rounded-xl border ${colorMap[color]}`}>
+        <div className={`shrink-0 p-2.5 rounded-lg border ${colorMap[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
       </div>

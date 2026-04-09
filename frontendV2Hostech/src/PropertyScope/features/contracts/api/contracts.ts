@@ -163,5 +163,10 @@ export const contractsApi = {
       },
     });
     return response.data?.data;
+  },
+
+  addContractMember: async (contractId: string, memberData: any) => {
+    const response = await apiClient.post(`/contracts/${contractId}/members`, memberData);
+    return response.data?.data;
   }
 };

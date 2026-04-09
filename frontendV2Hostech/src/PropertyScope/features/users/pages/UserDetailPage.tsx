@@ -31,7 +31,7 @@ export default function UserDetailPage() {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+        <div className="w-8 h-8 rounded-full border-4 border-[#EFF6FF] border-t-[#1E3A8A] animate-spin" />
       </div>
     );
   }
@@ -39,10 +39,10 @@ export default function UserDetailPage() {
   if (isError || !user) {
     return (
       <div className="text-center py-20">
-        <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300">Không tìm thấy người dùng</h2>
+        <h2 className="text-xl font-bold text-[#111827] dark:text-slate-300">Không tìm thấy người dùng</h2>
         <button 
           onClick={handleBack}
-          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-xl"
+          className="mt-4 px-6 py-2 bg-[#1E3A8A] text-white rounded-lg font-bold"
         >
           Quay lại
         </button>
@@ -76,13 +76,12 @@ export default function UserDetailPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={handleBack}
-            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all shadow-sm group"
+            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[#4B5563] hover:text-[#1E3A8A] dark:hover:text-[#1E3A8A] transition-all shadow-sm group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
           <div>
-            <div className="absolute inset-0 bg-linear-to-b from-white/10 to-transparent pointer-events-none" />
-            <h1 className="text-2xl font-black bg-linear-to-br from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent flex items-center gap-3">
+            <h1 className="text-24 font-bold text-[#111827] dark:text-white">
               Hồ sơ người dùng
             </h1>
           </div>
@@ -92,10 +91,10 @@ export default function UserDetailPage() {
         <button
           onClick={handleToggleLock}
           disabled={isUpdating}
-          className={`group relative flex items-center gap-2 px-6 py-3 rounded-2xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
+          className={`group relative flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
             isActive 
-              ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50 shadow-rose-600/10' 
-              : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50 shadow-emerald-600/10'
+              ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:hover:bg-rose-900/50' 
+              : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:hover:bg-emerald-900/50'
           }`}
         >
           {isUpdating ? (
@@ -140,15 +139,15 @@ export default function UserDetailPage() {
               <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">{user.email}</p>
 
               <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-tight ${
-                  user.role === 'Tenant' || user.roles?.[0] === 'Tenant' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-tight ${
+                  user.role === 'Tenant' || user.roles?.[0] === 'Tenant' ? 'bg-[#EFF6FF] text-[#1E3A8A] dark:bg-indigo-900/30 dark:text-indigo-400' : 
                   'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
                 }`}>
                   {user.role === 'Tenant' || user.roles?.[0] === 'Tenant' ? <BadgeCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
                   {user.roles?.[0] || user.role || 'Người dùng'}
                 </span>
 
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-tight ${
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-tight ${
                   isActive ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
                 }`}>
                   {isActive ? <ShieldCheck className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
@@ -165,22 +164,22 @@ export default function UserDetailPage() {
             transition={{ delay: 0.05 }}
             className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4"
           >
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 flex items-center gap-2">
-              <DoorOpen className="w-4 h-4 text-violet-500" />
+            <h3 className="text-sm font-bold text-[#111827] dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 flex items-center gap-2">
+              <DoorOpen className="w-4 h-4 text-[#1E3A8A]" />
               Phòng đang ở
             </h3>
             
             {user.assigned_rooms && user.assigned_rooms.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {user.assigned_rooms.map(room => (
-                  <div key={room.id} className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/50 w-full">
-                    <div className="w-10 h-10 rounded-xl bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                  <div key={room.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800/50 w-full">
+                    <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-900/40 flex items-center justify-center text-[#1E3A8A] dark:text-violet-400 shadow-sm border border-slate-50">
                       <DoorOpen className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-violet-800 dark:text-violet-300">{room.name || room.code}</p>
+                      <p className="text-sm font-bold text-[#111827] dark:text-violet-300">{room.name || room.code}</p>
                       {room.name && room.code && (
-                        <p className="text-xs font-semibold text-violet-500 dark:text-violet-400/70">Mã: {room.code}</p>
+                        <p className="text-xs font-medium text-[#4B5563] dark:text-violet-400/70">Mã: {room.code}</p>
                       )}
                     </div>
                   </div>
@@ -203,7 +202,7 @@ export default function UserDetailPage() {
             transition={{ delay: 0.1 }}
             className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700 space-y-4"
           >
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4">
+            <h3 className="text-sm font-bold text-[#111827] dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4">
               Ngày tháng
             </h3>
             
@@ -212,8 +211,8 @@ export default function UserDetailPage() {
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ngày tham gia</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{new Date(user.created_at).toLocaleDateString('vi-VN')}</p>
+                <p className="text-xs font-bold text-[#4B5563] uppercase tracking-wider">Ngày tham gia</p>
+                <p className="text-sm font-bold text-[#111827] dark:text-slate-100">{new Date(user.created_at).toLocaleDateString('vi-VN')}</p>
               </div>
             </div>
 
@@ -222,8 +221,8 @@ export default function UserDetailPage() {
                 <Unlock className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Đăng nhập lần cuối</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                <p className="text-xs font-bold text-[#4B5563] uppercase tracking-wider">Đăng nhập lần cuối</p>
+                <p className="text-sm font-bold text-[#111827] dark:text-slate-100">
                   {user.last_login_at ? new Date(user.last_login_at).toLocaleString('vi-VN') : 'Chưa từng đăng nhập'}
                 </p>
               </div>
@@ -239,16 +238,16 @@ export default function UserDetailPage() {
             transition={{ delay: 0.2 }}
             className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700"
           >
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 mb-6">
+            <h3 className="text-sm font-bold text-[#111827] dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 mb-6">
               Thông tin liên hệ & Định danh
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                <label className="text-xs font-bold text-[#4B5563] flex items-center gap-2">
                   <Mail className="w-4 h-4" /> EMAIL LIÊN HỆ
                 </label>
-                <p className="text-base font-semibold text-slate-900 dark:text-slate-100">{user.email}</p>
+                <p className="text-base font-bold text-[#111827] dark:text-slate-100">{user.email}</p>
               </div>
 
               <div className="space-y-1">
@@ -290,40 +289,6 @@ export default function UserDetailPage() {
             </div>
           </motion.div>
 
-          {/* Security */}
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="bg-white dark:bg-slate-800 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-700"
-          >
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700/50 pb-4 mb-6">
-              Bảo mật tài khoản
-            </h3>
-
-            <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700/50">
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  user.two_factor_enabled || user.mfa_enabled ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400' : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                }`}>
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-slate-100">Xác thực 2 lớp (2FA)</h4>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                    {user.two_factor_enabled || user.mfa_enabled ? 'Người dùng đang bật bảo mật bằng 2 lớp.' : 'Chưa được kích hoạt tính năng này.'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-tight ${
-                  user.two_factor_enabled || user.mfa_enabled ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                }`}>
-                  {user.two_factor_enabled || user.mfa_enabled ? 'Đã bật' : 'Tắt'}
-                </span>
-              </div>
-            </div>
-          </motion.div>
         </div>
 
       </div>

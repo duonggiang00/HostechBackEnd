@@ -29,7 +29,7 @@ function Step({ step, title, description, status, badge, onAction, actionLabel }
   const c = colors[status];
 
   return (
-    <div className={`flex items-start gap-4 p-4 rounded-xl border ${c.border} bg-white dark:bg-slate-900 transition-all`}>
+    <div className={`flex items-start gap-4 p-4 rounded-[12px] border ${c.border} bg-white dark:bg-slate-900 transition-all`}>
       {/* Step circle */}
       <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black ${c.icon}`}>
         {status === 'done' ? <CheckCircle2 className="w-5 h-5" /> : status === 'warning' ? <AlertCircle className="w-5 h-5" /> : <span>{step}</span>}
@@ -39,9 +39,9 @@ function Step({ step, title, description, status, badge, onAction, actionLabel }
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-black text-slate-800 dark:text-slate-200">{title}</span>
           {badge !== undefined && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              status === 'done' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                : status === 'action' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300'
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] ${
+              status === 'done' ? 'bg-[#D1FAE5] text-[#10B981]'
+                : status === 'action' ? 'bg-[#FEF3C7] text-[#F59E0B]'
                 : 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300'
             }`}>
               {badge}
@@ -54,14 +54,14 @@ function Step({ step, title, description, status, badge, onAction, actionLabel }
       {onAction && actionLabel && (
         <button
           onClick={onAction}
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex-shrink-0 ${
+          className={`flex items-center gap-1 px-3 py-1.5 rounded-[8px] text-xs font-bold transition-colors flex-shrink-0 ${
             status === 'done'
               ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
               : status === 'action'
-              ? 'bg-amber-500 text-white hover:bg-amber-600'
+              ? 'bg-[#F59E0B] text-white hover:bg-[#D97706]'
               : status === 'warning'
-              ? 'bg-rose-500 text-white hover:bg-rose-600'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              ? 'bg-[#EF4444] text-white hover:bg-[#DC2626]'
+              : 'bg-[#1E3A8A] text-white hover:bg-blue-900'
           }`}
         >
           {actionLabel}
@@ -96,7 +96,7 @@ export function BillingPeriodChecklist({ propertyId, onOpenBulkApprove, onOpenGe
   const allIssued      = hasInvoices && draftCount === 0;
 
   return (
-    <div className="bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-2xl p-5">
+    <div className="bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-[12px] p-5">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tiến độ kỳ tháng {thisMonth}</span>
       </div>
