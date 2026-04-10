@@ -31,6 +31,8 @@ import UtilityManager from '@/PropertyScope/features/operations/components/Utili
 import RoomImageGallery from '../components/RoomImageGallery';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import { formatCurrency } from '@/lib/utils';
+import { AddMemberModal } from '@/PropertyScope/features/contracts/components/AddMemberModal';
+import { UserPlus } from 'lucide-react';
 
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ export default function RoomDetailPage() {
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQuickInvoiceOpen, setIsQuickInvoiceOpen] = useState(false);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
   const handleBack = () => {
     if (location.state?.from === 'building-view') {
@@ -394,6 +397,21 @@ export default function RoomDetailPage() {
         {/* ── Người thuê ───────────────────────────────────────────────── */}
         {activeTab === 'tenants' && (
           <div className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 overflow-hidden">
+            {/* Header controls */}
+            <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Danh sách thành viên hiện tại</h3>
+              
+              {room.status === 'occupied' && room.contracts?.some(c => String(c.status).toLowerCase() === 'active') && (
+                <button
+                  onClick={() => setIsAddMemberOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-sm"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Thêm người ở cùng
+                </button>
+              )}
+            </div>
+
             {activeMembers.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -598,6 +616,12 @@ export default function RoomDetailPage() {
         isOpen={isQuickInvoiceOpen}
         onClose={() => setIsQuickInvoiceOpen(false)}
         room={room}
+      />
+
+      <AddMemberModal
+        isOpen={isAddMemberOpen}
+        onClose={() => setIsAddMemberOpen(false)}
+        contractId={room.contracts?.find(c => String(c.status).toLowerCase() === 'active')?.id || ''}
       />
     </div>
   );

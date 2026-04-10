@@ -17,13 +17,13 @@ export const OccupancyGauge = ({ percentage }: OccupancyGaugeProps) => {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-3xl shadow-sm flex flex-col items-center justify-center text-center ${isLargeFont ? 'h-auto py-6' : 'h-[340px]'}`}
+      className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-5 rounded-[12px] shadow-sm flex flex-col items-center justify-center text-center ${isLargeFont ? 'h-auto py-6' : 'h-[340px]'}`}
     >
-      <h3 className={`${isLargeFont ? 'text-lg' : 'text-base'} font-bold text-slate-900 dark:text-white mb-0.5`}>Tỉ lệ lấp đầy</h3>
-      <p className={`${isLargeFont ? 'text-sm' : 'text-xs'} text-slate-500 dark:text-slate-400 font-medium mb-4`}>Trạng thái hiện tại</p>
+      <h3 className={`${isLargeFont ? 'text-[18px]' : 'text-[16px]'} font-bold text-gray-900 dark:text-white mb-0.5`}>Tỉ lệ lấp đầy</h3>
+      <p className={`${isLargeFont ? 'text-[13px]' : 'text-[12px]'} text-gray-500 dark:text-gray-400 font-normal mb-4`}>Trạng thái hiện tại</p>
       
-      <div className={`relative ${isLargeFont ? 'w-36 h-36' : 'w-44 h-44'}`}>
-        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+      <div className={`relative flex items-center justify-center ${isLargeFont ? 'w-36 h-36' : 'w-44 h-44'}`}>
+        <svg className="w-full h-full transform -rotate-90 absolute" viewBox="0 0 200 200">
           <circle
             cx="100"
             cy="100"
@@ -31,7 +31,7 @@ export const OccupancyGauge = ({ percentage }: OccupancyGaugeProps) => {
             stroke="currentColor"
             strokeWidth="12"
             fill="transparent"
-            className="text-slate-100 dark:text-slate-800"
+            className="text-gray-100 dark:text-gray-800"
           />
           <motion.circle
             cx="100"
@@ -44,28 +44,28 @@ export const OccupancyGauge = ({ percentage }: OccupancyGaugeProps) => {
             initial={{ strokeDashoffset: circumference }}
             animate={{ strokeDashoffset: offset }}
             transition={{ duration: 1.5, ease: "easeOut" }}
-            className="text-indigo-600"
+            className="text-blue-900"
             strokeLinecap="round"
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`${isLargeFont ? 'text-2xl' : 'text-3xl'} font-bold text-slate-900 dark:text-white`}>{percentage}%</span>
-          <span className={`${isLargeFont ? 'text-[10px]' : 'text-[10px]'} font-bold text-slate-400 uppercase tracking-widest mt-0.5`}>Lấp đầy</span>
+          <span className={`${isLargeFont ? 'text-2xl' : 'text-3xl'} font-bold text-gray-900 dark:text-white`}>{percentage}%</span>
+          <span className={`${isLargeFont ? 'text-[10px]' : 'text-[11px]'} font-semibold text-gray-500 uppercase tracking-widest mt-0.5`}>Lấp đầy</span>
         </div>
       </div>
       
       <div className={`${isLargeFont ? 'mt-4' : 'mt-8'} flex gap-6`}>
         <div className="text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Trạng thái</p>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full" />
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Rất tốt</span>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Trạng thái</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <div className="w-2 h-2 bg-green-500 rounded-full" />
+            <span className="text-[13px] font-medium text-gray-700 dark:text-gray-200">Rất tốt</span>
           </div>
         </div>
-        <div className="w-px h-8 bg-slate-100 dark:bg-slate-800" />
+        <div className="w-px h-8 bg-gray-200 dark:bg-gray-800" />
         <div className="text-center">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Mục tiêu</p>
-          <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Đúng tiến độ</p>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">Mục tiêu</p>
+          <p className="text-[13px] font-medium text-gray-700 dark:text-gray-200">Đúng tiến độ</p>
         </div>
       </div>
     </motion.div>

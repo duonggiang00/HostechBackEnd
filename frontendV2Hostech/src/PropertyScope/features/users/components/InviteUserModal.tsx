@@ -55,22 +55,22 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700"
+          className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700"
         >
           {/* Tiêu đề Modal */}
           <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] dark:bg-indigo-900/40 flex items-center justify-center text-[#1E3A8A] dark:text-indigo-400">
                 <Mail className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">Gửi lời mời</h3>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Thêm người dùng vào tòa nhà</p>
+                <h3 className="text-lg font-bold text-[#111827] dark:text-slate-100">Gửi lời mời</h3>
+                <p className="text-xs text-[#4B5563] dark:text-slate-400">Thêm người dùng vào tòa nhà</p>
               </div>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              className="p-2 text-slate-400 hover:text-[#1E3A8A] transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -81,7 +81,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
             <div className="space-y-4">
               {/* Nhập Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Email người nhận</label>
+                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">Email người nhận</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
@@ -90,58 +90,58 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="nguyenvana@example.com"
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-2xl focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 dark:focus:ring-indigo-400/10 transition-all text-sm font-semibold outline-none"
+                    className="w-full pl-12 pr-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg focus:border-[#1E3A8A] focus:ring-2 focus:ring-[#1E3A8A]/10 transition-all text-sm font-medium outline-none text-[#111827] dark:text-white"
                   />
                 </div>
               </div>
 
               {/* Chọn vai trò */}
               <div className="space-y-3 pt-2">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Vai trò (Role)</label>
+                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">Vai trò (Role)</label>
                 <div className="grid grid-cols-2 gap-3">
                   {/* Khách thuê */}
-                  <label className={`relative cursor-pointer rounded-2xl border-2 p-4 transition-all ${
+                  <label className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
                     roleName === 'Tenant' 
-                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' 
+                      ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20' 
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                   }`}>
                     <input type="radio" name="role" value="Tenant" checked={roleName === 'Tenant'} onChange={(e) => setRoleName(e.target.value)} className="sr-only" />
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl flex-shrink-0 ${
-                        roleName === 'Tenant' ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${
+                        roleName === 'Tenant' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
                       }`}>
                         <BadgeCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-sm font-bold ${roleName === 'Tenant' ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <p className={`text-sm font-bold ${roleName === 'Tenant' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'}`}>
                           Khách thuê
                         </p>
-                        <p className={`text-[10px] mt-0.5 ${roleName === 'Tenant' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
-                          Thuê phòng, xem hóa đơn
+                        <p className={`text-[10px] mt-0.5 font-bold ${roleName === 'Tenant' ? 'text-[#1E3A8A]/70 dark:text-indigo-400' : 'text-slate-500'}`}>
+                          Thuê phòng, hóa đơn
                         </p>
                       </div>
                     </div>
                   </label>
 
                   {/* Nhân viên */}
-                  <label className={`relative cursor-pointer rounded-2xl border-2 p-4 transition-all ${
+                  <label className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
                     roleName === 'Staff' 
-                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-900/20' 
+                      ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20' 
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                   }`}>
                     <input type="radio" name="role" value="Staff" checked={roleName === 'Staff'} onChange={(e) => setRoleName(e.target.value)} className="sr-only" />
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl flex-shrink-0 ${
-                        roleName === 'Staff' ? 'bg-indigo-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                      <div className={`p-2 rounded-lg flex-shrink-0 ${
+                        roleName === 'Staff' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
                       }`}>
                         <ShieldAlert className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-sm font-bold ${roleName === 'Staff' ? 'text-indigo-900 dark:text-indigo-200' : 'text-slate-700 dark:text-slate-300'}`}>
+                        <p className={`text-sm font-bold ${roleName === 'Staff' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'}`}>
                           Nhân viên
                         </p>
-                        <p className={`text-[10px] mt-0.5 ${roleName === 'Staff' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}`}>
-                          Quản trị tòa nhà này
+                        <p className={`text-[10px] mt-0.5 font-bold ${roleName === 'Staff' ? 'text-[#1E3A8A]/70 dark:text-indigo-400' : 'text-slate-500'}`}>
+                          Vận hành tòa nhà
                         </p>
                       </div>
                     </div>
@@ -155,7 +155,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-2xl text-sm font-bold transition-colors"
+                className="flex-1 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-[#4B5563] dark:text-slate-200 rounded-lg text-sm font-bold transition-colors"
                 disabled={inviteMutation.isPending}
               >
                 Hủy bỏ
@@ -163,7 +163,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               <button
                 type="submit"
                 disabled={inviteMutation.isPending || !email}
-                className="flex-1 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-lg text-sm font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {inviteMutation.isPending ? (
                   <>

@@ -121,20 +121,25 @@ const RootRedirect = () => {
   }
 
   switch (user.role) {
+    case 'Admin':
     case 'Owner':
       return <Navigate to="/org/dashboard" replace />;
     
     case 'Manager':
     case 'Staff': {
       // 1. If user has exactly one assigned property, jump straight to its dashboard (Property Scope)
+      // But if they are STAFF with "full power", they might want to go to ORG dashboard too.
+      // Let's stick to the current logic: if they have an org and no specific prop, go to org.
+      
       if (user.properties && user.properties.length === 1) {
         return <Navigate to={`/properties/${user.properties[0].id}/dashboard`} replace />;
       }
       
       // 2. If user has multiple properties or no specific assignment (but has an org),
-      // navigate to the neutral property selection layout.
+      // navigate to the neutral property selection layout or Org Dashboard.
       if (user.org_id) {
-         return <Navigate to="/select-property" replace />;
+         // Staff with full power can go to Org Dashboard
+         return <Navigate to="/org/dashboard" replace />;
       }
 
       // Fallback
@@ -177,7 +182,7 @@ export default function AppRoutes() {
         <Route 
           path="/select-property" 
           element={
-            <ProtectedRoute allowedRoles={['Owner', 'Manager', 'Staff']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
               <SelectionLayout title="Chọn cơ sở" subtitle="Hãy chọn một cơ sở để bắt đầu quản lý vận hành hàng ngày">
                 <PropertySelectionPage />
               </SelectionLayout>
@@ -190,7 +195,7 @@ export default function AppRoutes() {
         <Route 
           path="/org"
           element={
-            <ProtectedRoute allowedRoles={['Owner']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Staff']}>
               <OrgScopeLayout><Outlet /></OrgScopeLayout>
             </ProtectedRoute>
           }
@@ -210,7 +215,7 @@ export default function AppRoutes() {
         <Route 
           path="/properties/:propertyId"
           element={
-            <ProtectedRoute allowedRoles={['Owner', 'Manager', 'Staff']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
               <PropertyScopeLayout><Outlet /></PropertyScopeLayout>
             </ProtectedRoute>
           }

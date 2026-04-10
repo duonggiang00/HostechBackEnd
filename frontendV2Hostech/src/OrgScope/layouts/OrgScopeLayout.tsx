@@ -24,11 +24,11 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Owner'] },
+    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner', 'Staff'] },
     { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Owner'] },
-    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Owner'] },
-    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Owner'] },
+    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Admin', 'Owner', 'Staff'] },
+    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner', 'Staff'] },
+    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner', 'Staff'] },
   ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
 
   const menuSections = [

@@ -271,18 +271,18 @@ export default function QuickReadingPage() {
         <div>
           <button
             onClick={() => navigate(`/properties/${propertyId}/meters`)}
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors mb-2"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1E3A8A] hover:text-blue-900 transition-colors mb-2"
           >
             <ArrowLeft className="w-4 h-4" />
             Quay lại danh sách
           </button>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-yellow-50 dark:bg-yellow-500/10 rounded-xl">
-              <Zap className="w-6 h-6 text-yellow-500 dark:text-yellow-400" />
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-500/10 rounded-[12px]">
+              <Zap className="w-6 h-6 text-[#1E3A8A] dark:text-blue-400" />
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Chốt số nhanh</h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Nhập chỉ số điện, nước hàng loạt cho các phòng</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Chốt số nhanh</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Nhập chỉ số điện, nước hàng loạt cho các phòng</p>
             </div>
           </div>
         </div>
@@ -290,35 +290,35 @@ export default function QuickReadingPage() {
 
       {/* Progress Floating Bar */}
       {!isLoading && meters.length > 0 && (
-        <div className="sticky top-4 z-40 mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-white/10 p-4 rounded-2xl shadow-xl flex items-center gap-4 transition-all animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="sticky top-4 z-40 mb-8 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-white/10 p-4 rounded-[12px] shadow-sm flex items-center gap-4 transition-all animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex-1">
-            <div className="flex justify-between text-sm font-bold mb-1.5">
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Tiến độ chốt số</span>
-              <span className="text-indigo-600 dark:text-indigo-400" data-testid="reading-progress-text">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
+            <div className="flex justify-between text-sm font-semibold mb-1.5">
+              <span className="text-slate-600 dark:text-slate-400">Tiến độ chốt số</span>
+              <span className="text-[#1E3A8A] dark:text-blue-400" data-testid="reading-progress-text">{Object.keys(readings).length} / {meters.length} đồng hồ</span>
             </div>
             <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-600 transition-all duration-500 ease-out shadow-[0_0_12px_rgba(79,70,229,0.4)]"
+                className="h-full bg-[#1E3A8A] transition-all duration-500 ease-out shadow-[0_0_12px_rgba(30,58,138,0.4)]"
                 style={{ width: `${(Object.keys(readings).length / meters.length) * 100}%` }}
               />
             </div>
           </div>
-          <div className="hidden sm:block h-10 w-px bg-slate-200 dark:bg-white/10 mx-2" />
+          <div className="hidden sm:block h-8 w-px bg-slate-200 dark:bg-white/10 mx-2" />
           <button
             onClick={handleSave}
             disabled={isSubmitting || Object.keys(readings).length === 0}
-            className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center gap-2 whitespace-nowrap"
+            className="px-6 py-2.5 bg-[#F59E0B] text-white rounded-[8px] text-sm font-semibold hover:bg-[#D97706] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2 whitespace-nowrap"
           >
-            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Lưu ngay
           </button>
         </div>
       )}
 
       {/* Settings Card */}
-      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-sm">
+      <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 p-6 rounded-[12px] shadow-sm">
         <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-indigo-500" />
+          <Calendar className="w-5 h-5 text-[#1E3A8A]" />
           Kỳ chốt số
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -329,7 +329,7 @@ export default function QuickReadingPage() {
               value={periodStart}
               data-testid="reading-period-start"
               onChange={(e) => setPeriodStart(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all text-slate-900 dark:text-white text-sm"
             />
           </div>
           <div>
@@ -339,7 +339,7 @@ export default function QuickReadingPage() {
               value={periodEnd}
               data-testid="reading-period-end"
               onChange={(e) => setPeriodEnd(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-900 dark:text-white"
+              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all text-slate-900 dark:text-white text-sm"
             />
           </div>
         </div>
@@ -352,25 +352,25 @@ export default function QuickReadingPage() {
       {/* Main List */}
       {isLoading ? (
         <div className="flex items-center justify-center p-12">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-[#1E3A8A] animate-spin" />
         </div>
       ) : Object.keys(groupedMeters).length === 0 ? (
-        <div className="text-center p-12 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl">
+        <div className="text-center p-12 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px]">
           <AlertCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Không tìm thấy đồng hồ nào đang hoạt động.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Không tìm thấy đồng hồ nào đang hoạt động.</p>
         </div>
       ) : (
         <div className="space-y-8">
           {Object.entries(groupedMeters).map(([floorName, rooms]) => (
             <div key={floorName} className="space-y-4">
               <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <div className="w-2 h-6 bg-indigo-500 rounded-full"></div>
+                <div className="w-2 h-6 bg-[#1E3A8A] rounded-full"></div>
                 {floorName}
               </h3>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {Object.entries(rooms).map(([roomName, roomMeters]) => (
-                  <div key={roomName} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div key={roomName} className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-[12px] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="px-5 py-3 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center text-sm">
                       <span className="font-bold text-slate-800 dark:text-slate-200">
                         {roomName}
@@ -439,10 +439,10 @@ export default function QuickReadingPage() {
                                   value={currentValue}
                                   data-testid={`meter-reading-input-${meter.id}`}
                                   onChange={(e) => handleReadingChange(meter.id, e.target.value)}
-                                  className={`w-full px-3 py-1.5 bg-white dark:bg-slate-800 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold text-sm text-slate-900 dark:text-white placeholder:font-normal placeholder:text-slate-400
+                                  className={`w-full px-3 py-1.5 bg-white dark:bg-slate-800 border rounded-[8px] focus:outline-none focus:ring-1 focus:ring-[#1E3A8A] font-semibold text-sm text-slate-900 dark:text-white placeholder:font-normal placeholder:text-slate-400
                                     ${currentValue && parseFloat(currentValue) < prevValue
                                       ? 'border-red-300 focus:border-red-500'
-                                      : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'}
+                                      : 'border-slate-200 dark:border-slate-700 focus:border-[#1E3A8A]'}
                                   `}
                                 />
                               </div>
@@ -453,9 +453,9 @@ export default function QuickReadingPage() {
                                 <div className="flex items-center justify-end gap-1.5">
                                   <p
                                     className={`text-sm font-bold ${consumption > 500
-                                        ? 'text-orange-600 animate-pulse'
+                                        ? 'text-[#F59E0B] animate-pulse'
                                         : consumption > 0
-                                          ? 'text-indigo-600 dark:text-indigo-400'
+                                          ? 'text-[#1E3A8A] dark:text-blue-400'
                                           : 'text-slate-400 dark:text-slate-500'
                                       }`}
                                     data-testid={`consumption-value-${meter.id}`}
@@ -579,7 +579,7 @@ export default function QuickReadingPage() {
                   navigate(`/properties/${propertyId}/meters`);
                 }}
                 disabled={bulkSubmitMutation.isPending}
-                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3 bg-[#1E3A8A] text-white rounded-[8px] text-sm font-semibold hover:bg-blue-900 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {bulkSubmitMutation.isPending ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

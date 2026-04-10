@@ -36,32 +36,33 @@ export function PropertyDashboardView({
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Active Actions Row */}
       <div className="flex justify-end">
-        <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl w-fit">
+        <div className="flex items-center gap-1.5 p-1 bg-gray-50 rounded-lg w-fit border border-gray-200 shadow-sm">
           <button 
             onClick={onGenerateBilling}
             disabled={isGenerating}
             data-testid="generate-billing-btn"
-            className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-indigo-300' : 'bg-indigo-600 hover:bg-indigo-700'} text-white shadow-sm rounded-xl text-[11px] font-bold transition-all`}
+            className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-600'} text-white shadow-sm rounded-md text-[13px] font-semibold transition-colors focus-visible:outline-none focus:ring-2 focus:ring-amber-500/50 ml-0.5`}
           >
             {isGenerating ? (
-              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             ) : (
-              <CalendarCheck className="w-3.5 h-3.5" />
+              <CalendarCheck className="w-4 h-4" />
             )}
             Chạy hóa đơn
           </button>
-          <button className="px-3 py-1.5 bg-white dark:bg-slate-700 shadow-xs rounded-lg text-[11px] font-bold text-slate-800 dark:text-white">30 ngày qua</button>
-          <button className="px-3 py-1.5 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded-lg text-[11px] font-bold text-slate-500 dark:text-slate-400 transition-colors">Quý trước</button>
+          <div className="h-5 w-px bg-gray-200 mx-1"></div>
+          <button className="px-4 py-2 bg-white shadow-sm rounded-md text-[13px] font-semibold text-gray-900 border border-gray-200">30 ngày qua</button>
+          <button className="px-4 py-2 hover:bg-gray-100 rounded-md text-[13px] font-medium text-gray-500 hover:text-gray-900 transition-colors mr-0.5">Quý trước</button>
         </div>
       </div>
 
       {/* High Level Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
         <StatCard 
           label="Khách thuê hiện tại" 
           value={stats.totalTenants.toLocaleString('vi-VN')} 
           icon={Users} 
-          color="indigo"
+          color="blue"
           trend={{ value: 12, isUp: true }}
           testId="stat-tenants"
         />
@@ -69,14 +70,14 @@ export function PropertyDashboardView({
           label="Tổng số phòng" 
           value={stats.totalRooms.toLocaleString('vi-VN')} 
           icon={DoorOpen} 
-          color="emerald"
+          color="gray"
           testId="stat-rooms"
         />
         <StatCard 
           label="Hóa đơn chưa thanh toán" 
           value={stats.unpaidInvoices} 
           icon={Receipt} 
-          color="rose"
+          color="amber"
           trend={{ value: 5, isUp: false }}
           testId="stat-unpaid"
         />
@@ -84,7 +85,7 @@ export function PropertyDashboardView({
           label="Doanh thu tháng này" 
           value={stats.thisMonthRevenue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} 
           icon={TrendingUp} 
-          color="amber"
+          color="green"
           trend={{ value: 8, isUp: true }}
           testId="stat-revenue"
         />
@@ -120,29 +121,29 @@ export function PropertyDashboardView({
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className={`${isLargeFont ? 'lg:col-span-2' : 'lg:col-span-2'} bg-linear-to-br from-indigo-600 to-indigo-800 p-6 md:p-8 rounded-3xl shadow-lg relative overflow-hidden group`}
+          className={`${isLargeFont ? 'lg:col-span-2' : 'lg:col-span-2'} bg-blue-900 p-6 md:p-8 rounded-[12px] shadow-sm border border-blue-800 relative overflow-hidden group`}
         >
-          <div className="absolute right-0 top-0 w-64 h-64 bg-white opacity-[0.05] rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-110 transition-transform" />
+          <div className="absolute right-0 bottom-0 w-64 h-64 bg-white/5 rounded-full translate-y-1/3 translate-x-1/3 blur-2xl group-hover:scale-110 transition-transform" />
           
           <div className="relative z-10 flex flex-col h-full justify-between">
             <div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-2">Tình trạng phòng</h3>
-              <p className="text-indigo-100 text-sm font-medium max-w-md">Tòa nhà hiện có {stats.vacantRooms.toLocaleString('vi-VN')} phòng trống sẵn sàng cho thuê. Tỷ lệ lấp đầy hiện tại là {stats.occupancyRate}%.</p>
+              <h3 className="text-xl font-bold text-white mb-2 tracking-tight">Tình trạng phòng</h3>
+              <p className="text-blue-100 text-[14px] max-w-md font-medium leading-relaxed">Tòa nhà hiện có {stats.vacantRooms.toLocaleString('vi-VN')} phòng trống sẵn sàng cho thuê. Tỷ lệ lấp đầy hiện tại là {stats.occupancyRate}%.</p>
             </div>
             
-            <div className="mt-8 md:mt-12 flex flex-wrap gap-6 md:gap-12 items-end justify-between">
+            <div className="mt-8 flex flex-wrap gap-6 md:gap-12 items-end justify-between">
               <div className="flex gap-8 md:gap-12">
                 <div>
-                  <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mb-1">Đã thuê</p>
+                  <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mb-1.5">Đã thuê</p>
                   <p className="text-2xl md:text-3xl font-bold text-white">{stats.occupiedRooms.toLocaleString('vi-VN')}</p>
                 </div>
                 <div>
-                  <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mb-1">Trống</p>
+                  <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mb-1.5">Trống</p>
                   <p className="text-2xl md:text-3xl font-bold text-white">{stats.vacantRooms.toLocaleString('vi-VN')}</p>
                 </div>
               </div>
               
-              <button className="px-5 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-xl hover:scale-105 active:scale-95 transition-all">
+              <button className="px-5 py-2.5 flex items-center justify-center bg-white text-blue-900 text-sm font-bold rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
                 Quản lý kho
               </button>
             </div>

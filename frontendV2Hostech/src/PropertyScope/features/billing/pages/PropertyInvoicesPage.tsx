@@ -66,14 +66,14 @@ export function PropertyInvoicesPage() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsBulkApproveOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
-              <ClipboardList className="w-4 h-4 text-amber-500" />
+              <ClipboardList className="w-4 h-4 text-[#1E3A8A]" />
               Duyệt chốt số
             </button>
             <button 
               onClick={() => setIsGenerateModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm transition-all shadow-lg shadow-indigo-500/20"
+              className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] font-black text-sm transition-all shadow-sm active:scale-95"
             >
               <Plus className="w-4 h-4" />
               Tạo hóa đơn tháng
@@ -90,11 +90,11 @@ export function PropertyInvoicesPage() {
 
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-indigo-100 dark:group-hover:bg-indigo-500/20 transition-all duration-500"></div>
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-blue-100 transition-all duration-500"></div>
             <div className="flex items-start justify-between relative z-10">
               <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tổng doanh thu kỳ này</p>
-              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : <TrendingUp className="w-4 h-4 text-indigo-400" />}
+              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : <TrendingUp className="w-4 h-4 text-[#1E3A8A]" />}
             </div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 relative z-10">
               {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalRevenue)}
@@ -102,13 +102,13 @@ export function PropertyInvoicesPage() {
             <p className="text-xs text-slate-400 mt-1 relative z-10">{summary.count} hóa đơn</p>
           </div>
 
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 dark:group-hover:bg-emerald-500/20 transition-all duration-500"></div>
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 transition-all duration-500"></div>
             <div className="flex items-start justify-between relative z-10">
               <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Đã thu</p>
               {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
             </div>
-            <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-2 relative z-10">
+            <h3 className="text-2xl font-black text-[#10B981] mt-2 relative z-10">
               {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalPaid)}
             </h3>
             <p className="text-xs text-slate-400 mt-1 relative z-10">
@@ -116,13 +116,13 @@ export function PropertyInvoicesPage() {
             </p>
           </div>
 
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-rose-100 dark:group-hover:bg-rose-500/20 transition-all duration-500"></div>
+          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-rose-100 transition-all duration-500"></div>
             <div className="flex items-start justify-between relative z-10">
               <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Dư nợ / Chưa thanh toán</p>
               {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
             </div>
-            <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2 relative z-10">
+            <h3 className="text-2xl font-black text-[#EF4444] mt-2 relative z-10">
               {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalDebt)}
             </h3>
             <p className="text-xs text-slate-400 mt-1 relative z-10">
@@ -140,7 +140,7 @@ export function PropertyInvoicesPage() {
               placeholder="Tìm kiếm hóa đơn, mã phòng..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all"
             />
           </div>
           <div className="relative w-full sm:w-48">
@@ -148,7 +148,7 @@ export function PropertyInvoicesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 appearance-none focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] text-sm font-bold text-slate-700 dark:text-slate-300 appearance-none focus:outline-none focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all"
             >
                <option value="">Tất cả trạng thái</option>
                <option value="DRAFT">Nháp</option>
@@ -160,10 +160,10 @@ export function PropertyInvoicesPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
           {isLoading ? (
              <div className="flex justify-center py-20">
-               <div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+               <div className="w-8 h-8 border-4 border-[#1E3A8A]/20 border-t-[#1E3A8A] rounded-full animate-spin"></div>
              </div>
           ) : invoices.length === 0 ? (
              <div className="flex flex-col items-center justify-center py-24 text-center px-4">
@@ -178,12 +178,12 @@ export function PropertyInvoicesPage() {
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/50">
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Phòng</th>
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Kỳ thanh toán</th>
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Tổng cộng</th>
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Đã trả</th>
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Còn nợ</th>
-                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Trạng thái</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Phòng</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Kỳ thanh toán</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Tổng cộng</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Đã trả</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Còn nợ</th>
+                     <th className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-[#4B5563] dark:text-slate-400">Trạng thái</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -194,7 +194,7 @@ export function PropertyInvoicesPage() {
                         className="group hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
                       >
                          <td className="py-4 px-6">
-                            <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#1E3A8A] dark:group-hover:text-blue-400 transition-colors">
                               {inv.room?.code ?? inv.room?.name ?? '—'}
                             </span>
                          </td>
@@ -212,12 +212,12 @@ export function PropertyInvoicesPage() {
                             </span>
                          </td>
                          <td className="py-4 px-6">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                            <span className="text-sm font-black text-[#10B981]">
                                {inv.paid_amount.toLocaleString()} ₫
                             </span>
                          </td>
                          <td className="py-4 px-6">
-                           <span className={`text-sm font-black ${inv.debt > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                           <span className={`text-sm font-black ${inv.debt > 0 ? 'text-[#EF4444]' : 'text-slate-400'}`}>
                              {inv.debt.toLocaleString()} ₫
                            </span>
                          </td>

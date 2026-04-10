@@ -112,7 +112,7 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
   return (
     <form id="service-form" onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Thông tin dịch vụ</h2>
+        <h2 className="text-lg font-bold text-[#111827] dark:text-white mb-6">Thông tin dịch vụ</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -122,31 +122,31 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
             <input
               {...register('code')}
               disabled={!!initialData} // Không cho sửa code nếu đang update
-              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none disabled:opacity-50"
               placeholder="VD: DIEN, NUOC..."
             />
             {errors.code && <p className="mt-1.5 text-sm text-red-500">{errors.code.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-[#4B5563] dark:text-slate-300 mb-1.5">
               Tên dịch vụ <span className="text-red-500">*</span>
             </label>
             <input
               {...register('name')}
-              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none"
               placeholder="VD: Tiền điện, Tiền nước sinh hoạt..."
             />
             {errors.name && <p className="mt-1.5 text-sm text-red-500">{errors.name.message}</p>}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-[#4B5563] dark:text-slate-300 mb-1.5">
               Cách tính phí
             </label>
             <select
               {...register('calc_mode')}
-              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none"
             >
               <option value="PER_ROOM">Chỉ số cố định theo phòng (VND/Phòng)</option>
               <option value="PER_PERSON">Theo người (VND/Người)</option>
@@ -156,25 +156,25 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-[#4B5563] dark:text-slate-300 mb-1.5">
               Đơn vị tính <span className="text-red-500">*</span>
             </label>
             <input
               {...register('unit')}
-              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none"
               placeholder="VD: Phòng, Người, kWh, Khối..."
             />
             {errors.unit && <p className="mt-1.5 text-sm text-red-500">{errors.unit.message}</p>}
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-[#4B5563] dark:text-slate-300 mb-1.5">
               Đơn giá cơ bản (VND) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
               {...register('price', { valueAsNumber: true })}
-              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 text-lg font-semibold"
+              className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none text-lg font-semibold text-[#111827] dark:text-white"
             />
             <p className="text-xs text-slate-500 mt-1">Đơn giá này áp dụng mặc định. Nếu thiết lập bậc thang, mảng giá bậc thang sẽ ghi đè giá này khi tính chỉ số.</p>
             {errors.price && <p className="mt-1.5 text-sm text-red-500">{errors.price.message}</p>}
@@ -183,13 +183,25 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
 
         {/* Toggles */}
         <div className="mt-8 flex flex-col sm:flex-row gap-6">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" {...register('is_recurring')} className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500" />
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Tự động thêm vào hóa đơn tháng</span>
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative flex items-center">
+              <input 
+                type="checkbox" 
+                {...register('is_recurring')} 
+                className="w-5 h-5 rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A]" 
+              />
+            </div>
+            <span className="text-sm font-medium text-[#4B5563] dark:text-slate-300 group-hover:text-[#111827] transition-colors">Tự động thêm vào hóa đơn tháng</span>
           </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" {...register('is_active')} className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500" />
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Hoạt động (Cho phép sử dụng)</span>
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative flex items-center">
+              <input 
+                type="checkbox" 
+                {...register('is_active')} 
+                className="w-5 h-5 rounded border-slate-300 text-[#1E3A8A] focus:ring-[#1E3A8A]" 
+              />
+            </div>
+            <span className="text-sm font-medium text-[#4B5563] dark:text-slate-300 group-hover:text-[#111827] transition-colors">Hoạt động (Cho phép sử dụng)</span>
           </label>
         </div>
       </div>
@@ -199,15 +211,15 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 sm:p-8 animate-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-800 dark:text-white">Cấu hình giá bậc thang</h2>
-              <p className="text-sm text-slate-500 mt-1">Sử dụng cho Điện và Nước (lũy tiến).</p>
+              <h2 className="text-lg font-bold text-[#111827] dark:text-white">Cấu hình giá bậc thang</h2>
+              <p className="text-sm text-[#4B5563] mt-1">Sử dụng cho Điện và Nước (lũy tiến).</p>
             </div>
             
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => loadPreset('electric')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400 rounded-lg text-sm font-medium hover:bg-yellow-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-100 transition-colors border border-amber-200 dark:border-amber-500/20"
               >
                 <Zap className="w-4 h-4" />
                 Điện 6 bậc
@@ -215,7 +227,7 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
               <button
                 type="button"
                 onClick={() => loadPreset('water')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-500/20"
               >
                 <Droplets className="w-4 h-4" />
                 Nước 4 bậc
@@ -227,11 +239,11 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
             {fields.map((field, index) => (
               <div key={field.id} className="flex flex-col sm:flex-row items-end gap-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-800">
                 <div className="flex-1 w-full relative">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Từ mức</label>
+                  <label className="block text-xs font-semibold text-[#4B5563] uppercase tracking-wider mb-1.5">Từ mức</label>
                   <input
                     type="number"
                     {...register(`tiered_rates.${index}.tier_from` as const, { valueAsNumber: true })}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none"
                   />
                   {errors.tiered_rates?.[index]?.tier_from && (
                     <span className="text-xs text-red-500 absolute -bottom-5 left-0">{errors.tiered_rates[index]?.tier_from?.message}</span>
@@ -239,14 +251,14 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
                 </div>
 
                 <div className="flex-1 w-full relative">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Đến mức</label>
+                  <label className="block text-xs font-semibold text-[#4B5563] uppercase tracking-wider mb-1.5">Đến mức</label>
                   <input
                     type="number"
                     {...register(`tiered_rates.${index}.tier_to` as const, { 
                       setValueAs: v => v === '' ? null : parseInt(v, 10) 
                     })}
                     placeholder="Không giới hạn"
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none"
                   />
                   {errors.tiered_rates?.[index]?.tier_to && (
                     <span className="text-xs text-red-500 absolute -bottom-5 left-0">{errors.tiered_rates[index]?.tier_to?.message}</span>
@@ -254,11 +266,11 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
                 </div>
 
                 <div className="flex-1 w-full relative">
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Đơn giá (VND)</label>
+                  <label className="block text-xs font-semibold text-[#4B5563] uppercase tracking-wider mb-1.5">Đơn giá (VND)</label>
                   <input
                     type="number"
                     {...register(`tiered_rates.${index}.price` as const, { valueAsNumber: true })}
-                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-500 font-medium"
+                    className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-[#1E3A8A] focus:border-transparent transition-all outline-none font-medium text-[#111827] dark:text-white"
                   />
                   {errors.tiered_rates?.[index]?.price && (
                     <span className="text-xs text-red-500 absolute -bottom-5 left-0">{errors.tiered_rates[index]?.price?.message}</span>
@@ -268,7 +280,7 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
                 <button
                   type="button"
                   onClick={() => remove(index)}
-                  className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                  className="p-2.5 text-[#4B5563] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
                   title="Xóa bậc này"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -279,7 +291,7 @@ export default function ServiceForm({ initialData, onSubmit }: Props) {
             <button
               type="button"
               onClick={() => append({ tier_from: 0, tier_to: null, price: 0 })}
-              className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-300 dark:hover:text-indigo-400 dark:hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 transition-all font-medium"
+              className="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-[#4B5563] hover:text-[#1E3A8A] hover:border-[#1E3A8A]/30 dark:hover:text-indigo-400 dark:hover:border-indigo-500/50 hover:bg-slate-50/50 dark:hover:bg-indigo-500/5 transition-all font-medium"
             >
               <Plus className="w-4 h-4" />
               Thêm một bậc giá

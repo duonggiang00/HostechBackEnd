@@ -90,16 +90,16 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
 
   if (isLoading && !property) {
     return (
-      <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+      <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
         <div className="flex justify-center">
-          <Skeleton className="h-12 w-64 rounded-2xl" />
+          <Skeleton className="h-10 w-64 rounded-md" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-3xl" />
+            <Skeleton key={i} className="h-32 rounded-xl" />
           ))}
         </div>
-        <Skeleton className="h-[400px] w-full rounded-[2.5rem]" />
+        <Skeleton className="h-[400px] w-full rounded-xl" />
       </div>
     );
   }
@@ -107,9 +107,9 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
   if (!property) {
     return (
       <div className="flex flex-col items-center justify-center p-20 min-h-[60vh]">
-         <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md p-10 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-xl text-center max-w-md">
-            <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Tòa nhà không tồn tại</h2>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Chúng tôi không thể tìm thấy thông tin tòa nhà bạn yêu cầu. Vui lòng kiểm tra lại ID hoặc liên hệ quản trị viên.</p>
+         <div className="bg-white dark:bg-zinc-900 p-8 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm text-center max-w-md">
+            <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 mb-2">Tòa nhà không tồn tại</h2>
+            <p className="text-zinc-600 dark:text-zinc-400 text-sm">Chúng tôi không thể tìm thấy thông tin tòa nhà bạn yêu cầu. Vui lòng kiểm tra lại ID hoặc liên hệ quản trị viên.</p>
          </div>
       </div>
     );

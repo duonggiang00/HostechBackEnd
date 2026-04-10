@@ -17,12 +17,17 @@ class UserFactory extends Factory
             'id' => Str::uuid(),
             'org_id' => null,
             'full_name' => fake('vi_VN')->name(),
-            'phone' => fake('vi_VN')->phoneNumber(),
+            'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
             'email' => fake()->unique()->safeEmail(),
             'password_hash' => Hash::make('12345678'),
             'email_verified_at' => now(),
             'is_active' => true,
             'mfa_enabled' => false,
+            'identity_number' => fake()->numerify('0############'),
+            'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+            'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+            'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+            'address' => fake('vi_VN')->address(),
         ];
     }
 
