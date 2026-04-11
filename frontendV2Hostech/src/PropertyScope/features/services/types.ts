@@ -20,6 +20,7 @@ export interface Service {
   org_id: string;
   code: string;
   name: string;
+  type: 'ELECTRIC' | 'WATER' | 'OTHER';
   calc_mode: 'PER_ROOM' | 'PER_PERSON' | 'PER_QUANTITY' | 'PER_METER';
   unit: string;
   is_recurring: boolean;
@@ -33,6 +34,7 @@ export interface Service {
 export interface ServiceFormData {
   code: string;
   name: string;
+  type: 'ELECTRIC' | 'WATER' | 'OTHER';
   calc_mode: 'PER_ROOM' | 'PER_PERSON' | 'PER_QUANTITY' | 'PER_METER';
   unit: string;
   is_recurring: boolean;

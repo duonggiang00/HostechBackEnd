@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Settings, Plus, Search, Edit2, Trash2, Zap, Droplets } from 'lucide-react';
 import { useServices, useUpdateService, useDeleteService } from '../hooks/useServices';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import type { Service } from '../types';
-import ServiceCreateModal from '../components/ServiceCreateModal';
 
 interface ServiceListPageProps {
   hideHeader?: boolean;
@@ -14,7 +13,6 @@ interface ServiceListPageProps {
 export default function ServiceListPage({ hideHeader = false }: ServiceListPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
   const [search, setSearch] = useState('');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   
   const { data: response, isLoading } = useServices({ search, per_page: 50 });
   const services = response?.data || [];
@@ -55,7 +53,6 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
   };
 
   return (
-  <>
     <div data-testid="services-page" className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       {!hideHeader && (
@@ -70,13 +67,13 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
             </p>
           </div>
 
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
+          <Link
+            to={`/properties/${propertyId}/services/create`}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] shadow-sm transition-all focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-2 w-full sm:w-auto font-semibold"
           >
             <Plus className="w-5 h-5" />
             Thêm dịch vụ mới
-          </button>
+          </Link>
         </div>
       )}
 
@@ -94,13 +91,13 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
         </div>
 
         {hideHeader && (
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
+          <Link
+            to={`/properties/${propertyId}/services/create`}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] shadow-sm transition-all focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-2 w-full sm:w-auto font-semibold"
           >
             <Plus className="w-5 h-5" />
             Thêm dịch vụ mới
-          </button>
+          </Link>
         )}
       </div>
 
@@ -146,9 +143,13 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-600">
-                            <span className="text-sm font-bold text-[#1E3A8A] dark:text-indigo-400">
-                              {service.code.substring(0, 2).toUpperCase()}
-                            </span>
+                                {service.type === 'ELECTRIC' ? (
+                                  <Zap className="w-5 h-5 text-amber-500" />
+                                ) : service.type === 'WATER' ? (
+                                  <Droplets className="w-5 h-5 text-blue-500" />
+                                ) : (
+                                  <Settings className="w-5 h-5 text-[#1E3A8A] dark:text-indigo-400" />
+                                )}
                           </div>
                           <div>
                             <div className="font-bold text-[#111827] dark:text-white">
@@ -223,10 +224,5 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
         </div>
       </div>
     </div>
-    <ServiceCreateModal 
-      isOpen={isCreateModalOpen} 
-      onClose={() => setIsCreateModalOpen(false)} 
-    />
-  </>
   );
 }

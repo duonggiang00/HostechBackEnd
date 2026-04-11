@@ -114,7 +114,7 @@ export default function ContractDetailPage() {
           <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="w-10 h-10 text-rose-500 dark:text-rose-400" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight mb-2">Lỗi tải dữ liệu</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Lỗi tải dữ liệu</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">Không thể tìm thấy thông tin hợp đồng này hoặc đã có lỗi xẩy ra.</p>
           <button 
             onClick={handleBack}
@@ -143,7 +143,7 @@ export default function ContractDetailPage() {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white leading-tight italic uppercase tracking-tighter transition-colors">
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white leading-tight uppercase tracking-tighter transition-colors">
                 Chi tiết Hợp đồng
               </h1>
               <div className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${statusInfo.color}`}>
@@ -151,7 +151,7 @@ export default function ContractDetailPage() {
               </div>
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 uppercase tracking-wide text-xs transition-colors">
-              <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md font-black italic">
+              <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md font-black">
                 {contract.id?.substring(0, 8).toUpperCase()}
               </span>
               <span>• Tạo ngày {format(new Date(contract.created_at), 'dd/MM/yyyy')}</span>
@@ -229,8 +229,8 @@ export default function ContractDetailPage() {
                 <DollarSign className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               </div>
               <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Tiền phòng (Tháng)</p>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic tabular-nums transition-colors">
-                {Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} <span className="text-sm font-bold not-italic">đ</span>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums transition-colors">
+                {Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} <span className="text-sm font-bold">đ</span>
               </h3>
             </motion.div>
 
@@ -244,8 +244,8 @@ export default function ContractDetailPage() {
                 <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               </div>
               <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Tiền đặt cọc</p>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic tabular-nums transition-colors">
-                {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-bold not-italic">đ</span>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight tabular-nums transition-colors">
+                {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-bold">đ</span>
               </h3>
             </motion.div>
 
@@ -259,8 +259,8 @@ export default function ContractDetailPage() {
                 <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Thời hạn hợp đồng</p>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic transition-colors">
-                {contract.cycle_months || 0} <span className="text-sm font-bold not-italic font-sans tracking-tight">Tháng</span>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight transition-colors">
+                {contract.cycle_months || 0} <span className="text-sm font-bold font-sans tracking-tight">Tháng</span>
               </h3>
             </motion.div>
 
@@ -275,8 +275,8 @@ export default function ContractDetailPage() {
                   <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-300" />
                 </div>
                 <p className="text-xs font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest mb-1 transition-colors">Ví cấn trừ</p>
-                <h3 className="text-xl font-black text-blue-700 dark:text-blue-300 tracking-tight italic tabular-nums transition-colors">
-                  {Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} <span className="text-sm font-bold not-italic">đ</span>
+                <h3 className="text-xl font-black text-blue-700 dark:text-blue-300 tracking-tight tabular-nums transition-colors">
+                  {Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} <span className="text-sm font-bold">đ</span>
                 </h3>
               </motion.div>
             )}
@@ -291,7 +291,7 @@ export default function ContractDetailPage() {
           >
             {/* Rent & Terms */}
             <section>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 transition-colors">
                 <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Điều khoản thuê
               </h3>
@@ -324,7 +324,7 @@ export default function ContractDetailPage() {
 
             {/* Property & Room */}
             <section>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 transition-colors">
                 <Home className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Vị trí & Cơ sở
               </h3>
@@ -337,7 +337,7 @@ export default function ContractDetailPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Tòa nhà / Cơ sở</p>
                     <p className="font-bold text-slate-900 dark:text-white text-lg transition-colors">{contract.property?.name || '---'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">{contract.property?.address}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium transition-colors">{contract.property?.address}</p>
                   </div>
                 </div>
 
@@ -348,7 +348,7 @@ export default function ContractDetailPage() {
                   <div className="space-y-1">
                     <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Mã số phòng</p>
                     <p className="font-bold text-slate-900 dark:text-white text-lg transition-colors">{contract.room?.name || '---'}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">Phòng {contract.room?.code}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium transition-colors">Phòng {contract.room?.code}</p>
                   </div>
                 </div>
               </div>
@@ -359,7 +359,7 @@ export default function ContractDetailPage() {
             {/* Members / Occupants */}
             <section>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 italic transition-colors">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 transition-colors">
                   <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Thành viên & Cư dân
                 </h3>
@@ -425,7 +425,7 @@ export default function ContractDetailPage() {
                     {!contract.members?.length && (
                       <tr>
                         <td colSpan={4} className="px-6 py-12 text-center">
-                          <p className="text-slate-400 dark:text-slate-500 font-bold italic transition-colors">Chưa có thông tin thành viên.</p>
+                          <p className="text-slate-400 dark:text-slate-500 font-bold transition-colors">Chưa có thông tin thành viên.</p>
                         </td>
                       </tr>
                     )}
@@ -456,7 +456,7 @@ export default function ContractDetailPage() {
               </h3>
               <div className="bg-white/20 backdrop-blur-md rounded-4xl p-8 text-center relative z-10 border border-white/20">
                 <p className="text-xs uppercase font-black tracking-widest mb-3 opacity-80">Gửi mã này cho khách thuê</p>
-                <p className="text-3xl font-black italic tracking-tighter tabular-nums mb-4">{contract.join_code}</p>
+                <p className="text-3xl font-black tracking-tighter tabular-nums mb-4">{contract.join_code}</p>
                 <div className="flex items-center justify-center gap-2 text-xs font-bold opacity-70">
                   <CheckCircle2 className="w-3 h-3" />
                   <span>Mã có hiệu lực</span>
@@ -473,7 +473,7 @@ export default function ContractDetailPage() {
             transition={{ delay: 0.6 }}
             className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-4xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 transition-colors"
           >
-            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 italic transition-colors">
+            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 transition-colors">
               <History className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Nghiệp vụ
             </h3>
@@ -495,7 +495,7 @@ export default function ContractDetailPage() {
                 </div>
                 <div>
                   <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Ghi chú nghiệp vụ</p>
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 italic transition-colors">Không có ghi chú nào đặc biệt cho hợp đồng này.</p>
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 transition-colors">Không có ghi chú nào đặc biệt cho hợp đồng này.</p>
                 </div>
               </div>
             </div>
@@ -511,7 +511,7 @@ export default function ContractDetailPage() {
             )}
 
             <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 transition-colors">
                 <History className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 Timeline Trạng thái
               </h4>

@@ -34,6 +34,7 @@ class ServiceUpdateRequest extends FormRequest
                 }),
             ],
             'name' => ['sometimes', 'string', 'max:255'],
+            'type' => ['sometimes', 'string', 'in:ELECTRIC,WATER,OTHER'],
             'calc_mode' => ['sometimes', 'string', 'in:PER_ROOM,PER_PERSON,PER_QUANTITY,PER_METER'],
             'unit' => ['sometimes', 'string', 'max:20'],
             'is_recurring' => ['boolean'],

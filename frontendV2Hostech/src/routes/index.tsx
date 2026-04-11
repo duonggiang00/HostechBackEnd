@@ -136,10 +136,9 @@ const RootRedirect = () => {
       }
       
       // 2. If user has multiple properties or no specific assignment (but has an org),
-      // navigate to the neutral property selection layout or Org Dashboard.
+      // navigate to the neutral property selection layout.
       if (user.org_id) {
-         // Staff with full power can go to Org Dashboard
-         return <Navigate to="/org/dashboard" replace />;
+         return <Navigate to="/select-property" replace />;
       }
 
       // Fallback
@@ -195,7 +194,7 @@ export default function AppRoutes() {
         <Route 
           path="/org"
           element={
-            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Staff']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
               <OrgScopeLayout><Outlet /></OrgScopeLayout>
             </ProtectedRoute>
           }

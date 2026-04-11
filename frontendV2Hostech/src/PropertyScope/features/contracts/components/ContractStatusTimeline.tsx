@@ -41,7 +41,7 @@ export function ContractStatusTimeline({ histories, isLoading }: ContractStatusT
   return (
     <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-indigo-200 dark:before:via-indigo-800/50 before:to-transparent">
       {histories.map((history, idx) => {
-        const transitionKey = `${history.from_status || 'DRAFT'}->${history.to_status}`;
+        const transitionKey = `${history.old_status || 'DRAFT'}->${history.new_status}`;
         const Icon = DEFAULT_ICON_MAP[transitionKey] || Settings;
 
         return (
@@ -63,7 +63,7 @@ export function ContractStatusTimeline({ histories, isLoading }: ContractStatusT
                 <div className="font-bold text-slate-900 dark:text-white flex flex-wrap items-center gap-2">
                   <span className="text-sm">Trạng thái: </span>
                   <span className="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                    {history.to_status}
+                    {history.new_status}
                   </span>
                 </div>
                 <time className="text-xs font-semibold text-slate-400 italic shrink-0">
@@ -71,7 +71,7 @@ export function ContractStatusTimeline({ histories, isLoading }: ContractStatusT
                 </time>
               </div>
               <div className="text-sm text-slate-600 dark:text-slate-300 mt-2 mb-3 break-words whitespace-pre-wrap">
-                {history.notes || 'Hệ thống cập nhật trạng thái hợp đồng.'}
+                {history.reason || history.comment || 'Hệ thống cập nhật trạng thái hợp đồng.'}
               </div>
               {history.changedBy && (
                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">

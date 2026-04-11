@@ -61,6 +61,17 @@ class OrgSeeder extends Seeder
         $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
+        
+        // Cleanup existing 'test' org to avoid unique constraint issues on re-run
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Org::whereIn('name', $orgNames)->withTrashed()->each(function($org) {
+            $this->command->line("🗑️  Xóa dữ liệu cũ của tổ chức: <fg=red>{$org->name}</>");
+            // Explicitly force delete users and the org to completely clear unique constraint conflicts
+            User::where('org_id', $org->id)->withTrashed()->forceDelete();
+            $org->forceDelete();
+        });
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
 
         foreach ($orgNames as $name) {
@@ -272,15 +283,22 @@ class OrgSeeder extends Seeder
                             if ($roomArea < 15) $roomArea = 15;
                             if ($roomArea > $remainingArea) $roomArea = $remainingArea;
 
-                            Room::factory()->create([
-                                'org_id' => $org->id,
-                                'property_id' => $property->id,
-                                'floor_id' => $floor->id,
-                                'area' => $roomArea,
-                                'capacity' => $template->capacity,
-                                'base_price' => $template->base_price,
-                                'floor_number' => $i,
-                            ]);
+                            $roomNumber = ($i * 100) + ($j + 1);
+                            // Disable events to prevent RoomObserver from creating default meters
+                            // We will create them manually later with more control.
+                            Room::withoutEvents(function() use ($org, $property, $floor, $roomNumber, $roomArea, $template, $i) {
+                                Room::factory()->create([
+                                    'org_id' => $org->id,
+                                    'property_id' => $property->id,
+                                    'floor_id' => $floor->id,
+                                    'name' => (string)$roomNumber,
+                                    'code' => 'R' . $roomNumber,
+                                    'area' => $roomArea,
+                                    'capacity' => $template->capacity,
+                                    'base_price' => $template->base_price,
+                                    'floor_number' => $i,
+                                ]);
+                            });
 
                             $remainingArea -= $roomArea;
                         }
@@ -315,12 +333,11 @@ class OrgSeeder extends Seeder
 
             // ---------------------------------------------------------
             // 3. ASSIGN ROOM SERVICES, CONTRACTS, INVOICES
-            // ---------------------------------------------------------
-            $properties = Property::where('org_id', $org->id)->get();
+                $properties = Property::where('org_id', $org->id)->get();
             $baseCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
             $ownerId = User::where('org_id', $org->id)->first()->id;
 
-            foreach ($properties as $property) {
+            foreach ($properties as $propertyIdx => $property) {
                 $masterMeterIds = DB::table('meters')
                     ->where('property_id', $property->id)
                     ->where('is_master', true)
@@ -333,7 +350,7 @@ class OrgSeeder extends Seeder
                 $roomsInProperty = Room::where('property_id', $property->id)->get();
                 $occupancyRate = rand(50, 80) / 100;
                 $numOccupiedRooms = round($roomsInProperty->count() * $occupancyRate);
-                $occupiedRoomIds = $roomsInProperty->random($numOccupiedRooms)->pluck('id')->toArray();
+                $occupiedRoomIds = $roomsInProperty->random($numOccupiedRooms)->pluck('id', 'id')->toArray();
 
                 foreach ($roomsInProperty as $room) {
                     // A. Assign Room Services & Meters (Ensure every room has meters)
@@ -359,7 +376,7 @@ class OrgSeeder extends Seeder
                             'org_id' => $org->id,
                             'property_id' => $room->property_id,
                             'room_id' => $room->id,
-                            'code' => $mConfig['prefix'] . $room->code . '-' . rand(10, 99),
+                            'code' => $mConfig['prefix'] . 'P' . ($propertyIdx + 1) . '-' . $room->code . '-' . strtoupper(Str::random(3)),
                             'type' => $mConfig['type'],
                             'is_master' => false,
                             'base_reading' => $initialValue,
@@ -372,9 +389,7 @@ class OrgSeeder extends Seeder
                         $initialMeterSum[$mConfig['type']] += $initialValue;
                     }
 
-                    $mandatoryCodes = ['DIEN', 'NUOC'];
-                    $otherCodes = ['INTERNET', 'QL', 'VS'];
-                    $selectedCodes = array_merge($mandatoryCodes, fake()->randomElements($otherCodes, fake()->numberBetween(1, 3)));
+                    $selectedCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
                     foreach ($selectedCodes as $code) {
                         DB::table('room_services')->insert([
                             'id' => Str::uuid()->toString(),
@@ -456,7 +471,7 @@ class OrgSeeder extends Seeder
     $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
 }
 
-    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $staffId, &$propertyMonthlyUsage)
+    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $propertyStaffId, &$propertyMonthlyUsage)
 {
     $cutoffLimit = Carbon::parse('2026-03-31');
     $readingService = app(MeterReadingService::class);
@@ -507,22 +522,23 @@ class OrgSeeder extends Seeder
         // Dynamically create a tenant user for each contract member
         $fullName = fake('vi_VN')->name();
         
-        $isActive = in_array($status, ['ACTIVE', 'PENDING_TERMINATION']);
-        $prefix = $isActive ? 'test_tenant_' : 'free_tenant_';
-        $counter = $isActive ? self::$testTenantCounter++ : self::$freeTenantCounter++;
-        
-        $email = $prefix . $counter . "@example.com";
-        $phone = fake('vi_VN')->phoneNumber();
+        $emailName = Str::slug($fullName, '.');
+        $email = $emailName . fake()->numberBetween(10, 99) . "@gmail.com";
         
         $memberUser = User::create([
             'id' => Str::uuid()->toString(),
             'org_id' => $org->id,
             'full_name' => $fullName,
             'email' => $email,
-            'phone' => $phone,
             'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
             'email_verified_at' => now(),
             'is_active' => true,
+            'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+            'identity_number' => fake()->numerify('0############'),
+            'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+            'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+            'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+            'address' => fake('vi_VN')->address(),
         ]);
         $memberUser->assignRole('Tenant');
 
@@ -532,7 +548,6 @@ class OrgSeeder extends Seeder
             'contract_id' => $contract->id,
             'user_id' => $memberUser->id,
             'full_name' => $fullName,
-            'phone' => $phone,
             'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
             'is_primary' => $i === 0,
             'left_at' => $status === 'ENDED' ? $endDate : null,
@@ -585,11 +600,10 @@ class OrgSeeder extends Seeder
                 'type' => 'RENT',
             ]);
             $isFirstInvoice = false;
-            // No addMonth here because utility readings happen at the end of the same month
         }
 
         if (!$isFirstInvoice && $tempDate->gt($startDate)) {
-             InvoiceItem::create([
+            InvoiceItem::create([
                 'id' => Str::uuid()->toString(),
                 'org_id' => $org->id,
                 'invoice_id' => $invoice->id,
@@ -601,10 +615,11 @@ class OrgSeeder extends Seeder
             ]);
         }
 
-        // End of month: Utilities (DIEN, NUOC)
+        // --- Utility Readings ---
+        $pStart = $tempDate->copy()->startOfMonth();
+        $pEnd = $tempDate->copy()->endOfMonth();
+
         foreach ($meters as &$m) {
-            $pStart = $tempDate->copy()->startOfMonth();
-            $pEnd = $tempDate->copy()->endOfMonth();
             $usage = rand($m['config']['min'], $m['config']['max']);
             $newValue = $m['last_value'] + $usage;
             $readingId = Str::uuid()->toString();
@@ -616,7 +631,7 @@ class OrgSeeder extends Seeder
                 'period_end' => $pEnd->toDateString(),
                 'reading_value' => $newValue,
                 'status' => 'SUBMITTED',
-                'submitted_by_user_id' => $staffId,
+                'submitted_by_user_id' => $propertyStaffId,
                 'submitted_at' => $pEnd->copy()->addDay(),
             ]);
 

@@ -285,9 +285,9 @@ export default function MeterListPage() {
 
                         <td className="px-6 py-4 text-right">
                           <button
-                            onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}
+                            onClick={() => navigate(`/properties/${propertyId}/meters/room/${room.id}`)}
                             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors group"
-                            title="Chi tiết phòng"
+                            title="Chi tiết chỉ số"
                           >
                             <Eye className="w-5 h-5 text-slate-400 group-hover:text-[#1E3A8A]" />
                           </button>

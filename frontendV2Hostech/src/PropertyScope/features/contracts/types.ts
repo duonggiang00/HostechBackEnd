@@ -10,10 +10,10 @@ export type ContractCancellationParty = 'LANDLORD' | 'TENANT' | 'MUTUAL';
 export interface ContractStatusHistory {
   id: string;
   contract_id: string;
-  from_status: ContractStatus | null;
-  to_status: ContractStatus;
-  changed_by_user_id: string | null;
-  notes: string | null;
+  old_status: ContractStatus | null;
+  new_status: ContractStatus;
+  reason: string | null;
+  comment: string | null;
   created_at: string;
   changedBy?: User;
 }
@@ -98,6 +98,8 @@ export interface Contract {
   cycle_months: number | null;
   created_by_user_id: string | null;
   meta: Record<string, any> | null;
+  document_url: string | null;
+  signed_document_url: string | null;
   initial_invoice?: {
     id: string;
     status: string;
@@ -114,6 +116,7 @@ export interface Contract {
   property?: Property;
   members?: ContractMember[];
   createdBy?: User;
+  statusHistories?: ContractStatusHistory[];
 }
 
 export interface ContractQueryParams {

@@ -159,7 +159,7 @@ class ContractService
 
     public function find(string $id): ?Contract
     {
-        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices'])->find($id);
+        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices', 'statusHistories'])->find($id);
     }
 
     public function findTrashed(string $id): ?Contract

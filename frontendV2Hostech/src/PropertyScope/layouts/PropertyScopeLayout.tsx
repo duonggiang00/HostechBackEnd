@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   LayoutTemplate,
   ScrollText,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
