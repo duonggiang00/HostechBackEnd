@@ -60,7 +60,7 @@ export default function ServiceFormPage() {
 
   const isPending = isEditMode ? updateMutation.isPending : createMutation.isPending;
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } = {}, reset } = useForm<FormValues>({
+  const { register, control, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<FormValues>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
       code: '',
@@ -199,7 +199,7 @@ export default function ServiceFormPage() {
               {isEditMode ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới'}
             </h1>
             <p className="text-sm text-[#4B5563] dark:text-slate-400 mt-1">
-              {isEditMode ? `${service.name} (${service.code})` : 'Định nghĩa cấu hình dịch vụ và bảng giá mới'}
+              {isEditMode ? `${service?.name} (${service?.code})` : 'Định nghĩa cấu hình dịch vụ và bảng giá mới'}
             </p>
           </div>
         </div>
