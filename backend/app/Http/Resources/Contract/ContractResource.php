@@ -19,25 +19,50 @@ class ContractResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'org_id' => $this->org_id,
-            'status' => $this->status,
-            'property' => new PropertyResource($this->whenLoaded('property')),
-            'room' => new RoomResource($this->whenLoaded('room')),
-            'members' => ContractMemberResource::collection($this->whenLoaded('members')),
-            'start_date' => $this->start_date ? $this->start_date->format('Y-m-d') : null,
-            'end_date' => $this->end_date ? $this->end_date->format('Y-m-d') : null,
-            'rent_price' => (float) $this->rent_price,
-            'base_rent' => (float) $this->base_rent,
-            'fixed_services_fee' => (float) $this->fixed_services_fee,
-            'total_rent' => (float) $this->total_rent,
-            'monthly_rent' => (float) $this->rent_price, // Alias for frontend
-            'deposit_amount' => (float) $this->deposit_amount,
-            'billing_cycle' => $this->billing_cycle,
+            'id'                   => $this->id,
+            'org_id'               => $this->org_id,
+            'property_id'          => $this->property_id,
+            'room_id'              => $this->room_id,
+            'status'               => $this->status,
+            'base_rent'            => (float) $this->base_rent,
+            'fixed_services_fee'   => (float) $this->fixed_services_fee,
+            'total_rent'           => (float) $this->total_rent,
+            'cycle_months'         => (int) $this->cycle_months,
+            'start_date'           => $this->start_date?->toDateString(),
+            'end_date'             => $this->end_date?->toDateString(),
+            'billing_cycle'        => $this->billing_cycle,
             'billing_cycle_months' => $this->resolveBillingCycleMonths($this->billing_cycle),
-            'cycle_months' => (int) $this->cycle_months,
-            'due_day' => (int) $this->due_day,
-            'cutoff_day' => (int) $this->cutoff_day,
+            'due_day'              => (int) $this->due_day,
+            'cutoff_day'           => (int) $this->cutoff_day,
+            'rent_price'           => (float) $this->rent_price,
+            'monthly_rent'         => (float) $this->rent_price,
+            'deposit_amount'       => (float) $this->deposit_amount,
+            'deposit_status'       => $this->deposit_status,
+            'refunded_amount'      => (float) $this->refunded_amount,
+            'forfeited_amount'     => (float) $this->forfeited_amount,
+            'join_code'            => $this->when(! $request->user()?->hasRole('Tenant'), $this->join_code),
+            'join_code_expires_at' => $this->when(! $request->user()?->hasRole('Tenant'), $this->join_code_expires_at?->toIso8601String()),
+            'signed_at'            => $this->signed_at?->toIso8601String(),
+            // ── Termination ────────────────────────────────────────────────────────
+            'terminated_at'        => $this->terminated_at?->toIso8601String(),
+            'cancellation_party'   => $this->cancellation_party,
+            'cancellation_reason'  => $this->cancellation_reason,
+            'cancelled_at'         => $this->cancelled_at?->toIso8601String(),
+            'notice_days'          => $this->notice_days,
+            'notice_given_at'      => $this->notice_given_at?->toDateString(),
+
+            'meta'                 => (object) $this->meta,
+            'document_url'         => $this->document_path ? \Storage::url($this->document_path) : null,
+            'signed_document_url'  => $this->getFirstMediaUrl('signed_contracts') ?: null,
+            'created_at'           => $this->created_at->toIso8601String(),
+            'updated_at'           => $this->updated_at->toIso8601String(),
+
+            // Relations
+            'room'                 => new RoomResource($this->whenLoaded('room')),
+            'property'             => new PropertyResource($this->whenLoaded('property')),
+            'members'              => ContractMemberResource::collection($this->whenLoaded('members')),
+            'createdBy'            => new UserResource($this->whenLoaded('createdBy')),
+            'statusHistories'      => \App\Http\Resources\Contract\ContractStatusHistoryResource::collection($this->whenLoaded('statusHistories')),
             'tenant' => $this->whenLoaded('members', function () {
                 $tenant = $this->members->first();
                 return $tenant ? [
@@ -46,7 +71,6 @@ class ContractResource extends JsonResource
                     'email' => $tenant->email,
                 ] : null;
             }),
-            'meta' => $this->meta,
             'initial_invoice' => $this->whenLoaded('invoices', function () {
                 /** @var Invoice|null $invoice */
                 $invoice = $this->invoices

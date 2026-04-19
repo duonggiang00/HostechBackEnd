@@ -15,17 +15,17 @@ class RoomTemplateStoreRequest extends FormRequest
     {
         return [
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'area' => ['required', 'numeric', 'min:0'],
-            'capacity' => ['required', 'integer', 'min:1'],
-            'base_price' => ['required', 'numeric', 'min:0'],
+            'name'        => ['required', 'string', 'max:255'],
+            'area'        => ['required', 'numeric', 'min:0'],
+            'capacity'    => ['required', 'integer', 'min:1'],
+            'base_price'  => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
-            'amenities' => ['nullable', 'array'],
-            'utilities' => ['nullable', 'array'],
-            'services' => ['nullable', 'array'],
-            'services.*' => ['uuid', 'exists:services,id'],
-            'assets' => ['nullable', 'array'],
-            'assets.*' => ['string', 'max:255'],
+            'services'    => ['nullable', 'array'],
+            'services.*'  => ['uuid', 'exists:services,id'],
+            'assets'      => ['nullable', 'array'],
+            'assets.*.name' => ['required', 'string', 'max:255'],
+            'media_ids'   => ['nullable', 'array'],
+            'media_ids.*' => ['uuid', 'exists:media,uuid'],
         ];
     }
 }

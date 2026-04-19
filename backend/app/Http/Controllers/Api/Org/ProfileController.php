@@ -24,7 +24,7 @@ class ProfileController extends Controller
      */
     public function show(Request $request)
     {
-        $user = $request->user()->loadMissing('roles', 'permissions', 'media');
+        $user = $request->user()->loadMissing('roles', 'permissions', 'media', 'properties');
 
         return new UserResource($user);
     }

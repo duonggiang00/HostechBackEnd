@@ -119,13 +119,14 @@ class RoomObserver
         ];
 
         foreach ($types as $type => $suffix) {
+            $propertySuffix = $room->property_id ? '-' . substr($room->property_id, 0, 4) : '';
             Meter::create([
                 // HasUuids sẽ tự sinh ID
                 'org_id'       => $room->org_id,
                 'room_id'      => $room->id,
                 'property_id'  => $room->property_id,
                 'type'         => $type,
-                'code'         => "{$room->code}-{$suffix}",
+                'code'         => "{$room->code}-{$suffix}{$propertySuffix}",
                 'is_active'    => true,
                 'base_reading' => 0,
             ]);

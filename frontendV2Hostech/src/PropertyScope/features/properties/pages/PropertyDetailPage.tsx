@@ -12,7 +12,7 @@ import BuildingOverviewPage from '../../building-overview/pages/BuildingOverview
 import RoomListPage from '../../rooms/pages/RoomListPage';
 
 interface PropertyDetailPageProps {
-  defaultTab?: 'dashboard' | 'layout' | 'rooms';
+  defaultTab?: 'dashboard' | 'layout' | 'rooms' | 'details';
 }
 
 export default function PropertyDetailPage({ defaultTab = 'dashboard' }: PropertyDetailPageProps) {
@@ -83,6 +83,7 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     );
   }, [dashboard, isGenerating, propertyId]);
 
+
   if (isLoading && !property) {
     return (
       <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
@@ -123,3 +124,4 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     </FeatureTabbedLayout>
   );
 }
+

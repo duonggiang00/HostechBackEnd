@@ -1,7 +1,6 @@
 import type { RouteObject } from 'react-router-dom';
 import ServiceListPage from './pages/ServiceListPage';
-import ServiceCreatePage from './pages/ServiceCreatePage';
-import ServiceEditPage from './pages/ServiceEditPage';
+import ServiceFormPage from './pages/ServiceFormPage';
 
 export const serviceRoutes: RouteObject[] = [
   {
@@ -10,10 +9,10 @@ export const serviceRoutes: RouteObject[] = [
   },
   {
     path: 'services/create',
-    element: <ServiceCreatePage />,
+    element: <ServiceFormPage />,
   },
   {
     path: 'services/:serviceId/edit',
-    element: <ServiceEditPage />,
+    element: <ServiceFormPage />,
   },
 ];

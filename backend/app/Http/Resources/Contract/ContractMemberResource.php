@@ -20,7 +20,7 @@ class ContractMemberResource extends JsonResource
             'contract_id' => $this->contract_id,
             'user' => new UserResource($this->whenLoaded('user')),
             'full_name' => $this->full_name,
-            'phone' => $this->phone,
+            'phone' => $this->phone ?? $this->user?->phone,
             'identity_number' => $this->identity_number,
             'role' => $this->role,
             'status' => $this->status,

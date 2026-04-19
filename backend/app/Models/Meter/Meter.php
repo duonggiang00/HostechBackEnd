@@ -65,13 +65,16 @@ class Meter extends Model implements HasMedia
 
     public function latestReading()
     {
-        return $this->hasOne(MeterReading::class)->latestOfMany();
+        return $this->hasOne(MeterReading::class)
+            ->latestOfMany('period_end')
+            ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
     }
 
     public function latestApprovedReading()
     {
         return $this->hasOne(MeterReading::class)
             ->where('status', 'APPROVED')
-            ->latest('period_end');
+            ->latestOfMany('period_end')
+            ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
     }
 }

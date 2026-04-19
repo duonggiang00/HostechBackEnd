@@ -3,9 +3,9 @@
 namespace App\Services\Contract;
 
 use App\Enums\ContractStatus;
- use App\Enums\ContractCancellationParty;
- use App\Enums\DepositStatus;
- use App\Enums\InvoiceItemType;
+use App\Enums\ContractCancellationParty;
+use App\Enums\DepositStatus;
+use App\Enums\InvoiceItemType;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Invoice\Invoice;
@@ -26,7 +26,8 @@ class ContractService
     public function __construct(
         protected InvoiceService $invoiceService,
         protected ServiceService $serviceService,
-    ) {}
+    ) {
+    }
     /**
      * Aggregate status counts for KPI cards (single query).
      * Uses the same role-based scoping as paginate().
@@ -45,7 +46,7 @@ class ContractService
                 $query->whereHas('members', fn($q) => $q->where('user_id', $user->id));
             } elseif ($user->hasRole(['Manager', 'Staff'])) {
                 $query->whereHas('property.managers', fn($q) => $q->where('user_id', $user->id));
-            } elseif (! $user->hasRole('Admin')) {
+            } elseif (!$user->hasRole('Admin')) {
                 $query->where('org_id', $user->org_id);
             }
         }
@@ -66,14 +67,14 @@ class ContractService
             ->first();
 
         return [
-            'total'             => (int) ($row->total ?? 0),
-            'DRAFT'             => (int) ($row->draft_count ?? 0),
+            'total' => (int) ($row->total ?? 0),
+            'DRAFT' => (int) ($row->draft_count ?? 0),
             'PENDING_SIGNATURE' => (int) ($row->pending_sig_count ?? 0),
-            'PENDING_PAYMENT'   => (int) ($row->pending_pay_count ?? 0),
-            'ACTIVE'            => (int) ($row->active_count ?? 0),
-            'ENDED'             => (int) ($row->ended_count ?? 0),
-            'CANCELLED'         => (int) ($row->cancelled_count ?? 0),
-            'expiring'          => (int) ($row->expiring_count ?? 0),
+            'PENDING_PAYMENT' => (int) ($row->pending_pay_count ?? 0),
+            'ACTIVE' => (int) ($row->active_count ?? 0),
+            'ENDED' => (int) ($row->ended_count ?? 0),
+            'CANCELLED' => (int) ($row->cancelled_count ?? 0),
+            'expiring' => (int) ($row->expiring_count ?? 0),
         ];
     }
 
@@ -101,7 +102,7 @@ class ContractService
                 $query->whereHas('property.managers', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 });
-            } elseif (! $user->hasRole('Admin')) {
+            } elseif (!$user->hasRole('Admin')) {
                 // Các role khác (Owner) thấy trong org của mình
                 $query->where('org_id', $user->org_id);
             }
@@ -142,7 +143,7 @@ class ContractService
                 $query->whereHas('property.managers', function ($q) use ($user) {
                     $q->where('user_id', $user->id);
                 });
-            } elseif (! $user->hasRole('Admin')) {
+            } elseif (!$user->hasRole('Admin')) {
                 $query->where('org_id', $user->org_id);
             }
         }
@@ -158,7 +159,7 @@ class ContractService
 
     public function find(string $id): ?Contract
     {
-        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices'])->find($id);
+        return Contract::with(['room', 'property', 'members.user', 'createdBy', 'invoices', 'statusHistories'])->find($id);
     }
 
     public function findTrashed(string $id): ?Contract
@@ -183,13 +184,13 @@ class ContractService
             $contractData = collect($data)->except(['members'])->toArray();
 
             // Auto-assign org_id if missing. Admin can pass it, others use their own.
-            if (! isset($contractData['org_id'])) {
+            if (!isset($contractData['org_id'])) {
                 $contractData['org_id'] = $user?->org_id;
             }
 
             $contractData['created_by_user_id'] = $user?->id;
 
-            if (! isset($contractData['join_code'])) {
+            if (!isset($contractData['join_code'])) {
                 $contractData['join_code'] = $this->generateJoinCode();
             }
 
@@ -237,7 +238,7 @@ class ContractService
                 );
                 $contractData['due_day'] = $contractData['due_day'] ?? $property->default_due_day ?? 5;
                 $contractData['cutoff_day'] = min(($contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 25), 25);
-                
+
                 // If rent_price not provided, use Room's base_price or Property default
                 if (empty($contractData['rent_price'])) {
                     $contractData['rent_price'] = $room->base_price ?? 0;
@@ -257,9 +258,11 @@ class ContractService
                 ]);
             }
 
-            if (($contractData['cutoff_day'] ?? null) !== null
+            if (
+                ($contractData['cutoff_day'] ?? null) !== null
                 && ($contractData['due_day'] ?? null) !== null
-                && (int) $contractData['cutoff_day'] > (int) $contractData['due_day']) {
+                && (int) $contractData['cutoff_day'] > (int) $contractData['due_day']
+            ) {
                 throw ValidationException::withMessages([
                     'cutoff_day' => 'Ngay chot so khong duoc sau han nop.',
                 ]);
@@ -339,12 +342,12 @@ class ContractService
     public function update(string $id, array $data): ?Contract
     {
         $contract = $this->find($id);
-        if (! $contract) {
+        if (!$contract) {
             return null;
         }
 
         return DB::transaction(function () use ($contract, $data) {
-            if (! in_array($contract->status, ContractStatus::allowEdit())) {
+            if (!in_array($contract->status, ContractStatus::allowEdit())) {
                 $statusLabel = $contract->status->label();
                 throw new \Exception("Không thể sửa hợp đồng ở trạng thái {$statusLabel}.");
             }
@@ -396,7 +399,7 @@ class ContractService
     public function delete(string $id): bool
     {
         $contract = $this->find($id);
-        if (! $contract) {
+        if (!$contract) {
             return false;
         }
 
@@ -448,11 +451,11 @@ class ContractService
         if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
             $base64Data = substr($base64Image, strpos($base64Image, ',') + 1);
             $type = strtolower($type[1]);
-            
+
             if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
                 abort(400, 'Định dạng ảnh chữ ký không hợp lệ');
             }
-            
+
             $isManager = $user->hasRole(['Admin', 'Manager', 'Staff']);
             $rolePrefix = $isManager ? 'manager' : 'tenant';
             $signatureKey = $isManager ? 'signature_landlord' : 'signature_tenant';
@@ -461,10 +464,10 @@ class ContractService
             $storageFilePath = 'contracts/signatures/' . $imageName;
             \Illuminate\Support\Facades\Storage::disk('local')->put($storageFilePath, base64_decode($base64Data));
             $imagePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storageFilePath);
-            
+
             // Re-generate contract document to include the signature image
             $extraData = [$signatureKey => $imagePath];
-            
+
             // Đọc chữ ký của bên còn lại nếu có để chèn đồng thời
             $otherRole = $isManager ? 'tenant' : 'manager';
             $otherKey = $isManager ? 'signature_tenant' : 'signature_landlord';
@@ -478,7 +481,7 @@ class ContractService
 
             $contractDocService = app(ContractDocumentService::class);
             $contractDocService->generateDocument($contract, $extraData);
-            
+
             // Nếu người thuê ký thì mới gọi Accept Signature để xác nhận
             if (!$isManager) {
                 $success = $this->acceptSignature($contract, $user);
@@ -501,7 +504,7 @@ class ContractService
             ->where('status', 'PENDING')
             ->first();
 
-        if (! $member) {
+        if (!$member) {
             return false;
         }
 
@@ -520,10 +523,10 @@ class ContractService
 
             // 2. Tạo Initial Invoice (tiền phòng + cọc)
             if (in_array($contract->status, ContractStatus::allowAcceptSignature(), true) && $this->allSignersApproved($contract)) {
-                if (! $this->hasInitialInvoice($contract)) {
+                if (!$this->hasInitialInvoice($contract)) {
                     $this->createInitialInvoice($contract, $user);
                 }
-                
+
                 // 3. Contract → PENDING_PAYMENT
                 $contract->update([
                     'status' => ContractStatus::PENDING_PAYMENT,
@@ -548,7 +551,7 @@ class ContractService
             ->where('status', 'PENDING')
             ->first();
 
-        if (! $member) {
+        if (!$member) {
             return false;
         }
 
@@ -607,7 +610,7 @@ class ContractService
             ->where('status', 'available')
             ->first();
 
-        if (! $targetRoom) {
+        if (!$targetRoom) {
             return false;
         }
 
@@ -638,7 +641,7 @@ class ContractService
         }
 
         $user = User::find($memberData['user_id']);
-        if (! $user) {
+        if (!$user) {
             throw new \InvalidArgumentException('Không tìm thấy tài khoản cư dân.');
         }
 
@@ -647,7 +650,7 @@ class ContractService
         $memberData['identity_number'] = $memberData['identity_number'] ?? $user->identity_number;
 
         // 2. Intelligent Status Mapping
-        if (! isset($memberData['status'])) {
+        if (!isset($memberData['status'])) {
             $memberData['status'] = 'PENDING';
         }
 
@@ -677,7 +680,7 @@ class ContractService
     public function updateMember(string $contractId, string $memberId, array $data): ?ContractMember
     {
         $member = ContractMember::where('contract_id', $contractId)->find($memberId);
-        if (! $member) {
+        if (!$member) {
             return null;
         }
 
@@ -689,7 +692,7 @@ class ContractService
     public function removeMember(string $contractId, string $memberId): bool
     {
         $member = ContractMember::where('contract_id', $contractId)->find($memberId);
-        if (! $member) {
+        if (!$member) {
             return false;
         }
 
@@ -699,7 +702,7 @@ class ContractService
     public function approveMember(string $contractId, string $memberId): ?ContractMember
     {
         $member = ContractMember::where('contract_id', $contractId)->find($memberId);
-        if (! $member || $member->status === 'APPROVED') {
+        if (!$member || $member->status === 'APPROVED') {
             return null;
         }
 
@@ -727,10 +730,10 @@ class ContractService
     public function createInitialInvoice(Contract $contract, User $tenant): Invoice
     {
         $periodStart = \Carbon\Carbon::parse($contract->start_date);
-        
+
         // Next billing date is usually 1 cycle after start_date
         $monthsToAdd = $this->resolveBillingCycleMonths($contract->billing_cycle);
-        
+
         $nextBillingDate = $periodStart->copy()->addMonths($monthsToAdd);
 
         $periodEnd = $periodStart->copy()->addMonths($monthsToAdd)->subDay();
@@ -739,8 +742,8 @@ class ContractService
         $baseRent = (float) $contract->base_rent;
         $depositAmount = (float) $contract->deposit_amount;
 
-        $desc = $monthsToAdd === 1 
-            ? 'Tiền phòng tháng đầu tiên' 
+        $desc = $monthsToAdd === 1
+            ? 'Tiền phòng tháng đầu tiên'
             : 'Tiền phòng chu kỳ ' . $monthsToAdd . ' tháng đầu tiên';
 
         // Xây dựng danh sách items
@@ -810,7 +813,7 @@ class ContractService
         $initialInvoice = Invoice::where('contract_id', $contract->id)
             ->where(function ($q) {
                 $q->whereJsonContains('snapshot->is_initial', true)
-                  ->orWhere('snapshot', 'like', '%"is_initial":true%');
+                    ->orWhere('snapshot', 'like', '%"is_initial":true%');
             })
             ->whereNotIn('status', ['PAID', 'CANCELLED'])
             ->first();
@@ -833,8 +836,8 @@ class ContractService
      */
     public function confirmPayment(Contract $contract, User $performer): bool
     {
-        $allowedStatuses = array_map(fn ($enum) => $enum->value, ContractStatus::allowConfirmPayment());
-        if (! in_array($contract->status, $allowedStatuses)) {
+        $allowedStatuses = array_map(fn($enum) => $enum->value, ContractStatus::allowConfirmPayment());
+        if (!in_array($contract->status, $allowedStatuses)) {
             throw new \Exception('Chỉ có thể xác nhận thanh toán cho hợp đồng đang chờ thanh toán.');
         }
 
@@ -843,7 +846,7 @@ class ContractService
             $initialInvoice = Invoice::where('contract_id', $contract->id)
                 ->where(function ($q) {
                     $q->whereJsonContains('snapshot->is_initial', true)
-                      ->orWhere('snapshot', 'like', '%"is_initial":true%');
+                        ->orWhere('snapshot', 'like', '%"is_initial":true%');
                 })
                 ->whereNotIn('status', ['PAID', 'CANCELLED'])
                 ->first();
@@ -860,7 +863,7 @@ class ContractService
             // 2. Đảm bảo contract ACTIVE (hook có thể đã set, hoặc không có initial invoice)
             if ($contract->status !== ContractStatus::ACTIVE) {
                 $contract->update([
-                    'status'       => ContractStatus::ACTIVE,
+                    'status' => ContractStatus::ACTIVE,
                     'activated_at' => now(),
                 ]);
             }
@@ -887,7 +890,7 @@ class ContractService
     public function terminate(Contract $contract, array $data): bool
     {
         $allowedStatuses = array_map(
-            fn ($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
+            fn($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
             ContractStatus::allowTerminate()
         );
 
@@ -895,15 +898,15 @@ class ContractService
             ? $contract->status->value
             : (string) $contract->status;
 
-        if (! in_array($currentStatus, $allowedStatuses)) {
+        if (!in_array($currentStatus, $allowedStatuses)) {
             throw new \Exception('Chỉ có thể thanh lý hợp đồng đang hoạt động, chờ thanh lý hoặc hết hạn.');
         }
 
         return DB::transaction(function () use ($contract, $data) {
-            $terminationDate     = $data['termination_date'] ?? now()->toDateString();
-            $cancellationParty   = $data['cancellation_party'] ?? null;
-            $cancellationReason  = $data['cancellation_reason'] ?? $data['reason'] ?? null;
-            $waivePenalty        = (bool) ($data['waive_penalty'] ?? false);
+            $terminationDate = $data['termination_date'] ?? now()->toDateString();
+            $cancellationParty = $data['cancellation_party'] ?? null;
+            $cancellationReason = $data['cancellation_reason'] ?? $data['reason'] ?? null;
+            $waivePenalty = (bool) ($data['waive_penalty'] ?? false);
             $refundRemainingRent = (bool) ($data['refund_remaining_rent'] ?? false);
 
             $depositAmount = (float) $contract->deposit_amount;
@@ -917,41 +920,41 @@ class ContractService
 
             $forfeitDeposit = false;
 
-            if ($cancellationParty === 'TENANT' && $isEarlyTermination && ! $waivePenalty) {
+            if ($cancellationParty === 'TENANT' && $isEarlyTermination && !$waivePenalty) {
                 $forfeitDeposit = true; // Rule 1: Phạt cọc
             }
 
-            $refundedAmount  = 0;
+            $refundedAmount = 0;
             $forfeitedAmount = 0;
 
             if ($forfeitDeposit) {
                 $forfeitedAmount = $depositAmount;
-                $depositStatus   = DepositStatus::FORFEITED;
-                $contractStatus  = ContractStatus::CANCELLED; // Huỷ ngang → CANCELLED
+                $depositStatus = DepositStatus::FORFEITED;
+                $contractStatus = ContractStatus::CANCELLED; // Huỷ ngang → CANCELLED
             } else {
                 $refundedAmount = $depositAmount;
-                $depositStatus  = DepositStatus::REFUND_PENDING;
+                $depositStatus = DepositStatus::REFUND_PENDING;
                 $contractStatus = ContractStatus::TERMINATED; // Thỏa thuận / đương hạn → TERMINATED
             }
 
-            $contract->status             = $contractStatus;
-            $contract->deposit_status     = $depositStatus;
-            $contract->end_date           = $terminationDate;
-            $contract->terminated_at      = now();
-            $contract->cancelled_at       = $forfeitDeposit ? now() : null;
+            $contract->status = $contractStatus;
+            $contract->deposit_status = $depositStatus;
+            $contract->end_date = $terminationDate;
+            $contract->terminated_at = now();
+            $contract->cancelled_at = $forfeitDeposit ? now() : null;
             $contract->cancellation_party = $cancellationParty;
             $contract->cancellation_reason = $cancellationReason;
-            $contract->refunded_amount    = $refundedAmount;
-            $contract->forfeited_amount   = $forfeitedAmount;
-            $contract->meta               = array_merge($contract->meta ?? [], [
+            $contract->refunded_amount = $refundedAmount;
+            $contract->forfeited_amount = $forfeitedAmount;
+            $contract->meta = array_merge($contract->meta ?? [], [
                 'termination_details' => [
-                    'is_early_termination'  => $isEarlyTermination,
-                    'cancellation_party'    => $cancellationParty,
-                    'cancellation_reason'   => $cancellationReason,
-                    'waive_penalty'         => $waivePenalty,
-                    'forfeit_deposit'       => $forfeitDeposit,
+                    'is_early_termination' => $isEarlyTermination,
+                    'cancellation_party' => $cancellationParty,
+                    'cancellation_reason' => $cancellationReason,
+                    'waive_penalty' => $waivePenalty,
+                    'forfeit_deposit' => $forfeitDeposit,
                     'refund_remaining_rent' => $refundRemainingRent,
-                    'original_end_date'     => $contract->getOriginal('end_date'),
+                    'original_end_date' => $contract->getOriginal('end_date'),
                 ],
             ]);
             $contract->save();
@@ -966,21 +969,21 @@ class ContractService
             );
 
             $this->invoiceService->create([
-                'org_id'      => $contract->org_id,
+                'org_id' => $contract->org_id,
                 'property_id' => $contract->property_id,
-                'room_id'     => $contract->room_id,
+                'room_id' => $contract->room_id,
                 'contract_id' => $contract->id,
-                'status'      => 'DRAFT',
-                'issue_date'  => $terminationDate,
-                'due_date'    => $terminationDate,
+                'status' => 'DRAFT',
+                'issue_date' => $terminationDate,
+                'due_date' => $terminationDate,
                 'period_start' => $terminationDate,
-                'period_end'  => $terminationDate,
+                'period_end' => $terminationDate,
                 'is_termination' => true,
-                'snapshot'    => [
-                    'is_termination'     => true,
+                'snapshot' => [
+                    'is_termination' => true,
                     'cancellation_party' => $cancellationParty,
-                    'forfeit_deposit'    => $forfeitDeposit,
-                    'is_early'           => $isEarlyTermination,
+                    'forfeit_deposit' => $forfeitDeposit,
+                    'is_early' => $isEarlyTermination,
                 ],
             ], $items);
 
@@ -1001,7 +1004,7 @@ class ContractService
     public function requestTermination(Contract $contract, User $requester, array $data): bool
     {
         $allowedStatuses = array_map(
-            fn ($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
+            fn($e) => $e instanceof \BackedEnum ? $e->value : (string) $e,
             ContractStatus::allowRequestTermination()
         );
 
@@ -1009,14 +1012,14 @@ class ContractService
             ? $contract->status->value
             : (string) $contract->status;
 
-        if (! in_array($currentStatus, $allowedStatuses)) {
+        if (!in_array($currentStatus, $allowedStatuses)) {
             throw new \Exception('Chỉ có thể gửi yêu cầu dời khi hợp đồng đang hiệu lực.');
         }
 
         return DB::transaction(function () use ($contract, $data) {
             $contract->update([
-                'status'             => ContractStatus::PENDING_TERMINATION,
-                'notice_given_at'    => now(),
+                'status' => ContractStatus::PENDING_TERMINATION,
+                'notice_given_at' => now(),
                 'cancellation_party' => ContractCancellationParty::TENANT->value,
                 'cancellation_reason' => $data['reason'] ?? null,
             ]);
@@ -1047,7 +1050,7 @@ class ContractService
                 if ($transferDate->lt($nextBilling)) {
                     $daysInCurrentCycle = 30; // Mặc định 30 ngày để tính giá trị ngày
                     $unusedDays = $nextBilling->diffInDays($transferDate);
-                    
+
                     if ($unusedDays > 0) {
                         $dailyRent = $oldContract->rent_price / $daysInCurrentCycle;
                         $unusedRentAmount = round($dailyRent * $unusedDays, 0); // Làm tròn số tiền
@@ -1069,7 +1072,7 @@ class ContractService
 
             // 3. Tạo hợp đồng mới
             $targetRoom = \App\Models\Property\Room::findOrFail($targetRoomId);
-            
+
             $newContractData = [
                 'org_id' => $oldContract->org_id,
                 'property_id' => $targetRoom->property_id,
@@ -1111,9 +1114,9 @@ class ContractService
             if ($totalCreditAmount > 0) {
                 // Xác định số tiền hóa đơn trước khi giảm trừ (Tổng Cọc + Phí + Thuê)
                 $invoiceTotalBeforeCredit = $initialInvoice->total_amount;
-                
+
                 $excessHandlingMethod = $data['excess_handling_method'] ?? 'CASH_REFUND';
-                
+
                 // Mức tín dụng thực tế sẽ cấn trừ vào hóa đơn (không vượt quá tổng hóa đơn)
                 $appliedCredit = 0;
                 $excessCredit = 0;
@@ -1138,7 +1141,7 @@ class ContractService
                     // Nhưng Hostech thiết kế "total >= 0", vì vậy ta vẫn phải push $appliedCredit.
                     // Để bảo toàn giá trị sổ sách, ta vẫn ghi nhận full amount vào Adjustment
                     // dù invoice total sẽ kẹp bằng 0.
-                    $appliedCredit = $totalCreditAmount; 
+                    $appliedCredit = $totalCreditAmount;
                 } else {
                     $appliedCredit = $totalCreditAmount;
                 }
@@ -1156,7 +1159,7 @@ class ContractService
 
                 // Tính lại bill
                 $this->invoiceService->recalculateTotalAmount($initialInvoice);
-                
+
                 // Nếu hóa đơn trả về 0 sau khi bù trừ, tự động đóng (PAID) hóa đơn và kích hoạt HD
                 if ($initialInvoice->total_amount <= 0) {
                     $this->invoiceService->payInvoice($initialInvoice, 'Thanh toán bằng cấn trừ từ phòng cũ.');
@@ -1209,33 +1212,33 @@ class ContractService
 
         // Tiền thuê tháng cuối (nếu có)
         $items[] = [
-            'type'        => InvoiceItemType::RENT->value,
+            'type' => InvoiceItemType::RENT->value,
             'description' => 'Tiền thuê tháng cuối / phí thanh lý',
-            'quantity'    => 1,
-            'unit_price'  => (float) $contract->rent_price,
-            'amount'      => (float) $contract->rent_price,
+            'quantity' => 1,
+            'unit_price' => (float) $contract->rent_price,
+            'amount' => (float) $contract->rent_price,
         ];
 
         if ($depositAmount > 0) {
             if ($forfeitDeposit) {
                 // Phạt cọc — ghi rõ lý do
                 $items[] = [
-                    'type'        => InvoiceItemType::PENALTY->value,
+                    'type' => InvoiceItemType::PENALTY->value,
                     'description' => 'Tiền cọc bị phạt thu (huỷ hợp đồng trước hạn)',
-                    'quantity'    => 1,
-                    'unit_price'  => $depositAmount,
-                    'amount'      => $depositAmount,
-                    'meta'        => ['note' => 'Đã thu trước, không hoàn lại'],
+                    'quantity' => 1,
+                    'unit_price' => $depositAmount,
+                    'amount' => $depositAmount,
+                    'meta' => ['note' => 'Đã thu trước, không hoàn lại'],
                 ];
             } else {
                 // Hoàn cọc — ghi dương để rõ chuức năng
                 $items[] = [
-                    'type'        => InvoiceItemType::ADJUSTMENT->value,
+                    'type' => InvoiceItemType::ADJUSTMENT->value,
                     'description' => 'Hoàn trả tiền đặt cọc cho khách',
-                    'quantity'    => 1,
-                    'unit_price'  => -$depositAmount, // âm = cần trả lại cho khách
-                    'amount'      => -$depositAmount,
-                    'meta'        => ['note' => 'Chuyển sang trạng thái REFUND_PENDING'],
+                    'quantity' => 1,
+                    'unit_price' => -$depositAmount, // âm = cần trả lại cho khách
+                    'amount' => -$depositAmount,
+                    'meta' => ['note' => 'Chuyển sang trạng thái REFUND_PENDING'],
                 ];
             }
         }
@@ -1261,10 +1264,10 @@ class ContractService
 
         return $query->where(function ($q) use ($startDate, $endDate) {
             $q->where('start_date', '<=', $endDate ?? '9999-12-31')
-              ->where(function ($inner) use ($startDate) {
-                  $inner->whereNull('end_date')
+                ->where(function ($inner) use ($startDate) {
+                    $inner->whereNull('end_date')
                         ->orWhere('end_date', '>=', $startDate);
-              });
+                });
         })->first();
     }
 
@@ -1278,14 +1281,14 @@ class ContractService
             ->orderBy('end_date', 'desc')
             ->first();
 
-        if (! $activeContract) {
+        if (!$activeContract) {
             return ['status' => 'available'];
         }
 
         $now = now();
         $endDate = $activeContract->end_date ? \Carbon\Carbon::parse($activeContract->end_date) : null;
 
-        if (! $endDate) {
+        if (!$endDate) {
             return [
                 'status' => 'occupied',
                 'contract_id' => $activeContract->id,
@@ -1315,7 +1318,7 @@ class ContractService
 
     private function allSignersApproved(Contract $contract): bool
     {
-        return ! $contract->members()
+        return !$contract->members()
             ->whereNull('left_at')
             ->where('status', '!=', 'APPROVED')
             ->exists();
@@ -1349,7 +1352,7 @@ class ContractService
         ?string $endDate,
         string|int|null $billingCycle,
     ): void {
-        if (! $startDate || ! $endDate) {
+        if (!$startDate || !$endDate) {
             return;
         }
 

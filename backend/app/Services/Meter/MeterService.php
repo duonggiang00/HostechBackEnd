@@ -39,8 +39,8 @@ class MeterService
             ])
             ->allowedSorts(['installed_at', 'code', 'type', 'created_at'])
             ->defaultSort('-created_at')
-            ->allowedIncludes(['room', 'room.property', 'room.floor'])
-            ->with(['latestApprovedReading']); // Eager load approved readings for "số cũ" display
+            ->allowedIncludes(['room', 'room.property', 'room.floor', 'latestReading', 'latestApprovedReading'])
+            ->with(['room', 'latestReading', 'latestApprovedReading']); // Eager load them by default for performance
         
         // Apply manual filters if provided
         foreach ($filters as $key => $value) {

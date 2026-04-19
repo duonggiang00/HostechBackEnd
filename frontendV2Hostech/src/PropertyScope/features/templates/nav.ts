@@ -3,9 +3,9 @@ import type { NavItem } from '../../types/nav';
 
 export const templatesNav = (propertyId: string): NavItem[] => [
   {
-    id: 'config-building',
+    id: 'config-info',
     icon: Building2,
-    label: 'Chi tiết tòa nhà',
+    label: 'Thông tin tòa nhà',
     path: `/properties/${propertyId}/templates/building`,
   },
   {

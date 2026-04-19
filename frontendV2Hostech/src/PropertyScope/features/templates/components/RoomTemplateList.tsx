@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, Zap, ArrowLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import { useRoomTemplates, useRoomTemplateActions } from '../hooks/useTemplates';
 import { RoomTemplateWizard } from './RoomTemplateWizard';
-import { BulkRoomCreateModal } from '../../rooms/components/BulkRoomCreateModal';
 import type { RoomTemplate } from '../types';
 
 interface RoomTemplateListProps {
@@ -13,7 +12,6 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const { data: templates = [], isLoading } = useRoomTemplates(propertyId);
   const { deleteTemplate } = useRoomTemplateActions(propertyId);
   const [showWizard, setShowWizard] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate | null>(null);
 
   const handleEdit = (template: RoomTemplate) => {
@@ -24,11 +22,6 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const handleCreate = () => {
     setSelectedTemplate(null);
     setShowWizard(true);
-  };
-
-  const handleBulkCreate = (template: RoomTemplate) => {
-    setSelectedTemplate(template);
-    setIsBulkModalOpen(true);
   };
 
   const handleDelete = (id: string) => {
@@ -72,16 +65,16 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Mẫu Phòng</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Mẫu Phòng</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Quản lý các loại phòng để tạo phòng nhanh chóng
           </p>
         </div>
         <button
           onClick={handleCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           <span>Thêm mẫu phòng</span>
         </button>
       </div>
@@ -142,38 +135,21 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
                 </div>
               )}
             </div>
-
-            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700">
-              <button
-                onClick={() => handleBulkCreate(template)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-black dark:hover:bg-slate-600 text-white rounded-xl text-sm font-semibold transition-all shadow-sm active:scale-95"
-              >
-                <Zap className="w-4 h-4 text-amber-400 fill-amber-400" />
-                Tạo nhanh phòng
-              </button>
-            </div>
           </div>
         ))}
-
-        {templates.length === 0 && (
-          <div className="col-span-full p-12 text-center bg-slate-50 dark:bg-slate-800/30 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700">
-            <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có mẫu phòng nào</p>
-            <button
-              onClick={handleCreate}
-              className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-indigo-600 dark:text-indigo-400 font-bold rounded-xl hover:shadow-md transition-all active:scale-95"
-            >
-              + Tạo mẫu đầu tiên
-            </button>
-          </div>
-        )}
       </div>
 
-      <BulkRoomCreateModal
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-        propertyId={propertyId}
-        template={selectedTemplate}
-      />
+      {templates.length === 0 && (
+        <div className="p-12 text-center bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <p className="text-slate-500 dark:text-slate-400 mb-4">Chưa có mẫu phòng nào</p>
+          <button
+            onClick={handleCreate}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all active:scale-95"
+          >
+            + Tạo mẫu đầu tiên
+          </button>
+        </div>
+      )}
     </div>
   );
 }

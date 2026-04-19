@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ChevronLeft, FileText, User, Home, Calendar, Shield, 
-  DollarSign, Clock, MapPin, Users, Printer, Edit3, 
+import {
+  ChevronLeft, FileText, User, Home, Calendar, Shield,
+  DollarSign, Clock, MapPin, Users, Printer, Edit3,
   AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft,
   PenTool, UserPlus
 } from 'lucide-react';
@@ -46,7 +46,7 @@ export default function ContractDetailPage() {
   const { data: contract, isLoading, error } = useContract(contractId);
   const { generateDocument, downloadDocument } = useContractActions();
   const { data: histories, isLoading: isLoadingHistories } = useContractStatusHistories(contractId);
-  
+
   const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -54,7 +54,7 @@ export default function ContractDetailPage() {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const { signContract } = useContractActions();
-  
+
   const handlePrintContract = async () => {
     if (!contractId) return;
     setIsPrinting(true);
@@ -64,7 +64,7 @@ export default function ContractDetailPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const fileName = `Hop-dong-${contract?.room?.code || contractId.substring(0,8)}.docx`;
+      const fileName = `Hop-dong-${contract?.room?.code || contractId.substring(0, 8)}.docx`;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
@@ -77,7 +77,7 @@ export default function ContractDetailPage() {
       setIsPrinting(false);
     }
   };
-  
+
   const handleBack = () => {
     navigate(`/properties/${propertyId}/contracts`);
   };
@@ -104,9 +104,9 @@ export default function ContractDetailPage() {
           <div className="w-16 h-16 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-500 dark:text-red-400" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Lỗi tải dữ liệu</h2>
-          <p className="text-gray-600 dark:text-slate-400 font-normal text-sm mb-6">Không thể tìm thấy thông tin hợp đồng này hoặc đã có lỗi xẩy ra.</p>
-          <button 
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight mb-2">Lỗi tải dữ liệu</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">Không thể tìm thấy thông tin hợp đồng này hoặc đã có lỗi xẩy ra.</p>
+          <button
             onClick={handleBack}
             className="w-full bg-blue-900 text-white py-2 px-4 rounded-md font-medium text-sm hover:bg-blue-800 transition-colors"
           >
@@ -125,7 +125,7 @@ export default function ContractDetailPage() {
       {/* Header & Actions */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 pt-6">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={handleBack}
             className="p-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-500 dark:text-slate-400 hover:text-blue-900 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
@@ -133,15 +133,15 @@ export default function ContractDetailPage() {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
+              <h1 className="text-2xl font-black text-slate-900 dark:text-white leading-tight italic uppercase tracking-tighter transition-colors">
                 Chi tiết Hợp đồng
               </h1>
               <div className={`px-2.5 py-0.5 rounded-md text-xs font-medium ${statusInfo.color}`}>
                 {statusInfo.label}
               </div>
             </div>
-            <p className="text-gray-500 dark:text-slate-400 font-normal text-xs mt-1">
-              <span className="text-blue-900 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded mr-2 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 uppercase tracking-wide text-xs transition-colors">
+              <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md font-black italic">
                 {contract.id?.substring(0, 8).toUpperCase()}
               </span>
               Tạo ngày {format(new Date(contract.created_at), 'dd/MM/yyyy')}
@@ -150,14 +150,14 @@ export default function ContractDetailPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button 
+          <button
             onClick={() => setIsPreviewModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-700 dark:text-slate-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <FileText className="w-4 h-4" />
             <span>Xem hợp đồng</span>
           </button>
-          <button 
+          <button
             onClick={handlePrintContract}
             disabled={isPrinting}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-700 dark:text-slate-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm disabled:opacity-50"
@@ -166,7 +166,7 @@ export default function ContractDetailPage() {
             <span>{isPrinting ? 'Đang tạo file...' : 'In hợp đồng'}</span>
           </button>
           {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && (
-            <button 
+            <button
               onClick={() => setIsSignatureModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-amber-500 dark:bg-amber-600 text-white rounded-md font-medium text-sm hover:bg-amber-600 dark:hover:bg-amber-700 transition-colors shadow-sm"
             >
@@ -175,7 +175,7 @@ export default function ContractDetailPage() {
             </button>
           )}
           {isOrdinalEditable && (
-            <button 
+            <button
               onClick={handleEdit}
               className="flex items-center gap-2 px-4 py-2 bg-blue-900 dark:bg-blue-800 text-white rounded-md font-medium text-sm hover:bg-blue-800 dark:hover:bg-blue-700 transition-colors shadow-sm"
             >
@@ -185,14 +185,14 @@ export default function ContractDetailPage() {
           )}
           {contract.status === 'ACTIVE' && (
             <>
-              <button 
+              <button
                 onClick={() => setIsTransferModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md text-gray-700 dark:text-slate-300 font-medium text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
               >
                 <ArrowRightLeft className="w-4 h-4" />
                 <span>Chuyển phòng</span>
               </button>
-              <button 
+              <button
                 onClick={() => setIsTerminateModalOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-red-500 dark:bg-red-600 text-white rounded-md font-medium text-sm hover:bg-red-600 dark:hover:bg-red-700 transition-colors shadow-sm"
               >
@@ -209,7 +209,7 @@ export default function ContractDetailPage() {
         <div className="xl:col-span-8 space-y-6">
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -218,13 +218,13 @@ export default function ContractDetailPage() {
               <div className="w-8 h-8 bg-blue-50 dark:bg-blue-900/20 rounded-md flex items-center justify-center mb-2">
                 <DollarSign className="w-4 h-4 text-blue-900 dark:text-blue-400" />
               </div>
-              <p className="text-xs font-normal text-gray-500 dark:text-slate-400 mb-1">Tiền phòng (Tháng)</p>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} <span className="text-sm font-medium">đ</span>
+              <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Tiền phòng (Tháng)</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic tabular-nums transition-colors">
+                {Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} <span className="text-sm font-bold not-italic">đ</span>
               </h3>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
@@ -233,13 +233,13 @@ export default function ContractDetailPage() {
               <div className="w-8 h-8 bg-emerald-50 dark:bg-emerald-500/10 rounded-md flex items-center justify-center mb-2">
                 <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <p className="text-xs font-normal text-gray-500 dark:text-slate-400 mb-1">Tiền đặt cọc</p>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-medium">đ</span>
+              <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Tiền đặt cọc</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic tabular-nums transition-colors">
+                {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-bold not-italic">đ</span>
               </h3>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -248,14 +248,14 @@ export default function ContractDetailPage() {
               <div className="w-8 h-8 bg-amber-50 dark:bg-amber-500/10 rounded-md flex items-center justify-center mb-2">
                 <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <p className="text-xs font-normal text-gray-500 dark:text-slate-400 mb-1">Thời hạn hợp đồng</p>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                {contract.cycle_months || 0} <span className="text-sm font-medium">Tháng</span>
+              <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-1 transition-colors">Thời hạn hợp đồng</p>
+              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight italic transition-colors">
+                {contract.cycle_months || 0} <span className="text-sm font-bold not-italic font-sans tracking-tight">Tháng</span>
               </h3>
             </motion.div>
 
             {contract.meta?.credit_balance > 0 && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -264,16 +264,16 @@ export default function ContractDetailPage() {
                 <div className="w-8 h-8 bg-blue-100 dark:bg-blue-800 rounded-md flex items-center justify-center mb-2">
                   <DollarSign className="w-4 h-4 text-blue-900 dark:text-blue-300" />
                 </div>
-                <p className="text-xs font-normal text-blue-900 dark:text-blue-400 mb-1">Ví cấn trừ</p>
-                <h3 className="text-lg font-bold text-blue-900 dark:text-blue-300">
-                  {Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} <span className="text-sm font-medium">đ</span>
+                <p className="text-xs font-black uppercase text-blue-600 dark:text-blue-400 tracking-widest mb-1 transition-colors">Ví cấn trừ</p>
+                <h3 className="text-xl font-black text-blue-700 dark:text-blue-300 tracking-tight italic tabular-nums transition-colors">
+                  {Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} <span className="text-sm font-bold not-italic">đ</span>
                 </h3>
               </motion.div>
             )}
           </div>
 
           {/* Details Sections */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
@@ -281,29 +281,29 @@ export default function ContractDetailPage() {
           >
             {/* Rent & Terms */}
             <section>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4 transition-colors">
-                <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+                <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Điều khoản thuê
               </h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <DetailItem 
-                  label="Ngày bắt đầu" 
+                <DetailItem
+                  label="Ngày bắt đầu"
                   value={contract.start_date ? format(new Date(contract.start_date), 'dd/MM/yyyy') : '---'}
                   icon={<Calendar className="w-4 h-4" />}
                 />
-                <DetailItem 
-                  label="Ngày kết thúc" 
+                <DetailItem
+                  label="Ngày kết thúc"
                   value={contract.end_date ? format(new Date(contract.end_date), 'dd/MM/yyyy') : '---'}
                   icon={<Calendar className="w-4 h-4" />}
                 />
-                <DetailItem 
-                  label="Chu kỳ đóng tiền" 
+                <DetailItem
+                  label="Chu kỳ đóng tiền"
                   value={`${contract.billing_cycle_months ?? normalizeBillingCycleMonths(contract.billing_cycle)} tháng`}
                   icon={<Clock className="w-4 h-4" />}
                 />
-                <DetailItem 
-                  label="Ngày chốt số" 
+                <DetailItem
+                  label="Ngày chốt số"
                   value={`Ngày ${contract.cutoff_day}`}
                   icon={<CheckCircle2 className="w-4 h-4" />}
                 />
@@ -314,20 +314,20 @@ export default function ContractDetailPage() {
 
             {/* Property & Room */}
             <section>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4 transition-colors">
-                <Home className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+                <Home className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                 Vị trí & Cơ sở
               </h3>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-xl flex items-start gap-4 transition-colors">
                   <div className="w-10 h-10 bg-white dark:bg-slate-700 rounded-md flex items-center justify-center shadow-sm shrink-0 transition-colors">
                     <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-normal text-gray-500 dark:text-slate-400 transition-colors">Tòa nhà / Cơ sở</p>
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm transition-colors">{contract.property?.name || '---'}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 font-normal transition-colors">{contract.property?.address}</p>
+                    <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Tòa nhà / Cơ sở</p>
+                    <p className="font-bold text-slate-900 dark:text-white text-lg transition-colors">{contract.property?.name || '---'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">{contract.property?.address}</p>
                   </div>
                 </div>
 
@@ -336,9 +336,9 @@ export default function ContractDetailPage() {
                     <Home className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-normal text-gray-500 dark:text-slate-400 transition-colors">Mã số phòng</p>
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm transition-colors">{contract.room?.name || '---'}</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400 font-normal transition-colors">Phòng {contract.room?.code}</p>
+                    <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Mã số phòng</p>
+                    <p className="font-bold text-slate-900 dark:text-white text-lg transition-colors">{contract.room?.name || '---'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 font-medium italic transition-colors">Phòng {contract.room?.code}</p>
                   </div>
                 </div>
               </div>
@@ -348,9 +348,9 @@ export default function ContractDetailPage() {
 
             {/* Members / Occupants */}
             <section>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 transition-colors">
-                  <Users className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 italic transition-colors">
+                  <Users className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   Thành viên & Cư dân
                 </h3>
 
@@ -364,7 +364,7 @@ export default function ContractDetailPage() {
                   </button>
                 )}
               </div>
-              
+
               <div className="overflow-hidden bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-sm transition-colors">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
@@ -401,9 +401,9 @@ export default function ContractDetailPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button 
-                            onClick={() => navigate(`/properties/${propertyId}/users/${member.user_id || member.id}`, { 
-                              state: { from: 'contract-detail', contractId: contractId } 
+                          <button
+                            onClick={() => navigate(`/properties/${propertyId}/users/${member.user_id || member.id}`, {
+                              state: { from: 'contract-detail', contractId: contractId }
                             })}
                             className="inline-flex items-center px-3 py-1.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-xs font-medium shadow-sm"
                           >
@@ -414,8 +414,8 @@ export default function ContractDetailPage() {
                     ))}
                     {!contract.members?.length && (
                       <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center bg-gray-50 dark:bg-slate-800/50">
-                          <p className="text-gray-500 dark:text-slate-400 font-normal text-sm transition-colors">Chưa có thông tin thành viên.</p>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <p className="text-slate-400 dark:text-slate-500 font-bold italic transition-colors">Chưa có thông tin thành viên.</p>
                         </td>
                       </tr>
                     )}
@@ -427,19 +427,47 @@ export default function ContractDetailPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="xl:col-span-4 space-y-6">
+        <div className="xl:col-span-4 space-y-8">
+          {/* Join Code Card (Hidden per user request) */}
+          {/* 
+          {contract.join_code && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5 }}
+              className="bg-indigo-600 p-8 rounded-6xl text-white shadow-2xl shadow-indigo-200 relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Shield className="w-24 h-24" />
+              </div>
+              <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2 mb-4 relative z-10">
+                <Clock className="w-5 h-5" />
+                Mã tham gia
+              </h3>
+              <div className="bg-white/20 backdrop-blur-md rounded-4xl p-8 text-center relative z-10 border border-white/20">
+                <p className="text-xs uppercase font-black tracking-widest mb-3 opacity-80">Gửi mã này cho khách thuê</p>
+                <p className="text-3xl font-black italic tracking-tighter tabular-nums mb-4">{contract.join_code}</p>
+                <div className="flex items-center justify-center gap-2 text-xs font-bold opacity-70">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Mã có hiệu lực</span>
+                </div>
+              </div>
+            </motion.div>
+          )} 
+          */}
+
           {/* Quick Info Sidebar */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 }}
             className="bg-white dark:bg-slate-800 p-6 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm space-y-6 transition-colors"
           >
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2 transition-colors">
-              <History className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+            <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2 italic transition-colors">
+              <History className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               Nghiệp vụ
             </h3>
-            
+
             <div className="space-y-4">
               <div className="flex items-start gap-4">
                 <div className="w-10 h-10 bg-gray-50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-md flex items-center justify-center shrink-0 transition-colors">
@@ -456,8 +484,8 @@ export default function ContractDetailPage() {
                   <AlertCircle className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                 </div>
                 <div>
-                  <p className="text-xs font-normal text-gray-500 dark:text-slate-400 transition-colors">Ghi chú nghiệp vụ</p>
-                  <p className="text-sm font-normal text-gray-600 dark:text-slate-400 transition-colors">Không có ghi chú nào đặc biệt cho hợp đồng này.</p>
+                  <p className="text-xs font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest transition-colors">Ghi chú nghiệp vụ</p>
+                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 italic transition-colors">Không có ghi chú nào đặc biệt cho hợp đồng này.</p>
                 </div>
               </div>
             </div>
@@ -472,9 +500,9 @@ export default function ContractDetailPage() {
               </button>
             )}
 
-            <div className="pt-6 border-t border-gray-100 dark:border-slate-700">
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4 transition-colors">
-                <History className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+            <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
+              <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3 mb-6 italic transition-colors">
+                <History className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 Timeline Trạng thái
               </h4>
               <ContractStatusTimeline histories={histories || []} isLoading={isLoadingHistories} />

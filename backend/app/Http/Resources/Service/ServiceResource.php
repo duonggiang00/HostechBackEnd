@@ -19,6 +19,7 @@ class ServiceResource extends JsonResource
             'org_id' => $this->org_id,
             'code' => $this->code,
             'name' => $this->name,
+            'type' => $this->type,
             'calc_mode' => $this->calc_mode,
             'unit' => $this->unit,
             'price' => $this->current_price,

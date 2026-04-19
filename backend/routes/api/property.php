@@ -62,4 +62,4 @@ Route::apiResource('properties.rooms.assets', RoomAssetController::class)
 
 // Room Templates
 Route::apiResource('room-templates', RoomTemplateController::class);
-Route::apiResource('properties.room-templates', RoomTemplateController::class)->shallow();
+Route::apiResource('properties.room-templates', RoomTemplateController::class);

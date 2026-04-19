@@ -160,26 +160,35 @@ export function usePropertyReadings(
   propertyId?: string | null,
   params?: { status?: string; period_start?: string; period_end?: string }
 ) {
-  // Bước 1: lấy danh sách meter IDs của property (dùng perPage cao để lấy hết)
-  const metersQuery = useQuery({
-    queryKey: ['meters-ids-for-readings', propertyId],
+  return useQuery({
+    queryKey: ['property-readings', propertyId, params],
+    queryFn: () =>
+      meteringApi.getReadingsForMeters([], {
+        ...params,
+        property_id: propertyId as string,
+      }),
+    enabled: !!propertyId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Hook lấy số lượng bản ghi đang chờ duyệt (Pending) - Tối ưu hóa cực độ.
+ */
+export function usePendingReadingsCount(propertyId?: string | null) {
+  return useQuery({
+    queryKey: ['pending-readings-count', propertyId],
     queryFn: async () => {
-      if (!propertyId) return [] as string[];
-      const res = await meteringApi.getMeters(propertyId, {}, undefined, 1, 200);
-      return (res.data ?? []).map((m: any) => m.id as string);
+      if (!propertyId) return 0;
+      const res = await meteringApi.getGlobalReadings({
+        property_id: propertyId,
+        status: 'SUBMITTED',
+        per_page: 1, // Chỉ lấy meta.total
+      });
+      return res.meta?.total || 0;
     },
     enabled: !!propertyId,
-    staleTime: 60_000,
-  });
-
-  const meterIds = metersQuery.data ?? [];
-
-  // Bước 2: fetch readings cho toàn bộ meters (chỉ chạy khi đã có meterIds)
-  return useQuery({
-    queryKey: ['property-readings', propertyId, params, meterIds.join(',')],
-    queryFn: () => meteringApi.getReadingsForMeters(meterIds, params),
-    enabled: !!propertyId && meterIds.length > 0,
-    staleTime: 30_000,
+    refetchInterval: 60_000, // Tự động làm mới mỗi phút
   });
 }
 

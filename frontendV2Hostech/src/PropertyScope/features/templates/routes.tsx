@@ -1,13 +1,13 @@
 import type { RouteObject } from 'react-router-dom';
 import { Navigate, useParams } from 'react-router-dom';
 import { TemplatesPage } from './pages/TemplatesPage';
-import { BuildingConfig } from './components/BuildingConfig';
+import { PropertyInfoView } from './components/PropertyInfoView';
 import { RoomTemplateList } from './components/RoomTemplateList';
 import ServiceListPage from '../services/pages/ServiceListPage';
 
-function BuildingConfigWrapper() {
+function PropertyInfoViewWrapper() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  return <BuildingConfig propertyId={propertyId ?? ''} />;
+  return <PropertyInfoView propertyId={propertyId ?? ''} />;
 }
 
 function RoomTemplateListWrapper() {
@@ -22,11 +22,11 @@ export const templatesRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <Navigate to="building" replace />,
+        element: <Navigate to="info" replace />,
       },
       {
-        path: 'building',
-        element: <BuildingConfigWrapper />,
+        path: 'info',
+        element: <PropertyInfoViewWrapper />,
       },
       {
         path: 'services',

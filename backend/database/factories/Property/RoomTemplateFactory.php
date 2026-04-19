@@ -18,16 +18,6 @@ class RoomTemplateFactory extends Factory
             'capacity' => $this->faker->numberBetween(1, 4),
             'base_price' => $area * $this->faker->numberBetween(100, 250) * 1000,
             'description' => $this->faker->paragraph(),
-            'amenities' => [
-                'wifi' => true,
-                'air_conditioner' => $this->faker->boolean(80),
-                'fridge' => $this->faker->boolean(60),
-                'bed' => true,
-            ],
-            'utilities' => [
-                'electricity' => 'metered',
-                'water' => 'metered',
-            ],
         ];
     }
 }

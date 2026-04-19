@@ -12,13 +12,13 @@ import {
   User,
   CreditCard,
   LayoutDashboard,
-  Settings,
   Ticket,
   DollarSign,
   ArrowLeftCircle,
   LayoutGrid,
   LayoutTemplate,
   ScrollText,
+  Settings,
   type LucideIcon,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
@@ -81,6 +81,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         { id: 'dashboard', icon: LayoutDashboard, label: 'Trang chủ', path: `/properties/${propertyId}/dashboard`, exact: true },
       ],
     },
+    {
     {
       id: 'operations',
       label: 'Vận Hành',

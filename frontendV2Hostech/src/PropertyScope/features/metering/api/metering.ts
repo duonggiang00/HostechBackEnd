@@ -27,7 +27,7 @@ export const meteringApi = {
     const params: Record<string, any> = {
       page,
       per_page: perPage,
-      include: 'room', // Load room relationship
+      include: 'room,latestReading,latestApprovedReading', // Load essential relations for status
     };
 
     // Add filter parameters in bracket notation
@@ -233,14 +233,55 @@ export const meteringApi = {
   },
 
   /**
-   * Lấy readings theo status cho nhiều meters (song song).
-   * Thành phần máy chủ không có endpoint property-level, nên
-   * ta gọi /meters/{id}/readings cho từng meter và gộp lại.
+   * Lấy readings (Toàn cục) - Hỗ trợ lọc theo property_id, status.
+   */
+  getGlobalReadings: async (params?: {
+    property_id?: string;
+    status?: string;
+    period_start?: string;
+    period_end?: string;
+    page?: number;
+    per_page?: number;
+    include?: string;
+  }) => {
+    const queryParams: Record<string, any> = {
+      page: params?.page || 1,
+      per_page: params?.per_page || 50,
+      include: params?.include || 'meter,meter.room,submittedBy',
+    };
+
+    if (params?.property_id) queryParams['filter[property_id]'] = params.property_id;
+    if (params?.status) queryParams['filter[status]'] = params.status;
+    // ... add more filters if needed
+
+    const response = await apiClient.get('/meter-readings', { params: queryParams });
+    return response.data;
+  },
+
+  /**
+   * Lấy readings cho nhiều meters (Tối ưu hóa: dùng global endpoint nếu có property_id).
    */
   getReadingsForMeters: async (
     meterIds: string[],
-    params?: { status?: string; period_start?: string; period_end?: string; per_page?: number }
+    params?: { property_id?: string; status?: string; period_start?: string; period_end?: string; per_page?: number }
   ): Promise<{ data: (MeterReading & { meter_id: string })[]; meta: { total: number } }> => {
+    // Nếu có property_id, dùng endpoint global mới để lấy tất cả trong 1 nốt nhạc
+    if (params?.property_id) {
+      const response = await meteringApi.getGlobalReadings({
+        property_id: params.property_id,
+        status: params.status,
+        per_page: params.per_page || 100,
+      });
+
+      const list = (response.data || []).map((r: any) => ({
+        ...r,
+        meter_id: r.meter?.id || r.meter_id,
+      }));
+
+      return { data: list, meta: { total: response.meta?.total || list.length } };
+    }
+
+    // Fallback: nếu không có property_id (hiếm khi xảy ra trong context này)
     if (!meterIds.length) return { data: [], meta: { total: 0 } };
 
     const results = await Promise.allSettled(

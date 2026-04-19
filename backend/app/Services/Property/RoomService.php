@@ -28,7 +28,7 @@ class RoomService
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price'])
-            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'invoices', 'roomServices'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
         // Scoping Pattern: Membership-based for Tenant (Renters) OR they can see 'available' rooms
@@ -70,7 +70,7 @@ class RoomService
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price', 'deleted_at'])
-            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'invoices', 'roomServices'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
         if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
@@ -146,7 +146,13 @@ class RoomService
                 $serviceIds = $property->defaultServices()->pluck('services.id')->toArray();
             }
             if (! empty($serviceIds)) {
-                $room->services()->sync($serviceIds);
+                foreach ($serviceIds as $svcId) {
+                    \App\Models\Service\RoomService::create([
+                        'room_id' => $room->id,
+                        'service_id' => $svcId,
+                        'org_id' => $room->org_id,
+                    ]);
+                }
             }
             // -------------------------------
 
@@ -202,12 +208,12 @@ class RoomService
             $template = RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
 
             $roomData = array_merge([
-                'area' => $template->area,
-                'capacity' => $template->capacity,
-                'base_price' => $template->base_price,
+                'area'        => $template->area,
+                'capacity'    => $template->capacity,
+                'base_price'  => $template->base_price,
                 'description' => $template->description,
                 'property_id' => $template->property_id,
-                'status' => 'available',
+                'status'      => 'available',
             ], $overrides);
 
             // Inherit services if not explicitly provided
@@ -221,12 +227,18 @@ class RoomService
             if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
                 foreach ($template->assets as $tAsset) {
                     $room->assets()->create([
-                        'id' => Str::uuid()->toString(),
-                        'org_id' => $room->org_id,
+                        'id'      => Str::uuid()->toString(),
+                        'org_id'  => $room->org_id,
                         'room_id' => $room->id,
-                        'name' => $tAsset->name,
+                        'name'    => $tAsset->name,
                     ]);
                 }
+            }
+
+            // Media: copy gallery images from template to new room
+            $templateMedia = $template->getMedia('gallery');
+            foreach ($templateMedia as $media) {
+                $media->copy($room, 'gallery');
             }
 
             return $room;
@@ -266,7 +278,25 @@ class RoomService
 
             // Sync Services
             if (is_array($serviceIds)) {
-                $room->services()->sync($serviceIds);
+                $existingPivot = \App\Models\Service\RoomService::where('room_id', $room->id)->get();
+                $existingServiceIds = $existingPivot->pluck('service_id')->toArray();
+
+                $toAdd = array_diff($serviceIds, $existingServiceIds);
+                $toRemove = array_diff($existingServiceIds, $serviceIds);
+
+                if (!empty($toRemove)) {
+                    \App\Models\Service\RoomService::where('room_id', $room->id)
+                        ->whereIn('service_id', $toRemove)
+                        ->delete();
+                }
+
+                foreach ($toAdd as $svcId) {
+                    \App\Models\Service\RoomService::create([
+                        'room_id' => $room->id,
+                        'service_id' => $svcId,
+                        'org_id' => $room->org_id,
+                    ]);
+                }
             }
 
             // Sync Assets
@@ -516,12 +546,17 @@ class RoomService
                     // Create Assets
                     foreach ($template->assets as $tAsset) {
                         $room->assets()->create([
-                            'id' => Str::uuid()->toString(),
+                            'id'     => Str::uuid()->toString(),
                             'org_id' => $room->org_id,
-                            'name' => $tAsset->name,
+                            'name'   => $tAsset->name,
                         ]);
                     }
 
+                    // Copy gallery images from template to new room
+                    $templateMedia = $template->getMedia('gallery');
+                    foreach ($templateMedia as $media) {
+                        $media->copy($room, 'gallery');
+                    }
                 }
 
                 $rooms->push($room);
@@ -571,7 +606,25 @@ class RoomService
 
             // Attach services
             if (isset($data['services'])) {
-                $room->services()->sync($data['services']);
+                $existingPivot = \App\Models\Service\RoomService::where('room_id', $room->id)->get();
+                $existingServiceIds = $existingPivot->pluck('service_id')->toArray();
+
+                $toAdd = array_diff($data['services'], $existingServiceIds);
+                $toRemove = array_diff($existingServiceIds, $data['services']);
+
+                if (!empty($toRemove)) {
+                    \App\Models\Service\RoomService::where('room_id', $room->id)
+                        ->whereIn('service_id', $toRemove)
+                        ->delete();
+                }
+
+                foreach ($toAdd as $svcId) {
+                    \App\Models\Service\RoomService::create([
+                        'room_id' => $room->id,
+                        'service_id' => $svcId,
+                        'org_id' => $room->org_id,
+                    ]);
+                }
             }
 
             // Create meters

@@ -57,6 +57,11 @@ class RoomFactory extends Factory
                 ]);
             }
 
+            // Update description with structured text
+            $assetList = !empty($assetsToCreate) ? implode(', ', $assetsToCreate) : 'cơ bản';
+            $description = "Phòng tầng {$room->floor_number}, rộng {$room->area} m2 cho {$room->capacity} người ở, có sẵn {$assetList}";
+            $room->update(['description' => $description]);
+
             // Sinh Price history (1 base price records based on room base_price)
             RoomPrice::create([
                 'id' => Str::uuid(),

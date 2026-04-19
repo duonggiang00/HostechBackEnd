@@ -118,16 +118,7 @@ class RoomResource extends JsonResource
                 ];
             }),
 
-            'meters' => $this->whenLoaded('meters', function () {
-                return collect($this->meters)->map(fn($meter) => [
-                    'id' => $meter->id,
-                    'room_id' => $meter->room_id,
-                    'code' => $meter->code,
-                    'type' => $meter->type,
-                    'last_reading' => (float) ($meter->latestApprovedReading?->reading_value ?? 0),
-                    'last_reading_date' => $meter->latestApprovedReading?->period_end instanceof \Carbon\Carbon ? $meter->latestApprovedReading->period_end->format('Y-m-d') : ($meter->latestApprovedReading?->period_end ? \Carbon\Carbon::parse($meter->latestApprovedReading->period_end)->format('Y-m-d') : null),
-                ]);
-            }),
+            'meters' => \App\Http\Resources\Meter\MeterResource::collection($this->whenLoaded('meters')),
 
             'invoices' => $this->whenLoaded('invoices', function () {
                 return collect($this->invoices)->sortByDesc('period_start')->take(10)->values()->map(fn($invoice) => [

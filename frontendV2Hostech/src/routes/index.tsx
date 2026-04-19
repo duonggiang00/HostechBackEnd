@@ -17,7 +17,7 @@ import InvitationSetupPage from '@/shared/features/auth/components/InvitationSet
 import PropertiesPage from '@/OrgScope/features/properties/pages/PropertiesPage';
 import PropertyDetailPage from '@/PropertyScope/features/properties/pages/PropertyDetailPage';
 import { TemplatesPage } from '@/PropertyScope/features/templates/pages/TemplatesPage';
-import { BuildingConfig } from '@/PropertyScope/features/templates/components/BuildingConfig';
+import { PropertyInfoView } from '@/PropertyScope/features/templates/components/PropertyInfoView';
 import { RoomTemplateList } from '@/PropertyScope/features/templates/components/RoomTemplateList';
 // import RoomListPage from '@/PropertyScope/features/rooms/pages/RoomListPage';
 import RoomCreatePage from '@/PropertyScope/features/rooms/pages/RoomCreatePage';
@@ -33,10 +33,10 @@ import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
 import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
 import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
 import QuickReadingPage from '@/PropertyScope/features/metering/pages/QuickReadingPage';
+import RoomMeterDetailPage from '@/PropertyScope/features/metering/pages/RoomMeterDetailPage';
 import ProfilePage from '@/shared/features/profile/pages/ProfilePage';
 import ServiceListPage from '@/PropertyScope/features/services/pages/ServiceListPage';
-const ServiceCreatePage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceCreatePage'));
-const ServiceEditPage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceEditPage'));
+const ServiceFormPage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceFormPage'));
 const ContractListPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractListPage'));
 const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractCreatePage'));
 const ContractDetailPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractDetailPage'));
@@ -64,9 +64,9 @@ import PropertySelectionPage from '@/shared/features/properties/pages/PropertySe
  * Wrapper components for TemplatesPage nested routes.
  * Needed because RouteObject components can't call useParams at module level.
  */
-function BuildingConfigWrapper() {
+function PropertyInfoViewWrapper() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  return <BuildingConfig propertyId={propertyId ?? ''} />;
+  return <PropertyInfoView propertyId={propertyId ?? ''} />;
 }
 
 function RoomTemplateListWrapper() {
@@ -135,7 +135,7 @@ const RootRedirect = () => {
       }
 
       // 2. If user has multiple properties or no specific assignment (but has an org),
-      // navigate to the neutral property selection layout or Org Dashboard.
+      // navigate to the neutral property selection layout.
       if (user.org_id) {
         // Staff with full power can go to Org Dashboard
         return <Navigate to="/org/dashboard" replace />;
@@ -194,7 +194,7 @@ export default function AppRoutes() {
         <Route
           path="/org"
           element={
-            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Staff']}>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
               <OrgScopeLayout><Outlet /></OrgScopeLayout>
             </ProtectedRoute>
           }
@@ -220,8 +220,8 @@ export default function AppRoutes() {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<PropertyDetailPage defaultTab="dashboard" />} />
-          <Route path="detail" element={<Navigate to="../templates/building" replace />} />
+           <Route path="dashboard" element={<PropertyDetailPage defaultTab="dashboard" />} />
+          <Route path="details" element={<Navigate to="../templates/building" replace />} />
           <Route path="settings" element={<Navigate to="../templates/building" replace />} />
           <Route path="rooms" element={<PropertyDetailPage defaultTab="rooms" />} />
           <Route path="rooms/create" element={<RoomCreatePage />} />
@@ -231,6 +231,7 @@ export default function AppRoutes() {
           <Route path="meters" element={<MeterListPage />} />
           <Route path="meters/quick" element={<QuickReadingPage />} />
           <Route path="meters/quick-reading" element={<QuickReadingPage />} />
+          <Route path="meters/room/:roomId" element={<RoomMeterDetailPage />} />
           <Route path="meters/:meterId" element={<MeterDetailPage />} />
           <Route path="contracts" element={<ContractListPage />} />
           <Route path="contracts/create" element={<ContractCreatePage />} />
@@ -243,11 +244,12 @@ export default function AppRoutes() {
           <Route path="users/create" element={<CreateUserPage />} />
           <Route path="users/:userId" element={<UserDetailPage />} />
           <Route path="services" element={<ServiceListPage />} />
-          <Route path="services/create" element={<ServiceCreatePage />} />
-          <Route path="services/:serviceId/edit" element={<ServiceEditPage />} />
+          <Route path="services/create" element={<ServiceFormPage />} />
+          <Route path="services/:serviceId/edit" element={<ServiceFormPage />} />
           <Route path="templates" element={<TemplatesPage />}>
             <Route index element={<Navigate to="building" replace />} />
-            <Route path="building" element={<BuildingConfigWrapper />} />
+            <Route path="building" element={<PropertyInfoViewWrapper />} />
+            <Route path="info" element={<Navigate to="../building" replace />} />
             <Route path="services" element={<ServiceListPage hideHeader={true} />} />
             <Route path="rooms" element={<RoomTemplateListWrapper />} />
           </Route>

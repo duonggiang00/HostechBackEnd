@@ -9,6 +9,7 @@ use App\Http\Requests\Contract\ContractUpdateRequest;
 use App\Http\Requests\Contract\ExecuteRoomTransferRequest;
 use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
+use App\Http\Resources\Contract\ContractStatusHistoryResource;
 use App\Models\Contract\Contract;
 use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
@@ -363,7 +364,7 @@ class ContractController extends Controller
      *
      * Trả về toàn bộ lịch sử chuyển trạng thái theo thời gian.
      */
-    public function statusHistories(string $id): JsonResponse
+    public function statusHistories(string $id): AnonymousResourceCollection
     {
         $contract = Contract::with([
             'statusHistories.changedBy:id,full_name,email',
@@ -371,9 +372,7 @@ class ContractController extends Controller
 
         $this->authorize('view', $contract);
 
-        return response()->json([
-            'data' => $contract->statusHistories,
-        ]);
+        return ContractStatusHistoryResource::collection($contract->statusHistories);
     }
 
     /**

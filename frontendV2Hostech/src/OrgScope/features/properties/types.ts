@@ -6,7 +6,6 @@ export interface Property {
   area: number | null;
   shared_area: number | null;
   note: string | null;
-  use_floors: boolean;
   default_billing_cycle: 'monthly' | 'quarterly' | 'yearly';
   default_due_day: number;
   default_cutoff_day: number;

@@ -17,6 +17,7 @@ export interface Service {
   id: string;
   code: string;
   name: string;
+  type: 'ELECTRIC' | 'WATER' | 'OTHER';
   calc_mode: 'fixed' | 'metered' | 'tiered' | 'per_tenant';
   unit: string;
   is_recurring: boolean;

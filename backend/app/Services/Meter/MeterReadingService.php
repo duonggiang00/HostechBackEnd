@@ -29,6 +29,11 @@ class MeterReadingService
                 AllowedFilter::exact('meter_id'),
                 AllowedFilter::exact('submitted_by_user_id'),
                 AllowedFilter::exact('approved_by_user_id'),
+                AllowedFilter::callback('property_id', function ($query, $value) {
+                    $query->whereHas('meter', function ($q) use ($value) {
+                        $q->where('property_id', $value);
+                    });
+                }),
             ])
             ->allowedSorts(['period_start', 'period_end', 'reading_value', 'created_at'])
             ->defaultSort('-created_at')

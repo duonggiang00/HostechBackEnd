@@ -34,6 +34,7 @@ class ServiceStoreRequest extends FormRequest
                 }),
             ],
             'name' => ['required', 'string', 'max:255'],
+            'type' => ['required', 'string', 'in:ELECTRIC,WATER,OTHER'],
             'calc_mode' => ['required', 'string', 'in:PER_ROOM,PER_PERSON,PER_QUANTITY,PER_METER'],
             'unit' => ['required', 'string', 'max:20'],
             'is_recurring' => ['boolean'],

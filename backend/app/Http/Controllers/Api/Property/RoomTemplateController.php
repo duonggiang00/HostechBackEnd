@@ -14,14 +14,10 @@ class RoomTemplateController extends Controller
 {
     /**
      * Display a listing of the resource.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  string|null  $propertyId
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     public function index(Request $request, $propertyId = null): \Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Http\JsonResponse
     {
-        // Support both nested route /properties/{property}/room-templates 
+        // Support both nested route /properties/{property}/room-templates
         // and flat URL /room-templates?filter[property_id]=...
         $id = $propertyId ?: $request->input('filter.property_id') ?: $request->input('property_id');
 
@@ -33,6 +29,7 @@ class RoomTemplateController extends Controller
 
         $templates = RoomTemplate::where('property_id', $id)
             ->with(['services', 'assets'])
+            ->with('media') // Eager load Spatie media
             ->get();
 
         return RoomTemplateResource::collection($templates);
@@ -41,32 +38,58 @@ class RoomTemplateController extends Controller
     public function store(RoomTemplateStoreRequest $request)
     {
         return DB::transaction(function () use ($request) {
-            $template = RoomTemplate::create($request->validated());
+            $data = $request->validated();
+
+            // Extract media_ids before creating template
+            $mediaIds = $data['media_ids'] ?? [];
+            unset($data['media_ids']);
+
+            $template = RoomTemplate::create(array_merge($data, [
+                'org_id' => $request->user()->org_id ?? $request->user()->id
+            ]));
 
             if ($request->has('services')) {
                 $template->services()->sync($request->services);
             }
 
             if ($request->has('assets')) {
-                foreach ($request->assets as $assetName) {
-                    $template->assets()->create(['name' => $assetName]);
+                foreach ($request->assets as $asset) {
+                    $template->assets()->create([
+                        'name' => $asset['name'],
+                        'condition' => $asset['condition'] ?? 'new',
+                        'note' => $asset['note'] ?? ''
+                    ]);
                 }
             }
 
+            // Sync gallery images from TemporaryUpload
+            if (!empty($mediaIds)) {
+                $template->syncMediaAttachments($mediaIds, 'gallery');
+            }
 
-            return new RoomTemplateResource($template->load(['services', 'assets']));
+            return new RoomTemplateResource($template->load(['services', 'assets', 'media']));
         });
     }
 
-    public function show(RoomTemplate $roomTemplate)
+    public function show($propertyId, $templateId)
     {
-        return new RoomTemplateResource($roomTemplate->load(['services', 'assets']));
+        $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
+        return new RoomTemplateResource(
+            $roomTemplate->load(['services', 'assets', 'media'])
+        );
     }
 
-    public function update(RoomTemplateUpdateRequest $request, RoomTemplate $roomTemplate)
+    public function update(RoomTemplateUpdateRequest $request, $propertyId, $templateId)
     {
+        $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
         return DB::transaction(function () use ($request, $roomTemplate) {
-            $roomTemplate->update($request->validated());
+            $data = $request->validated();
+
+            // Extract media_ids before updating
+            $mediaIds = $data['media_ids'] ?? null;
+            unset($data['media_ids']);
+
+            $roomTemplate->update($data);
 
             if ($request->has('services')) {
                 $roomTemplate->services()->sync($request->services);
@@ -74,18 +97,29 @@ class RoomTemplateController extends Controller
 
             if ($request->has('assets')) {
                 $roomTemplate->assets()->delete();
-                foreach ($request->assets as $assetName) {
-                    $roomTemplate->assets()->create(['name' => $assetName]);
+                foreach ($request->assets as $asset) {
+                    $roomTemplate->assets()->create([
+                        'name' => $asset['name'],
+                        'condition' => $asset['condition'] ?? 'new',
+                        'note' => $asset['note'] ?? ''
+                    ]);
                 }
             }
 
+            // Sync gallery images if provided
+            if (!empty($mediaIds)) {
+                $roomTemplate->syncMediaAttachments($mediaIds, 'gallery');
+            }
 
-            return new RoomTemplateResource($roomTemplate->load(['services', 'assets']));
+            return new RoomTemplateResource(
+                $roomTemplate->load(['services', 'assets', 'media'])
+            );
         });
     }
 
-    public function destroy(RoomTemplate $roomTemplate)
+    public function destroy($propertyId, $templateId)
     {
+        $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
         $roomTemplate->delete();
         return response()->json(['message' => 'Template deleted successfully']);
     }
