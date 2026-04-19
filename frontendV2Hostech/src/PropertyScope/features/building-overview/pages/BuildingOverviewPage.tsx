@@ -129,30 +129,30 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
                 Chỉnh sửa mặt bằng
               </button>
             ) : (
-                <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
-                  <button
-                    onClick={handleCancel}
-                    disabled={syncMutation.isPending}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors text-[13px] focus-visible:outline-none focus:ring-2 focus:ring-gray-300"
-                  >
-                    <X className="w-4 h-4" />
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={syncMutation.isPending}
-                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-[6px] font-semibold hover:bg-green-700 transition-colors text-[13px] shadow-sm disabled:opacity-70 focus-visible:outline-none focus:ring-2 focus:ring-green-600/50"
-                  >
-                    {syncMutation.isPending
-                      ? <RefreshCw className="w-4 h-4 animate-spin" />
-                      : <Save className="w-4 h-4" />
-                    }
-                    {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-                  </button>
-                </div>
-              )}
-            </div>
+              <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+                <button
+                  onClick={handleCancel}
+                  disabled={syncMutation.isPending}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors text-[13px] focus-visible:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={syncMutation.isPending}
+                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-[6px] font-semibold hover:bg-green-700 transition-colors text-[13px] shadow-sm disabled:opacity-70 focus-visible:outline-none focus:ring-2 focus:ring-green-600/50"
+                >
+                  {syncMutation.isPending
+                    ? <RefreshCw className="w-4 h-4 animate-spin" />
+                    : <Save className="w-4 h-4" />
+                  }
+                  {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </button>
+              </div>
+            )}
           </div>
+        </div>
       )}
 
       {/* Error State */}

@@ -45,7 +45,7 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={() => setShowWizard(false)}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
           >
@@ -57,8 +57,8 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
             </h2>
           </div>
         </div>
-        
-        <RoomTemplateWizard 
+
+        <RoomTemplateWizard
           propertyId={propertyId}
           initialData={selectedTemplate}
           onSuccess={() => setShowWizard(false)}
@@ -119,21 +119,21 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
                   {Intl.NumberFormat('vi-VN').format(template.base_price)}đ
                 </span>
               </div>
-              
+
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 dark:text-slate-400">Diện tích</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {template.area ? `${template.area} m²` : '--'}
                 </span>
               </div>
-              
+
               <div className="flex justify-between items-center text-sm">
                 <span className="text-slate-500 dark:text-slate-400">Số người ở tối đa</span>
                 <span className="font-medium text-slate-900 dark:text-white">
                   {template.capacity ? `${template.capacity} người` : '--'}
                 </span>
               </div>
-              
+
               {template.description && (
                 <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-700">
                   <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">

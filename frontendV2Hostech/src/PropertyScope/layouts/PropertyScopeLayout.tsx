@@ -74,7 +74,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   const menuSections: SidebarSection[] = [
     {
       id: 'overview',
-      label: '', // Không hiển thị nhãn sẽ khiến Trang Chủ hiển thị ở cấp thư mục gốc (Root)
+      label: '',
       defaultOpen: true,
       path: `/properties/${propertyId}/dashboard`,
       items: [
@@ -82,67 +82,60 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
       ],
     },
     {
-      id: 'spaces',
-      label: 'Không Gian Cho Thuê',
-      icon: LayoutGrid,
-      defaultOpen: true,
-      items: [
-        { id: 'floorplan', icon: Layers, label: 'Mặt bằng tòa nhà', path: `/properties/${propertyId}/building-view` },
-        { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: `/properties/${propertyId}/rooms` },
-        { id: 'templates', icon: LayoutTemplate, label: 'Cấu hình mẫu phòng', path: `/properties/${propertyId}/templates/rooms`, exact: true },
-      ],
-    },
-    {
-      id: 'finance_business',
-      label: 'Tài Chính & Kinh Doanh',
-      icon: DollarSign,
-      defaultOpen: true,
-      items: [
-        { 
-          id: 'contracts', 
-          icon: ScrollText, 
-          label: 'Quản lý hợp đồng', 
-          path: `/properties/${propertyId}/contracts`,
-          badge: contractAttentionCount > 0 ? contractAttentionCount : undefined,
-        },
-        { 
-          id: 'meters', 
-          icon: Gauge, 
-          label: 'Chỉ số điện nước', 
-          path: `/properties/${propertyId}/meters`,
-        },
-        { 
-          id: 'invoices', 
-          icon: CreditCard, 
-          label: 'Hóa đơn & Thu tiền', 
-          path: `/properties/${propertyId}/billing`,
-          badge: issuedInvoiceCount > 0 ? issuedInvoiceCount : undefined,
-        },
-        { id: 'services', icon: DollarSign, label: 'Bảng giá dịch vụ', path: `/properties/${propertyId}/templates/services`, exact: true },
-      ],
-    },
-    {
       id: 'operations',
-      label: 'Cư dân & Vận Hành',
+      label: 'Vận Hành',
       icon: Building2,
       defaultOpen: true,
       items: [
+        { id: 'floorplan', icon: Layers, label: 'Sơ đồ tòa nhà', path: `/properties/${propertyId}/building-view` },
+        { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: `/properties/${propertyId}/rooms` },
         { id: 'users', icon: User, label: 'Danh sách cư dân', path: `/properties/${propertyId}/users` },
-        { 
-          id: 'tickets', 
-          icon: Ticket, 
-          label: 'Yêu cầu hỗ trợ', 
+        {
+          id: 'tickets',
+          icon: Ticket,
+          label: 'Yêu cầu hỗ trợ',
           path: `/properties/${propertyId}/tickets`,
           badge: openCount > 0 ? openCount : undefined,
         },
       ],
     },
     {
-      id: 'settings',
-      label: 'Cài Đặt Tòa nhà',
-      icon: Settings,
+      id: 'finance_business',
+      label: 'Tài Chính & Doanh Thu',
+      icon: DollarSign,
+      defaultOpen: true,
       items: [
-        { id: 'details', icon: Settings, label: 'Thông tin tòa nhà', path: `/properties/${propertyId}/templates/building`, exact: true },
+        {
+          id: 'contracts',
+          icon: ScrollText,
+          label: 'Quản lý hợp đồng',
+          path: `/properties/${propertyId}/contracts`,
+          badge: contractAttentionCount > 0 ? contractAttentionCount : undefined,
+        },
+        {
+          id: 'meters',
+          icon: Gauge,
+          label: 'Chỉ số điện nước',
+          path: `/properties/${propertyId}/meters`,
+        },
+        {
+          id: 'invoices',
+          icon: CreditCard,
+          label: 'Hóa đơn & Thu tiền',
+          path: `/properties/${propertyId}/billing`,
+          badge: issuedInvoiceCount > 0 ? issuedInvoiceCount : undefined,
+        },
+      ],
+    },
+    {
+      id: 'settings',
+      label: 'Thiết Lập Tòa Nhà',
+      icon: Settings,
+      defaultOpen: true,
+      items: [
+        { id: 'details', icon: Settings, label: 'Thông tin hệ thống', path: `/properties/${propertyId}/templates/building`, exact: true },
+        { id: 'services', icon: DollarSign, label: 'Dịch vụ & Bảng giá', path: `/properties/${propertyId}/templates/services`, exact: true },
+        { id: 'templates', icon: LayoutTemplate, label: 'Mẫu thiết lập phòng', path: `/properties/${propertyId}/templates/rooms`, exact: true },
       ],
     },
   ];
@@ -178,8 +171,8 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               <Menu className="w-6 h-6" />
             </button>
             <div className="hidden md:flex items-center gap-3">
-                <Building2 className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Vận Hành</h2>
+              <Building2 className="w-5 h-5 text-indigo-500" />
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">Vận Hành</h2>
             </div>
           </div>
 
@@ -187,13 +180,13 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
             <div className="relative hidden md:block group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
               <input
-                type="text" 
+                type="text"
                 hidden
                 placeholder="Tìm kiếm nhanh..."
                 className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               />
             </div>
-            <div 
+            <div
               onClick={() => setIsNotificationOpen(true)}
               className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer border border-slate-100 dark:border-slate-600 relative group"
             >
@@ -211,7 +204,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
           </div>
         </header>
 
-        <main className="p-4 md:p-8 flex-1 overflow-auto">
+        <main className="p-4 md:px-8 md:pt-6 md:pb-8 flex-1 overflow-auto">
           <div className="max-w-7xl mx-auto animate-in fade-in duration-700">{children}</div>
         </main>
       </div>

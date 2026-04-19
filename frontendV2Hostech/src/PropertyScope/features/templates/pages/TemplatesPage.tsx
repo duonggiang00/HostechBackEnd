@@ -10,19 +10,19 @@ export function TemplatesPage() {
   if (!propertyId) return null;
 
   const tabs = [
-    { 
-      id: 'building', 
-      label: 'Cấu hình tòa nhà', 
+    {
+      id: 'building',
+      label: 'Cấu hình tòa nhà',
       icon: Building2,
     },
-    { 
-      id: 'services', 
-      label: 'Dịch vụ & Bảng giá', 
+    {
+      id: 'services',
+      label: 'Dịch vụ & Bảng giá',
       icon: Coins,
     },
-    { 
-      id: 'rooms', 
-      label: 'Mẫu thiết lập phòng', 
+    {
+      id: 'rooms',
+      label: 'Mẫu thiết lập phòng',
       icon: LayoutGrid,
     }
   ];

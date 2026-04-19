@@ -5,7 +5,7 @@ import { useDashboard, useGenerateMonthlyBilling } from '../../dashboard/hooks/u
 import { PropertyDashboardView } from '../../dashboard/components/PropertyDashboardView';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import toast from 'react-hot-toast';
-import { LayoutDashboard, Layers, Home } from 'lucide-react';
+import { LayoutDashboard, Layers, DoorOpen } from 'lucide-react';
 import { FeatureTabbedLayout } from '../../../components/FeatureTabbedLayout';
 
 import BuildingOverviewPage from '../../building-overview/pages/BuildingOverviewPage';
@@ -28,9 +28,9 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
   }, [location.pathname, defaultTab]);
 
   const tabs = [
-    { id: 'dashboard', label: 'Trang chủ', icon: LayoutDashboard },
-    { id: 'layout', label: 'Sơ đồ', icon: Layers },
-    { id: 'rooms', label: 'Phòng', icon: Home },
+    { id: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+    { id: 'layout', label: 'Sơ đồ tòa nhà', icon: Layers },
+    { id: 'rooms', label: 'Danh sách phòng', icon: DoorOpen },
   ] as const;
 
   const handleTabChange = (tab: 'dashboard' | 'layout' | 'rooms') => {

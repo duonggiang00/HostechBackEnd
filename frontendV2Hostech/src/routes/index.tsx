@@ -123,22 +123,22 @@ const RootRedirect = () => {
     case 'Admin':
     case 'Owner':
       return <Navigate to="/org/dashboard" replace />;
-    
+
     case 'Manager':
     case 'Staff': {
       // 1. If user has exactly one assigned property, jump straight to its dashboard (Property Scope)
       // But if they are STAFF with "full power", they might want to go to ORG dashboard too.
       // Let's stick to the current logic: if they have an org and no specific prop, go to org.
-      
+
       if (user.properties && user.properties.length === 1) {
         return <Navigate to={`/properties/${user.properties[0].id}/dashboard`} replace />;
       }
-      
+
       // 2. If user has multiple properties or no specific assignment (but has an org),
       // navigate to the neutral property selection layout or Org Dashboard.
       if (user.org_id) {
-         // Staff with full power can go to Org Dashboard
-         return <Navigate to="/org/dashboard" replace />;
+        // Staff with full power can go to Org Dashboard
+        return <Navigate to="/org/dashboard" replace />;
       }
 
       // Fallback
@@ -178,20 +178,20 @@ export default function AppRoutes() {
         <Route path="/" element={<RootRedirect />} />
 
         {/* --- Property Selection (Intermediate/Neutral Scope) --- */}
-        <Route 
-          path="/select-property" 
+        <Route
+          path="/select-property"
           element={
             <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
               <SelectionLayout title="Chọn cơ sở" subtitle="Hãy chọn một cơ sở để bắt đầu quản lý vận hành hàng ngày">
                 <PropertySelectionPage />
               </SelectionLayout>
             </ProtectedRoute>
-          } 
+          }
         />
 
 
         {/* 2. Organization Scope Layout — Owner & Admin ONLY (Managers/Staff use Selection Scope) */}
-        <Route 
+        <Route
           path="/org"
           element={
             <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Staff']}>
@@ -211,7 +211,7 @@ export default function AppRoutes() {
         </Route>
 
         {/* 3. Property Scope Layout — Admin, Owner, Manager, Staff */}
-        <Route 
+        <Route
           path="/properties/:propertyId"
           element={
             <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
@@ -256,15 +256,15 @@ export default function AppRoutes() {
         </Route>
 
         {/* --- Tenant App Portal --- */}
-        <Route 
-          path="/app" 
+        <Route
+          path="/app"
           element={
             <ProtectedRoute allowedRoles={['Tenant']}>
               <TenantLayout>
                 <Outlet />
               </TenantLayout>
             </ProtectedRoute>
-          } 
+          }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<TenantDashboard />} />
