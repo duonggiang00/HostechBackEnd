@@ -248,7 +248,6 @@ export default function GlobalMeterReadingPage() {
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Tiêu thụ</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Trạng thái</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest">Người chốt</th>
-                  <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Ảnh</th>
                 </tr>
               </thead>
               <tbody>
@@ -333,21 +332,6 @@ export default function GlobalMeterReadingPage() {
                            (reading as any).approvedBy?.full_name || 
                            '-'}
                         </span>
-                      </td>
-                      <td className="p-4 text-center">
-                        {reading.proofs && reading.proofs.length > 0 ? (
-                          <a
-                            href={reading.proofs[0].url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline"
-                          >
-                            <Camera className="w-4 h-4" />
-                            {reading.proofs.length}
-                          </a>
-                        ) : (
-                          <span className="text-gray-300 text-xs">-</span>
-                        )}
                       </td>
                     </tr>
                   );

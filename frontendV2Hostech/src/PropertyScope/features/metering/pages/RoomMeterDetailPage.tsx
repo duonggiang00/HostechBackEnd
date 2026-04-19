@@ -9,8 +9,6 @@ import {
   Send, CheckCircle, XCircle, MessageSquare, Camera
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-  TableCell 
-} from '@/shared/components/ui/table';
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { roomsApi } from '@/PropertyScope/features/rooms/api/rooms';
 import { meteringApi } from '../api/metering';
@@ -480,7 +478,6 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Chỉ số ({unit})</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Sử dụng</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Trạng thái</th>
-                  <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Ảnh</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Người chốt</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Hành động</th>
                 </tr>
@@ -527,23 +524,6 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
                       </td>
                       <td className="p-4 text-center">
                         <ReadingStatusBadge status={reading.status} />
-                      </td>
-                      <td className="p-4 text-center">
-                        {reading.proofs && reading.proofs.length > 0 ? (
-                          <div className="flex items-center justify-center">
-                            <a
-                              href={reading.proofs[0].url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline font-bold"
-                            >
-                              <Camera className="w-4 h-4" />
-                              {reading.proofs.length}
-                            </a>
-                          </div>
-                        ) : (
-                          <span className="text-gray-300 text-xs">-</span>
-                        )}
                       </td>
                       <td className="p-4 text-center">
                         <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
