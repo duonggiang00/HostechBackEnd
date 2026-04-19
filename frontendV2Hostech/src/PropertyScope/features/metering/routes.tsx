@@ -5,6 +5,7 @@ const MeterListPage = lazy(() => import('./pages/MeterListPage'));
 const QuickReadingPage = lazy(() => import('./pages/QuickReadingPage'));
 const MeterDetailPage = lazy(() => import('./pages/MeterDetailPage'));
 const RoomMeterDetailPage = lazy(() => import('./pages/RoomMeterDetailPage'));
+const GlobalMeterReadingPage = lazy(() => import('./pages/GlobalMeterReadingPage'));
 
 export const meteringRoutes: RouteObject[] = [
   {
@@ -18,6 +19,11 @@ export const meteringRoutes: RouteObject[] = [
   {
     path: 'meters/quick-reading',
     element: <QuickReadingPage />,
+  },
+  {
+    // Trang lịch sử chốt số tổng (toàn bộ tài sản)
+    path: 'meters/history',
+    element: <GlobalMeterReadingPage />,
   },
   {
     path: 'meters/room/:roomId',

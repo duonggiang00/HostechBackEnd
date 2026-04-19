@@ -17,7 +17,8 @@ import {
   Info,
   LayoutTemplate,
   ClipboardList,
-  FileSignature
+  FileSignature,
+  LayoutList,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SidebarDropdownItem } from '@/shared/components/ui/SidebarDropdownSection';
@@ -96,6 +97,13 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         icon: Gauge, 
         label: 'Chỉ số điện nước', 
         path: '/properties/:propertyId/meters',
+        exact: true,
+      },
+      {
+        id: 'meter-history',
+        icon: LayoutList,
+        label: 'Lịch sử chốt số',
+        path: '/properties/:propertyId/meters/history',
       },
     ],
   },
@@ -149,6 +157,7 @@ export const TENANT_NAVIGATION: NavigationSection[] = [
     defaultOpen: true,
     items: [
       { id: 'dashboard', icon: LayoutDashboard, label: 'Tổng quan', path: '/app/dashboard', exact: true },
+      { id: 'my-room', icon: DoorOpen, label: 'Phòng của tôi', path: '/app/my-room' },
       { id: 'contracts', icon: FileSignature, label: 'Hợp đồng', path: '/app/contracts/pending' },
       { id: 'building-overview', icon: Layers, label: 'Sơ đồ tòa nhà', path: '/app/building-overview' },
     ],

@@ -6,6 +6,7 @@ import { messagingRoutes } from './features/messaging/routes';
 import { billingRoutes } from './features/billing/routes';
 import { contractsRoutes } from './features/contracts/routes';
 import { buildingOverviewRoutes } from './features/building-overview/routes';
+import { roomsRoutes } from './features/rooms/routes';
 
 export const tenantScopeRoutes: RouteObject[] = [
   {
@@ -18,6 +19,7 @@ export const tenantScopeRoutes: RouteObject[] = [
   ...billingRoutes,
   ...contractsRoutes,
   ...buildingOverviewRoutes,
+  ...roomsRoutes,
   {
     path: 'news',
     element: (

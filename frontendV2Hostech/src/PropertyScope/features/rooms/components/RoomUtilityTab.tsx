@@ -23,6 +23,7 @@ interface RoomUtilityTabProps {
   propertyId: string;
   roomId: string;
   meters?: any[];
+  isReadOnly?: boolean;
 }
 
 const formatDate = (dateStr?: string | null) => {
@@ -31,7 +32,7 @@ const formatDate = (dateStr?: string | null) => {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 };
 
-export default function RoomUtilityTab({ propertyId, roomId, meters: initialMeters }: RoomUtilityTabProps) {
+export default function RoomUtilityTab({ propertyId, roomId, meters: initialMeters, isReadOnly }: RoomUtilityTabProps) {
   // Use provided meters or fetch them if not available
   const { data: metersData, isLoading: metersLoading } = useQuery({
     queryKey: ['room-meters', roomId],
@@ -61,8 +62,8 @@ export default function RoomUtilityTab({ propertyId, roomId, meters: initialMete
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <MeterColumn meter={electricMeter} type="ELECTRIC" />
-      <MeterColumn meter={waterMeter} type="WATER" />
+      <MeterColumn meter={electricMeter} type="ELECTRIC" isReadOnly={isReadOnly} />
+      <MeterColumn meter={waterMeter} type="WATER" isReadOnly={isReadOnly} />
     </div>
   );
 }
@@ -70,9 +71,10 @@ export default function RoomUtilityTab({ propertyId, roomId, meters: initialMete
 interface MeterColumnProps {
   meter: any;
   type: 'ELECTRIC' | 'WATER';
+  isReadOnly?: boolean;
 }
 
-function MeterColumn({ meter, type }: MeterColumnProps) {
+function MeterColumn({ meter, type, isReadOnly }: MeterColumnProps) {
   const [readingsPage, setReadingsPage] = useState(1);
   const perPage = 10;
   const [previewingImage, setPreviewingImage] = useState<string | null>(null);
@@ -197,13 +199,15 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
             <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-widest">Mã: {meter.code}</p>
           </div>
         </div>
-        <button
-          onClick={handleOpenAddForm}
-          className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-lg transition-all active:scale-95"
-          title="Chốt số mới"
-        >
-          <Plus className="w-5 h-5" />
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={handleOpenAddForm}
+            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-lg transition-all active:scale-95"
+            title="Chốt số mới"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Summary Stats */}

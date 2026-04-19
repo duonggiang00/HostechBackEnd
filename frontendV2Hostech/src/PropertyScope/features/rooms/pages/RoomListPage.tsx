@@ -23,8 +23,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import type { RoomStatus } from '../types';
 import toast from 'react-hot-toast';
-import QuickRoomManager from '../components/QuickRoomManager';
-
 import { useDebounce } from '@/shared/hooks/useDebounce';
 
 const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
@@ -43,7 +41,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
 
   // Helper to parse numbers safely from URL
   const getNumberParam = (key: string) => {
@@ -286,13 +283,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsQuickCreateOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-[6px] font-semibold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm text-[13px] outline-none focus:ring-2 focus:ring-blue-900/50"
-            >
-              <Zap className="w-5 h-5 text-amber-500" />
-              Tạo nhanh
-            </button>
             <ActionButton 
               onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
               label="Thêm phòng"
@@ -800,30 +790,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
            </div>
         </div>
       </div>
-      {/* Quick Room Manager Modal */}
-      {isQuickCreateOpen && propertyId && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-950/40 backdrop-blur-sm" onClick={() => setIsQuickCreateOpen(false)} />
-          <div className="relative bg-white dark:bg-gray-900 rounded-[16px] shadow-2xl w-full max-w-lg p-8 space-y-6 overflow-hidden border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Thêm nhanh phòng</h3>
-                <p className="text-xs text-gray-500 font-medium">Khởi tạo nhanh danh sách phòng dự thảo cho dự án</p>
-              </div>
-              <button onClick={() => setIsQuickCreateOpen(false)} className="p-2 rounded-[8px] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            
-            <QuickRoomManager 
-              propertyId={propertyId} 
-              floorId={appliedFilters.floorId === 'all' ? '' : appliedFilters.floorId} 
-              onSuccess={() => setIsQuickCreateOpen(false)}
-              onCancel={() => setIsQuickCreateOpen(false)}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+

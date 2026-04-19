@@ -18,7 +18,9 @@ import {
   Gauge,
   Wallet,
   Key,
-  ChevronLeft
+  ChevronLeft,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { usePropertyDetail, usePropertyActions } from '@/OrgScope/features/properties/hooks/useProperties';
 import { Input } from '@/shared/components/ui/input';
@@ -39,6 +41,17 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
 
   useEffect(() => {
     if (property) {
+      let initialAccounts: any[] = [];
+      try {
+        if (Array.isArray(property.bank_accounts)) {
+          initialAccounts = property.bank_accounts;
+        } else if (typeof property.bank_accounts === 'string' && property.bank_accounts) {
+          initialAccounts = JSON.parse(property.bank_accounts);
+        }
+      } catch (e) {
+        console.error('Error parsing bank accounts:', e);
+      }
+
       setFormData({
         name: property.name || '',
         code: property.code || '',
@@ -50,6 +63,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
         default_deposit_months: property.default_deposit_months || 0,
         default_due_day: property.default_due_day || 5,
         default_cutoff_day: property.default_cutoff_day || 1,
+        bank_accounts: initialAccounts,
       });
     }
   }, [property]);
@@ -96,6 +110,31 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
       ...prev,
       [name]: type === 'number' ? Number(value) : value
     }));
+  };
+
+  const handleAddAccount = () => {
+    setFormData((prev: any) => ({
+      ...prev,
+      bank_accounts: [
+        ...(prev.bank_accounts || []),
+        { bank_name: '', account_number: '', account_holder: '' }
+      ]
+    }));
+  };
+
+  const handleRemoveAccount = (index: number) => {
+    setFormData((prev: any) => ({
+      ...prev,
+      bank_accounts: prev.bank_accounts.filter((_: any, i: number) => i !== index)
+    }));
+  };
+
+  const handleAccountChange = (index: number, field: string, value: string) => {
+    setFormData((prev: any) => {
+      const newAccounts = [...(prev.bank_accounts || [])];
+      newAccounts[index] = { ...newAccounts[index], [field]: value };
+      return { ...prev, bank_accounts: newAccounts };
+    });
   };
 
   // UI Components inside for better modularity
@@ -474,7 +513,90 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
           </div>
         </div>
 
+        {/* Bank Accounts Configuration */}
+        <div className="col-span-full bg-white dark:bg-gray-900 p-8 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div className="flex items-center justify-between mb-8 border-b border-gray-100 dark:border-gray-800 pb-6">
+            <div>
+              <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Tài khoản thanh toán</h3>
+              <p className="text-xs text-gray-500 font-medium mt-1">Cung cấp thông tin số tài khoản để khách thuê thanh toán</p>
+            </div>
+            <Button 
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddAccount}
+              className="rounded-xl font-bold gap-2 text-blue-900 dark:text-blue-400 border-blue-900/10 hover:bg-blue-50"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm tài khoản
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {formData?.bank_accounts?.map((account: any, index: number) => (
+              <div key={index} className="relative p-6 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                <Button 
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveAccount(index)}
+                  className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-red-500 hover:bg-red-50 shadow-sm"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Ngân hàng</label>
+                  <Input 
+                    value={account.bank_name || account.bank || ''} 
+                    onChange={(e) => handleAccountChange(index, 'bank_name', e.target.value)}
+                    placeholder="Ví dụ: MB Bank, Vietcombank..."
+                    className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 h-11 font-bold"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Số tài khoản</label>
+                    <Input 
+                      value={account.account_number || account.account || ''} 
+                      onChange={(e) => handleAccountChange(index, 'account_number', e.target.value)}
+                      placeholder="000111..."
+                      className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 h-11 font-black text-blue-900 dark:text-blue-400"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Chủ tài khoản</label>
+                    <Input 
+                      value={account.account_holder || account.holder || account.name || ''} 
+                      onChange={(e) => handleAccountChange(index, 'account_holder', e.target.value)}
+                      placeholder="NGUYEN VAN A"
+                      className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 h-11 font-bold uppercase"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {(!formData?.bank_accounts || formData.bank_accounts.length === 0) && (
+              <div className="col-span-full p-12 bg-gray-50/50 dark:bg-gray-800/20 border border-dashed border-gray-200 dark:border-gray-800 rounded-2xl flex flex-col items-center justify-center text-center">
+                 <div className="w-16 h-16 bg-white dark:bg-gray-800 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                    <Wallet className="w-8 h-8 text-gray-300" />
+                  </div>
+                <p className="text-sm font-black text-gray-400 uppercase tracking-widest">Chưa có tài khoản</p>
+                <Button 
+                  variant="link" 
+                  onClick={handleAddAccount}
+                  className="text-blue-900 dark:text-blue-400 font-black uppercase text-[10px] tracking-widest mt-2"
+                >
+                  Nhấn để thêm tài khoản đầu tiên
+                </Button>
+              </div>
+            )}
+          </div>
+
       </div>
     </div>
-  );
+  </div>
+);
 }

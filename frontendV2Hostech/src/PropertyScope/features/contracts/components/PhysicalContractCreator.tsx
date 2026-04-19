@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useMutation } from '@tanstack/react-query';
@@ -38,6 +38,15 @@ const schema = z.object({
   tenant_permanent_address: z.string().optional(),
   clause_responsibilities: z.string().optional(),
   clause_extra: z.string().optional(),
+  additional_members: z.array(z.object({
+    full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên'),
+    phone: z.string().min(10, 'Số điện thoại phải có ít nhất 10 số'),
+    email: z.string().email('Địa chỉ email không hợp lệ').optional().or(z.literal('')),
+    identity_number: z.string().min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
+    date_of_birth: z.string().optional(),
+    license_plate: z.string().optional(),
+    role: z.enum(['TENANT', 'ROOMMATE', 'GUARANTOR']).default('ROOMMATE'),
+  })).optional().default([]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -218,6 +227,7 @@ export default function PhysicalContractCreator({
   // ── Form ───────────────────────────────────────────────────────────────────
   const {
     register, handleSubmit, watch, setValue,
+    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -238,7 +248,13 @@ export default function PhysicalContractCreator({
       tenant_permanent_address: '',
       clause_responsibilities: '',
       clause_extra: '',
+      additional_members: [],
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'additional_members',
   });
 
   // resolved user from TenantSearchInput (Path A: email matched existing account)
@@ -348,7 +364,7 @@ export default function PhysicalContractCreator({
   });
 
   const onSubmit = (data: FormValues) => {
-    const memberPayload: Record<string, unknown> = {
+    const primaryMember: any = {
       full_name: data.tenant_full_name,
       phone: data.tenant_phone,
       identity_number: data.tenant_identity_number,
@@ -361,10 +377,16 @@ export default function PhysicalContractCreator({
     };
 
     if (resolvedUserId) {
-      memberPayload.user_id = resolvedUserId;
+      primaryMember.user_id = resolvedUserId;
     } else if (data.tenant_email) {
-      memberPayload.email = data.tenant_email;
+      primaryMember.email = data.tenant_email;
     }
+
+    const additionalMembers = (data.additional_members || []).map(m => ({
+      ...m,
+      is_primary: false,
+      joined_at: data.start_date,
+    }));
 
     const payload: CreateContractPayload = {
       property_id: propertyId,
@@ -376,7 +398,7 @@ export default function PhysicalContractCreator({
       billing_cycle: data.billing_cycle,
       due_day: data.due_day,
       cutoff_day: data.cutoff_day,
-      members: [memberPayload as any],
+      members: [primaryMember, ...additionalMembers],
     };
     createContract.mutate(payload);
   };
@@ -555,14 +577,122 @@ export default function PhysicalContractCreator({
             </div>
 
             {/* ── DANH SÁCH THÀNH VIÊN CÙNG Ở ── */}
-            <h3 className="font-bold text-sm uppercase tracking-wide mt-5 mb-2 text-gray-900 dark:text-gray-100
-              bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded">
-              DANH SÁCH THÀNH VIÊN CÙNG Ở
-            </h3>
-            <div className="pl-3 ml-1">
-              <p className="text-gray-400 text-xs italic">
-                Danh sách người ở cùng (nếu có) sẽ được bổ sung qua chức năng "Thêm thành viên" sau khi hợp đồng được tạo.
-              </p>
+            <div className="flex items-center justify-between mt-8 mb-4 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded">
+              <h3 className="font-bold text-sm uppercase tracking-wide text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <UserPlus className="w-4 h-4 text-indigo-500" />
+                DANH SÁCH THÀNH VIÊN KHÁC (BÊN B)
+              </h3>
+              <button
+                type="button"
+                onClick={() => append({
+                  full_name: '',
+                  phone: '',
+                  email: '',
+                  identity_number: '',
+                  date_of_birth: '',
+                  license_plate: '',
+                  role: 'ROOMMATE'
+                })}
+                className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight
+                  bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+              >
+                + Thêm thành viên
+              </button>
+            </div>
+
+            <div className="pl-3 ml-1 space-y-6">
+              {fields.length === 0 ? (
+                <p className="text-gray-400 text-xs italic py-2">
+                  Chưa có thành viên nào khác được thêm vào hợp đồng này.
+                </p>
+              ) : (
+                fields.map((field, index) => (
+                  <div key={field.id} className="relative p-4 border border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/30 dark:bg-gray-900/10 space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => remove(index)}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                      <InfoRow label="Họ và tên">
+                        <InlineInput
+                          id={`member_${index}_name`}
+                          value={watch(`additional_members.${index}.full_name`) || ''}
+                          onChange={val => setValue(`additional_members.${index}.full_name`, val, { shouldValidate: true })}
+                          placeholder="Họ và tên người ở cùng"
+                          className="w-48"
+                          error={(errors.additional_members?.[index] as any)?.full_name?.message}
+                        />
+                      </InfoRow>
+
+                      <InfoRow label="Vai trò">
+                        <select
+                          {...register(`additional_members.${index}.role`)}
+                          className="text-xs border border-dashed border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-2 py-0.5 outline-none focus:border-indigo-600 dark:text-indigo-200"
+                        >
+                          <option value="ROOMMATE">Người ở cùng</option>
+                          <option value="TENANT">Chủ đồng thuê</option>
+                          <option value="GUARANTOR">Người bảo lãnh</option>
+                        </select>
+                      </InfoRow>
+
+                      <InfoRow label="Điện thoại">
+                        <InlineInput
+                          id={`member_${index}_phone`}
+                          value={watch(`additional_members.${index}.phone`) || ''}
+                          onChange={val => setValue(`additional_members.${index}.phone`, val, { shouldValidate: true })}
+                          placeholder="09xx..."
+                          className="w-36"
+                          error={(errors.additional_members?.[index] as any)?.phone?.message}
+                        />
+                      </InfoRow>
+
+                      <InfoRow label="Email">
+                        <InlineInput
+                          id={`member_${index}_email`}
+                          value={watch(`additional_members.${index}.email`) || ''}
+                          onChange={val => setValue(`additional_members.${index}.email`, val)}
+                          placeholder="email@..."
+                          className="w-48"
+                        />
+                      </InfoRow>
+
+                      <InfoRow label="Số CCCD">
+                        <InlineInput
+                          id={`member_${index}_id`}
+                          value={watch(`additional_members.${index}.identity_number`) || ''}
+                          onChange={val => setValue(`additional_members.${index}.identity_number`, val, { shouldValidate: true })}
+                          placeholder="Số định danh..."
+                          className="w-36"
+                          error={(errors.additional_members?.[index] as any)?.identity_number?.message}
+                        />
+                      </InfoRow>
+
+                      <InfoRow label="Ngày sinh">
+                        <input
+                          {...register(`additional_members.${index}.date_of_birth`)}
+                          type="date"
+                          className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
+                            text-sm text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-36"
+                        />
+                      </InfoRow>
+
+                      <InfoRow label="Biển số xe">
+                        <InlineInput
+                          id={`member_${index}_plate`}
+                          value={watch(`additional_members.${index}.license_plate`) || ''}
+                          onChange={val => setValue(`additional_members.${index}.license_plate`, val)}
+                          placeholder="59-X1..."
+                          className="w-32"
+                        />
+                      </InfoRow>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
             {/* ── INTRO ── */}

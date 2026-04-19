@@ -392,7 +392,7 @@ export default function ContractDetailPage() {
                   Thành viên & Cư dân
                 </h3>
 
-                {['DRAFT', 'PENDING_SIGNATURE', 'PENDING_PAYMENT', 'ACTIVE'].includes(contract.status as string) && (
+                {!['ENDED', 'TERMINATED', 'CANCELLED', 'EXPIRED'].includes(contract.status as string) && (
                   <button
                     onClick={() => setIsAddMemberOpen(true)}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/30"

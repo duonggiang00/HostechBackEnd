@@ -30,6 +30,7 @@ class PropertyUpdateRequest extends FormRequest
             'default_deposit_months' => ['nullable', 'integer', 'min:0'],
             'default_services' => ['nullable', 'array'],
             'default_services.*' => ['uuid', 'exists:services,id'],
+            'bank_accounts' => ['nullable', 'array'],
         ];
     }
 }
