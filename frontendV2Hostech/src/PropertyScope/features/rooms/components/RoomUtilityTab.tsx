@@ -448,14 +448,16 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
   );
 }
 
+const STATUS_CONFIGS = {
+  APPROVED: { label: 'Đã duyệt', class: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' },
+  REJECTED: { label: 'Từ chối', class: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' },
+  SUBMITTED: { label: 'Chờ duyệt', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+  PENDING: { label: 'Chờ duyệt', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
+  DRAFT: { label: 'Nháp', class: 'bg-slate-100 text-slate-700 dark:bg-slate-700/50 dark:text-slate-400' },
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const cfg = {
-    APPROVED: { label: 'Đã duyệt', class: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' },
-    REJECTED: { label: 'Từ chối', class: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400' },
-    SUBMITTED: { label: 'Chờ duyệt', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
-    PENDING: { label: 'Chờ duyệt', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400' },
-    DRAFT: { label: 'Nháp', class: 'bg-slate-100 text-slate-700 dark:bg-slate-700/50 dark:text-slate-400' },
-  }[status as keyof typeof cfg] || { label: status, class: 'bg-slate-50 text-slate-500' };
+  const cfg = STATUS_CONFIGS[status as keyof typeof STATUS_CONFIGS] || { label: status, class: 'bg-slate-50 text-slate-500' };
 
   return (
     <span className={`px-2 py-0.5 rounded-full text-[0.6rem] font-bold uppercase tracking-widest ${cfg.class}`}>
