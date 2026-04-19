@@ -168,5 +168,15 @@ export const contractsApi = {
   addContractMember: async (contractId: string, memberData: any) => {
     const response = await apiClient.post(`/contracts/${contractId}/members`, memberData);
     return response.data?.data;
+  },
+
+  removeContractMember: async (contractId: string, memberId: string) => {
+    const response = await apiClient.delete(`/contracts/${contractId}/members/${memberId}`);
+    return response.data;
+  },
+
+  approveContractMember: async (contractId: string, memberId: string) => {
+    const response = await apiClient.post(`/contracts/${contractId}/members/${memberId}/approve`);
+    return response.data?.data;
   }
 };

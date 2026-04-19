@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   ArrowLeft,
   Info,
@@ -21,13 +22,13 @@ import {
   Tv,
   Archive,
   Droplet,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { useRoomDetail, useRoomActions } from '../hooks/useRooms';
-import ManagementModal from '@/shared/features/management/components/ManagementModal';
-import RoomForm from '../components/RoomForm';
 import { QuickInvoiceModal } from '../components/QuickInvoiceModal';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
-import UtilityManager from '@/PropertyScope/features/operations/components/UtilityManager';
+import RoomUtilityTab from '../components/RoomUtilityTab';
 import RoomImageGallery from '../components/RoomImageGallery';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import { formatCurrency } from '@/lib/utils';
@@ -87,11 +88,10 @@ export default function RoomDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { data: room, isLoading, error, refetch } = useRoomDetail(roomId);
+  const { data: room, isLoading, error } = useRoomDetail(roomId);
   const { deleteRoom, restoreRoom } = useRoomActions();
 
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQuickInvoiceOpen, setIsQuickInvoiceOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
@@ -207,7 +207,7 @@ export default function RoomDetailPage() {
                   ) : (
                     <>
                       <button
-                        onClick={() => setIsEditOpen(true)}
+                        onClick={() => navigate(`/properties/${propertyId}/rooms/${roomId}/edit`)}
                         className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-all"
                       >
                         <FileEdit className="w-4 h-4" />
@@ -446,20 +446,41 @@ export default function RoomDetailPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
-                            member.status === 'APPROVED'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
-                              : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
-                          }`}>
-                            {member.status === 'APPROVED' ? 'Đã xác nhận' : member.status === 'PENDING' ? 'Chờ xác nhận' : member.status}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
+                              member.status === 'APPROVED'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                                : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
+                            }`}>
+                              {member.status === 'APPROVED' ? 'Đã xác nhận' : member.status === 'PENDING' ? 'Chờ xác nhận' : member.status}
+                            </span>
+                            {member.user_id ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Đã đăng ký
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                <Clock className="w-2.5 h-2.5" /> Chờ đăng ký
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <button
-                            onClick={() => navigate(`/properties/${propertyId}/users/${member.user_id || member.id}`, { 
-                              state: { from: 'room-detail', roomId: roomId, activeTab: 'tenants' } 
-                            })}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-xs font-medium"
+                            onClick={() => {
+                              if (member.user_id) {
+                                navigate(`/properties/${propertyId}/users/${member.user_id}`, { 
+                                  state: { from: 'room-detail', roomId: roomId, activeTab: 'tenants' } 
+                                });
+                              } else {
+                                toast.error('Cư dân này chưa kích hoạt tài khoản hệ thống.');
+                              }
+                            }}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
+                              member.user_id
+                                ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20'
+                                : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                            }`}
                           >
                             <Eye className="w-3.5 h-3.5" />
                             Xem chi tiết
@@ -577,10 +598,10 @@ export default function RoomDetailPage() {
 
         {/* ── Đồng hồ ──────────────────────────────────────────────────── */}
         {activeTab === 'utilities' && (
-          <UtilityManager
+          <RoomUtilityTab
             propertyId={propertyId!}
             roomId={room.id}
-            data={room.meters}
+            meters={room.meters}
           />
         )}
 
@@ -594,23 +615,6 @@ export default function RoomDetailPage() {
 
       </div>
 
-      <ManagementModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        roomName={room.name}
-        title={`Chỉnh sửa ${room.name}`}
-      >
-        <RoomForm
-          initialData={room}
-          propertyId={propertyId as string}
-          floorId={room.floor_id || undefined}
-          onSuccess={() => {
-            setIsEditOpen(false);
-            refetch();
-          }}
-          onCancel={() => setIsEditOpen(false)}
-        />
-      </ManagementModal>
 
       <QuickInvoiceModal
         isOpen={isQuickInvoiceOpen}

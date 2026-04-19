@@ -22,6 +22,7 @@ interface FeatureTabbedLayoutProps {
   propertyHeader?: ReactNode;
   maxWidth?: string;
   defaultTab?: string;
+  hideTabs?: boolean;
 }
 
 export function FeatureTabbedLayout({
@@ -35,7 +36,8 @@ export function FeatureTabbedLayout({
   headerExtra,
   propertyHeader,
   maxWidth = 'max-w-7xl',
-  defaultTab
+  defaultTab,
+  hideTabs = false
 }: FeatureTabbedLayoutProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [internalActiveTab, setInternalActiveTab] = useState<string>(
@@ -75,30 +77,32 @@ export function FeatureTabbedLayout({
       className={`p-4 md:p-8 space-y-6 ${maxWidth} mx-auto pb-20`}
     >
       {/* Tabs Navigation - Sticky at top */}
-      <div className="flex justify-center sticky top-4 z-50">
-        <div className="flex items-center gap-1 p-1 bg-white rounded-lg w-fit shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-gray-100">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const TabIcon = tab.icon;
-            
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`
-                  relative flex items-center gap-2 px-6 py-2 rounded-md text-[14px] font-medium transition-colors duration-200 outline-none
-                  ${isActive ? 'text-blue-900 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}
-                `}
-              >
-                <span className="relative z-10 flex items-center gap-2 tracking-wide font-semibold">
-                  <TabIcon className="w-4 h-4" />
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
+      {!hideTabs && (
+        <div className="flex justify-center sticky top-4 z-50">
+          <div className="flex items-center gap-1 p-1 bg-white rounded-lg w-fit shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-gray-100">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              const TabIcon = tab.icon;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`
+                    relative flex items-center gap-2 px-6 py-2 rounded-md text-[14px] font-medium transition-colors duration-200 outline-none
+                    ${isActive ? 'text-blue-900 bg-blue-50' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}
+                  `}
+                >
+                  <span className="relative z-10 flex items-center gap-2 tracking-wide font-semibold">
+                    <TabIcon className="w-4 h-4" />
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Header Section */}
       {propertyHeader ? (

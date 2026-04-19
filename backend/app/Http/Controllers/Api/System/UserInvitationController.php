@@ -35,7 +35,7 @@ class UserInvitationController extends Controller
 
         $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
 
-        $query = UserInvitation::with(['org:id,name', 'inviter:id,name,email'])
+        $query = UserInvitation::with(['org:id,name', 'inviter:id,full_name,email'])
             ->orderBy('created_at', 'desc');
 
         // Scope: Admin sees all, others see only their org

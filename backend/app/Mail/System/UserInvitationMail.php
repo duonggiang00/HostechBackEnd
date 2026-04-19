@@ -38,7 +38,7 @@ class UserInvitationMail extends Mailable
         return new Content(
             view: 'emails.system.user-invitation',
             with: [
-                'inviteLink' => config('app.frontend_url', 'http://localhost:3000') . '/setup-account?token=' . $this->invitation->token,
+                'inviteLink' => config('app.frontend_url', 'http://localhost:3000') . '/setup-account/' . $this->invitation->token,
                 'inviterName' => $this->invitation->inviter?->full_name ?? 'Quản trị viên',
                 'orgName' => $this->invitation->org?->name ?? 'Tổ chức mới',
                 'roleName' => $this->invitation->role_name,

@@ -16,6 +16,9 @@ Route::get('meter-readings', [MeterReadingController::class, 'indexGlobal']);
 Route::post('tenant/meter-readings', [\App\Http\Controllers\Api\Meter\TenantMeterController::class, 'submit']);
 Route::post('properties/{property_id}/meters/bulk-readings', [MeterReadingController::class, 'bulkStore']);
 Route::post('meter-readings/bulk-submit', [MeterReadingController::class, 'bulkSubmit']);
+Route::post('meter-readings/bulk-approve', [MeterReadingController::class, 'bulkApprove']);
+Route::post('meter-readings/bulk-reject', [MeterReadingController::class, 'bulkReject']);
+Route::patch('meter-readings/bulk-update', [MeterReadingController::class, 'bulkUpdate']);
 Route::apiResource('meters.readings', MeterReadingController::class)->scoped();
 
 // Meter Reading Adjustments

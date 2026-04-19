@@ -24,6 +24,7 @@ class ContractMember extends Model
         'org_id',
         'contract_id',
         'user_id',
+        'email',            // snapshot identity — cũng dùng để backfill user_id khi tenant đăng ký
         'full_name',
         'phone',
         'identity_number',
@@ -33,6 +34,9 @@ class ContractMember extends Model
         'joined_at',
         'signed_at',
         'left_at',
+        'date_of_birth',
+        'license_plate',
+        'permanent_address',
     ];
 
     protected function casts(): array
@@ -42,6 +46,7 @@ class ContractMember extends Model
             'joined_at' => 'datetime',
             'signed_at' => 'datetime',
             'left_at' => 'datetime',
+            'date_of_birth' => 'date',
         ];
     }
 

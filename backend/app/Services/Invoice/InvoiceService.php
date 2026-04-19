@@ -21,6 +21,29 @@ class InvoiceService
     // ╠═══════════════════════════════════════════════════════╣
 
     /**
+     * Lấy tổng số tiền nợ chưa thanh toán của một hợp đồng (bao gồm các hóa đơn ISSUED, LATE, PARTIAL).
+     */
+    public function getUnpaidBalance(string $contractId): float
+    {
+        return (float) Invoice::where('contract_id', $contractId)
+            ->whereIn('status', ['ISSUED', 'LATE', 'PARTIAL', 'OVERDUE'])
+            ->sum('total_amount');
+    }
+
+    /**
+     * Hủy/Vô hiệu hóa toàn bộ hóa đơn chưa thanh toán của một hợp đồng (dùng khi đã gom tiền vào hóa đơn thanh lý).
+     */
+    public function voidUnpaidInvoicesByContract(string $contractId, string $note = ''): void
+    {
+        Invoice::where('contract_id', $contractId)
+            ->whereIn('status', ['ISSUED', 'LATE', 'PARTIAL', 'OVERDUE'])
+            ->update([
+                'status' => 'CANCELLED',
+                'snapshot->void_reason' => 'Đã gộp vào hóa đơn thanh lý: ' . $note
+            ]);
+    }
+
+    /**
      * Danh sách hóa đơn (pagination + filter + sort + search).
      */
     public function paginate(
@@ -437,7 +460,10 @@ class InvoiceService
     public function issueInvoice(Invoice $invoice, ?string $issuedByUserId = null, ?string $note = null): Invoice
     {
         return DB::transaction(function () use ($invoice, $issuedByUserId, $note) {
-            $oldStatus = $invoice->status;
+            // Truyền ghi chú trạng thái cho Observer
+            if ($note) {
+                $invoice->status_history_note = $note;
+            }
 
             $invoice->update([
                 'status' => 'ISSUED',
@@ -446,9 +472,10 @@ class InvoiceService
                 'issued_by_user_id' => $issuedByUserId,
             ]);
 
-            $this->recordStatusHistory($invoice, $oldStatus, 'ISSUED', $note);
+            $invoice->refresh();
+            event(new \App\Events\Billing\InvoiceGenerated($invoice));
 
-            return $invoice->refresh();
+            return $invoice;
         });
     }
 
@@ -461,14 +488,14 @@ class InvoiceService
     public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
     {
         return DB::transaction(function () use ($invoice, $note) {
-            $oldStatus = $invoice->status;
+            if ($note) {
+                $invoice->status_history_note = $note;
+            }
 
             $invoice->update([
                 'status' => 'PAID',
                 'paid_amount' => $invoice->total_amount,
             ]);
-
-            $this->recordStatusHistory($invoice, $oldStatus, 'PAID', $note);
 
             // Hook: Kích hoạt hợp đồng nếu là hóa đơn ban đầu
             $this->activateContractIfInitialInvoice($invoice);
@@ -484,14 +511,14 @@ class InvoiceService
     public function cancelInvoice(Invoice $invoice, ?string $note = null): Invoice
     {
         return DB::transaction(function () use ($invoice, $note) {
-            $oldStatus = $invoice->status;
+            if ($note) {
+                $invoice->status_history_note = $note;
+            }
 
             $invoice->update([
                 'status' => 'CANCELLED',
                 'cancelled_at' => now(),
             ]);
-
-            $this->recordStatusHistory($invoice, $oldStatus, 'CANCELLED', $note);
 
             return $invoice->refresh();
         });
@@ -501,24 +528,6 @@ class InvoiceService
     // ║  STATUS HISTORY & RECALCULATION HOOKS                 ║
     // ╠═══════════════════════════════════════════════════════╣
 
-    /**
-     * Ghi lịch sử thay đổi trạng thái hóa đơn.
-     */
-    private function recordStatusHistory(
-        Invoice $invoice,
-        ?string $oldStatus,
-        string $newStatus,
-        ?string $note = null
-    ): InvoiceStatusHistory {
-        return InvoiceStatusHistory::create([
-            'org_id' => $invoice->org_id,
-            'invoice_id' => $invoice->id,
-            'from_status' => $oldStatus,
-            'to_status' => $newStatus,
-            'note' => $note,
-            'changed_by_user_id' => request()->user()?->id,
-        ]);
-    }
 
     /**
      * Tính lại total_amount từ toàn bộ items + approved adjustments.
@@ -583,7 +592,10 @@ class InvoiceService
 
             $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn ban đầu – tự động phát hành khi Tenant ký hợp đồng.');
 
-            return $invoice->load('items');
+            $invoice->load('items');
+            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+
+            return $invoice;
         });
     }
 
@@ -624,7 +636,10 @@ class InvoiceService
 
             $this->recordStatusHistory($invoice, 'DRAFT', $finalStatus, 'Hóa đơn thanh lý hợp đồng ghi nhận các khoản chưa thanh toán cuối cùng.');
 
-            return $invoice->load('items');
+            $invoice->load('items');
+            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+
+            return $invoice;
         });
     }
 
@@ -793,7 +808,10 @@ class InvoiceService
 
             $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn tháng tự động tạo.');
 
-            return ['invoice' => $invoice->load('items'), 'is_new' => true];
+            $invoice->load('items');
+            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+
+            return ['invoice' => $invoice, 'is_new' => true];
         });
     }
 }

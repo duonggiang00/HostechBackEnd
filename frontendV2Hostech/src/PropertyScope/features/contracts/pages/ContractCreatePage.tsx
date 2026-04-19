@@ -1,5 +1,5 @@
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import ContractWizard from '../components/ContractWizard';
+import PhysicalContractCreator from '../components/PhysicalContractCreator';
 import { ChevronLeft } from 'lucide-react';
 
 export default function ContractCreatePage() {
@@ -38,7 +38,7 @@ export default function ContractCreatePage() {
       </div>
 
       <div className="bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-[12px] shadow-sm overflow-hidden transition-colors">
-        <ContractWizard 
+        <PhysicalContractCreator 
           propertyId={propertyId as string}
           roomId={roomId}
           onSuccess={handleSuccess}

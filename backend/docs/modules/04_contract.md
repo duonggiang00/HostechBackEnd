@@ -23,6 +23,9 @@ Module quản lý hợp đồng thuê phòng, thành viên trong hợp đồng, 
 | `POST`   | `/api/contracts` | Tạo hợp đồng mới | Owner, Manager |
 | `GET`    | `/api/contracts/{id}` | Chi tiết hợp đồng | All roles (với membership scope) |
 | `PUT`    | `/api/contracts/{id}` | Cập nhật hợp đồng | Owner, Manager |
+
+> [!NOTE]
+> Để thêm khách thuê vào hợp đồng, khách đó phải có tài khoản hệ thống trước. Nếu khách chưa có tài khoản, hãy sử dụng [User Invitations](file:///c:/laragon/www/laravel/datn/HostechBackEnd/backend/docs/modules/08_system.md) để mời họ trước khi gán vào hợp đồng.
 | `DELETE` | `/api/contracts/{id}` | Soft delete | Owner |
 | `GET`    | `/api/contracts/trash` | Thùng rác | Owner |
 | `POST`   | `/api/contracts/{id}/restore` | Khôi phục | Owner |

@@ -7,6 +7,7 @@ import type {
   UpdateTicketStatusPayload,
   CreateTicketEventPayload,
   CreateTicketCostPayload,
+  PaginatedTickets,
 } from '../types';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -19,11 +20,13 @@ export const ticketKeys = {
 };
 
 // ─── List Hook ────────────────────────────────────────────────────────────────
-export function useTickets(params: TicketQueryParams = {}) {
-  return useQuery({
+export function useTickets(params: TicketQueryParams = {}, options: any = {}) {
+  return useQuery<PaginatedTickets>({
     queryKey: ticketKeys.list(params),
     queryFn: ({ signal }) => ticketsApi.getTickets(params, signal),
-    enabled: !!params.property_id || true,
+    enabled: !!params.property_id,
+    staleTime: 60 * 1000, // 1 minute default stale time
+    ...options,
   });
 }
 
@@ -33,6 +36,7 @@ export function useTicketDetail(id: string | undefined) {
     queryKey: ticketKeys.detail(id!),
     queryFn: () => ticketsApi.getTicket(id!),
     enabled: !!id,
+    staleTime: 60 * 1000, // 1 minute stale time
   });
 }
 

@@ -20,11 +20,11 @@ class TicketSeeder extends Seeder
         $this->command->info('🎫 SEED DỮ LIỆU TICKET');
         $this->command->info("================================\n");
 
-        // Lấy org đầu tiên có đủ dữ liệu
-        $org = Org::first();
+        // Lấy org 'test' (tránh lỗi nếu có Org rác từ lần chạy trước)
+        $org = Org::where('name', 'test')->first() ?? Org::whereHas('users')->first();
 
         if (! $org) {
-            $this->command->error('❌ Không tìm thấy Org. Hãy chạy OrgSeeder trước.');
+            $this->command->error('❌ Không tìm thấy Org có người dùng. Hãy chạy OrgSeeder trước.');
 
             return;
         }

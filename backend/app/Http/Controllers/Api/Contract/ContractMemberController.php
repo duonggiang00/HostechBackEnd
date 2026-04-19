@@ -112,7 +112,7 @@ class ContractMemberController extends Controller
             abort(404, 'Contract Not Found');
         }
 
-        $this->authorize('update', $contract);
+        $this->authorize('removeMember', $contract);
 
         $success = $this->service->removeMember($contractId, $memberId);
         if (! $success) {

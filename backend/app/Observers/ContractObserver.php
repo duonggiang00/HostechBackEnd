@@ -59,8 +59,46 @@ class ContractObserver
      */
     public function updated(Contract $contract): void
     {
+        // 1. Handle Status Changes
         if ($contract->isDirty('status')) {
             $this->syncRoomStatus($contract);
+
+            $newStatusValue = $contract->status instanceof \BackedEnum
+                ? $contract->status->value
+                : (string) $contract->status;
+
+            // EDA: Fire ContractActivated when contract becomes ACTIVE
+            if ($newStatusValue === 'ACTIVE') {
+                \App\Events\Contract\ContractActivated::dispatch($contract);
+            }
+        }
+
+        // 2. Handle Signature Detection (JSON meta field)
+        if ($contract->wasChanged('meta')) {
+            $oldMeta = $contract->getOriginal('meta') ?? [];
+            $newMeta = $contract->meta ?? [];
+
+            // Case: Tenant just signed
+            if (! isset($oldMeta['tenant_signed_at']) && isset($newMeta['tenant_signed_at'])) {
+                \App\Events\Contract\ContractSignatureConfirmed::dispatch($contract, 'tenant');
+
+                // Notify only the creator (Manager) as per user feedback
+                $creator = $contract->createdBy;
+                if ($creator) {
+                    $primaryTenant = $contract->members()->where('is_primary', true)->first();
+                    $signerName = $primaryTenant?->full_name ?? 'Cư dân';
+
+                    $creator->notify(new \App\Notifications\Contract\ContractSignedNotification(
+                        $contract,
+                        $signerName
+                    ));
+                }
+            }
+
+            // Case: Manager just signed
+            if (! isset($oldMeta['manager_signed_at']) && isset($newMeta['manager_signed_at'])) {
+                \App\Events\Contract\ContractSignatureConfirmed::dispatch($contract, 'manager');
+            }
         }
     }
 

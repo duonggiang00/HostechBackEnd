@@ -1,6 +1,8 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import { PropertyInvoicesPage } from './pages/PropertyInvoicesPage';
-import { ExpensesPage } from './pages/ExpensesPage';
+
+const PropertyInvoicesPage = lazy(() => import('./pages/PropertyInvoicesPage').then(module => ({ default: module.PropertyInvoicesPage })));
+const ExpensesPage = lazy(() => import('./pages/ExpensesPage').then(module => ({ default: module.ExpensesPage })));
 
 export const billingRoutes: RouteObject[] = [
   {

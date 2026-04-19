@@ -1,8 +1,10 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import MeterListPage from './pages/MeterListPage';
-import QuickReadingPage from './pages/QuickReadingPage';
-import MeterDetailPage from './pages/MeterDetailPage';
-import RoomMeterDetailPage from './pages/RoomMeterDetailPage';
+
+const MeterListPage = lazy(() => import('./pages/MeterListPage'));
+const QuickReadingPage = lazy(() => import('./pages/QuickReadingPage'));
+const MeterDetailPage = lazy(() => import('./pages/MeterDetailPage'));
+const RoomMeterDetailPage = lazy(() => import('./pages/RoomMeterDetailPage'));
 
 export const meteringRoutes: RouteObject[] = [
   {

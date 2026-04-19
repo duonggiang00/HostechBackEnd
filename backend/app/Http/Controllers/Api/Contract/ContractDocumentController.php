@@ -95,9 +95,10 @@ class ContractDocumentController extends Controller
             $storagePath = $this->documentService->generateDocument($contract, $extraData);
 
             // Lưu path vào contract
+            $ext = pathinfo($storagePath, PATHINFO_EXTENSION);
             $contract->update([
                 'document_path' => $storagePath,
-                'document_type' => 'docx',
+                'document_type' => strtoupper($ext),
             ]);
 
             return response()->json([
@@ -130,9 +131,10 @@ class ContractDocumentController extends Controller
                 // Auto generate if missing
                 $extraData = $this->getSignatureExtraData($contract->id);
                 $storagePath = $this->documentService->generateDocument($contract, $extraData);
+                $ext = pathinfo($storagePath, PATHINFO_EXTENSION);
                 $contract->update([
                     'document_path' => $storagePath,
-                    'document_type' => 'docx',
+                    'document_type' => strtoupper($ext),
                 ]);
             }
 

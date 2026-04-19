@@ -132,6 +132,8 @@ class PropertyService
             $property->defaultServices()->sync($data['default_services']);
         }
 
+        \App\Events\Property\PropertyCreated::dispatch($property);
+
         return $property;
     }
 
@@ -143,6 +145,8 @@ class PropertyService
         if (isset($data['default_services']) && is_array($data['default_services'])) {
             $property->defaultServices()->sync($data['default_services']);
         }
+
+        \App\Events\Property\PropertyUpdated::dispatch($property);
 
         return $property;
     }

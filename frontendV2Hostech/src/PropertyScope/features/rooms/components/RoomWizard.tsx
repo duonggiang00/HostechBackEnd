@@ -15,7 +15,7 @@ import MediaDropzone from '@/shared/features/media/components/MediaDropzone';
 import ServicePicker from '@/shared/features/billing/components/ServicePicker';
 import { mediaApi } from '@/shared/features/media/api/media';
 import { RoomTemplateSelector } from './RoomTemplateSelector';
-import type { RoomTemplate } from '@/PropertyScope/features/templates/types';
+import type { RoomTemplate } from "@/PropertyScope/features/properties/templates/types";
 import { useService } from '@/shared/features/billing/hooks/useService';
 import type { Service } from '@/shared/features/billing/types';
 
@@ -68,6 +68,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
   });
 
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [existingMedia, setExistingMedia] = useState<any[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [assets, setAssets] = useState<Array<{ name: string; serial: string; condition: string; purchased_at: string; warranty_end: string; note: string }>>([]);
   const [expandedAssets, setExpandedAssets] = useState<Set<number>>(new Set());
@@ -75,6 +76,40 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | undefined>();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
+
+  // Initial Data Population for Edit Mode
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name ?? '',
+        code: initialData.code ?? '',
+        floor_id: floorId ?? initialData.floor_id ?? '',
+        capacity: Number(initialData.capacity ?? 2),
+        area: Number(initialData.area ?? 25),
+        base_price: Number(initialData.base_price ?? 5_000_000),
+        description: initialData.description ?? '',
+      });
+
+      if (initialData.room_services) {
+        setSelectedServices(initialData.room_services.map(rs => rs.service?.id).filter(Boolean) as string[]);
+      }
+
+      if (initialData.assets) {
+        setAssets(initialData.assets.map((a: any) => ({
+          name: a.name,
+          serial: a.serial || '',
+          condition: a.condition || 'good',
+          purchased_at: a.purchased_at || '',
+          warranty_end: a.warranty_end || '',
+          note: a.note || ''
+        })));
+      }
+
+      if (initialData.images) {
+        setExistingMedia(initialData.images);
+      }
+    }
+  }, [initialData, floorId]);
 
   const handleTemplateSelect = (template: RoomTemplate) => {
     setSelectedTemplateId(template.id);
@@ -116,7 +151,8 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
     const buildingArea = Number(property?.area || 0);
     const floorArea = Number(floor?.area || 0);
     const otherRoomsArea = rooms.reduce((sum: number, r: Room) => {
-      if (r.id === initialData?.id) return sum;
+      // Robust comparison using String() to avoid type mismatch (string vs number)
+      if (initialData?.id && String(r.id) === String(initialData.id)) return sum;
       return sum + Number(r.area || 0);
     }, 0);
     const sharedArea = floorArea > 0 
@@ -162,14 +198,19 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
       }
 
       const { buildingArea, effectiveLimit, otherRoomsArea, sharedArea, isUsingFloorLimit } = areaLimits;
+      
+      // 1. Check against total building area if defined
       if (buildingArea > 0 && formData.area > buildingArea) {
-        newErrors.area = `Vượt quá tổng diện tích tòa nhà (${buildingArea} m²)`;
+        newErrors.area = `Diện tích phòng (${formData.area} m²) vượt quá tổng diện tích tòa nhà (${buildingArea} m²)`;
       }
+      
+      // 2. Check against floor or building limit (including other rooms and shared area)
       if (effectiveLimit > 0) {
-        const totalArea = otherRoomsArea + formData.area + sharedArea;
-        if (totalArea > effectiveLimit) {
+        const totalUsedArea = otherRoomsArea + formData.area + sharedArea;
+        if (totalUsedArea > effectiveLimit) {
           const limitType = isUsingFloorLimit ? 'tầng' : 'tòa nhà';
-          newErrors.area = `Tổng diện tích (${totalArea} m²) vượt quá giới hạn ${limitType} (${effectiveLimit} m²)`;
+          const overAmount = (totalUsedArea - effectiveLimit).toFixed(2);
+          newErrors.area = `Tổng diện tích (${totalUsedArea} m²) vượt quá giới hạn ${limitType} (${effectiveLimit} m²). Vượt quá: ${overAmount} m².`;
         }
       }
     }
@@ -253,8 +294,11 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
           ...(serial?.trim() ? { serial: serial.trim() } : {}),
           ...(purchased_at ? { purchased_at } : {}),
           ...(warranty_end ? { warranty_end } : {}),
-          ...(note?.trim() ? { note: note.trim() } : {}),
+      ...(note?.trim() ? { note: note.trim() } : {}),
         })),
+      media_ids: [
+        ...existingMedia.map(m => m.id),
+      ]
     };
 
     setIsUploading(true);
@@ -466,8 +510,14 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                             value={formatCurrency(formData.base_price).replace('₫', '').trim()} 
                             onChange={e => setFormData({ ...formData, base_price: Number(parseNumber(e.target.value)) })}
                             className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all font-bold text-slate-800"
+                            placeholder={property?.default_rent_price_per_m2 ? `Mặc định: ${formatNumber(property.default_rent_price_per_m2)}đ/m²` : "Để trống để tự động tính"}
                           />
                         </div>
+                        {formData.base_price === 0 && property?.default_rent_price_per_m2 && (
+                          <p className="text-[10px] text-amber-600 font-bold ml-1 italic mt-1 leading-tight">
+                            * Sẽ tự động tính: {formatNumber(formData.area * property.default_rent_price_per_m2)}đ ({formatNumber(property.default_rent_price_per_m2)}đ/m²)
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -536,22 +586,54 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                     <h3 className="text-2xl font-black text-slate-800">Thêm hình ảnh thực tế</h3>
                     <p className="text-slate-500 font-medium">Hình ảnh đẹp giúp khách hàng dễ dàng đưa ra quyết định hơn.</p>
                   </div>
-                  <MediaDropzone onDrop={files => setMediaFiles(prev => [...prev, ...files])} maxFiles={10} />
-                  {mediaFiles.length > 0 && (
+                  <MediaDropzone onDrop={files => setMediaFiles(prev => [...prev, ...files])} maxFiles={30 - (existingMedia.length + mediaFiles.length)} />
+                  
+                  {/* Existing & New Images Combined */}
+                  {(existingMedia.length > 0 || mediaFiles.length > 0) && (
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      {mediaFiles.map((file, i) => (
-                        <div key={i} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group">
+                      {/* Existing Media */}
+                      {existingMedia.map((img, i) => (
+                        <div key={`existing-${img.id || i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-slate-200 group">
                           <img 
-                            src={URL.createObjectURL(file)} 
-                            alt={`Room ${i}`} 
+                            src={img.url} 
+                            alt={`Existing Room ${i}`} 
                             className="w-full h-full object-cover"
                           />
-                          <button 
-                            onClick={() => setMediaFiles(mediaFiles.filter((_, idx) => idx !== i))}
-                            className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity active:scale-95"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              onClick={() => setExistingMedia(existingMedia.filter((_, idx) => idx !== i))}
+                              className="p-2 bg-rose-500 text-white rounded-xl active:scale-95 shadow-lg"
+                              title="Xóa ảnh cũ"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-500">
+                             Hiện có
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* New Media Files */}
+                      {mediaFiles.map((file, i) => (
+                        <div key={`new-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border border-indigo-200 dark:border-indigo-900/50 bg-indigo-50/50 group">
+                          <img 
+                            src={URL.createObjectURL(file)} 
+                            alt={`New Room ${i}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <button 
+                              onClick={() => setMediaFiles(mediaFiles.filter((_, idx) => idx !== i))}
+                              className="p-2 bg-rose-500 text-white rounded-xl active:scale-95 shadow-lg"
+                              title="Xóa ảnh mới"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <div className="absolute bottom-2 left-2 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
+                             Mới
+                          </div>
                         </div>
                       ))}
                     </div>

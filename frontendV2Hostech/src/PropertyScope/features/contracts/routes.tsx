@@ -1,7 +1,10 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import ContractListPage from './pages/ContractListPage';
-import ContractCreatePage from './pages/ContractCreatePage';
-import ContractDetailPage from './pages/ContractDetailPage';
+
+const ContractListPage = lazy(() => import('./pages/ContractListPage'));
+const ContractCreatePage = lazy(() => import('./pages/ContractCreatePage'));
+const ContractDetailPage = lazy(() => import('./pages/ContractDetailPage'));
+const ContractDocumentViewPage = lazy(() => import('./pages/ContractDocumentViewPage'));
 
 export const contractsRoutes: RouteObject[] = [
   {
@@ -15,5 +18,9 @@ export const contractsRoutes: RouteObject[] = [
   {
     path: 'contracts/:contractId',
     element: <ContractDetailPage />,
+  },
+  {
+    path: 'contracts/:contractId/view',
+    element: <ContractDocumentViewPage />,
   },
 ];

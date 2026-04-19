@@ -12,6 +12,8 @@ const addMemberSchema = z.object({
   phone: z.string().min(10, 'Số điện thoại không hợp lệ').optional().or(z.literal('')),
   email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
   identity_number: z.string().optional(),
+  date_of_birth: z.string().optional(),
+  license_plate: z.string().optional(),
   role: z.enum(['ROOMMATE', 'STAFF', 'TENANT']).default('ROOMMATE'),
   status: z.enum(['PENDING', 'APPROVED']).default('APPROVED'),
 });
@@ -44,6 +46,8 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
       phone: '',
       email: '',
       identity_number: '',
+      date_of_birth: '',
+      license_plate: '',
     },
   });
 
@@ -68,6 +72,8 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
           phone: data.phone || undefined,
           email: data.email || undefined,
           identity_number: data.identity_number || undefined,
+          date_of_birth: data.date_of_birth || undefined,
+          license_plate: data.license_plate || undefined,
         },
       });
       toast.success('Đã thêm người ở cùng thành công!');
@@ -177,6 +183,29 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                       {...register('identity_number')}
                       placeholder="0123456789..."
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      Ngày sinh
+                    </label>
+                    <input
+                      {...register('date_of_birth')}
+                      type="date"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      Biển số xe
+                    </label>
+                    <input
+                      {...register('license_plate')}
+                      placeholder="59-X1 123.45"
+                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
                     />
                   </div>
                 </div>

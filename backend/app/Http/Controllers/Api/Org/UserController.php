@@ -163,4 +163,22 @@ class UserController extends Controller
 
         return response()->json(['message' => 'Permanently deleted successfully']);
     }
+
+    /**
+     * Kiểm tra email tồn tại trong hệ thống (dùng khi soạn hợp đồng)
+     *
+     * Trả về thông tin cơ bản của user nếu tìm thấy, null nếu chưa có tài khoản.
+     * Endpoint này chỉ trả về id + snapshot fields, KHÔNG trả về thông tin nhạy cảm.
+     */
+    public function checkEmail(Request $request)
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $user = User::where('email', $request->email)
+            ->whereNull('deleted_at')
+            ->select(['id', 'full_name', 'phone', 'identity_number'])
+            ->first();
+
+        return response()->json(['data' => $user]); // null if not found — frontend checks this
+    }
 }

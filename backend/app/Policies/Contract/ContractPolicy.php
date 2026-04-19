@@ -87,6 +87,23 @@ class ContractPolicy implements RbacModuleProvider
     }
 
     /**
+     * Determine whether the user can remove members from the contract.
+     */
+    public function removeMember(User $user, Contract $contract): bool
+    {
+        // Manager/Owner/Staff -> Can remove from any contract in Org
+        if ($user->hasPermissionTo('update Contracts')) {
+            return $this->checkPropertyScope($user, $contract);
+        }
+
+        // Tenant -> Can only remove members from their OWN contract
+        return $contract->members()
+            ->where('user_id', $user->id)
+            ->where('status', 'APPROVED')
+            ->exists();
+    }
+
+    /**
      * Determine whether the user can delete the model.
      */
     public function delete(User $user, Contract $contract): bool

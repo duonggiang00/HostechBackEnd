@@ -31,21 +31,13 @@ class ExpireContracts extends Command
             $this->info('[DRY-RUN] Không thực sự cập nhật dữ liệu.');
         }
 
-        $this->info('Đang tìm các hợp đồng hết hạn...');
+        $this->info('Đang kiểm tra các hợp đồng hết hạn và vi phạm dư nợ...');
+        
+        $expiredCount = $this->contractService->markExpiredContracts();
+        $breachCount = $this->contractService->processDebtBreachTerminations();
 
-        if ($isDryRun) {
-            $count = \App\Models\Contract\Contract::where('status', 'ACTIVE')
-                ->whereNotNull('end_date')
-                ->where('end_date', '<', today())
-                ->count();
-            $this->info("[DRY-RUN] Tìm thấy {$count} hợp đồng sẽ được chuyển sang EXPIRED.");
-            return self::SUCCESS;
-        }
-
-        $count = $this->contractService->markExpiredContracts();
-
-        $this->info("✅ Đã chuyển {$count} hợp đồng sang trạng thái EXPIRED.");
-        $this->info('   └─ Tiền cọc liên quan đã được cập nhật sang REFUND_PENDING.');
+        $this->info("✅ Đã chuyển {$expiredCount} hợp đồng sang trạng thái EXPIRED.");
+        $this->info("⚠️ Đã tự động thanh lý {$breachCount} hợp đồng do vi phạm dư nợ vượt cọc.");
 
         return self::SUCCESS;
     }

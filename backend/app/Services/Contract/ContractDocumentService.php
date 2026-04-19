@@ -3,6 +3,9 @@
 namespace App\Services\Contract;
 
 use App\Models\Contract\Contract;
+use App\Models\Document\DocumentTemplate;
+use App\Models\Document\GeneratedDocument;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,29 +16,11 @@ use PhpOffice\PhpWord\TemplateProcessor;
 class ContractDocumentService
 {
     // ───────────────────────────────────────────────────────────────────────────
-    //  1. OCR SCAN — Upload ảnh/PDF scan hợp đồng, trả về data trích xuất
+    //  1. OCR SCAN
     // ───────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Nhận file scan (image hoặc PDF), gửi lên OCR service và trả về structured data.
-     *
-     * Trả về array:
-     * [
-     *   'tenant_name'      => string|null,
-     *   'tenant_phone'     => string|null,
-     *   'tenant_id_number' => string|null,
-     *   'room_code'        => string|null,
-     *   'start_date'       => string|null,  // định dạng Y-m-d nếu parse được
-     *   'end_date'         => string|null,
-     *   'rent_price'       => float|null,
-     *   'deposit_amount'   => float|null,
-     *   'raw_text'         => string,       // toàn bộ text OCR thô (để debug/hiển thị)
-     *   '_is_mock'         => bool,         // true nếu dùng mock (chưa cấu hình OCR)
-     * ]
-     */
     public function scanContract(UploadedFile $file): array
     {
-        // Lưu file tạm để gửi lên OCR
         $tempPath = $file->store('temp/contract-scans', 'local');
 
         try {
@@ -47,7 +32,6 @@ class ContractDocumentService
                 default         => $this->mockScanResult($file->getClientOriginalName()),
             };
 
-            // Truy vấn database để lấy chính xác thông tin User nếu tìm thấy CCCD/CMND trên hợp đồng scan
             if (!empty($result['tenant_id_number'])) {
                 $user = \App\Models\Org\User::where('identity_number', $result['tenant_id_number'])->first();
                 if ($user) {
@@ -60,14 +44,10 @@ class ContractDocumentService
 
             return $result;
         } finally {
-            // Dọn file tạm
             Storage::disk('local')->delete($tempPath);
         }
     }
 
-    /**
-     * Google Cloud Vision OCR (cần cấu hình GOOGLE_VISION_API_KEY)
-     */
     private function scanWithGoogleVision(string $tempPath): array
     {
         $apiKey  = config('services.ocr.google_vision_key');
@@ -89,13 +69,9 @@ class ContractDocumentService
         }
 
         $rawText = $response->json('responses.0.fullTextAnnotation.text', '');
-
         return $this->parseRawText($rawText);
     }
 
-    /**
-     * Azure Cognitive Services OCR
-     */
     private function scanWithAzure(string $tempPath): array
     {
         $endpoint    = config('services.ocr.azure_endpoint');
@@ -114,10 +90,8 @@ class ContractDocumentService
             return $this->mockScanResult();
         }
 
-        // Azure Read API là async → poll result
         $operationUrl = $response->header('Operation-Location');
         $rawText      = $this->pollAzureReadResult($operationUrl, $key);
-
         return $this->parseRawText($rawText);
     }
 
@@ -138,14 +112,9 @@ class ContractDocumentService
                 return implode("\n", $lines);
             }
         }
-
         return '';
     }
 
-    /**
-     * Parse raw OCR text để extract structured fields.
-     * Dùng regex đơn giản – có thể nâng cấp lên LLM structured extraction sau.
-     */
     private function parseRawText(string $rawText): array
     {
         $result = [
@@ -161,42 +130,27 @@ class ContractDocumentService
             '_is_mock'         => false,
         ];
 
-        // Tên người thuê
         if (preg_match('/(?:Bên B|Người thuê|Họ (và|tên))[ :\t]+([^\n\r,]+)/iu', $rawText, $m)) {
             $result['tenant_name'] = trim($m[2]);
         }
-
-        // Số điện thoại
         if (preg_match('/(?:Điện thoại|SĐT|Phone)[ :\t]*([0-9]{9,11})/iu', $rawText, $m)) {
             $result['tenant_phone'] = trim($m[1]);
         }
-
-        // CCCD/CMND
         if (preg_match('/(?:CCCD|CMND|CMT|Số chứng minh)[ :\t]*([0-9]{9,12})/iu', $rawText, $m)) {
             $result['tenant_id_number'] = trim($m[1]);
         }
-
-        // Mã phòng
         if (preg_match('/(?:Phòng|Room)[ :\t]*([A-Za-z0-9\-\_]+)/iu', $rawText, $m)) {
             $result['room_code'] = trim($m[1]);
         }
-
-        // Ngày bắt đầu
         if (preg_match('/(?:Ngày bắt đầu|Từ ngày|Từ)[ :\t]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/iu', $rawText, $m)) {
             $result['start_date'] = $this->parseDate($m[1]);
         }
-
-        // Ngày kết thúc
         if (preg_match('/(?:Ngày kết thúc|Đến ngày|Đến)[ :\t]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/iu', $rawText, $m)) {
             $result['end_date'] = $this->parseDate($m[1]);
         }
-
-        // Giá thuê
         if (preg_match('/(?:Giá thuê|Tiền thuê|Rent)[ :\t]*([0-9][0-9\.,]*)/iu', $rawText, $m)) {
             $result['rent_price'] = (float) str_replace([',', '.'], ['', '.'], $m[1]);
         }
-
-        // Tiền cọc
         if (preg_match('/(?:Tiền cọc|Cọc|Deposit)[ :\t]*([0-9][0-9\.,]*)/iu', $rawText, $m)) {
             $result['deposit_amount'] = (float) str_replace([',', '.'], ['', '.'], $m[1]);
         }
@@ -207,7 +161,6 @@ class ContractDocumentService
     private function parseDate(string $raw): ?string
     {
         try {
-            // Thử dd/mm/yyyy hoặc dd-mm-yyyy
             $parts = preg_split('/[\/\-]/', $raw);
             if (count($parts) === 3) {
                 [$d, $m, $y] = $parts;
@@ -216,18 +169,12 @@ class ContractDocumentService
                 }
                 return \Carbon\Carbon::createFromDate((int) $y, (int) $m, (int) $d)->format('Y-m-d');
             }
-        } catch (\Exception) {
-        }
-
+        } catch (\Exception) {}
         return null;
     }
 
-    /**
-     * Mock kết quả scan (dùng khi chưa cấu hình OCR provider)
-     */
     private function mockScanResult(string $filename = ''): array
     {
-        // Để demo trải nghiệm tốt nhất khi dùng Mock, ta tự động lấy 1 user ngẫu nhiên có CCCD trong hệ thống
         $mockUser = \App\Models\Org\User::whereNotNull('identity_number')->inRandomOrder()->first();
 
         return [
@@ -241,62 +188,202 @@ class ContractDocumentService
             'deposit_amount'   => 2500000,
             'raw_text'         => 'Mock OCR Text: Hợp đồng thuê nhà. Bên thuê: ' . ($mockUser ? $mockUser->full_name : 'Nguyễn Văn Test') . ' - CCCD: ' . ($mockUser ? $mockUser->identity_number : '001173014264'),
             '_is_mock'         => true,
-            '_notice'          => 'OCR provider chưa cấu hình. Trả về kết quả Mock (đã móc nối thành công CCCD với Db Cư dân).',
+            '_notice'          => 'OCR provider chưa cấu hình. Trả về kết quả Mock.',
             'user_id'          => $mockUser ? $mockUser->id : null,
             '_db_user_found'   => $mockUser ? true : false,
         ];
     }
 
     // ───────────────────────────────────────────────────────────────────────────
-    //  2. GENERATE DOCUMENT — Tạo file DOCX từ template, lưu vào Storage
+    //  2. GENERATE DOCUMENT
     // ───────────────────────────────────────────────────────────────────────────
 
-    /**
-     * Tạo file DOCX từ template hợp đồng và lưu vào storage.
-     * Trả về path tương đối trong disk 'local'.
-     *
-     * Template phải nằm tại: storage/app/templates/contracts/hop-dong-thue.docx
-     * Các placeholder trong template dùng cú pháp: ${ten_truong}
-     */
     public function generateDocument(Contract $contract, array $extraData = []): string
     {
-        $templatePath = $this->resolveTemplatePath();
+        $contractId = $contract->id;
 
-        if (! file_exists($templatePath)) {
-            // Tạo template mẫu tự động nếu chưa có
-            $this->createDefaultTemplate($templatePath);
+        // Auto-discover signatures if not provided
+        if (!isset($extraData['signature_landlord'])) {
+            $extraData['signature_landlord'] = $this->findSignaturePath($contractId, 'manager');
+        }
+        if (!isset($extraData['signature_tenant'])) {
+            $extraData['signature_tenant'] = $this->findSignaturePath($contractId, 'tenant');
+        }
+
+        $primaryMember = $contract->members?->firstWhere('is_primary', true)
+            ?? $contract->members?->first();
+
+        $landlord = $contract->org;
+
+        // --- Đại diện (Bên A) ---
+        $creator = $contract->createdBy;
+        $representative = null;
+        $repRoleStr = 'Đại diện cho thuê';
+
+        if ($creator && ($creator->hasRole('Owner') || $creator->hasRole('Manager'))) {
+            $representative = $creator;
+            $repRoleStr = $creator->hasRole('Owner') ? 'Chủ sở hữu' : 'Quản lý tòa nhà';
+        } else {
+            $owner = \App\Models\Org\User::where('org_id', $contract->org_id)
+                        ->whereHas('roles', fn($q) => $q->where('name', 'Owner'))
+                        ->first();
+            if ($owner) {
+                $representative = $owner;
+                $repRoleStr = 'Chủ sở hữu';
+            }
+        }
+
+        // --- Dịch vụ phòng ---
+        $services = $contract->room?->services ?? [];
+        $serviceItems = [];
+        if ($services->count() > 0) {
+            foreach ($services as $index => $service) {
+                $price = number_format((float) $service->current_price, 0, ',', '.');
+                $priceStr = $price === '0' ? 'Miễn phí' : "{$price}đ/{$service->unit}";
+                $serviceItems[] = ($index + 1) . ". {$service->name}: {$priceStr}";
+            }
+        } else {
+            $serviceItems[] = "Theo quy định chung của tòa nhà";
+        }
+
+        $depositMonths = 0;
+        if ((float) $contract->rent_price > 0) {
+            $depositMonths = round((float) $contract->deposit_amount / (float) $contract->rent_price, 1);
+        }
+
+        $vars = array_merge([
+            // Contract
+            'contract_id'             => $contract->id,
+            'contract_status'         => $contract->status?->label() ?? $contract->status,
+            'contract_start_date'     => $contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('d/m/Y') : '---',
+            'contract_end_date'       => $contract->end_date ? \Carbon\Carbon::parse($contract->end_date)->format('d/m/Y') : 'Vô thời hạn',
+            'contract_rent_price'     => number_format((float) $contract->rent_price, 0, ',', '.'),
+            'contract_deposit_amount' => number_format((float) $contract->deposit_amount, 0, ',', '.'),
+            'contract_deposit_months' => $depositMonths,
+            'contract_billing_cycle'  => $contract->billing_cycle === 'MONTHLY' ? 'Hàng tháng' : 'Hàng quý',
+            'contract_due_day'        => $contract->due_day ?? 5,
+            'contract_members_count'  => $contract->members?->count() ?? 0,
+            
+            // Room
+            'room_code'               => $contract->room?->code ?? '---',
+            'room_name'               => $contract->room?->name ?? '---',
+            'room_capacity'           => $contract->room?->capacity ?? '---',
+            'room_area'               => $contract->room?->area ?? '---',
+            
+            // Property
+            'property_name'           => $contract->property?->name ?? '---',
+            'property_address'        => $contract->property?->address ?? '...',
+            'property_bank_info'      => $this->formatBankInfo($contract->property),
+            'property_house_rules'    => $contract->property?->house_rules ?? 'Theo quy định chung của tòa nhà',
+            
+            // Org (Landlord info)
+            'org_name'                => $landlord->name ?? '---',
+            'org_phone'               => $landlord->phone ?? '---',
+            'org_address'             => $landlord->address ?? '---',
+            'org_bank_info'           => $this->formatOrgBankInfo($landlord),
+
+            // Representative
+            'rep_full_name'           => $representative?->full_name ?? '---',
+            'rep_identity_number'     => $representative?->identity_number ?? '---',
+            'rep_identity_issued'     => $representative?->identity_issued_place ?? '---',
+            'rep_address'             => $representative?->address ?? '---',
+            'rep_phone'               => $representative?->phone ?? '---',
+            'rep_role'                => $repRoleStr,
+
+            // Tenant (Fallback to User if snapshot is empty)
+            'tenant_full_name'        => $primaryMember?->full_name ?? $primaryMember?->user?->full_name ?? '---',
+            'tenant_phone'            => $primaryMember?->phone ?? $primaryMember?->user?->phone ?? '---',
+            'tenant_identity_number'  => $primaryMember?->identity_number ?? $primaryMember?->user?->identity_number ?? '---',
+            'tenant_dob'              => $primaryMember?->date_of_birth 
+                                           ? \Carbon\Carbon::parse($primaryMember->date_of_birth)->format('d/m/Y') 
+                                           : ($primaryMember?->user?->date_of_birth 
+                                               ? \Carbon\Carbon::parse($primaryMember->user->date_of_birth)->format('d/m/Y') 
+                                               : '---'),
+            'tenant_license_plate'    => $primaryMember?->license_plate ?? $primaryMember?->user?->license_plate ?? '---',
+            'tenant_address'          => $primaryMember?->permanent_address ?? $primaryMember?->user?->address ?? '---',
+            
+            'created_at'              => now()->format('d/m/Y'),
+            'payment_range'           => 'Từ ngày 01 đến ngày 05 hàng tháng',
+        ], $extraData);
+
+        // Compute member list early but without final breaks
+        $memberLines = $this->getMemberListLines($contract);
+
+        // Map roommates
+        $roommates = $contract->members->where('is_primary', false)->values();
+        for ($i = 0; $i < 5; $i++) {
+            $index = $i + 1;
+            $member = $roommates->get($i);
+            $vars["roommate_{$index}_name"] = $member?->full_name ?? '';
+            $vars["roommate_{$index}_id"]   = $member?->identity_number ?? '';
+        }
+
+        // Lookup DocumentTemplate
+        $template = DocumentTemplate::active()
+            ->where('org_id', $contract->org_id)
+            ->where('type', 'CONTRACT')
+            ->where(function ($query) use ($contract) {
+                $query->where('property_id', $contract->property_id)
+                      ->orWhereNull('property_id');
+            })
+            ->latest()
+            ->first();
+
+        // Delegate rendering
+        if (!empty($contract->custom_content)) {
+            $vars['room_service_list'] = implode("<br/>", $serviceItems);
+            $vars['member_list'] = implode("<br/>", $memberLines);
+            // Create a fake template to easily reuse the generateHtmlDocument code
+            $fakeTemplate = new DocumentTemplate(['content' => $contract->custom_content, 'format' => 'HTML']);
+            $storagePath = $this->generateHtmlDocument($contract, $fakeTemplate, $vars);
+        } elseif ($template && $template->format === 'HTML') {
+            $vars['room_service_list'] = implode("<br/>", $serviceItems);
+            $vars['member_list'] = implode("<br/>", $memberLines);
+            $storagePath = $this->generateHtmlDocument($contract, $template, $vars);
+        } else {
+            $vars['room_service_list'] = implode("<w:br/>", $serviceItems);
+            $vars['member_list'] = implode("<w:br/>", $memberLines);
+            $storagePath = $this->generateDocxDocument($contract, $template, $vars);
+        }
+
+        // Log generation history
+        GeneratedDocument::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $contract->org_id,
+            'template_id' => $template?->id,
+            'owner_type' => $contract->getMorphClass(),
+            'owner_id' => $contract->id,
+            'path' => $storagePath,
+            'sha256' => hash_file('sha256', Storage::disk('local')->path($storagePath)),
+        ]);
+
+        return $storagePath;
+    }
+
+    private function generateDocxDocument(Contract $contract, ?DocumentTemplate $template, array $vars): string
+    {
+        $templatePath = null;
+
+        if ($template && !empty($template->file_path)) {
+            $path = Storage::disk('local')->path($template->file_path);
+            if (file_exists($path)) {
+                $templatePath = $path;
+            }
+        }
+
+        if (!$templatePath) {
+            $templatePath = $this->resolveDefaultDocxPath();
+            if (!file_exists($templatePath)) {
+                $this->createDefaultDocxTemplate($templatePath);
+            }
         }
 
         $templateProcessor = new TemplateProcessor($templatePath);
 
-        // Build variable map
-        $primaryMember = $contract->members?->firstWhere('is_primary', true)
-            ?? $contract->members?->first();
-
-        $vars = array_merge([
-            'contract_id'      => $contract->id,
-            'status'           => $contract->status?->label() ?? $contract->status,
-            'property_name'    => $contract->property?->name ?? '---',
-            'property_address' => $contract->property?->address ?? '......................................................',
-            'room_code'        => $contract->room?->code ?? '---',
-            'room_name'        => $contract->room?->name ?? '---',
-            'start_date'       => $contract->start_date ? \Carbon\Carbon::parse($contract->start_date)->format('d/m/Y') : '---',
-            'end_date'         => $contract->end_date ? \Carbon\Carbon::parse($contract->end_date)->format('d/m/Y') : 'Vô thời hạn',
-            'rent_price'       => number_format((float) $contract->rent_price, 0, ',', '.'),
-            'deposit_amount'   => number_format((float) $contract->deposit_amount, 0, ',', '.'),
-            'billing_cycle'    => $contract->billing_cycle === 'MONTHLY' ? 'Hàng tháng' : 'Hàng quý',
-            'due_day'          => $contract->due_day ?? 5,
-            'tenant_name'      => $primaryMember?->full_name ?? '---',
-            'tenant_phone'     => $primaryMember?->phone ?? '---',
-            'tenant_id_number' => $primaryMember?->identity_number ?? '---',
-            'created_at'       => now()->format('d/m/Y'),
-        ], $extraData);
-
         foreach ($vars as $key => $value) {
-            // Xử lý ảnh chữ ký
-            if (is_string($value) && str_starts_with($key, 'signature_') && file_exists($value)) {
+            if (is_string($value) && str_contains($key, 'signature') && !empty($value) && file_exists(Storage::disk('local')->path($value))) {
                 $templateProcessor->setImageValue($key, [
-                    'path' => $value,
+                    'path' => Storage::disk('local')->path($value),
                     'width' => 120,
                     'height' => 60,
                     'ratio' => false
@@ -306,12 +393,10 @@ class ContractDocumentService
             }
         }
 
-        // Lưu file output
         $filename    = 'hop-dong-' . Str::slug($contract->id) . '-' . now()->format('YmdHis') . '.docx';
         $storagePath = 'contracts/documents/' . $filename;
         $fullPath    = Storage::disk('local')->path($storagePath);
 
-        // Đảm bảo thư mục tồn tại
         if (! is_dir(dirname($fullPath))) {
             mkdir(dirname($fullPath), 0755, true);
         }
@@ -321,10 +406,119 @@ class ContractDocumentService
         return $storagePath;
     }
 
+    private function generateHtmlDocument(Contract $contract, DocumentTemplate $template, array $vars): string
+    {
+        $html = $template->content ?? '';
+
+        foreach ($vars as $key => $value) {
+            if (is_string($value) && str_contains($key, 'signature') && !empty($value) && file_exists(Storage::disk('local')->path($value))) {
+                $fullPath = Storage::disk('local')->path($value);
+                $type = pathinfo($fullPath, PATHINFO_EXTENSION);
+                $data = file_get_contents($fullPath);
+                $base64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
+                $imgTag = "<img src='{$base64}' width='120' height='60' />";
+                $html = str_replace('${' . $key . '}', $imgTag, $html);
+            } else {
+                $html = str_replace('${' . $key . '}', (string) $value, $html);
+            }
+        }
+
+        $pdf = Pdf::loadHTML($html)->setPaper('a4');
+
+        $filename    = 'hop-dong-' . Str::slug($contract->id) . '-' . now()->format('YmdHis') . '.pdf';
+        $storagePath = 'contracts/documents/' . $filename;
+        $fullPath    = Storage::disk('local')->path($storagePath);
+
+        if (! is_dir(dirname($fullPath))) {
+            mkdir(dirname($fullPath), 0755, true);
+        }
+
+        $pdf->save($fullPath);
+
+        return $storagePath;
+    }
+
+    private function formatBankInfo(?\App\Models\Property\Property $property): string
+    {
+        if (!$property || empty($property->bank_accounts)) {
+            return "---";
+        }
+
+        return $this->renderBankAccounts($property->bank_accounts);
+    }
+
+    private function formatOrgBankInfo(?\App\Models\Org\Org $org): string
+    {
+        if (!$org || empty($org->bank_accounts)) {
+            return "---";
+        }
+
+        return $this->renderBankAccounts($org->bank_accounts);
+    }
+
+    private function renderBankAccounts(array $accounts): string
+    {
+        $lines = [];
+        foreach ($accounts as $acc) {
+            $bankName = $acc['bank_name'] ?? 'Ngân hàng';
+            $accNum   = $acc['account_number'] ?? '';
+            $accName  = $acc['account_holder'] ?? '';
+            
+            if ($accNum) {
+                $lines[] = "{$bankName}: {$accNum}";
+                if ($accName) {
+                    $lines[] = "Chủ TK: {$accName}";
+                }
+            }
+        }
+
+        return count($lines) > 0 ? implode("\n", $lines) : "---";
+    }
+
+    private function getMemberListLines(Contract $contract): array
+    {
+        $members = $contract->members;
+        if (!$members || $members->isEmpty()) {
+            return ["---"];
+        }
+
+        $lines = [];
+        foreach ($members as $index => $m) {
+            $dob = $m->date_of_birth ? \Carbon\Carbon::parse($m->date_of_birth)->format('d/m/Y') : '---';
+            $id = $m->identity_number ?? '---';
+            $phone = $m->phone ?? '---';
+            $plate = $m->license_plate ?? '---';
+            
+            $text = ($index + 1) . ". " . $m->full_name . " - Ngày sinh: " . $dob . " - CCCD: " . $id . " - SĐT: " . $phone;
+            if ($plate !== '---' && !empty($plate)) {
+                $text .= " - Biển số xe: " . $plate;
+            }
+            $lines[] = $text;
+        }
+
+        return $lines;
+    }
+
     /**
-     * Lấy đường dẫn đầy đủ của file document thuộc contract.
-     * Ném exception nếu không tìm thấy.
+     * Tìm đường dẫn file chữ ký trên đĩa dựa trên contract_id và role.
      */
+    private function findSignaturePath(string $contractId, string $role): ?string
+    {
+        try {
+            $files = Storage::disk('local')->files('contracts/signatures');
+            foreach ($files as $file) {
+                $basename = basename($file);
+                // Khớp với pattern: signature_{role}_{contractId}-{userId}.{ext}
+                if (str_starts_with($basename, "signature_{$role}_{$contractId}-")) {
+                    return $file;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("Error finding signature path: " . $e->getMessage());
+        }
+        return null;
+    }
+
     public function getDocumentFullPath(Contract $contract): string
     {
         if (! $contract->document_path) {
@@ -340,20 +534,55 @@ class ContractDocumentService
         return $fullPath;
     }
 
-    private function resolveTemplatePath(): string
+    /**
+     * Scan a template for placeholders (e.g. ${variable_name}).
+     */
+    public function placeholderDiscovery(DocumentTemplate $template): array
+    {
+        if ($template->format === 'HTML') {
+            return $this->discoverHtmlPlaceholders($template->content ?? '');
+        }
+
+        return $this->discoverDocxPlaceholders($template->file_path);
+    }
+
+    private function discoverHtmlPlaceholders(string $content): array
+    {
+        preg_match_all('/\$\{([^}]+)\}/', $content, $matches);
+        return array_unique($matches[1] ?? []);
+    }
+
+    private function discoverDocxPlaceholders(?string $filePath): array
+    {
+        if (!$filePath) {
+            return [];
+        }
+
+        $fullPath = Storage::disk('local')->path($filePath);
+        if (!file_exists($fullPath)) {
+            return [];
+        }
+
+        try {
+            $templateProcessor = new TemplateProcessor($fullPath);
+            return $templateProcessor->getVariables();
+        } catch (\Exception $e) {
+            Log::error('Failed to discover DOCX placeholders', ['path' => $filePath, 'error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    private function resolveDefaultDocxPath(): string
     {
         $customTemplate = storage_path('app/templates/contracts/hop-dong-thue.docx');
         if (file_exists($customTemplate)) {
             return $customTemplate;
         }
 
-        return storage_path('app/templates/contracts/default-contract-v3.docx');
+        return storage_path('app/templates/contracts/default-contract-v4.docx');
     }
 
-    /**
-     * Tạo template DOCX mặc định bằng PhpWord (không cần file bên ngoài).
-     */
-    private function createDefaultTemplate(string $outputPath): void
+    private function createDefaultDocxTemplate(string $outputPath): void
     {
         if (! class_exists(\PhpOffice\PhpWord\PhpWord::class)) {
             throw new \RuntimeException(
@@ -372,89 +601,63 @@ class ContractDocumentService
 
         $section = $phpWord->addSection();
 
-        // Tiêu đề
-        $section->addText(
-            'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM',
-            ['bold' => true, 'size' => 13],
-            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
-        );
-        $section->addText(
-            'Độc lập – Tự do – Hạnh phúc',
-            ['bold' => true, 'size' => 13, 'underline' => 'single'],
-            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
-        );
-        $section->addText(
-            '-----o0o-----',
-            [],
-            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
-        );
+        $section->addText('CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM', ['bold' => true, 'size' => 13], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addText('Độc lập – Tự do – Hạnh phúc', ['bold' => true, 'size' => 13, 'underline' => 'single'], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
+        $section->addText('-----o0o-----', [], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addText('', [], []);
         
-        $section->addText(
-            'HỢP ĐỒNG THUÊ NHÀ',
-            ['bold' => true, 'size' => 16],
-            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
-        );
+        $section->addText('HỢP ĐỒNG THUÊ NHÀ', ['bold' => true, 'size' => 16], ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]);
         $section->addText('', [], []);
 
-        $section->addText('Hôm nay, ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . ' tại');
-        $section->addText('Tại địa chỉ: ${property_address}');
+        $section->addText('Hôm nay, ngày ' . date('d') . ' tháng ' . date('m') . ' năm ' . date('Y') . ' tại tòa nhà ${property_name}');
+        $section->addText('Địa chỉ: ${property_address}');
         $section->addText('Chúng tôi gồm:');
         
-        $section->addText('Bên cho thuê (Bên A):', ['bold' => true]);
-        $section->addText('Họ và tên: Lê Thị Ngọc           Sinh năm: 1973');
-        $section->addText('CMND: 001173014264               Điện thoại: 0963.336.586');
-        $section->addText('HKTT: TDP số 7 Phú Mỹ (Mỹ Đình), phường Từ Liêm, Hà Nội.');
+        $section->addText('BÊN CHO THUÊ (BÊN A):', ['bold' => true]);
+        $section->addText('Cơ quan/Tổ chức: ${org_name}');
+        $section->addText('Đại diện bởi: ${rep_full_name}           Chức vụ: ${rep_role}');
+        $section->addText('CCCD số: ${rep_identity_number}           Cấp ngày: ${rep_identity_issued}');
+        $section->addText('Địa chỉ thường trú: ${rep_address}');
+        $section->addText('Điện thoại: ${rep_phone}');
         $section->addText('');
 
-        $section->addText('Bên thuê nhà (Bên B):', ['bold' => true]);
-        $section->addText('Họ và tên: ${tenant_name}           Sinh năm: ........................');
-        $section->addText('CMND/CCCD: ${tenant_id_number}           Điện thoại: ${tenant_phone}');
-        $section->addText('HKTT: ........................................................................................................');
+        $section->addText('BÊN THUÊ NHÀ (BÊN B):', ['bold' => true]);
+        $section->addText('Họ và tên: ${tenant_full_name}           Năm sinh: ${tenant_dob}');
+        $section->addText('CCCD số: ${tenant_identity_number}           Điện thoại: ${tenant_phone}');
+        $section->addText('Địa chỉ HKTT: ${tenant_address}');
         $section->addText('');
 
         $section->addText('Sau khi hai bên đi đến thống nhất ký kết hợp đồng thuê nhà với các điều kiện và điều khoản sau đây:', ['italic' => true]);
         
-        $section->addText('Điều 1:', ['bold' => true]); 
-        $section->addText('Bên A đồng ý cho bên B được thuê căn nhà số: ${room_code}, tổng diện tích sử dụng: ............. Số người ở là: .............');
-        $section->addText('Tài sản trong nhà bao gồm:');
-        $section->addText('1. .....................................................................................................................');
-        $section->addText('2. .....................................................................................................................');
-        $section->addText('3. .....................................................................................................................');
-        $section->addText('');
-        $section->addText('Kể từ ngày: ${start_date}');
-        $section->addText('Đến ngày: ${end_date}');
+        $section->addText('ĐIỀU 1: NỘI DUNG HỢP ĐỒNG', ['bold' => true]); 
+        $section->addText('1.1. Bên A đồng ý cho bên B được thuê căn phòng số: ${room_code}, tổng diện tích: ${room_area}m2 thuộc tòa nhà ${property_name}.');
+        $section->addText('1.2. Mục đích thuê: Dùng để ở. Sức chứa tối đa: ${room_capacity} người.');
+        $section->addText('1.3. Thời hạn thuê: Từ ngày ${contract_start_date} đến ngày ${contract_end_date}.');
         $section->addText('');
 
-        $section->addText('Điều 2:', ['bold' => true]);
-        $section->addText('Tiền thuê nhà mỗi tháng là: ${rent_price} VNĐ');
-        $section->addText('Đặt cọc 1 tháng là: ${deposit_amount} VNĐ');
-        $section->addText('(Giá thuê chưa bao gồm chi phí điện, nước, internet, rác)', ['italic' => true]);
-        $section->addText('Bên thuê nhà phải trả tiền đầy đủ cho chủ nhà vào ngày từ mồng 1 đến mồng 5 hàng tháng bằng tiền mặt hoặc chuyển khoản.');
-        $section->addText('Số tài khoản: 177132136 tại ngân hàng VPBank, người nhận: Lê Thị Ngọc', ['bold' => true]);
+        $section->addText('ĐIỀU 2: GIÁ THUÊ VÀ PHƯƠNG THỨC THANH TOÁN', ['bold' => true]);
+        $section->addText('2.1. Giá thuê nhà mỗi tháng là: ${contract_rent_price} VNĐ/tháng.');
+        $section->addText('2.2. Tiền đặt cọc: ${contract_deposit_amount} VNĐ (tương đương ${contract_deposit_months} tháng tiền nhà).');
+        $section->addText('2.3. Chi phí dịch vụ khác:');
+        $section->addText('${room_service_list}');
+        $section->addText('2.4. Thời gian thanh toán: ${payment_range}.');
+        $section->addText('2.5. Thông tin tài khoản nhận tiền:');
+        $section->addText('${property_bank_info}');
         $section->addText('');
 
-        $section->addText('Điều 3: Hai bên cùng cam kết', ['bold' => true]);
-        $section->addText('- Bên thuê nhà sử dụng đúng mục đích thuê nhà để ở có trách nhiệm bảo quản tốt các tài sản thiết bị trong nhà.');
-        $section->addText('- Tuyệt đối không được khoan tường đóng đinh, dán giấy lên tường nhà.');
-        $section->addText('- Không tụ tập đông người sau 10h30 đêm, không nói to gây ồn ào xung quanh.');
-        $section->addText('- Có ý thức giữ gìn vệ sinh chung và riêng sạch sẽ.');
-        $section->addText('- Tuyệt đối không vứt giấy xuống bồn cầu.');
-        $section->addText('- Tuyệt đối không vứt rác, tóc, vỏ dầu gội đầu xuống đường ống thoát.');
-        $section->addText('- Không tự ý sang nhượng cho người khác. Nếu muốn ở thêm người phải báo với chủ nhà.');
-        $section->addText('- Bên thuê có trách nhiệm bảo quản tài sản trong nhà phát hiện kịp thời những hư hỏng và báo cho chủ nhà để cùng nhau khắc phục.');
+        $section->addText('ĐIỀU 3: TRÁCH NHIỆM VÀ QUY ĐỊNH CHUNG', ['bold' => true]);
+        $section->addText('3.1. Các quy định về hành vi và vệ sinh:', ['bold' => true]);
+        $section->addText('${property_house_rules}');
+        $section->addText('3.2. Bên thuê có trách nhiệm bảo quản tốt các tài sản, trang thiết bị trong nhà. Nếu hư hỏng do lỗi người dùng phải bồi thường theo giá thị trường.');
+        $section->addText('3.3. Tuyệt đối không được khoan tường, đóng đinh, dán giấy khi chưa được sự đồng ý của Bên A.');
         $section->addText('');
 
-        $section->addText('Điều 4:', ['bold' => true]);
-        $section->addText('Trong trường hợp bên B hoặc bên A không có nhu cầu thuê và cho thuê nữa thì phải báo với bên kia 30 ngày để cùng nhau tính toán điện nước. Nếu một trong hai bên mà không báo trước thì sẽ phải hoàn trả tiền cho bên còn lại số tiền cọc 1 tháng.');
-        $section->addText('');
-        
-        $section->addText('Lưu ý:', ['bold' => true, 'underline' => 'single']);
-        $section->addText('- Trước khi dọn đi phải quét dọn sạch sẽ như lúc đến.');
-        $section->addText('- Tuyệt đối không trả phòng các tháng 9, 10, và 12, 1, 2.');
+        $section->addText('ĐIỀU 4: CHẤM DỨT HỢP ĐỒNG', ['bold' => true]);
+        $section->addText('4.1. Trong trường hợp một trong hai bên muốn chấm dứt hợp đồng trước hạn phải thông báo cho bên kia ít nhất 30 ngày.');
+        $section->addText('4.2. Nếu Bên B tự ý chấm dứt hợp đồng mà không báo trước hoặc vi phạm nghiêm trọng các quy định tại Điều 3, Bên A có quyền đơn phương chấm dứt và không hoàn trả tiền đặt cọc.');
         $section->addText('');
 
-        $section->addText('Hợp đồng này được lập thành 2 bản mỗi bên giữ 01 bản có giá trị pháp lý như nhau.');
+        $section->addText('Hợp đồng này được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau.');
         $section->addText('');
         
         $table = $section->addTable(['width' => 100 * 50, 'unit' => 'pct']);

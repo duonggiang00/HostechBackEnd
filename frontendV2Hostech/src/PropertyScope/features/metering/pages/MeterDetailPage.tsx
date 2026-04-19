@@ -938,7 +938,7 @@ export default function MeterDetailPage() {
                       <tr>
                         <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Thời gian</th>
                         <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 text-right">Chỉ số</th>
-                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 text-right">Mức sử sử dụng</th>
+                        <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 text-right">Mức sử dụng</th>
                         <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Ảnh</th>
                         <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Trạng thái</th>
                         <th className="px-6 py-3 text-right font-semibold text-slate-900 dark:text-slate-300">Hành động</th>
@@ -1023,8 +1023,8 @@ export default function MeterDetailPage() {
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex gap-2 justify-end">
-                              {/* Submit for manager review */}
-                              {reading.status === 'DRAFT' && canSubmitDraftReadings && (
+                              {/* Submit for manager review - Available for DRAFT and REJECTED */}
+                              {(reading.status === 'DRAFT' || reading.status === 'REJECTED') && canSubmitDraftReadings && (
                                 <button
                                   onClick={() => handleSubmitReading(reading.id)}
                                   className="p-2 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-lg transition-colors"
@@ -1054,8 +1054,8 @@ export default function MeterDetailPage() {
                                 </>
                               )}
 
-                              {/* Edit only for DRAFT */}
-                              {reading.status === 'DRAFT' && canManageReadings && (
+                              {/* Edit for DRAFT or REJECTED status */}
+                              {(reading.status === 'DRAFT' || reading.status === 'REJECTED') && canManageReadings && (
                                 <button
                                   onClick={() => handleOpenEditForm(reading)}
                                   className="p-2 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg transition-colors"

@@ -95,6 +95,8 @@ interface ContractTableProps {
   onEdit: (contract: Contract) => void;
   onViewDetail: (contract: Contract) => void;
   onDelete: (contract: Contract) => void;
+  onRestore?: (contract: Contract) => void;
+  onForceDelete?: (contract: Contract) => void;
   isTrashView?: boolean;
   search: string;
   onSearchChange: (value: string) => void;
@@ -112,6 +114,8 @@ export const ContractTable: React.FC<ContractTableProps> = ({
   onEdit,
   onViewDetail,
   onDelete,
+  onRestore,
+  onForceDelete,
   isTrashView = false,
   search,
   onSearchChange,
@@ -304,7 +308,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                             variant="ghost"
                             size="sm"
                             title="Khôi phục"
-                            onClick={() => onEdit(contract)}
+                            onClick={() => onRestore?.(contract)}
                             className="h-8 w-8 p-0 rounded-lg text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300"
                           >
                             <RotateCcw className="h-4 w-4" />
@@ -313,7 +317,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                             variant="ghost"
                             size="sm"
                             title="Xóa vĩnh viễn"
-                            onClick={() => onDelete(contract)}
+                            onClick={() => onForceDelete?.(contract)}
                             className="h-8 w-8 p-0 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300"
                           >
                             <Trash2 className="h-4 w-4" />

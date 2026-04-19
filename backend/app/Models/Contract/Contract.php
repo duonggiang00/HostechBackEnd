@@ -58,6 +58,7 @@ class Contract extends Model implements HasMedia
         'document_type',
         'scan_original_filename',
         'meta',
+        'custom_content',
         // ── Termination fields ─────────────────────────────────────────────────────
         'cancellation_party',   // LANDLORD | TENANT | MUTUAL
         'cancellation_reason',  // Lý do huỷ (text tự do)

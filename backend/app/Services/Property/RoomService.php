@@ -117,7 +117,9 @@ class RoomService
 
             $assetsData = $data['assets'] ?? [];
             $mediaIds = $data['media_ids'] ?? [];
-            unset($data['assets'], $data['media_ids']);
+            $serviceIds = $data['service_ids'] ?? [];
+            $metersData = $data['meters'] ?? [];
+            unset($data['assets'], $data['media_ids'], $data['service_ids'], $data['meters']);
 
             // Auto-assign org_id from property
             $data['org_id'] = $property->org_id;
@@ -127,34 +129,18 @@ class RoomService
                 $this->validateRoomArea($property, $data['floor_id'] ?? null, (float) $data['area']);
             }
 
-            // --- AUTO-CALCULATE BASE PRICE ---
-            // If base_price is not provided or zero, use property's default price per m2
-            if ((empty($data['base_price']) || (float) $data['base_price'] === 0.0) && $property->default_rent_price_per_m2 > 0) {
-                $area = (float) ($data['area'] ?? 0);
-                if ($area > 0) {
-                    $data['base_price'] = round($property->default_rent_price_per_m2 * $area, -3); // Làm tròn đến nghìn
-                }
-            }
-            // ---------------------------------
+
 
             $room = Room::create($data);
 
-            // --- ATTACH DEFAULT SERVICES ---
-            // If No services provided, inherit from Property defaults
-            $serviceIds = $data['service_ids'] ?? [];
-            if (empty($serviceIds)) {
-                $serviceIds = $property->defaultServices()->pluck('services.id')->toArray();
-            }
+            // --- SYNC SERVICES (Before Event Dispatch) ---
             if (! empty($serviceIds)) {
-                foreach ($serviceIds as $svcId) {
-                    \App\Models\Service\RoomService::create([
-                        'room_id' => $room->id,
-                        'service_id' => $svcId,
-                        'org_id' => $room->org_id,
-                    ]);
+                $syncData = [];
+                foreach ($serviceIds as $sid) {
+                    $syncData[$sid] = ['org_id' => $room->org_id];
                 }
+                $room->services()->sync($syncData);
             }
-            // -------------------------------
 
             // Sync Media
             if (! empty($mediaIds)) {
@@ -175,28 +161,12 @@ class RoomService
                 RoomAsset::insert($assetsToInsert);
             }
 
-            // Sync Price History (bỏ qua nếu là draft)
-            if (isset($data['base_price']) && ($data['status'] ?? null) !== 'draft') {
-                RoomPrice::create([
-                    'org_id' => $room->org_id,
-                    'room_id' => $room->id,
-                    'effective_from' => now()->toDateString(),
-                    'price' => $data['base_price'],
-                    'created_by_user_id' => $performer->id,
-                ]);
-            }
+            // --- DECOUPLED: EVENT DISPATCH ---
+            // Side effects (Meters, Price History, Status History) are now handled in Listeners
+            \App\Events\Property\RoomCreated::dispatch($room, null, $performer->id);
+            // ---------------------------------
 
-            // Sync Status History (bỏ qua nếu là draft)
-            if (isset($data['status']) && $data['status'] !== 'draft') {
-                RoomStatusHistory::create([
-                    'org_id' => $room->org_id,
-                    'room_id' => $room->id,
-                    'from_status' => null,
-                    'to_status' => $data['status'],
-                    'reason' => 'Initial creation',
-                    'changed_by_user_id' => $performer->id,
-                ]);
-            }
+            return $room;
 
             return $room;
         });
@@ -217,7 +187,7 @@ class RoomService
             ], $overrides);
 
             // Inherit services if not explicitly provided
-            if (! isset($roomData['service_ids']) && $template->services->isNotEmpty()) {
+            if (! isset($overrides['service_ids']) && $template->services->isNotEmpty()) {
                 $roomData['service_ids'] = $template->services->pluck('id')->toArray();
             }
 
@@ -327,32 +297,10 @@ class RoomService
                 }
             }
 
-            // Sync Price History
-            if (isset($data['base_price']) && (float) $data['base_price'] !== (float) $oldPrice) {
-                RoomPrice::updateOrCreate(
-                    [
-                        'room_id' => $room->id,
-                        'effective_from' => now()->toDateString(),
-                    ],
-                    [
-                        'org_id' => $room->org_id,
-                        'price' => $data['base_price'],
-                        'created_by_user_id' => $performer->id,
-                    ]
-                );
-            }
-
-            // Sync Status History
-            if (isset($data['status']) && $data['status'] !== $oldStatus) {
-                RoomStatusHistory::create([
-                    'org_id' => $room->org_id,
-                    'room_id' => $room->id,
-                    'from_status' => $oldStatus,
-                    'to_status' => $data['status'],
-                    'reason' => 'Status updated',
-                    'changed_by_user_id' => $performer->id,
-                ]);
-            }
+            // --- DECOUPLED: EVENT DISPATCH ---
+            // Side effects like price/status history or cache clearing are handled in Listeners
+            \App\Events\Property\RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
+            // ---------------------------------
 
             return $room;
         });
@@ -373,7 +321,13 @@ class RoomService
             ]);
         }
 
-        return $room->delete();
+        $deleted = $room->delete();
+        
+        if ($deleted) {
+            \App\Events\Property\RoomDeleted::dispatch($room);
+        }
+
+        return $deleted;
     }
 
     public function deleteBatch(array $ids): array
@@ -535,14 +489,15 @@ class RoomService
                 } while (Room::where('property_id', $property->id)->where('code', $code)->exists());
 
                 $roomData['code'] = $code;
-                $room = Room::create($roomData);
+
+                // Sync Services from template to data
+                if ($template && $template->services->isNotEmpty()) {
+                    $roomData['service_ids'] = $template->services->pluck('id')->toArray();
+                }
+
+                $room = $this->create($roomData, $performer);
 
                 if ($template) {
-                    // Sync Services
-                    if ($template->services->isNotEmpty()) {
-                        $room->services()->sync($template->services->pluck('id')->toArray());
-                    }
-
                     // Create Assets
                     foreach ($template->assets as $tAsset) {
                         $room->assets()->create([
@@ -588,67 +543,12 @@ class RoomService
                 }
             }
 
-            $newPrice = $data['base_price'] ?? (float) $room->base_price;
-            if ($newPrice <= 0) {
-                abort(422, 'base_price must be greater than 0 to publish a room.');
-            }
-
-            $oldStatus = $room->status;
             $room->update(array_merge($data, ['status' => 'available']));
 
-            // Attach initial price
-            $room->prices()->create([
-                'org_id' => $room->org_id,
-                'price' => $data['base_price'],
-                'effective_from' => now()->toDateString(),
-                'created_by_user_id' => $performer->id,
-            ]);
 
-            // Attach services
-            if (isset($data['services'])) {
-                $existingPivot = \App\Models\Service\RoomService::where('room_id', $room->id)->get();
-                $existingServiceIds = $existingPivot->pluck('service_id')->toArray();
-
-                $toAdd = array_diff($data['services'], $existingServiceIds);
-                $toRemove = array_diff($existingServiceIds, $data['services']);
-
-                if (!empty($toRemove)) {
-                    \App\Models\Service\RoomService::where('room_id', $room->id)
-                        ->whereIn('service_id', $toRemove)
-                        ->delete();
-                }
-
-                foreach ($toAdd as $svcId) {
-                    \App\Models\Service\RoomService::create([
-                        'room_id' => $room->id,
-                        'service_id' => $svcId,
-                        'org_id' => $room->org_id,
-                    ]);
-                }
-            }
-
-            // Create meters
-            if (isset($data['meters'])) {
-                foreach ($data['meters'] as $meterData) {
-                    $room->meters()->create([
-                        'org_id' => $room->org_id,
-                        'property_id' => $room->property_id,
-                        'type' => $meterData['type'],
-                        'code' => $meterData['code'],
-                        'base_reading' => $meterData['initial_reading'] ?? 0,
-                        'is_active' => true,
-                    ]);
-                }
-            }
-
-            // Initial status history
-            $room->statusHistories()->create([
-                'org_id' => $room->org_id,
-                'from_status' => 'draft',
-                'to_status' => $room->status,
-                'reason' => 'Published from draft',
-                'changed_by_user_id' => $performer->id,
-            ]);
+            // --- DECOUPLED: EVENT DISPATCH ---
+            \App\Events\Property\RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
+            // ---------------------------------
 
             return $room;
         });

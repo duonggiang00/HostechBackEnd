@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Layers, Hash, Plus, AlertCircle } from 'lucide-react';
 import { useFloors } from '@/PropertyScope/hooks/useFloors';
 import { useBulkCreateRooms } from '../hooks/useRooms';
-import type { RoomTemplate } from '../../templates/types';
+import type { RoomTemplate } from "../../properties/templates/types";
 import { toast } from 'react-hot-toast';
 import { formatNumber } from '@/lib/utils';
 

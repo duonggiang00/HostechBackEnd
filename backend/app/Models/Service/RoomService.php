@@ -6,12 +6,14 @@ use App\Models\Concerns\MultiTenant;
 use App\Models\Property\Room;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class RoomService extends Model
+class RoomService extends Pivot
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes;
+
+    protected $table = 'room_services';
 
     protected $guarded = [];
 

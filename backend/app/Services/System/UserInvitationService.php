@@ -2,6 +2,7 @@
 
 namespace App\Services\System;
 
+use App\Models\Contract\Contract;
 use App\Models\Org\User;
 use App\Models\System\UserInvitation;
 use Carbon\Carbon;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use App\Mail\System\UserInvitationMail;
+use App\Mail\Contract\ContractInvitationMail;
 
 class UserInvitationService
 {
@@ -20,49 +22,49 @@ class UserInvitationService
         // Generate secure random token
         $data['token'] = Str::random(64);
         $data['invited_by'] = $inviter->id;
-        $data['expires_at'] = Carbon::now()->addDays(7); // Invitations valid for 7 days
+        $data['expires_at'] = Carbon::now()->addDays(7); // Lời mời có giá trị trong 7 ngày
+        $data['registered_at'] = null; // Reset trạng thái nếu mời lại
 
         $role = $data['role_name'];
 
         // Role hierarchy logic & Security checks
         if ($inviter->hasRole('Admin')) {
-            // Admin can invite anyone. If inviting Owner, org_id must be null.
             if ($role === 'Owner') {
                 $data['org_id'] = null;
             } elseif (empty($data['org_id'])) {
-                abort(422, "org_id is required when Admin invites $role");
+                abort(422, "org_id là bắt buộc khi Admin mời $role");
             }
         } elseif ($inviter->hasRole('Owner')) {
-            // Owner can only invite inside their Org
             if (in_array($role, ['Admin', 'Owner'])) {
-                abort(422, "Owner cannot invite $role");
+                abort(422, "Chủ sở hữu không thể mời $role");
             }
             $data['org_id'] = $inviter->org_id;
         } elseif ($inviter->hasRole('Manager')) {
-            // Manager can only invite Staff/Tenant in their specific properties
             if (! in_array($role, ['Staff', 'Tenant'])) {
-                abort(422, "Manager cannot invite $role");
+                abort(422, "Quản lý không thể mời $role");
             }
             $data['org_id'] = $inviter->org_id;
 
-            // Ensure requested properties are within Manager's scope
             $managerProps = $inviter->properties->pluck('id')->toArray();
             $requestedProps = $data['properties_scope'] ?? [];
 
             if (empty($requestedProps)) {
-                abort(400, 'Manager must specify property scope for the invite.');
+                abort(400, 'Quản lý phải chỉ định phạm vi bất động sản cho lời mời.');
             }
 
             if (count(array_diff($requestedProps, $managerProps)) > 0) {
-                abort(400, 'You can only invite users to properties you manage.');
+                abort(400, 'Bạn chỉ có thể mời người dùng vào các bất động sản mà bạn quản lý.');
             }
         } else {
-            abort(403, 'You do not have permission to invite users.');
+            abort(403, 'Bạn không có quyền mời người dùng.');
         }
 
-        $invitation = UserInvitation::create($data);
+        // Sử dụng updateOrCreate để tránh lỗi Duplicate Entry cho email chưa đăng ký
+        $invitation = UserInvitation::updateOrCreate(
+            ['email' => $data['email']],
+            $data
+        );
 
-        // Fire Job/Event to send email with Magic Link to $invitation->email
         Mail::to($invitation->email)->queue(new UserInvitationMail($invitation));
 
         return $invitation;
@@ -73,13 +75,18 @@ class UserInvitationService
      */
     public function validateToken(string $token): UserInvitation
     {
-        $invitation = UserInvitation::where('token', $token)
-            ->whereNull('registered_at')
-            ->where('expires_at', '>', Carbon::now())
-            ->first();
+        $invitation = UserInvitation::where('token', $token)->first();
 
         if (! $invitation) {
-            abort(400, 'This invitation token is invalid or has expired.');
+            abort(400, 'Mã mời không hợp lệ hoặc không tồn tại.');
+        }
+
+        if ($invitation->registered_at) {
+            abort(400, 'Lời mời này đã được sử dụng để đăng ký tài khoản. Vui lòng đăng nhập.');
+        }
+
+        if ($invitation->expires_at && $invitation->expires_at->isPast()) {
+            abort(400, 'Liên kết mời đã hết hạn. Vui lòng liên hệ người quản lý để gửi lại lời mời mới.');
         }
 
         return $invitation;
@@ -133,5 +140,51 @@ class UserInvitationService
             DB::rollBack();
             throw $e;
         }
+    }
+
+    /**
+     * Create an invitation specifically for a contract tenant (Path B).
+     *
+     * Unlike the generic createInvite(), this bypasses role-hierarchy checks because
+     * it is issued programmatically during contract creation by a Manager/Owner.
+     *
+     * The invitation is stored in user_invitations with:
+     *  - role_name = 'Tenant'
+     *  - properties_scope = [contract->property_id]
+     *  - meta stored in role_name compound field (kept simple: no new columns)
+     *
+     * When the prospective tenant registers via the link, acceptToken() links them to
+     * the correct property automatically. The ContractMember will be updated
+     * (user_id backfilled + status changed to PENDING) via a separate command/listener.
+     */
+    public function createContractInvite(
+        User     $inviter,
+        string   $email,
+        Contract $contract,
+        array    $memberData = [],
+    ): UserInvitation {
+        $data = [
+            'token'             => Str::random(64),
+            'role_name'         => 'Tenant',
+            'org_id'            => $contract->org_id,
+            'properties_scope'  => [$contract->property_id],
+            'invited_by'        => $inviter->id,
+            'expires_at'        => Carbon::now()->addDays(72 / 24),
+            'registered_at'     => null, // Đảm bảo lời mời có thể sử dụng lại nếu mời lại
+        ];
+
+        // Tránh lỗi Duplicate Entry bằng cách cập nhật bản ghi cũ nếu có
+        $invitation = UserInvitation::updateOrCreate(
+            ['email' => $email],
+            $data
+        );
+
+        Mail::to($email)->queue(new ContractInvitationMail(
+            contract: $contract,
+            inviteToken: $invitation->token,
+            memberData: array_merge($memberData, ['email' => $email]),
+        ));
+
+        return $invitation;
     }
 }

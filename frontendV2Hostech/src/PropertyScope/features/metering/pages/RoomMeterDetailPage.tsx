@@ -277,7 +277,7 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
         {type === 'ELECTRIC' ? <Zap className="w-12 h-12 text-slate-300" /> : <Droplet className="w-12 h-12 text-slate-300" />}
         <p className="mt-4 text-slate-500 font-medium">Chưa định cấu hình Đồng hồ {type === 'ELECTRIC' ? 'Điện' : 'Nước'}</p>
         <Link
-          to={`/properties/${propertyId}/services/create`}
+          to={`/properties/${propertyId}/templates`}
           className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-all shadow-sm active:scale-95"
         >
           <Plus className="w-5 h-5" />

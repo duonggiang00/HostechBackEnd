@@ -31,7 +31,8 @@ export const useContracts = (params?: ContractQueryParams, options?: Partial<Use
     },
     ...options,
     enabled: options?.enabled !== undefined ? options.enabled : true,
-    staleTime: options?.staleTime ?? 60 * 1000, // 1 minute stale time for the list
+    staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes stale time for the list
+    gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes cache time
     placeholderData: keepPreviousData,
   });
 };
@@ -62,6 +63,8 @@ export const useContract = (id?: string) => {
       return contractsApi.getContract(id, signal);
     },
     enabled: isUuid(id),
+    staleTime: 10 * 60 * 1000, // 10 minutes stale time for contract details
+    gcTime: 15 * 60 * 1000, // 15 minutes cache time
   });
 };
 
@@ -86,6 +89,7 @@ export const useContractStatusHistories = (id?: string) => {
       return contractsApi.getStatusHistories(id);
     },
     enabled: isUuid(id),
+    staleTime: 60 * 1000, // 1 minute stale time
   });
 };
 
@@ -225,6 +229,26 @@ export const useContractActions = () => {
     },
   });
 
+  /** DELETE /api/contracts/{id}/members/{memberId} */
+  const removeContractMember = useMutation({
+    mutationFn: ({ contractId, memberId }: { contractId: string, memberId: string }) => 
+      contractsApi.removeContractMember(contractId, memberId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.contractId] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    },
+  });
+
+  /** POST /api/contracts/{id}/members/{memberId}/approve */
+  const approveContractMember = useMutation({
+    mutationFn: ({ contractId, memberId }: { contractId: string, memberId: string }) => 
+      contractsApi.approveContractMember(contractId, memberId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.contractId] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    },
+  });
+
   return {
     createContract,
     updateContract,
@@ -241,5 +265,7 @@ export const useContractActions = () => {
     generateDocument,
     downloadDocument,
     addContractMember,
+    removeContractMember,
+    approveContractMember,
   };
 };

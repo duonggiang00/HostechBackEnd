@@ -30,6 +30,33 @@ export const authApi = {
     return response.data;
   },
 
+  /**
+   * Register a new user from an invitation link (both system invitations and contract invitations).
+   * Calls Fortify POST /auth/register → CreateNewUser action.
+   *
+   * This is the ONLY correct path for invitation-based registration because CreateNewUser
+   * performs the critical step of backfilling ContractMember.user_id for contract tenants
+   * (PENDING_INVITE → PENDING), which /system/invitations/accept does NOT do.
+   */
+  registerFromInvitation: async (data: {
+    invite_token: string;
+    email: string;
+    full_name: string;
+    password: string;
+    password_confirmation: string;
+    phone?: string;
+    org_name?: string;
+    identity_number?: string;
+    identity_issued_date?: string;
+    identity_issued_place?: string;
+    date_of_birth?: string;
+    address?: string;
+    license_plate?: string;
+  }) => {
+    const response = await apiClient.post('/auth/register', data);
+    return response.data;
+  },
+
   /** GET /auth/me — Returns full user object with properties[] for Manager/Staff */
   getMe: async (): Promise<AuthUser> => {
     const response = await apiClient.get('/auth/me');

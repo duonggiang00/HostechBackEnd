@@ -18,6 +18,8 @@ class Payment extends Model
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
+    public $status_history_note;
+
     public $incrementing = false;
 
     protected $keyType = 'string';

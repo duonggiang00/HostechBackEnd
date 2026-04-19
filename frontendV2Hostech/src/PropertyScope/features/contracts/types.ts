@@ -49,6 +49,8 @@ export interface ContractMember {
   full_name: string;
   phone: string | null;
   identity_number: string | null;
+  date_of_birth: string | null;
+  license_plate: string | null;
   role: string;
   status: ContractMemberStatus;
   is_primary: boolean;
@@ -84,6 +86,7 @@ export interface Contract {
   join_code_revoked_at: string | null;
   signed_at: string | null;
   terminated_at: string | null;
+  custom_content: string | null;
 
   // Termination fields
   cancellation_party?: ContractCancellationParty | null;
@@ -99,6 +102,8 @@ export interface Contract {
   created_by_user_id: string | null;
   meta: Record<string, any> | null;
   document_url: string | null;
+  document_path: string | null;
+  document_type: 'PDF' | 'DOCX' | null;
   signed_document_url: string | null;
   initial_invoice?: {
     id: string;
@@ -158,6 +163,8 @@ export interface CreateContractMemberPayload {
   full_name?: string;
   phone?: string;
   identity_number?: string;
+  date_of_birth?: string;
+  license_plate?: string;
   role?: ContractMemberRole;
   is_primary?: boolean;
   joined_at?: string;
@@ -174,6 +181,7 @@ export interface CreateContractPayload {
   due_day?: number;
   cutoff_day?: number;
   status?: ContractStatus;
+  custom_content?: string;
   members?: CreateContractMemberPayload[];
   meta?: Record<string, any>;
 }

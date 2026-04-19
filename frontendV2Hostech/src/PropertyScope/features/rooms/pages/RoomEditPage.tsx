@@ -1,10 +1,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
-import RoomForm from '@/PropertyScope/features/rooms/components/RoomForm';
+import RoomWizard from '@/PropertyScope/features/rooms/components/RoomWizard';
 import { useRoom } from '@/PropertyScope/features/rooms/hooks/useRooms';
 
 export default function RoomEditPage() {
-  const { propertyId, floorId, roomId } = useParams();
+  const { propertyId, roomId } = useParams();
   const navigate = useNavigate();
 
   const { data: room, isLoading, error } = useRoom(roomId);
@@ -30,7 +30,7 @@ export default function RoomEditPage() {
   }
 
   return (
-    <div className="space-y-8 pb-12 max-w-4xl mx-auto">
+    <div className="space-y-8 pb-12 max-w-5xl mx-auto">
       <div className="flex items-center gap-4">
         <button 
           onClick={() => navigate(-1)}
@@ -40,19 +40,17 @@ export default function RoomEditPage() {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">Chỉnh sửa {room.name}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cập nhật thông tin chi tiết, quy định, giá cả hoặc hình ảnh</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cập nhật thông tin chi tiết, quy định, giá cả hoặc hình ảnh qua từng bước</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
-        <RoomForm 
-          initialData={room}
-          propertyId={propertyId} 
-          floorId={floorId || room.floor_id}
-          onSuccess={() => navigate(-1)}
-          onCancel={() => navigate(-1)}
-        />
-      </div>
+      <RoomWizard 
+        initialData={room} 
+        propertyId={propertyId!}
+        floorId={room.floor_id || null}
+        onSuccess={() => navigate(`/properties/${propertyId}/rooms/${roomId}`)}
+        onCancel={() => navigate(-1)}
+      />
     </div>
   );
 }

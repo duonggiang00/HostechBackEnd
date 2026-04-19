@@ -3,7 +3,7 @@ import { ChevronDown, ChevronUp, Eye, LogOut, Settings, User } from 'lucide-reac
 import { useNavigate } from 'react-router-dom';
 
 interface SidebarAccountMenuProps {
-  profilePath: string;
+  profilePath?: string;
   userName?: string | null;
   role?: string | null;
   onLogout: () => void;
@@ -35,7 +35,9 @@ export default function SidebarAccountMenu({
   }, []);
 
   const handleNavigateProfile = () => {
-    navigate(profilePath);
+    if (profilePath) {
+      navigate(profilePath);
+    }
     setOpen(false);
     onActionComplete?.();
   };

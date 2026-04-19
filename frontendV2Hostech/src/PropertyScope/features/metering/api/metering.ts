@@ -233,6 +233,40 @@ export const meteringApi = {
   },
 
   /**
+   * Duyệt hàng loạt chỉ số (Gửi mảng ID).
+   */
+  bulkApproveReadings: async (readingIds: string[]) => {
+    const response = await apiClient.post('/meter-readings/bulk-approve', {
+      reading_ids: readingIds,
+    });
+    console.log(`📡 API: POST bulk-approve:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Từ chối hàng loạt chỉ số.
+   */
+  bulkRejectReadings: async (readingIds: string[], reason?: string) => {
+    const response = await apiClient.post('/meter-readings/bulk-reject', {
+      reading_ids: readingIds,
+      rejection_reason: reason,
+    });
+    console.log(`📡 API: POST bulk-reject:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Cập nhật hàng loạt (Sửa lỗi/Resubmit).
+   */
+  bulkUpdateReadings: async (updates: { id: string; reading_value?: number; period_start?: string; period_end?: string; status?: string }[]) => {
+    const response = await apiClient.patch('/meter-readings/bulk-update', {
+      updates,
+    });
+    console.log(`📡 API: PATCH bulk-update:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
    * Lấy readings (Toàn cục) - Hỗ trợ lọc theo property_id, status.
    */
   getGlobalReadings: async (params?: {
@@ -307,28 +341,7 @@ export const meteringApi = {
     return { data: allReadings, meta: { total: allReadings.length } };
   },
 
-  // Duyệt nhiều chốt số cùng lúc (gọi từng cái song song)
-  bulkApproveReadings: async (items: { meterId: string; readingId: string }[]) => {
-    const results = await Promise.allSettled(
-      items.map(({ meterId, readingId }) =>
-        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'APPROVED' })
-      )
-    );
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
-    return { succeeded, failed };
-  },
 
-  bulkRejectReadings: async (items: { meterId: string; readingId: string }[], reason?: string) => {
-    const results = await Promise.allSettled(
-      items.map(({ meterId, readingId }) =>
-        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'REJECTED', meta: { rejection_reason: reason } })
-      )
-    );
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
-    return { succeeded, failed };
-  },
 
   // Legacy method
   addReading: async (meterId: string, reading_value: number, reading_date: string, photo?: File) => {

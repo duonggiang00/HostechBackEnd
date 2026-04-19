@@ -1,5 +1,5 @@
-import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { Loader2 } from 'lucide-react';
@@ -8,71 +8,17 @@ import { Loader2 } from 'lucide-react';
 import OrgScopeLayout from '@/OrgScope/layouts/OrgScopeLayout';
 import PropertyScopeLayout from '@/PropertyScope/layouts/PropertyScopeLayout';
 import TenantLayout from '@/Tenant/layouts/TenantLayout';
+import SelectionLayout from '@/shared/layouts/SelectionLayout';
 
 // Public & Auth Pages
 import LoginPage from '@/shared/features/auth/components/LoginPage';
 import InvitationSetupPage from '@/shared/features/auth/components/InvitationSetupPage';
-
-// Admin Pages
-import PropertiesPage from '@/OrgScope/features/properties/pages/PropertiesPage';
-import PropertyDetailPage from '@/PropertyScope/features/properties/pages/PropertyDetailPage';
-import { TemplatesPage } from '@/PropertyScope/features/templates/pages/TemplatesPage';
-import { PropertyInfoView } from '@/PropertyScope/features/templates/components/PropertyInfoView';
-import { RoomTemplateList } from '@/PropertyScope/features/templates/components/RoomTemplateList';
-// import RoomListPage from '@/PropertyScope/features/rooms/pages/RoomListPage';
-import RoomCreatePage from '@/PropertyScope/features/rooms/pages/RoomCreatePage';
-import { PropertyInvoicesPage } from '@/PropertyScope/features/billing/pages/PropertyInvoicesPage';
-import { ExpensesPage } from '@/PropertyScope/features/billing/pages/ExpensesPage';
-import RoomEditPage from '@/PropertyScope/features/rooms/pages/RoomEditPage';
-import RoomDetailPage from '@/PropertyScope/features/rooms/pages/RoomDetailPage';
-import { RoomTemplateCreatePage } from '@/PropertyScope/features/rooms/pages/RoomTemplateCreatePage';
-import InvoicesPage from '@/OrgScope/features/finance/pages/InvoicesPage';
-import FinanceDashboard from '@/OrgScope/features/finance/pages/FinanceDashboard';
-import StaffPage from '@/OrgScope/features/staff/pages/StaffPage';
-import PropertyForm from '@/OrgScope/features/properties/pages/PropertyForm';
-import MeterListPage from '@/PropertyScope/features/metering/pages/MeterListPage';
-import MeterDetailPage from '@/PropertyScope/features/metering/pages/MeterDetailPage';
-import QuickReadingPage from '@/PropertyScope/features/metering/pages/QuickReadingPage';
-import RoomMeterDetailPage from '@/PropertyScope/features/metering/pages/RoomMeterDetailPage';
-import ProfilePage from '@/shared/features/profile/pages/ProfilePage';
-import ServiceListPage from '@/PropertyScope/features/services/pages/ServiceListPage';
-const ServiceFormPage = lazy(() => import('@/PropertyScope/features/services/pages/ServiceFormPage'));
-const ContractListPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractListPage'));
-const ContractCreatePage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractCreatePage'));
-const ContractDetailPage = lazy(() => import('@/PropertyScope/features/contracts/pages/ContractDetailPage'));
-const PropertyUsersPage = lazy(() => import('@/PropertyScope/features/users/pages/PropertyUsersPage'));
-const CreateUserPage = lazy(() => import('@/PropertyScope/features/users/pages/CreateUserPage'));
-const UserDetailPage = lazy(() => import('@/PropertyScope/features/users/pages/UserDetailPage'));
-const TicketListPage = lazy(() => import('@/PropertyScope/features/tickets/pages/TicketListPage'));
-// const BuildingOverviewPage = lazy(() => import('@/PropertyScope/features/building-overview/pages/BuildingOverviewPage'));
-
-// Tenant Pages
-import TenantDashboard from '@/Tenant/features/dashboard/pages/TenantDashboard';
-import TenantRequestsPage from '@/Tenant/features/requests/pages/TenantRequestsPage';
-import TenantMessagingPage from '@/Tenant/features/messaging/pages/TenantMessagingPage';
-import TenantBillingPage from '@/Tenant/features/billing/pages/TenantBillingPage';
-const TenantVnpayReturnPage = lazy(() => import('@/Tenant/features/billing/pages/TenantVnpayReturnPage'));
-const TenantPendingContractsPage = lazy(() => import('@/Tenant/features/contracts/pages/PendingContractsPage'));
-const TenantContractDetailPage = lazy(() => import('@/Tenant/features/contracts/pages/TenantContractDetailPage'));
-const TenantBuildingOverviewPage = lazy(() => import('@/Tenant/features/building-overview/pages/TenantBuildingOverviewPage'));
-
-
-import SelectionLayout from '@/shared/layouts/SelectionLayout';
 import PropertySelectionPage from '@/shared/features/properties/pages/PropertySelectionPage';
 
-/**
- * Wrapper components for TemplatesPage nested routes.
- * Needed because RouteObject components can't call useParams at module level.
- */
-function PropertyInfoViewWrapper() {
-  const { propertyId } = useParams<{ propertyId: string }>();
-  return <PropertyInfoView propertyId={propertyId ?? ''} />;
-}
-
-function RoomTemplateListWrapper() {
-  const { propertyId } = useParams<{ propertyId: string }>();
-  return <RoomTemplateList propertyId={propertyId ?? ''} />;
-}
+// Modular Routes
+import { orgScopeRoutes } from '@/OrgScope/routes';
+import { propertyScopeRoutes } from '@/PropertyScope/routes';
+import { tenantScopeRoutes } from '@/Tenant/routes';
 
 /**
  * 1. ProtectedRoute: Checks if user is logged in, and if they hold an allowed role.
@@ -102,7 +48,6 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode, allow
 
 /**
  * 2. RootRedirect: The primary routing decision maker.
- * Analyzes the user's role and redirects them to their primary layout/dashboard.
  */
 const RootRedirect = () => {
   const { user, isAuthenticated, isLoading } = useAuthStore();
@@ -126,21 +71,12 @@ const RootRedirect = () => {
     
     case 'Manager':
     case 'Staff': {
-      // 1. If user has exactly one assigned property, jump straight to its dashboard (Property Scope)
-      // But if they are STAFF with "full power", they might want to go to ORG dashboard too.
-      // Let's stick to the current logic: if they have an org and no specific prop, go to org.
-      
       if (user.properties && user.properties.length === 1) {
         return <Navigate to={`/properties/${user.properties[0].id}/dashboard`} replace />;
       }
-      
-      // 2. If user has multiple properties or no specific assignment (but has an org),
-      // navigate to the neutral property selection layout.
       if (user.org_id) {
          return <Navigate to="/select-property" replace />;
       }
-
-      // Fallback
       return <Navigate to="/unauthorized" replace />;
     }
 
@@ -188,8 +124,7 @@ export default function AppRoutes() {
           } 
         />
 
-
-        {/* 2. Organization Scope Layout — Owner & Admin ONLY (Managers/Staff use Selection Scope) */}
+        {/* 2. Organization Scope Layout */}
         <Route 
           path="/org"
           element={
@@ -198,18 +133,22 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<FinanceDashboard />} />
-          <Route path="properties" element={<PropertiesPage />} />
-          <Route path="properties/add" element={<PropertyForm />} />
-          <Route path="properties/:id/edit" element={<PropertyForm />} />
-          <Route path="staff" element={<StaffPage />} />
-          <Route path="finance" element={<FinanceDashboard />} />
-          <Route path="invoices" element={<InvoicesPage />} />
-          <Route path="profile" element={<ProfilePage />} />
+          {orgScopeRoutes.map((route, idx) => {
+            const children = route.children?.map((child, cIdx) => (
+              child.index ? 
+                <Route key={cIdx} index element={child.element} /> : 
+                <Route key={cIdx} path={child.path} element={child.element} />
+            ));
+
+            return route.index ? (
+              <Route key={idx} index element={route.element} />
+            ) : (
+              <Route key={idx} path={route.path} element={route.element}>{children}</Route>
+            );
+          })}
         </Route>
 
-        {/* 3. Property Scope Layout — Admin, Owner, Manager, Staff */}
+        {/* 3. Property Scope Layout */}
         <Route 
           path="/properties/:propertyId"
           element={
@@ -218,41 +157,19 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-           <Route path="dashboard" element={<PropertyDetailPage defaultTab="dashboard" />} />
-          <Route path="details" element={<Navigate to="../templates/info" replace />} />
-          <Route path="settings" element={<Navigate to="../templates/info" replace />} />
-          <Route path="rooms" element={<PropertyDetailPage defaultTab="rooms" />} />
-          <Route path="rooms/create" element={<RoomCreatePage />} />
-          <Route path="rooms/templates/create" element={<RoomTemplateCreatePage />} />
-          <Route path="rooms/:roomId" element={<RoomDetailPage />} />
-          <Route path="rooms/:roomId/edit" element={<RoomEditPage />} />
-          <Route path="meters" element={<MeterListPage />} />
-          <Route path="meters/quick" element={<QuickReadingPage />} />
-          <Route path="meters/quick-reading" element={<QuickReadingPage />} />
-          <Route path="meters/room/:roomId" element={<RoomMeterDetailPage />} />
-          <Route path="meters/:meterId" element={<MeterDetailPage />} />
-          <Route path="contracts" element={<ContractListPage />} />
-          <Route path="contracts/create" element={<ContractCreatePage />} />
-          <Route path="contracts/:contractId" element={<ContractDetailPage />} />
-          <Route path="billing" element={<PropertyInvoicesPage />} />
-          <Route path="invoices" element={<PropertyInvoicesPage />} />
-          <Route path="expenses" element={<ExpensesPage />} />
-          <Route path="tickets" element={<TicketListPage />} />
-          <Route path="users" element={<PropertyUsersPage />} />
-          <Route path="users/create" element={<CreateUserPage />} />
-          <Route path="users/:userId" element={<UserDetailPage />} />
-          <Route path="services" element={<ServiceListPage />} />
-          <Route path="services/create" element={<ServiceFormPage />} />
-          <Route path="services/:serviceId/edit" element={<ServiceFormPage />} />
-          <Route path="templates" element={<TemplatesPage />}>
-            <Route index element={<Navigate to="info" replace />} />
-            <Route path="info" element={<PropertyInfoViewWrapper />} />
-            <Route path="services" element={<ServiceListPage hideHeader={true} />} />
-            <Route path="rooms" element={<RoomTemplateListWrapper />} />
-          </Route>
-          <Route path="building-view" element={<PropertyDetailPage defaultTab="layout" />} />
-          <Route path="profile" element={<ProfilePage />} />
+          {propertyScopeRoutes.map((route, idx) => {
+            const children = route.children?.map((child, cIdx) => (
+              child.index ? 
+                <Route key={cIdx} index element={child.element} /> : 
+                <Route key={cIdx} path={child.path} element={child.element} />
+            ));
+
+            return route.index ? (
+              <Route key={idx} index element={route.element} />
+            ) : (
+              <Route key={idx} path={route.path} element={route.element}>{children}</Route>
+            );
+          })}
         </Route>
 
         {/* --- Tenant App Portal --- */}
@@ -266,34 +183,35 @@ export default function AppRoutes() {
             </ProtectedRoute>
           } 
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<TenantDashboard />} />
-          <Route path="requests" element={<TenantRequestsPage />} />
-          <Route path="messages" element={<TenantMessagingPage />} />
-          <Route path="billing" element={<TenantBillingPage />} />
-          <Route path="contracts/pending" element={<TenantPendingContractsPage />} />
-          <Route path="contracts/:id" element={<TenantContractDetailPage />} />
-          <Route path="building-overview" element={<TenantBuildingOverviewPage />} />
+          {tenantScopeRoutes.map((route, idx) => {
+            const children = route.children?.map((child, cIdx) => (
+              child.index ? 
+                <Route key={cIdx} index element={child.element} /> : 
+                <Route key={cIdx} path={child.path} element={child.element} />
+            ));
 
-          <Route path="news" element={
-            <div className="p-8 text-center text-slate-400">
-              <p className="text-lg font-bold">Thông báo</p>
-              <p className="text-sm">Tính năng đang được phát triển và sẽ sớm ra mắt.</p>
-            </div>
-          } />
-          <Route path="profile" element={<ProfilePage />} />
+            return route.index ? (
+              <Route key={idx} index element={route.element} />
+            ) : (
+              <Route key={idx} path={route.path} element={route.element}>{children}</Route>
+            );
+          })}
         </Route>
 
+        {/* Special case: VNPAY return needs to be outside /app but within TenantLayout in index.tsx logic */}
         <Route
           path="/payment/vnpay/return"
           element={
             <ProtectedRoute allowedRoles={['Tenant']}>
               <TenantLayout>
-                <TenantVnpayReturnPage />
+                <Outlet />
               </TenantLayout>
             </ProtectedRoute>
           }
-        />
+        >
+           {/* Fallback to Tenant scope routes or direct mapping */}
+           <Route index element={<Navigate to="/app/billing/vnpay-return" replace />} />
+        </Route>
 
         {/* --- Fallback Route --- */}
         <Route path="*" element={<RootRedirect />} />

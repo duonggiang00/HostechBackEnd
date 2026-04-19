@@ -17,11 +17,12 @@ class Org extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'timezone', 'currency'];
+    protected $fillable = ['id', 'name', 'phone', 'email', 'address', 'timezone', 'currency', 'bank_accounts'];
 
     protected function casts(): array
     {
         return [
+            'bank_accounts' => 'array',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',

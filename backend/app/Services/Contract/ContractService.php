@@ -6,8 +6,10 @@ use App\Enums\ContractStatus;
 use App\Enums\ContractCancellationParty;
 use App\Enums\DepositStatus;
 use App\Enums\InvoiceItemType;
+use App\Enums\PenaltyRuleType;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Finance\PenaltyRule;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
 use App\Services\Invoice\InvoiceService;
@@ -205,19 +207,19 @@ class ContractService
 
             if ($property && $user?->org_id && $property->org_id !== $user->org_id) {
                 throw ValidationException::withMessages([
-                    'property_id' => 'Ban khong the tao hop dong ngoai to chuc hien tai.',
+                    'property_id' => 'Bạn không thể tạo hợp đồng ngoài tổ chức hiện tại.',
                 ]);
             }
 
             if ($property && $room && $room->property_id !== $property->id) {
                 throw ValidationException::withMessages([
-                    'room_id' => 'Phong khong thuoc bat dong san da chon.',
+                    'room_id' => 'Phòng không thuộc bất động sản đã chọn.',
                 ]);
             }
 
             if ($room && $room->status === 'maintenance') {
                 throw ValidationException::withMessages([
-                    'room_id' => 'Phong dang bao tri, khong the tao hop dong moi.',
+                    'room_id' => 'Phòng đang bảo trì, không thể tạo hợp đồng mới.',
                 ]);
             }
 
@@ -225,9 +227,9 @@ class ContractService
             if ($roomId && $startDate) {
                 $overlap = $this->checkOverlap($roomId, $startDate, $endDate);
                 if ($overlap) {
-                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vo thoi han)");
+                    $overlapDate = $overlap->start_date . ($overlap->end_date ? " - " . $overlap->end_date : " (Vô thời hạn)");
                     throw ValidationException::withMessages([
-                        'room_id' => "Phong nay da co hop dong trung lap trong khoang thoi gian nay ($overlapDate).",
+                        'room_id' => "Phòng này đã có hợp đồng trùng lặp trong khoảng thời gian này ($overlapDate).",
                     ]);
                 }
             }
@@ -237,7 +239,7 @@ class ContractService
                     $contractData['billing_cycle'] ?? $property->default_billing_cycle ?? 1
                 );
                 $contractData['due_day'] = $contractData['due_day'] ?? $property->default_due_day ?? 5;
-                $contractData['cutoff_day'] = min(($contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 25), 25);
+                $contractData['cutoff_day'] = $contractData['cutoff_day'] ?? $property->default_cutoff_day ?? 25;
 
                 // If rent_price not provided, use Room's base_price or Property default
                 if (empty($contractData['rent_price'])) {
@@ -254,19 +256,11 @@ class ContractService
 
             if ((float) ($contractData['rent_price'] ?? 0) <= 0) {
                 throw ValidationException::withMessages([
-                    'rent_price' => 'Gia thue phai lon hon 0 sau khi ap dung mac dinh cua phong/toa nha.',
+                    'rent_price' => 'Giá thuê phải lớn hơn 0 sau khi áp dụng mặc định của phòng/tòa nhà.',
                 ]);
             }
 
-            if (
-                ($contractData['cutoff_day'] ?? null) !== null
-                && ($contractData['due_day'] ?? null) !== null
-                && (int) $contractData['cutoff_day'] > (int) $contractData['due_day']
-            ) {
-                throw ValidationException::withMessages([
-                    'cutoff_day' => 'Ngay chot so khong duoc sau han nop.',
-                ]);
-            }
+            // Removed cutoff_day > due_day check to allow flexible billing patterns (e.g., prepaid/postpaid)
 
             $this->ensureEndDateMeetsBillingCycle(
                 $contractData['start_date'] ?? null,
@@ -307,23 +301,18 @@ class ContractService
 
             if ($primaryCount !== 1) {
                 throw ValidationException::withMessages([
-                    'members' => 'Hop dong phai co dung 1 nguoi thue chinh.',
+                    'members' => 'Hợp đồng phải có đúng 1 người thuê chính.',
                 ]);
             }
 
             if (isset($data['members']) && is_array($data['members'])) {
                 foreach ($data['members'] as $memberData) {
-                    // Member có user_id → Tenant cần ký → status PENDING
-                    // Member không có user_id → khai báo thủ công → status APPROVED
-                    $memberStatus = 'PENDING';
+                    $member = $this->addMember($contract, $memberData, $user);
 
-                    if ($memberStatus === 'PENDING') {
+                    // Contract needs signature if any member is PENDING or PENDING_INVITE
+                    if (in_array($member->status, ['PENDING', 'PENDING_INVITE'])) {
                         $hasPendingTenant = true;
                     }
-
-                    $this->addMember($contract, array_merge($memberData, [
-                        'status' => $memberData['status'] ?? $memberStatus,
-                    ]), $user);
                 }
             }
 
@@ -370,7 +359,7 @@ class ContractService
             }
 
             if (array_key_exists('cutoff_day', $data)) {
-                $data['cutoff_day'] = min((int) $data['cutoff_day'], 25);
+                $data['cutoff_day'] = (int) $data['cutoff_day'];
             }
 
             if (array_key_exists('start_date', $data) || array_key_exists('billing_cycle', $data)) {
@@ -466,21 +455,14 @@ class ContractService
             $imagePath = \Illuminate\Support\Facades\Storage::disk('local')->path($storageFilePath);
 
             // Re-generate contract document to include the signature image
-            $extraData = [$signatureKey => $imagePath];
-
-            // Đọc chữ ký của bên còn lại nếu có để chèn đồng thời
-            $otherRole = $isManager ? 'tenant' : 'manager';
-            $otherKey = $isManager ? 'signature_tenant' : 'signature_landlord';
-            $existingFiles = \Illuminate\Support\Facades\Storage::disk('local')->files('contracts/signatures');
-            foreach ($existingFiles as $file) {
-                if (str_starts_with(basename($file), 'signature_' . $otherRole . '_' . $contract->id . '-')) {
-                    $extraData[$otherKey] = \Illuminate\Support\Facades\Storage::disk('local')->path($file);
-                    break;
-                }
-            }
-
             $contractDocService = app(ContractDocumentService::class);
-            $contractDocService->generateDocument($contract, $extraData);
+            $docPath = $contractDocService->generateDocument($contract);
+            
+            $ext = pathinfo($docPath, PATHINFO_EXTENSION);
+            $contract->update([
+                'document_path' => $docPath,
+                'document_type' => strtoupper($ext),
+            ]);
 
             // Nếu người thuê ký thì mới gọi Accept Signature để xác nhận
             if (!$isManager) {
@@ -532,6 +514,21 @@ class ContractService
                     'status' => ContractStatus::PENDING_PAYMENT,
                     'signed_at' => now(),
                 ]);
+
+                // 4. Generate Final Document with Signatures
+                try {
+                    $documentService = app(\App\Services\Contract\ContractDocumentService::class);
+                    $docPath = $documentService->generateDocument($contract);
+                    
+                    $ext = pathinfo($docPath, PATHINFO_EXTENSION);
+                    $contract->update([
+                        'document_path' => $docPath,
+                        'document_type' => strtoupper($ext),
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to auto-generate contract document after signature: ' . $e->getMessage());
+                    // Don't fail the transaction, we can regenerate later
+                }
             }
 
             return true;
@@ -596,7 +593,7 @@ class ContractService
         return \App\Models\Property\Room::where('property_id', $contract->property_id)
             ->where('status', 'available')
             ->where('id', '!=', $contract->room_id)
-            ->select(['id', 'code', 'name', 'type', 'area', 'base_price', 'floor_number', 'capacity'])
+            ->select(['id', 'code', 'name', 'area', 'base_price', 'floor_number', 'capacity'])
             ->get();
     }
 
@@ -630,31 +627,66 @@ class ContractService
     }
 
     /**
-     * General Add Member logic.
-     * Status defaults to APPROVED for Managers, PENDING for others (Tenants).
+     * General Add Member logic — 3 paths based on identity input.
+     *
+     * PATH A — user_id provided: link existing account, status=PENDING (needs e-signature).
+     * PATH B — email provided (no user_id): look up account by email;
+     *          found → link + notify via socket; not found → create UserInvitation + send email.
+     * PATH C — no user_id, no email: manual declaration (manager vouches), status=APPROVED.
      */
     public function addMember(Contract $contract, array $memberData, ?User $performer = null): ContractMember
     {
-        // 1. Resolve User Details
-        if (empty($memberData['user_id'])) {
-            throw new \InvalidArgumentException('Chỉ được thêm cư dân đã có tài khoản vào hợp đồng.');
+        $resolvedUser = null;
+        $defaultStatus = 'APPROVED'; // PATH C baseline
+
+        // ── PATH A: user_id provided ──────────────────────────────────────────
+        if (!empty($memberData['user_id'])) {
+            $resolvedUser = User::find($memberData['user_id']);
+            if (!$resolvedUser) {
+                throw new \InvalidArgumentException('Không tìm thấy tài khoản cư dân.');
+            }
+            $defaultStatus = 'PENDING';
+        }
+        // ── PATH B: email provided, no user_id ───────────────────────────────
+        elseif (!empty($memberData['email'])) {
+            $resolvedUser = User::where('email', $memberData['email'])->first();
+
+            if ($resolvedUser) {
+                // Account exists → link and require signature
+                $memberData['user_id'] = $resolvedUser->id;
+                $defaultStatus = 'PENDING';
+            } else {
+                // Account does not exist → create a UserInvitation
+                $defaultStatus = 'PENDING_INVITE';
+
+                if ($performer) {
+                    /** @var \App\Services\System\UserInvitationService $invitationService */
+                    $invitationService = app(\App\Services\System\UserInvitationService::class);
+
+                    $invitationService->createContractInvite(
+                        inviter: $performer,
+                        email: $memberData['email'],
+                        contract: $contract,
+                        memberData: $memberData,
+                    );
+                }
+            }
+        }
+        // ── PATH C: no user_id, no email → manual declaration ─────────────────
+        // $defaultStatus is already 'APPROVED'
+
+        // Merge user profile into snapshot (PATH A or B with existing user)
+        if ($resolvedUser) {
+            $memberData['full_name']       = $memberData['full_name'] ?? $resolvedUser->full_name;
+            $memberData['phone']           = $memberData['phone'] ?? $resolvedUser->phone;
+            $memberData['identity_number'] = $memberData['identity_number'] ?? $resolvedUser->identity_number;
+            $memberData['date_of_birth']   = $memberData['date_of_birth'] ?? $resolvedUser->date_of_birth;
+            $memberData['license_plate']   = $memberData['license_plate'] ?? $resolvedUser->license_plate;
         }
 
-        $user = User::find($memberData['user_id']);
-        if (!$user) {
-            throw new \InvalidArgumentException('Không tìm thấy tài khoản cư dân.');
-        }
+        $memberData['status'] ??= $defaultStatus;
 
-        $memberData['full_name'] = $memberData['full_name'] ?? $user->full_name;
-        $memberData['phone'] = $memberData['phone'] ?? $user->phone;
-        $memberData['identity_number'] = $memberData['identity_number'] ?? $user->identity_number;
-
-        // 2. Intelligent Status Mapping
-        if (!isset($memberData['status'])) {
-            $memberData['status'] = 'PENDING';
-        }
-
-        // 3. Date Handling
+        // Date handling
         $joinedAt = null;
         $signedAt = null;
         if ($memberData['status'] === 'APPROVED') {
@@ -664,17 +696,29 @@ class ContractService
             }
         }
 
-        $payload = array_merge($memberData, [
-            'contract_id' => $contract->id,
-            'org_id' => $contract->org_id,
-            'joined_at' => $joinedAt,
-        ]);
+        $payload = array_merge(
+            $memberData,
+            [
+                'contract_id' => $contract->id,
+                'org_id'      => $contract->org_id,
+                'joined_at'   => $joinedAt,
+            ]
+        );
 
         if ($this->contractMembersHasSignedAtColumn()) {
             $payload['signed_at'] = $signedAt;
         }
 
-        return ContractMember::create($payload);
+        $member = ContractMember::create($payload);
+
+        // Fire real-time notification for PATH A/B (existing user linked)
+        if ($resolvedUser && in_array($member->status, ['PENDING'])) {
+            $resolvedUser->notify(
+                new \App\Notifications\Contract\ContractSignatureRequested($contract, $member)
+            );
+        }
+
+        return $member;
     }
 
     public function updateMember(string $contractId, string $memberId, array $data): ?ContractMember
@@ -908,33 +952,45 @@ class ContractService
             $cancellationReason = $data['cancellation_reason'] ?? $data['reason'] ?? null;
             $waivePenalty = (bool) ($data['waive_penalty'] ?? false);
             $refundRemainingRent = (bool) ($data['refund_remaining_rent'] ?? false);
+            $forfeitDeposit = (bool) ($data['forfeit_deposit'] ?? false);
 
             $depositAmount = (float) $contract->deposit_amount;
+            $unpaidBalance = $this->invoiceService->getUnpaidBalance($contract->id);
             $isEarlyTermination = $contract->isEarlyTermination();
 
-            // ── Smart Deposit Logic ─────────────────────────────────────────────
-            // Rule 1: Tenant tự ý dời trước hạn + Manager không miễn phạt → Phạt toàn bộ cọc
-            // Rule 2: Tenant dời trước hạn + Manager chấp nhận miễn phạt → Hoàn cọc
-            // Rule 3: Chủ nhà hủy / Hai bên thỏa thuận → Hoàn cọc
-            // Rule 4: Kết thúc đúng hạn → REFUND_PENDING (chời bác không phạt)
+            // ── Penalty Rules Lookup ──────────────────────────────────────────
+            $penaltyAmount = 0;
+            if ($isEarlyTermination && ($cancellationParty === 'TENANT' || $cancellationParty === 'SYSTEM') && !$waivePenalty) {
+                $rule = \App\Models\Finance\PenaltyRule::active()
+                    ->where('type', \App\Enums\PenaltyRuleType::EARLY_TERMINATION)
+                    ->where(function ($q) use ($contract) {
+                        $q->where('property_id', $contract->property_id)
+                          ->orWhereNull('property_id');
+                    })
+                    ->orderByDesc('property_id')
+                    ->first();
 
-            $forfeitDeposit = false;
-
-            if ($cancellationParty === 'TENANT' && $isEarlyTermination && !$waivePenalty) {
-                $forfeitDeposit = true; // Rule 1: Phạt cọc
+                if ($rule) {
+                    $penaltyAmount = $rule->calculate((float) $contract->rent_price, $depositAmount);
+                    $forfeitDeposit = true;
+                } else {
+                    $penaltyAmount = $depositAmount;
+                    $forfeitDeposit = true;
+                }
             }
 
+            // ── Smart Deposit Logic ─────────────────────────────────────────────
             $refundedAmount = 0;
             $forfeitedAmount = 0;
 
             if ($forfeitDeposit) {
                 $forfeitedAmount = $depositAmount;
                 $depositStatus = DepositStatus::FORFEITED;
-                $contractStatus = ContractStatus::CANCELLED; // Huỷ ngang → CANCELLED
+                $contractStatus = ContractStatus::CANCELLED;
             } else {
                 $refundedAmount = $depositAmount;
                 $depositStatus = DepositStatus::REFUND_PENDING;
-                $contractStatus = ContractStatus::TERMINATED; // Thỏa thuận / đương hạn → TERMINATED
+                $contractStatus = ContractStatus::TERMINATED;
             }
 
             $contract->status = $contractStatus;
@@ -953,8 +1009,8 @@ class ContractService
                     'cancellation_reason' => $cancellationReason,
                     'waive_penalty' => $waivePenalty,
                     'forfeit_deposit' => $forfeitDeposit,
+                    'penalty_rule_applied' => isset($rule) ? $rule->id : 'default',
                     'refund_remaining_rent' => $refundRemainingRent,
-                    'original_end_date' => $contract->getOriginal('end_date'),
                 ],
             ]);
             $contract->save();
@@ -966,9 +1022,11 @@ class ContractService
                 forfeitDeposit: $forfeitDeposit,
                 depositAmount: $depositAmount,
                 refundRemainingRent: $refundRemainingRent,
+                penaltyAmount: $penaltyAmount,
+                unpaidBalance: $unpaidBalance
             );
 
-            $this->invoiceService->create([
+            $invoice = $this->invoiceService->create([
                 'org_id' => $contract->org_id,
                 'property_id' => $contract->property_id,
                 'room_id' => $contract->room_id,
@@ -986,6 +1044,9 @@ class ContractService
                     'is_early' => $isEarlyTermination,
                 ],
             ], $items);
+
+            // Vô hiệu hóa các hóa đơn cũ vì đã gom nợ vào hóa đơn thanh lý
+            $this->invoiceService->voidUnpaidInvoicesByContract($contract->id, "Settlement Invoice ID: " . $invoice->id);
 
             // Free the room
             if ($contract->room) {
@@ -1199,6 +1260,37 @@ class ContractService
     }
 
     /**
+     * Tự động thanh lý các hợp đồng có dư nợ vượt quá tiền cọc.
+     */
+    public function processDebtBreachTerminations(): int
+    {
+        $contracts = Contract::where('status', ContractStatus::ACTIVE)
+            ->where('deposit_amount', '>', 0)
+            ->get();
+
+        $count = 0;
+        foreach ($contracts as $contract) {
+            $unpaidBalance = $this->invoiceService->getUnpaidBalance($contract->id);
+            $depositAmount = (float) $contract->deposit_amount;
+
+            if ($unpaidBalance >= $depositAmount) {
+                DB::transaction(function () use ($contract, $unpaidBalance) {
+                    $this->terminate($contract, [
+                        'termination_date' => now()->toDateString(),
+                        'cancellation_party' => ContractCancellationParty::SYSTEM->value,
+                        'reason' => "Tự động thanh lý: Dư nợ ({$unpaidBalance}) vượt quá tiền cọc ({$contract->deposit_amount}).",
+                        'waive_penalty' => false,
+                        'forfeit_deposit' => true,
+                    ]);
+                });
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
      * Xây dựng danh sách các mục trong Settlement Invoice khi thanh lý.
      */
     private function buildSettlementItems(
@@ -1207,6 +1299,8 @@ class ContractService
         bool $forfeitDeposit,
         float $depositAmount,
         bool $refundRemainingRent,
+        float $penaltyAmount = 0,
+        float $unpaidBalance = 0,
     ): array {
         $items = [];
 
@@ -1239,6 +1333,40 @@ class ContractService
                     'unit_price' => -$depositAmount, // âm = cần trả lại cho khách
                     'amount' => -$depositAmount,
                     'meta' => ['note' => 'Chuyển sang trạng thái REFUND_PENDING'],
+                ];
+            }
+        }
+
+        // Gom nợ cũ (nếu có)
+        if ($unpaidBalance > 0) {
+            $items[] = [
+                'type' => \App\Enums\InvoiceItemType::DEBT->value,
+                'description' => 'Tổng nợ tồn đọng từ các hóa đơn trước',
+                'quantity' => 1,
+                'unit_price' => $unpaidBalance,
+                'amount' => $unpaidBalance,
+            ];
+        }
+
+        // Áp dụng phí phạt phá hợp đồng (nếu có)
+        if ($penaltyAmount > 0) {
+            $items[] = [
+                'type' => InvoiceItemType::PENALTY->value,
+                'description' => 'Phí vi phạm hợp đồng (Dời trước hạn)',
+                'quantity' => 1,
+                'unit_price' => $penaltyAmount,
+                'amount' => $penaltyAmount,
+            ];
+            
+            // Nếu có phạt và có cọc, ta thêm dòng đối trừ cọc vào luôn để giảm số tiền khách phải trả
+            if ($depositAmount > 0) {
+                $items[] = [
+                    'type' => InvoiceItemType::ADJUSTMENT->value,
+                    'description' => 'Đối trừ từ tiền đặt cọc đã thu',
+                    'quantity' => 1,
+                    'unit_price' => -$depositAmount,
+                    'amount' => -$depositAmount,
+                    'meta' => ['note' => 'Cấn trừ nợ bằng tiền cọc'],
                 ];
             }
         }

@@ -1,50 +1,14 @@
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useDashboard, useGenerateMonthlyBilling } from '../../dashboard/hooks/useDashboard';
 import { PropertyDashboardView } from '../../dashboard/components/PropertyDashboardView';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { LayoutDashboard } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { 
-  LayoutDashboard, 
-  Layers, 
-  Home
-} from 'lucide-react';
-import { FeatureTabbedLayout } from '../../../components/FeatureTabbedLayout';
 
-import BuildingOverviewPage from '../../building-overview/pages/BuildingOverviewPage';
-import RoomListPage from '../../rooms/pages/RoomListPage';
-
-interface PropertyDetailPageProps {
-  defaultTab?: 'dashboard' | 'layout' | 'rooms' | 'details';
-}
-
-export default function PropertyDetailPage({ defaultTab = 'dashboard' }: PropertyDetailPageProps) {
+export default function PropertyDetailPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const activeTab = useMemo(() => {
-    if (location.pathname.endsWith('/dashboard')) return 'dashboard';
-    if (location.pathname.endsWith('/building-view')) return 'layout';
-    if (location.pathname.endsWith('/rooms')) return 'rooms';
-    return defaultTab;
-  }, [location.pathname, defaultTab]);
-
-  const tabs = [
-    { id: 'dashboard', label: 'Trang chủ', icon: LayoutDashboard },
-    { id: 'layout', label: 'Sơ đồ', icon: Layers },
-    { id: 'rooms', label: 'Phòng', icon: Home },
-  ] as const;
-
-  const handleTabChange = (tab: 'dashboard' | 'layout' | 'rooms') => {
-    const pathMap = {
-      dashboard: `/properties/${propertyId}/dashboard`,
-      layout: `/properties/${propertyId}/building-view`,
-      rooms: `/properties/${propertyId}/rooms`,
-    };
-    navigate(pathMap[tab]);
-  };
 
   const { data: property, isLoading: isPropertyLoading } = usePropertyDetail(propertyId);
   const { data: dashboard, isLoading: isDashboardLoading, refetch: refetchDashboard } = useDashboard(propertyId);
@@ -74,7 +38,7 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
     }
   };
 
-  const isLoading = isPropertyLoading || (activeTab === 'dashboard' && isDashboardLoading);
+  const isLoading = isPropertyLoading || isDashboardLoading;
 
   const dashboardView = useMemo(() => {
     if (!dashboard || !propertyId) return null;
@@ -116,16 +80,22 @@ export default function PropertyDetailPage({ defaultTab = 'dashboard' }: Propert
   }
 
   return (
-    <FeatureTabbedLayout
-      tabs={tabs as any}
-      activeTab={activeTab}
-      onTabChange={handleTabChange as any}
-      maxWidth="max-w-[1600px]"
-    >
-      {activeTab === 'dashboard' && dashboardView}
-      {activeTab === 'layout' && <BuildingOverviewPage />}
-      {activeTab === 'rooms' && <RoomListPage />}
-    </FeatureTabbedLayout>
+    <div className="max-w-[1600px] mx-auto animate-in fade-in duration-500 space-y-6">
+      {/* Premium Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 dark:shadow-none">
+            <LayoutDashboard className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Bảng điều khiển</h1>
+            <p className="text-gray-500 dark:text-gray-400 font-medium">Tổng quan vận hành cho <span className="text-blue-900 dark:text-blue-400 font-bold">{property.name}</span></p>
+          </div>
+        </div>
+      </div>
+
+      {dashboardView}
+    </div>
   );
 }
 

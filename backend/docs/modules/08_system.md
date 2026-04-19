@@ -1,13 +1,18 @@
 # Module: Hệ thống (System)
 
 ## Tổng quan
-Module hệ thống bao gồm quản lý file/media, nhật ký hoạt động (Audit Log) và tiện ích hệ thống chung.
+Module hệ thống bao gồm quản lý file/media, nhật ký hoạt động (Audit Log), và đặc biệt là luồng **Lời mời người dùng (User Invitations)** - điểm khởi đầu của mọi người dùng trong hệ thống (ngoại trừ Owner).
 
 **Controllers:**
 - `App\Http\Controllers\Api\System\MediaController`
 - `App\Http\Controllers\Api\System\AuditLogController`
 - `App\Http\Controllers\Api\System\UserInvitationController`
 - `App\Http\Controllers\UploadController`
+
+**Services:**
+- `App\Services\System\UserInvitationService`
+- `App\Services\System\AuditLogService`
+- `App\Services\System\MediaService`
 
 ---
 

@@ -17,8 +17,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Invoice extends Model
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    
+    public $status_history_note;
 
     public $incrementing = false;
+
 
     protected $keyType = 'string';
 
@@ -40,7 +43,16 @@ class Invoice extends Model
         'issued_at',
         'is_termination',
         'cancelled_at',
+        'pdf_path',
     ];
+
+    /**
+     * Get the full URL for the invoice PDF.
+     */
+    public function getPdfUrlAttribute(): ?string
+    {
+        return $this->pdf_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->pdf_path) : null;
+    }
 
     protected function casts(): array
     {

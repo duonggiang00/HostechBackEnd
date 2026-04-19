@@ -1,148 +1,190 @@
-import { useEffect, useRef, useState } from 'react';
-import { renderAsync } from 'docx-preview';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2 } from 'lucide-react';
-import { contractsApi } from '../api/contracts';
+import { X, FileText, Download, Printer, Loader2, AlertCircle } from 'lucide-react';
+import { useContractActions } from '../hooks/useContracts';
 import { toast } from 'react-hot-toast';
+import { renderAsync } from 'docx-preview';
 
 interface ContractPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   contractId: string;
+  contract?: any;
 }
 
-export function ContractPreviewModal({ isOpen, onClose, contractId }: ContractPreviewModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function ContractPreviewModal({ isOpen, onClose, contractId, contract }: ContractPreviewModalProps) {
+  const { downloadDocument } = useContractActions();
+  
+  const [fileBlob, setFileBlob] = useState<Blob | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [docType, setDocType] = useState<'PDF' | 'DOCX' | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !contractId) return;
-
-    let isMounted = true;
-    const loadPreview = async () => {
+    const fetchFile = async () => {
+      if (!contractId || !isOpen) return;
+      
       setIsLoading(true);
-      setHasError(false);
       try {
-        // Fetch DOCX Blob
-        const blob = await contractsApi.downloadDocument(contractId);
+        const blob = await downloadDocument.mutateAsync(contractId);
+        setFileBlob(blob);
         
-        if (!isMounted) return;
+        const url = window.URL.createObjectURL(blob);
+        setFileUrl(url);
 
-        // Ensure container is empty before rendering
-        if (containerRef.current) {
-          containerRef.current.innerHTML = '';
-          await renderAsync(blob, containerRef.current, undefined, {
-            className: 'docx-viewer',
-            inWrapper: true,
-            ignoreWidth: false,
-            ignoreHeight: false,
-            ignoreFonts: false,
-            breakPages: true,
-            ignoreLastRenderedPageBreak: true,
-            experimental: false,
-            trimXmlDeclaration: true,
-            debug: false,
-          });
-        }
-      } catch (err: any) {
-        if (!isMounted) return;
-        setHasError(true);
-        if (err?.response?.data instanceof Blob) {
-           const text = await err.response.data.text();
-           try {
-             const json = JSON.parse(text);
-             toast.error(json.message || 'Hợp đồng này chưa có file DOCX.');
-           } catch {
-             toast.error('Có lỗi xảy ra khi lấy file bản mềm.');
-           }
+        // Determine type based on contract prop or blob type
+        if (contract?.document_type) {
+          setDocType(contract.document_type.toUpperCase() as 'PDF' | 'DOCX');
+        } else if (blob.type === 'application/pdf') {
+          setDocType('PDF');
         } else {
-           toast.error('Có lỗi xảy ra hoặc file bản mềm không tồn tại.');
+          setDocType('DOCX');
         }
+      } catch (err) {
+        console.error('Error fetching document:', err);
+        toast.error('Không thể tải tệp bản mềm hợp đồng.');
       } finally {
-        if (isMounted) setIsLoading(false);
+        setIsLoading(false);
       }
     };
 
-    loadPreview();
+    if (isOpen) {
+      fetchFile();
+    }
 
     return () => {
-      isMounted = false;
-      if (containerRef.current) containerRef.current.innerHTML = '';
+      if (fileUrl) {
+        window.URL.revokeObjectURL(fileUrl);
+        setFileUrl(null);
+        setFileBlob(null);
+        setDocType(null);
+      }
     };
-  }, [isOpen, contractId]);
+  }, [contractId, isOpen]);
+
+  useEffect(() => {
+    if (isOpen && docType === 'DOCX' && fileBlob && fileUrl) {
+      // Small timeout to ensure DOM element is ready
+      const timer = setTimeout(() => {
+        const container = document.getElementById('modal-docx-container');
+        if (container) {
+          renderAsync(fileBlob, container).catch(err => {
+             console.error('Docx render error:', err);
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, docType, fileBlob, fileUrl]);
+
+  const handleDownload = () => {
+    if (!fileUrl) return;
+    const link = document.createElement('a');
+    link.href = fileUrl;
+    const extension = docType === 'PDF' ? 'pdf' : 'docx';
+    link.download = `Hop-dong-${contract?.room?.code || contractId.substring(0, 8)}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <React.Fragment>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60]"
             onClick={onClose}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 transition-colors"
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none p-4 md:p-8">
+
+          <div className="fixed inset-0 z-[61] flex items-center justify-center p-4 pointer-events-none">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="w-full max-w-5xl bg-slate-100 dark:bg-slate-900 rounded-[2rem] md:rounded-[3xl] shadow-2xl flex flex-col pointer-events-auto overflow-hidden h-[95vh] border border-slate-200 dark:border-slate-800 transition-colors"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-5xl h-[90vh] rounded-3xl shadow-2xl overflow-hidden pointer-events-auto border border-slate-200 dark:border-slate-700 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 md:px-8 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 transition-colors z-20 shrink-0 shadow-sm relative">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic transition-colors">
-                    Xem trước hợp đồng
-                  </h3>
-                  <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest transition-colors">
-                    Bản xem trước của file hợp đồng
-                  </p>
+              <div className="flex items-center justify-between p-5 sm:px-8 border-b border-slate-100 dark:border-slate-800 shrink-0">
+                <div className="flex items-center gap-4 text-indigo-600 dark:text-indigo-400">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Xem trước hợp đồng</h3>
+                    <p className="text-xs font-bold text-slate-500">Bản mềm lưu trữ trên hệ thống</p>
+                  </div>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 transition-all border border-slate-200 dark:border-slate-700 active:scale-95"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleDownload}
+                    disabled={!fileUrl}
+                    className="p-2.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors disabled:opacity-30"
+                    title="Tải xuống"
+                  >
+                    <Download className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => window.print()}
+                    disabled={!fileUrl}
+                    className="p-2.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors disabled:opacity-30"
+                    title="In tài liệu"
+                  >
+                    <Printer className="w-5 h-5" />
+                  </button>
+                  <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1" />
+                  <button
+                    onClick={onClose}
+                    className="p-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto relative bg-slate-200 dark:bg-slate-950 p-4 md:p-10 custom-scrollbar z-10 transition-colors">
-                {isLoading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-200/80 dark:bg-slate-950/80 backdrop-blur-sm z-30 transition-colors">
-                    <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4 drop-shadow-md" />
-                    <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest animate-pulse drop-shadow-sm">
-                      Đang xử lý tài liệu cấu trúc DOCX...
-                    </p>
+              <div className="flex-1 overflow-hidden bg-slate-100 dark:bg-slate-950 relative">
+                {isLoading ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
+                    <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+                    <p className="font-bold text-slate-500 animate-pulse uppercase tracking-widest text-xs">Đang tải tài liệu...</p>
+                  </div>
+                ) : !fileUrl ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+                    <AlertCircle className="w-12 h-12 text-rose-500 mb-4" />
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Không thể hiển thị tài liệu</h4>
+                    <p className="text-slate-500 max-w-xs mx-auto">Tệp tin không tồn tại hoặc bạn không có quyền truy cập.</p>
+                  </div>
+                ) : docType === 'PDF' ? (
+                  <iframe 
+                    src={`${fileUrl}#toolbar=0`} 
+                    className="w-full h-full border-none"
+                    title="Contract Preview"
+                  />
+                ) : (
+                  <div className="w-full h-full overflow-auto p-4 sm:p-8 flex justify-center">
+                    <div id="modal-docx-container" className="bg-white shadow-xl max-w-[850px] w-full min-h-[1000px]" />
                   </div>
                 )}
-                
-                {hasError && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-8 text-center m-auto mb-[20vh]">
-                    <div className="bg-white dark:bg-slate-800 p-8 rounded-[2rem] shadow-xl border border-slate-200 dark:border-slate-700 max-w-sm">
-                      <div className="w-16 h-16 bg-rose-50 dark:bg-rose-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <X className="w-8 h-8 text-rose-500" />
-                      </div>
-                      <p className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Lỗi hiển thị</p>
-                      <p className="text-sm font-bold text-slate-500">
-                        Không có file tài liệu DOCX hoặc quá trình render thất bại. Bạn vui lòng Khởi tạo DOCX trước khi xem!
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {/* DOCX Container */}
-                <div 
-                  className={`min-h-full max-w-4xl bg-white text-black shadow-xl mx-auto ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity rounded-xl overflow-hidden`} 
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 sm:px-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-end items-center shrink-0">
+                <button
+                  onClick={onClose}
+                  className="px-8 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-black uppercase tracking-widest text-xs transition-all"
                 >
-                  <div ref={containerRef} className="docx-container p-4 md:p-8" />
-                </div>
+                  Đóng
+                </button>
               </div>
             </motion.div>
           </div>
-        </>
+        </React.Fragment>
       )}
     </AnimatePresence>
   );
