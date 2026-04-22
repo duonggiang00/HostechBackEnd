@@ -82,7 +82,6 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
       ],
     },
     {
-    {
       id: 'operations',
       label: 'Vận Hành',
       icon: Building2,
