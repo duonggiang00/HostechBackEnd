@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import MaintenanceReportModal from '@/shared/features/tickets/components/MaintenanceReportModal';
 import TenantMeterModal from '@/PropertyScope/features/metering/components/TenantMeterModal';
-import { useMyPendingContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useMyPendingContracts, useMyContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
+import toast from 'react-hot-toast';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
@@ -22,6 +23,8 @@ export default function TenantDashboard() {
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
 
   const { data: pendingContracts = [] } = useMyPendingContracts();
+  const { data: myContracts = [] } = useMyContracts();
+  
   const { useInvoices } = useInvoice();
   const { data: invoicesResponse } = useInvoices();
 
@@ -65,7 +68,13 @@ export default function TenantDashboard() {
           ? `${formatCurrency(totalOutstanding)} cần xử lý${nearestInvoice ? ` trước ${formatDate(nearestInvoice.due_date)}` : ''}.`
           : 'Hiện chưa có hóa đơn đang chờ thanh toán.',
       actionLabel: 'Mở hóa đơn',
-      onClick: () => navigate('/app/billing'),
+      onClick: () => {
+        if (myContracts.length === 0) {
+          toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+          return;
+        }
+        navigate('/app/billing');
+      },
       tone: outstandingInvoices.length > 0 ? 'rose' : 'slate',
     },
     {
@@ -74,7 +83,13 @@ export default function TenantDashboard() {
       title: 'Báo sự cố',
       description: 'Gửi yêu cầu mới khi phòng cần hỗ trợ hoặc bảo trì.',
       actionLabel: 'Tạo yêu cầu',
-      onClick: () => setIsReportModalOpen(true),
+      onClick: () => {
+        if (myContracts.length === 0) {
+          toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+          return;
+        }
+        setIsReportModalOpen(true);
+      },
       tone: 'blue',
     },
   ] as const;
@@ -160,7 +175,13 @@ export default function TenantDashboard() {
 
           <div className="mt-5 space-y-3">
             <button
-              onClick={() => navigate('/app/billing')}
+              onClick={() => {
+                if (myContracts.length === 0) {
+                  toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+                  return;
+                }
+                navigate('/app/billing');
+              }}
               className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
             >
               <div>
@@ -171,7 +192,13 @@ export default function TenantDashboard() {
             </button>
 
             <button
-              onClick={() => setIsReportModalOpen(true)}
+              onClick={() => {
+                if (myContracts.length === 0) {
+                  toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+                  return;
+                }
+                setIsReportModalOpen(true);
+              }}
               className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
             >
               <div>
@@ -182,7 +209,13 @@ export default function TenantDashboard() {
             </button>
 
             <button
-              onClick={() => setIsMeterModalOpen(true)}
+              onClick={() => {
+                if (myContracts.length === 0) {
+                  toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+                  return;
+                }
+                setIsMeterModalOpen(true);
+              }}
               className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
             >
               <div>

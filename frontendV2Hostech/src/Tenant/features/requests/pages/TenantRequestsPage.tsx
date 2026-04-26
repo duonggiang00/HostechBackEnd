@@ -3,6 +3,8 @@ import { AlertCircle, CheckCircle2, ChevronRight, Clock, MessageCircle, Plus } f
 import { AnimatePresence, motion } from 'framer-motion';
 import TicketTimeline from '@/shared/features/tickets/components/TicketTimeline';
 import MaintenanceReportModal from '@/shared/features/tickets/components/MaintenanceReportModal';
+import { useMyContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import toast from 'react-hot-toast';
 
 interface Request {
   id: string;
@@ -16,12 +18,9 @@ export default function TenantRequestsPage() {
   const [activeTab, setActiveTab] = useState<'active' | 'completed'>('active');
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const { data: myContracts = [] } = useMyContracts();
 
-  const requests: Request[] = [
-    { id: 'REQ-101', title: 'Thay lõi lọc máy lạnh', category: 'Bảo trì', status: 'pending', date: '15/03/2026' },
-    { id: 'REQ-102', title: 'Rò nước khu vực bếp', category: 'Nước', status: 'in_progress', date: '12/03/2026' },
-    { id: 'REQ-103', title: 'Cấp lại thẻ ra vào', category: 'An ninh', status: 'completed', date: '08/03/2026' },
-  ];
+  const requests: Request[] = [];
 
   const statusMap = {
     pending: { icon: Clock, label: 'Chờ xử lý', tone: 'text-amber-600 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10' },
@@ -70,7 +69,13 @@ export default function TenantRequestsPage() {
           </div>
 
           <button
-            onClick={() => setIsReportModalOpen(true)}
+            onClick={() => {
+              if (myContracts.length === 0) {
+                toast.error('Tính năng không khả dụng do chưa có hợp đồng.');
+                return;
+              }
+              setIsReportModalOpen(true);
+            }}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
           >
             <Plus className="h-4 w-4" />

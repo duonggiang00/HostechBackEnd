@@ -99,6 +99,11 @@ export const contractsApi = {
     return response.data;
   },
 
+  managerConfirmSignature: async (id: string, signature_image: string) => {
+    const response = await apiClient.post(`/contracts/${id}/manager-sign`, { signature_image });
+    return response.data;
+  },
+
   rejectSignature: async (id: string) => {
     const response = await apiClient.post(`/contracts/${id}/reject-signature`);
     return response.data;

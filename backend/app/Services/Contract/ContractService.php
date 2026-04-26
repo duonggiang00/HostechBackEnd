@@ -316,10 +316,8 @@ class ContractService
                 }
             }
 
-            // Hợp đồng có cư dân đã đăng ký luôn phải đi qua ký điện tử trước.
-            if ($hasPendingTenant) {
-                $contract->update(['status' => ContractStatus::PENDING_SIGNATURE]);
-            }
+            // Hợp đồng mới tạo luôn đi qua trạng thái chờ ký.
+            $contract->update(['status' => ContractStatus::PENDING_SIGNATURE]);
 
             return $contract->refresh();
         });
@@ -532,6 +530,70 @@ class ContractService
             }
 
             return true;
+        });
+    }
+
+    /**
+     * Xác nhận ký hợp đồng thủ công (dành cho Manager)
+     * 
+     * Ghi đè trạng thái hợp đồng, tạo hóa đơn ban đầu và chuyển sang PENDING_PAYMENT.
+     */
+    public function managerConfirmSignature(Contract $contract, string $base64Image, User $manager): void
+    {
+        if ($contract->status !== ContractStatus::PENDING_SIGNATURE) {
+            throw new \Exception('Hợp đồng không ở trạng thái chờ ký.');
+        }
+
+        DB::transaction(function () use ($contract, $base64Image, $manager) {
+            // Validate and save physical signature image
+            if (preg_match('/^data:image\/(\w+);base64,/', $base64Image, $type)) {
+                $base64Data = substr($base64Image, strpos($base64Image, ',') + 1);
+                $type = strtolower($type[1]);
+
+                if (!in_array($type, ['jpg', 'jpeg', 'gif', 'png'])) {
+                    throw new \Exception('Định dạng ảnh chữ ký không hợp lệ');
+                }
+
+                $imageName = 'signature_manager_override_' . $contract->id . '-' . $manager->id . '.' . $type;
+                $storageFilePath = 'contracts/signatures/' . $imageName;
+                \Illuminate\Support\Facades\Storage::disk('local')->put($storageFilePath, base64_decode($base64Data));
+                
+                // Approve all manual members
+                ContractMember::where('contract_id', $contract->id)
+                    ->whereIn('status', ['PENDING', 'PENDING_INVITE'])
+                    ->update([
+                        'status' => 'APPROVED',
+                        'joined_at' => now(),
+                    ]);
+
+                // Create initial invoice if not exists
+                if (!$this->hasInitialInvoice($contract)) {
+                    $primaryMember = $contract->members->firstWhere('is_primary', true)?->user;
+                    $this->createInitialInvoice($contract, $primaryMember ?? $manager);
+                }
+
+                // Move contract to PENDING_PAYMENT
+                $contract->update([
+                    'status' => ContractStatus::PENDING_PAYMENT,
+                    'signed_at' => now(),
+                ]);
+
+                // Generate Final Document
+                try {
+                    $documentService = app(\App\Services\Contract\ContractDocumentService::class);
+                    $docPath = $documentService->generateDocument($contract);
+                    
+                    $ext = pathinfo($docPath, PATHINFO_EXTENSION);
+                    $contract->update([
+                        'document_path' => $docPath,
+                        'document_type' => strtoupper($ext),
+                    ]);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Failed to auto-generate contract document after manual signature: ' . $e->getMessage());
+                }
+            } else {
+                throw new \Exception('Dữ liệu ảnh chữ ký không đúng định dạng');
+            }
         });
     }
 
@@ -1447,6 +1509,7 @@ class ContractService
     private function allSignersApproved(Contract $contract): bool
     {
         return !$contract->members()
+            ->where('is_primary', true)
             ->whereNull('left_at')
             ->where('status', '!=', 'APPROVED')
             ->exists();

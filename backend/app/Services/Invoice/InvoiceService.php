@@ -554,6 +554,20 @@ class InvoiceService
         $invoice->update(['total_amount' => max(0, $finalAmount)]);
     }
 
+    /**
+     * Ghi nhận lịch sử thay đổi trạng thái của hóa đơn.
+     */
+    protected function recordStatusHistory(Invoice $invoice, string $fromStatus, string $toStatus, string $note): void
+    {
+        $invoice->statusHistories()->create([
+            'org_id' => $invoice->org_id,
+            'from_status' => $fromStatus,
+            'to_status' => $toStatus,
+            'note' => $note,
+            'changed_by_user_id' => request()->user()?->id,
+        ]);
+    }
+
     // ╔═══════════════════════════════════════════════════════╗
     // ║  INITIAL INVOICE (Hóa đơn ký hợp đồng)              ║
     // ╠═══════════════════════════════════════════════════════╣

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useChangePassword } from '../hooks/useProfile';
 import { Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function PasswordChangeForm() {
   const [form, setForm] = useState({
@@ -22,6 +23,14 @@ export default function PasswordChangeForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.password.length < 8) {
+      toast.error('Mật khẩu mới phải có ít nhất 8 ký tự.');
+      return;
+    }
+    if (form.password !== form.password_confirmation) {
+      toast.error('Xác nhận mật khẩu không khớp.');
+      return;
+    }
     changePassword.mutate(form, {
       onSuccess: () => {
         setForm({ current_password: '', password: '', password_confirmation: '' });
@@ -72,7 +81,6 @@ export default function PasswordChangeForm() {
             value={form.password}
             onChange={handleChange}
             required
-            minLength={8}
             className={inputClass}
           />
           <ToggleEye field="new" />

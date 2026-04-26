@@ -456,13 +456,21 @@ class ContractDocumentService
         return $this->renderBankAccounts($org->bank_accounts);
     }
 
-    private function renderBankAccounts(array $accounts): string
+    private function renderBankAccounts($accounts): string
     {
+        if (is_string($accounts)) {
+            $accounts = json_decode($accounts, true) ?? [];
+        }
+
+        if (!is_array($accounts)) {
+            return "---";
+        }
+
         $lines = [];
         foreach ($accounts as $acc) {
-            $bankName = $acc['bank_name'] ?? 'Ngân hàng';
-            $accNum   = $acc['account_number'] ?? '';
-            $accName  = $acc['account_holder'] ?? '';
+            $bankName = $acc['bank_name'] ?? $acc['bank'] ?? 'Ngân hàng';
+            $accNum   = $acc['account_number'] ?? $acc['account'] ?? '';
+            $accName  = $acc['account_holder'] ?? $acc['account_name'] ?? $acc['name'] ?? '';
             
             if ($accNum) {
                 $lines[] = "{$bankName}: {$accNum}";

@@ -10,6 +10,7 @@ Route::get('contracts/my-pending', [ContractController::class, 'myPendingContrac
 Route::get('contracts/my-contracts', [ContractController::class, 'myContracts']);
 Route::post('contracts/{contract}/accept-signature', [ContractController::class, 'acceptSignature']);
 Route::post('contracts/{contract}/sign', [ContractController::class, 'sign']);
+Route::post('contracts/{contract}/manager-sign', [ContractController::class, 'managerConfirmSignature']);
 Route::post('contracts/{contract}/reject-signature', [ContractController::class, 'rejectSignature']);
 Route::get('contracts/{contract}/available-rooms', [ContractController::class, 'availableRooms']);
 Route::post('contracts/{contract}/room-transfer-request', [ContractController::class, 'roomTransferRequest']);

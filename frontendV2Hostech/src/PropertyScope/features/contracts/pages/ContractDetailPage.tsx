@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, FileText, User, Home, Calendar, Shield, 
@@ -14,7 +14,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import SignatureModal from '../components/SignatureModal';
 import { AddMemberModal } from '../components/AddMemberModal';
-import { PenTool, UserPlus, LogOut } from 'lucide-react';
+import { PenTool, UserPlus, LogOut, UploadCloud } from 'lucide-react';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
@@ -50,7 +50,9 @@ export default function ContractDetailPage() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
-  const { signContract, removeContractMember, approveContractMember } = useContractActions();
+  const [isUploadingManagerSignature, setIsUploadingManagerSignature] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { signContract, managerConfirmSignature, removeContractMember, approveContractMember } = useContractActions();
   const { user, hasPermission } = useAuth();
   
   const isManager = hasPermission('update Contracts');
@@ -122,6 +124,28 @@ export default function ContractDetailPage() {
   const handleEdit = () => {
     // Navigate to edit page if implemented
     console.log('Edit contract', contractId);
+  };
+
+  const handleManagerSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !contractId) return;
+
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64String = e.target?.result as string;
+      setIsUploadingManagerSignature(true);
+      try {
+        await managerConfirmSignature.mutateAsync({ id: contractId, signatureDataUrl: base64String });
+        toast.success('Đã tải lên chữ ký tay và xác nhận hợp đồng thành công!');
+        window.location.reload();
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi tải chữ ký.');
+      } finally {
+        setIsUploadingManagerSignature(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   if (isLoading) {
@@ -203,14 +227,24 @@ export default function ContractDetailPage() {
             {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
             <span>{isPrinting ? 'Đang tạo file...' : 'In hợp đồng'}</span>
           </button>
-          {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && (
-            <button 
-              onClick={() => setIsSignatureModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 dark:shadow-none ring-4 ring-emerald-50 dark:ring-emerald-500/20"
-            >
-              <PenTool className="w-4 h-4" />
-              <span>Ký của Chủ nhà</span>
-            </button>
+          {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && isManager && (
+            <>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                accept="image/jpeg, image/png, image/jpg" 
+                onChange={handleManagerSignatureUpload} 
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingManagerSignature}
+                className="flex items-center gap-2 px-6 py-3.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 dark:shadow-none ring-4 ring-emerald-50 dark:ring-emerald-500/20 disabled:opacity-50"
+              >
+                {isUploadingManagerSignature ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
+                <span>Tải lên chữ ký tay</span>
+              </button>
+            </>
           )}
           {isOrdinalEditable && (
             <button 
@@ -411,7 +445,6 @@ export default function ContractDetailPage() {
                       <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Vai trò</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Điện thoại</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Trạng thái</th>
-                      <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Hành động</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700 transition-colors">
@@ -455,56 +488,11 @@ export default function ContractDetailPage() {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {isManager && member.status === 'PENDING' && (
-                              <button 
-                                onClick={() => handleApproveMember(member.id)}
-                                disabled={approveContractMember.isPending}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors text-xs font-bold disabled:opacity-50"
-                              >
-                                {approveContractMember.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                Duyệt
-                              </button>
-                            )}
-
-                            {((isManager) || (isPrimaryTenant && member.id !== currentMembership?.id)) && 
-                              member.status === 'APPROVED' && !member.left_at && (
-                                <button
-                                  onClick={() => handleRemoveMember(member.id, member.full_name)}
-                                  disabled={removeContractMember.isPending}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors text-xs font-bold disabled:opacity-50"
-                                >
-                                  {removeContractMember.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
-                                  Báo đi
-                                </button>
-                            )}
-
-                            <button 
-                              onClick={() => {
-                                if (member.user_id) {
-                                  navigate(`/properties/${propertyId}/users/${member.user_id}`, { 
-                                    state: { from: 'contract-detail', contractId: contractId } 
-                                  });
-                                } else {
-                                  toast.error('Cư dân này chưa kích hoạt tài khoản hệ thống.');
-                                }
-                              }}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-bold ${
-                                member.user_id 
-                                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20' 
-                                  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                              }`}
-                            >
-                              Chi tiết
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))}
                     {!contract.members?.length && (
                       <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center">
+                        <td colSpan={4} className="px-6 py-12 text-center">
                           <p className="text-slate-400 dark:text-slate-500 font-bold transition-colors">Chưa có thông tin thành viên.</p>
                         </td>
                       </tr>

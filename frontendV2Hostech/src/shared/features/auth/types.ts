@@ -44,6 +44,8 @@ export interface AuthUser {
   permissions?: string[];
   avatar_url?: string;
   is_active?: boolean;
+  identity_number?: string;
+  date_of_birth?: string;
   created_at: string;
 }
 

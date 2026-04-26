@@ -10,6 +10,7 @@ import {
   CheckCircle2, UserPlus, UserX, Mail, Shield, AlertCircle, RefreshCw
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { UserSearchCombobox } from './UserSearchCombobox';
 
 import { contractsApi } from '../api/contracts';
 import type { CreateContractPayload } from '../types';
@@ -19,31 +20,35 @@ import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import apiClient from '@/shared/api/client';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
+const nameRegex = /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỮỰỲỴÝỶỸửữựỳỵỷỹ\s]+$/;
+const phoneRegex = /^\d+$/;
+const identityRegex = /^\d+$/;
+
 const schema = z.object({
   room_id: z.string().min(1, 'Vui lòng chọn phòng thuê'),
   start_date: z.string().min(1, 'Vui lòng chọn ngày bắt đầu hợp đồng'),
   end_date: z.string().optional(),
-  rent_price: z.number({ required_error: 'Vui lòng nhập giá thuê' }).min(1, 'Giá thuê phải lớn hơn 0'),
-  deposit_amount: z.number({ required_error: 'Vui lòng nhập tiền cọc' }).min(0, 'Tiền cọc không được là số âm'),
+  rent_price: z.number({ required_error: 'Vui lòng nhập giá thuê', invalid_type_error: 'Vui lòng nhập giá thuê hợp lệ' }).min(1, 'Giá thuê phải lớn hơn 0'),
+  deposit_amount: z.number({ required_error: 'Vui lòng nhập tiền cọc', invalid_type_error: 'Vui lòng nhập tiền cọc hợp lệ' }).min(0, 'Tiền cọc không được là số âm'),
   billing_cycle: z.number().min(1, 'Chu kỳ tối thiểu 1 tháng').max(12, 'Chu kỳ tối đa 12 tháng'),
   due_day: z.number().min(1, 'Ngày hạn đóng tiền từ mùng 1-31').max(31, 'Ngày hạn đóng tiền từ mùng 1-31'),
   cutoff_day: z.number().min(1, 'Ngày chốt số từ mùng 1-31').max(31, 'Ngày chốt số từ mùng 1-31'),
   // Tenant identity
   tenant_email: z.string().email('Địa chỉ email không hợp lệ').optional().or(z.literal('')),
-  tenant_full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên người thuê'),
-  tenant_phone: z.string().min(10, 'Số điện thoại phải có ít nhất 10 số'),
-  tenant_identity_number: z.string().min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
-  tenant_date_of_birth: z.string().optional(),
+  tenant_full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên người thuê').regex(nameRegex, 'Họ tên không được chứa số hoặc ký tự đặc biệt'),
+  tenant_phone: z.string().regex(phoneRegex, 'Số điện thoại chỉ được chứa số').min(10, 'Số điện thoại phải có ít nhất 10 số').max(15, 'Số điện thoại không hợp lệ'),
+  tenant_identity_number: z.string().regex(identityRegex, 'Số CCCD/CMND chỉ được chứa số').min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
+  tenant_date_of_birth: z.string().min(1, 'Vui lòng chọn ngày sinh người thuê'),
   tenant_license_plate: z.string().optional(),
   tenant_permanent_address: z.string().optional(),
   clause_responsibilities: z.string().optional(),
   clause_extra: z.string().optional(),
   additional_members: z.array(z.object({
-    full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên'),
-    phone: z.string().min(10, 'Số điện thoại phải có ít nhất 10 số'),
+    full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên').regex(nameRegex, 'Họ tên không được chứa số hoặc ký tự đặc biệt'),
+    phone: z.string().regex(phoneRegex, 'Số điện thoại chỉ được chứa số').min(10, 'Số điện thoại phải có ít nhất 10 số').max(15, 'Số điện thoại không hợp lệ'),
     email: z.string().email('Địa chỉ email không hợp lệ').optional().or(z.literal('')),
-    identity_number: z.string().min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
-    date_of_birth: z.string().optional(),
+    identity_number: z.string().regex(identityRegex, 'Số CCCD/CMND chỉ được chứa số').min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
+    date_of_birth: z.string().min(1, 'Vui lòng chọn ngày sinh thành viên'),
     license_plate: z.string().optional(),
     role: z.enum(['TENANT', 'ROOMMATE', 'GUARANTOR']).default('ROOMMATE'),
   })).optional().default([]),
@@ -97,82 +102,8 @@ function InlineInput({
 }
 
 // ─── TenantSearchInput ────────────────────────────────────────────────────────
-type TenantStatus = 'idle' | 'checking' | 'found' | 'new' | 'manual';
+// Replaced by UserSearchCombobox
 
-function TenantSearchInput({
-  value, onChange, onUserFound, onReset
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  onUserFound: (user: { id: string; full_name: string; phone: string; identity_number: string }) => void;
-  onReset: () => void;
-}) {
-  const [status, setStatus] = useState<TenantStatus>('idle');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const check = useCallback(async (email: string) => {
-    if (!email || !/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-      setStatus('idle');
-      return;
-    }
-    setStatus('checking');
-    try {
-      const res = await apiClient.get('/users/check-email', { params: { email } });
-      const user = res.data?.data;
-      if (user) {
-        setStatus('found');
-        onUserFound(user);
-      } else {
-        setStatus('new');
-        onReset();
-      }
-    } catch {
-      setStatus('new');
-      onReset();
-    }
-  }, [onUserFound, onReset]);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    onChange(val);
-    onReset();
-    setStatus('idle');
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => check(val), 600);
-  };
-
-  const statusConfig = {
-    idle:     { icon: <Mail className="w-3.5 h-3.5 text-gray-400" />, text: '', cls: '' },
-    checking: { icon: <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />, text: 'Đang kiểm tra...', cls: 'text-gray-400' },
-    found:    { icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />, text: 'Đã có tài khoản — sẽ nhận thông báo ký', cls: 'text-emerald-600' },
-    new:      { icon: <UserPlus className="w-3.5 h-3.5 text-amber-500" />, text: 'Chưa có tài khoản — sẽ nhận link đăng ký qua email', cls: 'text-amber-600' },
-    manual:   { icon: <UserX className="w-3.5 h-3.5 text-gray-400" />, text: 'Không điền email — xác nhận thủ công', cls: 'text-gray-400' },
-  }[status];
-
-  return (
-    <span className="inline-flex flex-col gap-0.5">
-      <span className="inline-flex items-center gap-1">
-        <input
-          id="tenant_email"
-          type="email"
-          value={value}
-          onChange={handleChange}
-          placeholder="email@tenant.com (tùy chọn)"
-          className="inline-block border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20
-            text-indigo-900 dark:text-indigo-200 px-1.5 py-0.5 text-sm outline-none
-            focus:border-indigo-600 focus:bg-indigo-50 dark:focus:bg-indigo-800/30 rounded-sm transition-colors
-            placeholder:text-indigo-300 dark:placeholder:text-indigo-600 w-64"
-        />
-        {statusConfig.icon}
-      </span>
-      {statusConfig.text && (
-        <span className={`text-[10px] ${statusConfig.cls} flex items-center gap-1`}>
-          {statusConfig.text}
-        </span>
-      )}
-    </span>
-  );
-}
 
 /** Tiêu đề điều khoản (Heading) trong hợp đồng */
 function ArticleHeading({ number, title, icon }: { number: string; title: string; icon?: React.ReactNode }) {
@@ -257,7 +188,7 @@ export default function PhysicalContractCreator({
     name: 'additional_members',
   });
 
-  // resolved user from TenantSearchInput (Path A: email matched existing account)
+  // resolved user from UserSearchCombobox (Path A: user selected)
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
 
   const v = watch();
@@ -284,7 +215,13 @@ export default function PhysicalContractCreator({
   const propertyName = (property as any)?.name || '';
   const propertyAddress = (property as any)?.address || '';
   const propertyHouseRules: string = (property as any)?.house_rules || '';
-  const bankAccounts: any[] = (property as any)?.bank_accounts || [];
+  
+  let bankAccounts: any[] = [];
+  try {
+    const rawBank = (property as any)?.bank_accounts;
+    if (typeof rawBank === 'string') bankAccounts = JSON.parse(rawBank);
+    else if (Array.isArray(rawBank)) bankAccounts = rawBank;
+  } catch (e) {}
   const primaryBank = bankAccounts[0];
 
   const repFullName = currentUser?.full_name || '';
@@ -358,7 +295,12 @@ export default function PhysicalContractCreator({
         
         toast.error(`${translatedKey}: ${message}`);
       } else {
-        toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo hợp đồng');
+        const errMsg = error.response?.data?.message || '';
+        if (errMsg.includes('SQLSTATE') || errMsg.includes('Integrity constraint violation')) {
+          toast.error('Có lỗi xảy ra với dữ liệu hệ thống. Vui lòng kiểm tra lại thông tin hoặc thử lại sau.');
+        } else {
+          toast.error(errMsg || 'Có lỗi xảy ra khi tạo hợp đồng. Vui lòng thử lại.');
+        }
       }
     },
   });
@@ -527,19 +469,30 @@ export default function PhysicalContractCreator({
               BÊN THUÊ NHÀ (BÊN B)
             </h3>
             <div className="pl-3 space-y-1 border-l-2 border-emerald-200 dark:border-emerald-700 ml-1">
-              {/* Email (TenantSearchInput — drives Path A/B/C) */}
-              <InfoRow label="Email">
-                <TenantSearchInput
-                  value={v.tenant_email || ''}
-                  onChange={val => setValue('tenant_email', val)}
-                  onUserFound={user => {
-                    setResolvedUserId(user.id);
-                    if (!v.tenant_full_name) setValue('tenant_full_name', user.full_name);
-                    if (!v.tenant_phone)     setValue('tenant_phone', user.phone || '');
-                    if (!v.tenant_identity_number) setValue('tenant_identity_number', user.identity_number || '');
+              {/* Liên kết tài khoản */}
+              <InfoRow label="Liên kết TK">
+                <UserSearchCombobox
+                  selectedUserId={resolvedUserId}
+                  onSelect={user => {
+                    if (user) {
+                      setResolvedUserId(user.id);
+                      if (!v.tenant_full_name) setValue('tenant_full_name', user.full_name, { shouldValidate: true });
+                      if (!v.tenant_phone)     setValue('tenant_phone', user.phone || '', { shouldValidate: true });
+                      if (!v.tenant_identity_number) setValue('tenant_identity_number', user.identity_number || '', { shouldValidate: true });
+                      if (!v.tenant_email) setValue('tenant_email', user.email || '', { shouldValidate: true });
+                      if (!v.tenant_date_of_birth && user.date_of_birth) setValue('tenant_date_of_birth', user.date_of_birth, { shouldValidate: true });
+                    } else {
+                      setResolvedUserId(null);
+                    }
                   }}
-                  onReset={() => setResolvedUserId(null)}
+                  className="w-72"
                 />
+              </InfoRow>
+              <InfoRow label="Email">
+                <InlineInput id="tenant_email" value={v.tenant_email || ''}
+                  onChange={val => setValue('tenant_email', val, { shouldValidate: true })}
+                  placeholder="email@tenant.com" className="w-56"
+                  error={errors.tenant_email?.message} />
               </InfoRow>
               <InfoRow label="Họ và tên">
                 <InlineInput id="tenant_full_name" value={v.tenant_full_name}
@@ -895,10 +848,10 @@ export default function PhysicalContractCreator({
                 </StaticClause>
                 {primaryBank ? (
                   <div className="ml-6 mt-1 text-sm space-y-0.5">
-                    <p><span className="font-semibold">Ngân hàng:</span> <span className="font-medium">{primaryBank.bank_name}</span></p>
-                    <p><span className="font-semibold">Số tài khoản:</span> <span className="font-mono font-medium">{primaryBank.account_number}</span></p>
-                    {primaryBank.account_name && (
-                      <p><span className="font-semibold">Chủ tài khoản:</span> <span className="font-medium">{primaryBank.account_name}</span></p>
+                    <p><span className="font-semibold">Ngân hàng:</span> <span className="font-medium">{primaryBank.bank_name || primaryBank.bank}</span></p>
+                    <p><span className="font-semibold">Số tài khoản:</span> <span className="font-mono font-medium">{primaryBank.account_number || primaryBank.account}</span></p>
+                    {(primaryBank.account_name || primaryBank.name) && (
+                      <p><span className="font-semibold">Chủ tài khoản:</span> <span className="font-medium">{primaryBank.account_name || primaryBank.name}</span></p>
                     )}
                     {primaryBank.account_holder && (
                       <p><span className="font-semibold">Chủ tài khoản:</span> <span className="font-medium">{primaryBank.account_holder}</span></p>

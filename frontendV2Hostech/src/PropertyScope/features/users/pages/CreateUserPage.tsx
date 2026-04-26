@@ -38,6 +38,11 @@ export default function CreateUserPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (formData.password.length < 8) {
+      toast.error('Mật khẩu phải có ít nhất 8 ký tự.');
+      return;
+    }
+
     if (formData.password !== formData.password_confirmation) {
       toast.error('Mật khẩu xác nhận không khớp.');
       return;
@@ -52,7 +57,8 @@ export default function CreateUserPage() {
       toast.success('Thêm người dùng thành công!');
       navigate(`/properties/${propertyId}/users`);
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi thêm người dùng.');
+      // apiClient will handle showing the toast error globally
+      console.error(err);
     }
   };
 
@@ -165,7 +171,6 @@ export default function CreateUserPage() {
                       type="password"
                       name="password"
                       required
-                      minLength={8}
                       value={formData.password}
                       onChange={handleChange}
                       placeholder="********"
@@ -182,7 +187,6 @@ export default function CreateUserPage() {
                       type="password"
                       name="password_confirmation"
                       required
-                      minLength={8}
                       value={formData.password_confirmation}
                       onChange={handleChange}
                       placeholder="********"

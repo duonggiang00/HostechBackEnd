@@ -167,6 +167,16 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/{id}/manager-sign */
+  const managerConfirmSignature = useMutation({
+    mutationFn: ({ id, signatureDataUrl }: { id: string, signatureDataUrl: string }) => contractsApi.managerConfirmSignature(id, signatureDataUrl),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      invalidateContracts();
+    },
+  });
+
   /** POST /api/contracts/{id}/reject-signature */
   const rejectSignature = useMutation({
     mutationFn: (id: string) => contractsApi.rejectSignature(id),
@@ -257,6 +267,7 @@ export const useContractActions = () => {
     forceDeleteContract,
     acceptSignature,
     signContract,
+    managerConfirmSignature,
     rejectSignature,
     requestRoomTransfer,
     requestTermination,
