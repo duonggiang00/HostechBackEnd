@@ -953,12 +953,16 @@ export default function PhysicalContractCreator({
                 '3.6. Giữ trật tự, không gây tiếng ồn sau 22:00.',
                 '3.7. Không hút thuốc trong phòng và khu vực chung.',
                 '3.8. Phải đóng cửa và tắt điện khi ra ngoài lâu.',
-              ].map(chip => (
+              ].filter(chip => {
+                const currentText = v.clause_responsibilities || '';
+                const ruleText = chip.split('. ').slice(1).join('. ').trim();
+                return !currentText.includes(ruleText);
+              }).map(chip => (
                 <button
                   key={chip}
                   type="button"
                   onClick={() => {
-                    const current = watch('clause_responsibilities') || '';
+                    const current = v.clause_responsibilities || '';
                     setValue('clause_responsibilities', current + (current.endsWith('\n') || !current ? '' : '\n') + chip);
                   }}
                   title={chip}
