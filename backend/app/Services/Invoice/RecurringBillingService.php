@@ -3,12 +3,16 @@
 namespace App\Services\Invoice;
 
 use App\Enums\InvoiceItemType;
+use App\Events\Billing\BillingBatchCompleted;
+use App\Events\Billing\BillingBatchStarted;
+use App\Jobs\Billing\GenerateInvoiceForContractJob;
 use App\Models\Contract\Contract;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Services\Service\ServiceService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class RecurringBillingService
 {
@@ -55,8 +59,11 @@ class RecurringBillingService
 
     /**
      * Generate monthly invoices for all active contracts in a specific property.
+     *
+     * EDA mode: dispatches one GenerateInvoiceForContractJob per contract onto
+     * the 'billing' queue, enabling async parallel processing without timeout risk.
      */
-    public function generateMonthlyInvoicesForProperty(string $propertyId, Carbon $periodMonth)
+    public function generateMonthlyInvoicesForProperty(string $propertyId, Carbon $periodMonth): array
     {
         $contracts = Contract::where('property_id', $propertyId)
             ->where('status', 'ACTIVE')
@@ -67,26 +74,34 @@ class RecurringBillingService
             })
             ->get();
 
-        $results = [
-            'total' => $contracts->count(),
-            'success' => 0,
-            'failed' => 0,
-            'errors' => [],
-        ];
+        $total = $contracts->count();
 
+        // ── EDA: Announce batch start for monitoring ───────────────────────────
+        BillingBatchStarted::dispatch(
+            $propertyId,
+            $periodMonth,
+            $total,
+            auth()->id()
+        );
+
+        // ── Dispatch one Job per contract (async, on 'billing' queue) ──────────
         foreach ($contracts as $contract) {
-            /** @var Contract $contract */
-            try {
-                $this->generateInvoiceForContract($contract, $periodMonth);
-                $results['success']++;
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to generate invoice for contract {$contract->id}: " . $e->getMessage());
-                $results['failed']++;
-                $results['errors'][] = "Contract {$contract->id}: " . $e->getMessage();
-            }
+            GenerateInvoiceForContractJob::dispatch($contract, $periodMonth)
+                ->onQueue('billing');
         }
 
-        return $results;
+        Log::info('[Billing] Batch dispatched to queue', [
+            'property_id' => $propertyId,
+            'period'      => $periodMonth->format('Y-m'),
+            'total'       => $total,
+        ]);
+
+        // Return immediately — individual results handled async by the Job.
+        return [
+            'total'   => $total,
+            'status'  => 'queued',
+            'message' => "{$total} hóa đơn đã được đưa vào hàng đợi xử lý.",
+        ];
     }
 
     /**

@@ -78,7 +78,7 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
 
   const filteredTemplates = templates.filter(t => 
     t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.room_type.toLowerCase().includes(searchTerm.toLowerCase())
+    t.room_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (

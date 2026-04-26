@@ -233,6 +233,40 @@ export const meteringApi = {
   },
 
   /**
+   * Duyệt hàng loạt chỉ số (Gửi mảng ID).
+   */
+  bulkApproveReadings: async (readingIds: string[]) => {
+    const response = await apiClient.post('/meter-readings/bulk-approve', {
+      reading_ids: readingIds,
+    });
+    console.log(`📡 API: POST bulk-approve:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Từ chối hàng loạt chỉ số.
+   */
+  bulkRejectReadings: async (readingIds: string[], reason?: string) => {
+    const response = await apiClient.post('/meter-readings/bulk-reject', {
+      reading_ids: readingIds,
+      rejection_reason: reason,
+    });
+    console.log(`📡 API: POST bulk-reject:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Cập nhật hàng loạt (Sửa lỗi/Resubmit).
+   */
+  bulkUpdateReadings: async (updates: { id: string; reading_value?: number; period_start?: string; period_end?: string; status?: string }[]) => {
+    const response = await apiClient.patch('/meter-readings/bulk-update', {
+      updates,
+    });
+    console.log(`📡 API: PATCH bulk-update:`, response.data);
+    return response.data.data || response.data;
+  },
+
+  /**
    * Lấy readings (Toàn cục) - Hỗ trợ lọc theo property_id, status.
    */
   getGlobalReadings: async (params?: {
@@ -307,30 +341,60 @@ export const meteringApi = {
     return { data: allReadings, meta: { total: allReadings.length } };
   },
 
-  // Duyệt nhiều chốt số cùng lúc (gọi từng cái song song)
-  bulkApproveReadings: async (items: { meterId: string; readingId: string }[]) => {
-    const results = await Promise.allSettled(
-      items.map(({ meterId, readingId }) =>
-        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'APPROVED' })
-      )
-    );
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
-    return { succeeded, failed };
+
+
+  // ─── Adjustment Notes ─────────────────────────────────────────────────────
+
+  /**
+   * Lấy danh sách ghi chú điều chỉnh cho một chốt số.
+   * NOTE: Chỉ áp dụng cho readings ở trạng thái LOCKED.
+   */
+  getAdjustmentNotes: async (readingId: string) => {
+    const response = await apiClient.get(`/meter-readings/${readingId}/adjustments`, {
+      params: { include: 'requestedBy,approvedBy,rejectedBy,media' },
+    });
+    return (response.data.data || response.data) as import('../types').AdjustmentNote[];
   },
 
-  bulkRejectReadings: async (items: { meterId: string; readingId: string }[], reason?: string) => {
-    const results = await Promise.allSettled(
-      items.map(({ meterId, readingId }) =>
-        apiClient.put(`/meters/${meterId}/readings/${readingId}`, { status: 'REJECTED', meta: { rejection_reason: reason } })
-      )
-    );
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    const failed = results.filter(r => r.status === 'rejected').length;
-    return { succeeded, failed };
+  /**
+   * Tạo phiếu xin sửa chỉ số.
+   * Bắt buộc: reason, after_value, proof_media_ids (ít nhất 1 ảnh minh chứng).
+   */
+  createAdjustmentNote: async (
+    readingId: string,
+    data: { reason: string; after_value: number; proof_media_ids: string[] }
+  ) => {
+    const response = await apiClient.post(`/meter-readings/${readingId}/adjustments`, data);
+    console.log(`📡 API: POST /meter-readings/${readingId}/adjustments:`, response.data);
+    return (response.data.data || response.data) as import('../types').AdjustmentNote;
   },
 
-  // Legacy method
+  /**
+   * Duyệt phiếu xin sửa chỉ số (Manager only).
+   * Tự động cập nhật reading_value + recalculate consumption.
+   */
+  approveAdjustmentNote: async (readingId: string, adjustmentId: string) => {
+    const response = await apiClient.put(
+      `/meter-readings/${readingId}/adjustments/${adjustmentId}/approve`,
+      {}
+    );
+    console.log(`📡 API: Approved adjustment note:`, response.data);
+    return (response.data.data || response.data) as import('../types').AdjustmentNote;
+  },
+
+  /**
+   * Từ chối phiếu xin sửa chỉ số (Manager only).
+   */
+  rejectAdjustmentNote: async (readingId: string, adjustmentId: string, reject_reason: string) => {
+    const response = await apiClient.put(
+      `/meter-readings/${readingId}/adjustments/${adjustmentId}/reject`,
+      { reject_reason }
+    );
+    console.log(`📡 API: Rejected adjustment note:`, response.data);
+    return (response.data.data || response.data) as import('../types').AdjustmentNote;
+  },
+
+  // ─── Legacy method ────────────────────────────────────────────────────────
   addReading: async (meterId: string, reading_value: number, reading_date: string, photo?: File) => {
     const formData = new FormData();
     formData.append('reading_value', reading_value.toString());

@@ -1,7 +1,9 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import PropertyUsersPage from './pages/PropertyUsersPage';
-import CreateUserPage from './pages/CreateUserPage';
-import UserDetailPage from './pages/UserDetailPage';
+
+const PropertyUsersPage = lazy(() => import('./pages/PropertyUsersPage'));
+const CreateUserPage = lazy(() => import('./pages/CreateUserPage'));
+const UserDetailPage = lazy(() => import('./pages/UserDetailPage'));
 
 export const usersRoutes: RouteObject[] = [
   {

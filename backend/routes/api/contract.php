@@ -20,11 +20,18 @@ Route::post('contracts/{contract}/request-termination', [ContractController::cla
 Route::get('contracts/{contract}/status-histories', [ContractController::class, 'statusHistories']);           // Timeline lịch sử
 
 
+use App\Http\Controllers\Api\Contract\GeneratedDocumentController;
+
 // Contract Documents
 Route::post('contracts/scan', [ContractDocumentController::class, 'scan']);
 Route::post('contracts/{contract}/generate-document', [ContractDocumentController::class, 'generate']);
 Route::get('contracts/{contract}/document/download', [ContractDocumentController::class, 'download'])->name('api.contracts.document.download');
 Route::post('contracts/{contract}/upload-signed', [ContractDocumentController::class, 'uploadSigned']);
+
+// Generated Documents History
+Route::get('generated-documents', [GeneratedDocumentController::class, 'index']);
+Route::get('generated-documents/{id}/download', [GeneratedDocumentController::class, 'download']);
+Route::delete('generated-documents/{id}', [GeneratedDocumentController::class, 'destroy']);
 
 Route::get('contracts/trash', [ContractController::class, 'trash']);
 Route::apiResource('contracts', ContractController::class);

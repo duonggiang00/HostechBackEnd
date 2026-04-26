@@ -69,7 +69,7 @@ const KPICard = ({ title, value, icon: Icon, trend, description, color }: KPICar
 export default function ContractListPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
-  const { deleteContract } = useContractActions();
+  const { deleteContract, restoreContract, forceDeleteContract } = useContractActions();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Keep setSearchParams in a ref so it's not a useEffect dependency
@@ -157,10 +157,30 @@ export default function ContractListPage() {
   };
 
   const handleDelete = (contract: any) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xoá hợp đồng này?')) return;
+    if (isTrashView) {
+      handleForceDelete(contract);
+      return;
+    }
+
+    if (!window.confirm('Bạn có chắc chắn muốn xoá hợp đồng này vào thùng rác?')) return;
     deleteContract.mutate(contract.id, {
       onSuccess: () => toast.success('Đã chuyển hợp đồng vào thùng rác.'),
       onError: () => toast.error('Có lỗi xảy ra khi xoá hợp đồng.'),
+    });
+  };
+
+  const handleRestore = (contract: any) => {
+    restoreContract.mutate(contract.id, {
+      onSuccess: () => toast.success('Hợp đồng đã được phục hồi.'),
+      onError: () => toast.error('Có lỗi xảy ra khi phục hồi hợp đồng.'),
+    });
+  };
+
+  const handleForceDelete = (contract: any) => {
+    if (!window.confirm('Hợp đồng này sẽ bị xoá vĩnh viễn. Bạn có chắc chắn?')) return;
+    forceDeleteContract.mutate(contract.id, {
+      onSuccess: () => toast.success('Đã xoá hợp đồng vĩnh viễn.'),
+      onError: () => toast.error('Có lỗi xảy ra khi xoá hợp đồng vĩnh viễn.'),
     });
   };
 
@@ -269,6 +289,8 @@ export default function ContractListPage() {
                 onEdit={handleEdit}
                 onViewDetail={handleEdit}
                 onDelete={handleDelete}
+                onRestore={handleRestore}
+                onForceDelete={handleForceDelete}
                 search={searchTerm}
                 onSearchChange={setSearchTerm}
                 status={status}

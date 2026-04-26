@@ -22,6 +22,7 @@ class ContractMemberUpdateRequest extends FormRequest
             'is_primary' => ['boolean'],
             'joined_at' => ['nullable', 'date'],
             'left_at' => ['nullable', 'date'],
+            'permanent_address' => ['nullable', 'string', 'max:500'],
         ];
     }
 

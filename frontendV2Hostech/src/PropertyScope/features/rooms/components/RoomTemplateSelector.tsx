@@ -1,7 +1,7 @@
-import { useRoomTemplates } from '../../templates/hooks/useTemplates';
+import { useRoomTemplates } from '@/PropertyScope/features/properties/templates/hooks/useTemplates';
 import { Layout, Zap, Users, Maximize2, DollarSign } from 'lucide-react';
 import { formatNumber } from '@/lib/utils';
-import type { RoomTemplate } from '../../templates/types';
+import type { RoomTemplate } from '@/PropertyScope/features/properties/templates/types';
 
 interface RoomTemplateSelectorProps {
   propertyId: string;
@@ -22,7 +22,7 @@ export function RoomTemplateSelector({ propertyId, onSelect, selectedId }: RoomT
         <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Sử dụng mẫu phòng</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {templates.map((template) => (
+        {templates.map((template: RoomTemplate) => (
           <button
             key={template.id}
             type="button"

@@ -2,6 +2,7 @@
 
 namespace App\Services\Meter;
 
+use App\Events\Meter\BulkMeterReadingsApproved;
 use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
 use App\Services\Notification\NotificationService;
@@ -176,37 +177,123 @@ class MeterReadingService
                 ]);
             }
             
-            // Centralize consumption calculation
-            $this->recalculateConsumption($reading);
-
-            // Sync base reading if approved
-            if ($reading->status === 'APPROVED') {
-                $this->syncMeterBaseReading($reading->meter);
-                $this->aggregateToMaster($reading);
-            }
+            // Consumption calculation and events are now handled by MeterReadingObserver
+            
+            $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
             $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
-            // Dispatch notification after successful creation
-            $this->notificationService->notifyMeterReadingStatusChanged($reading, $reading->status ?? 'SUBMITTED');
+            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB
+            return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
+        });
+    }
 
-            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB (không dùng 'media' relationship)
+    /**
+     * Create a meter reading WITHOUT dispatching events.
+     * Used internally by bulkStore() so events can be batched after all records are persisted.
+     */
+    protected function createSilent(array $data): MeterReading
+    {
+        return DB::transaction(function () use ($data) {
+            $actorId = Auth::id();
+            $data['org_id'] = $data['org_id'] ?? Auth::user()?->org_id;
+            $meterId = $data['meter_id'];
+            $readingValue = $data['reading_value'];
+
+            $actor = Auth::user();
+            $defaultStatus = ($actor && $actor->hasRole(['Manager', 'Owner'])) ? 'APPROVED' : 'DRAFT';
+            $status = $data['status'] ?? $defaultStatus;
+
+            $data['status'] = $status;
+            $data['submitted_by_user_id'] = $data['submitted_by_user_id'] ?? $actorId;
+
+            if ($status === 'SUBMITTED' || $status === 'APPROVED') {
+                $data['submitted_at'] = $data['submitted_at'] ?? now();
+            }
+            if ($status === 'APPROVED') {
+                $data['approved_at'] = $data['approved_at'] ?? now();
+                $data['approved_by_user_id'] = $data['approved_by_user_id'] ?? $actorId;
+            }
+
+            $existing = MeterReading::withTrashed()->where('meter_id', $meterId)
+                ->where('period_start', $data['period_start'])
+                ->where('period_end', $data['period_end'])
+                ->first();
+
+            if ($existing && $existing->trashed()) {
+                $existing->forceDelete();
+                $existing = null;
+            }
+
+            if ($existing) {
+                if ($existing->status !== 'DRAFT') {
+                    throw ValidationException::withMessages([
+                        'period_start' => 'Đã tồn tại bản chốt số cho kỳ này và không còn ở trạng thái DRAFT.',
+                    ]);
+                }
+                // Update silently (no event from update path)
+                $existing->update($data);
+                $this->recalculateConsumption($existing);
+                $this->attachProofs($existing, $data['proof_media_ids'] ?? []);
+                return $existing->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
+            }
+
+            $prev = MeterReading::where('meter_id', $meterId)
+                ->where('status', 'APPROVED')
+                ->orderBy('period_end', 'desc')
+                ->first();
+
+            $meter = \App\Models\Meter\Meter::find($meterId);
+            $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
+
+            if ($readingValue < $prevValue) {
+                throw new \Exception("Chỉ số mới ($readingValue) không thể nhỏ hơn chỉ số cũ ($prevValue)");
+            }
+
+            if (!$prev && $meter && !isset($meter->meta['initial_reading'])) {
+                $meta = $meter->meta ?? [];
+                $meta['initial_reading'] = $meter->base_reading;
+                $meter->update(['meta' => $meta]);
+            }
+
+            $reading = MeterReading::withoutEvents(fn() => MeterReading::create($data));
+            $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
+
             return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
         });
     }
 
     /**
      * Bulk create meter readings.
+     *
+     * Optimization: instead of dispatching N individual events (one per reading),
+     * we collect all approved IDs and fire ONE BulkMeterReadingsApproved event.
+     * This reduces billing queue pressure from O(N) jobs to O(1) job.
      */
     public function bulkStore(array $readings): array
     {
-        return DB::transaction(function () use ($readings) {
-            $results = [];
+        $results      = [];
+        $approvedIds  = [];
+
+        DB::transaction(function () use ($readings, &$results, &$approvedIds) {
             foreach ($readings as $readingData) {
-                $results[] = $this->create($readingData);
+                // createSilent: creates the reading WITHOUT firing any events
+                $reading   = $this->createSilent($readingData);
+                $results[] = $reading;
+
+                if ($reading->status === 'APPROVED') {
+                    $approvedIds[] = $reading->id;
+                }
             }
-            return $results;
         });
+
+        // Fire ONE batch event for all approved readings
+        if (!empty($approvedIds)) {
+            $propertyId = !empty($results) ? $results[0]->meter->property_id : null;
+            event(new BulkMeterReadingsApproved($approvedIds, $propertyId));
+        }
+
+        return $results;
     }
 
     /**
@@ -230,11 +317,87 @@ class MeterReadingService
     }
 
     /**
+     * Bulk approve readings (SUBMITTED → APPROVED).
+     */
+    public function bulkApprove(array $readingIds): array
+    {
+        return DB::transaction(function () use ($readingIds) {
+            $readings = MeterReading::whereIn('id', $readingIds)
+                ->where('status', 'SUBMITTED')
+                ->get();
+
+            $results = [];
+            $approvedIds = [];
+            $propertyId = null;
+
+            foreach ($readings as $reading) {
+                // Pass false to update to skip single MeterReadingApproved event
+                $results[] = $this->update($reading, ['status' => 'APPROVED'], false);
+                $approvedIds[] = $reading->id;
+                if (!$propertyId) {
+                    $propertyId = $reading->meter->property_id;
+                }
+            }
+
+            if (!empty($approvedIds)) {
+                event(new BulkMeterReadingsApproved($approvedIds, $propertyId));
+            }
+
+            return $results;
+        });
+    }
+
+    /**
+     * Bulk reject readings (SUBMITTED/DRAFT → REJECTED).
+     */
+    public function bulkReject(array $readingIds, ?string $reason = null): array
+    {
+        return DB::transaction(function () use ($readingIds, $reason) {
+            $readings = MeterReading::whereIn('id', $readingIds)
+                ->whereIn('status', ['SUBMITTED', 'DRAFT'])
+                ->get();
+
+            $results = [];
+            foreach ($readings as $reading) {
+                $results[] = $this->update($reading, [
+                    'status' => 'REJECTED',
+                    'meta' => array_merge($reading->meta ?? [], ['rejection_reason' => $reason])
+                ]);
+            }
+            return $results;
+        });
+    }
+
+    /**
+     * Bulk update readings (fix multiple drafts/rejected records at once).
+     */
+    public function bulkUpdate(array $updates): array
+    {
+        return DB::transaction(function () use ($updates) {
+            $results = [];
+            foreach ($updates as $updateData) {
+                $id = $updateData['id'] ?? null;
+                if (!$id) continue;
+
+                $reading = MeterReading::find($id);
+                if (!$reading) continue;
+
+                // Strip ID from updates to avoid mass-assignment errors or unexpected behavior
+                $data = $updateData;
+                unset($data['id']);
+
+                $results[] = $this->update($reading, $data);
+            }
+            return $results;
+        });
+    }
+
+    /**
      * Update an existing meter reading.
      */
-    public function update(MeterReading $reading, array $data): MeterReading
+    public function update(MeterReading $reading, array $data, bool $dispatchEvents = true): MeterReading
     {
-        return DB::transaction(function () use ($reading, $data) {
+        return DB::transaction(function () use ($reading, $data, $dispatchEvents) {
             $originalStatus = $reading->status;
             $targetStatus = $data['status'] ?? $originalStatus;
 
@@ -256,137 +419,25 @@ class MeterReadingService
                 $this->triggerCascadeRecalculation($reading->meter, $reading->period_end);
             }
 
-            // Sync base reading and aggregate if approved
-            if ($reading->status === 'APPROVED') {
-                $this->syncMeterBaseReading($reading->meter);
-                
-                // Aggregate to master if status just became approved OR if values changed on an already approved reading
-                $isValueChanged = $isReadingValueChanged || isset($data['consumption']);
-                if ($isBecameApproved || $isValueChanged) {
-                    $this->aggregateToMaster($reading);
+            // EDA: Dispatch events based on status transition or value change
+            if ($dispatchEvents) {
+                if ($reading->status === 'APPROVED') {
+                    $isValueChanged = $isReadingValueChanged || isset($data['consumption']);
+                    if ($isBecameApproved || $isValueChanged) {
+                        event(new \App\Events\Meter\MeterReadingApproved($reading));
+                    }
+                } elseif (isset($data['status'])) {
+                    // For SUBMITTED, REJECTED, etc.
+                    event(new \App\Events\Meter\MeterReadingStatusChanged($reading->load('meter')));
                 }
             }
 
-            if (isset($data['proof_media_ids'])) {
-                $this->attachProofs($reading, $data['proof_media_ids']);
-            }
-
-            if (isset($data['status'])) {
-                event(new \App\Events\Meter\MeterReadingStatusChanged($reading->load('meter')));
-
-                // Dispatch persistent + broadcast notifications
-                $this->notificationService->notifyMeterReadingStatusChanged(
-                    $reading,
-                    $data['status'],
-                    $this->resolveRejectionReason($data)
-                );
-            }
-
-            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB (không dùng 'media' relationship)
+            // Fresh reload để đảm bảo getMedia() lấy proofs mới nhất từ DB
             return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
         });
     }
 
-    /**
-     * Automatically aggregate room readings to the master meter for the property.
-     */
-    public function aggregateToMaster(MeterReading $reading)
-    {
-        $meter = $reading->meter;
-
-        // Skip if already a master meter or if no property link
-        if ($meter->is_master || !$meter->property_id) {
-            return null;
-        }
-
-        // Find the master meter for this property and meter type (Dynamic Linking)
-        $masterMeter = \App\Models\Meter\Meter::where('property_id', $meter->property_id)
-            ->where('type', $meter->type)
-            ->where('is_master', true)
-            ->first();
-
-        if (!$masterMeter) {
-            return null;
-        }
-
-        $periodStart = $reading->period_start;
-        $periodEnd = $reading->period_end;
-
-        // Sum up the consumption for all room meters for the given period (matched by type)
-        $totalPropertyUsage = MeterReading::whereHas('meter', function ($query) use ($masterMeter) {
-                $query->where('property_id', $masterMeter->property_id)
-                    ->where('type', $masterMeter->type)
-                    ->where('is_master', false);
-            })
-            ->where('period_start', $periodStart)
-            ->where('period_end', $periodEnd)
-            ->where('status', 'APPROVED')
-            ->sum('consumption');
-
-        // Preservation of initial reading for master meter history integrity
-        if (!isset($masterMeter->meta['initial_reading'])) {
-            $meta = $masterMeter->meta ?? [];
-            $meta['initial_reading'] = $masterMeter->base_reading;
-            $masterMeter->update(['meta' => $meta]);
-        }
-
-        // Ensure Master Meter reading is CUMULATIVE
-        $prevMaster = MeterReading::where('meter_id', $masterMeter->id)
-            ->where('period_end', '<=', $periodStart)
-            ->where('status', 'APPROVED')
-            ->orderBy('period_end', 'desc')
-            ->first();
-
-        // Use meta['initial_reading'] as stable anchor, fallback to master base_reading
-        $initialMasterStart = $masterMeter->meta['initial_reading'] ?? $masterMeter->base_reading;
-        $prevValue = $prevMaster ? $prevMaster->reading_value : $initialMasterStart;
-        $readingValue = $prevValue + $totalPropertyUsage;
-
-        $masterReading = MeterReading::updateOrCreate(
-            [
-                'meter_id' => $masterMeter->id,
-                'period_start' => $periodStart,
-                'period_end' => $periodEnd,
-            ],
-            [
-                'reading_value' => $readingValue,
-                'consumption' => $totalPropertyUsage,
-                'status' => 'APPROVED',
-                'submitted_at' => now(),
-                'org_id' => $masterMeter->org_id,
-                'submitted_by_user_id' => Auth::id(),
-            ]
-        );
-
-        // Sync the source room meter's base reading
-        $this->syncMeterBaseReading($meter);
-
-        // Sync master meter's base reading too
-        $this->syncMeterBaseReading($masterMeter);
-
-        return $masterReading;
-    }
-
-    /**
-     * Recalculate consumption for a specific reading based on the previous one.
-     */
-    public function recalculateConsumption(MeterReading $reading): void
-    {
-        $prev = MeterReading::where('meter_id', $reading->meter_id)
-            ->where('id', '!=', $reading->id)
-            ->where('period_end', '<=', $reading->period_start)
-            ->where('status', 'APPROVED')
-            ->orderBy('period_end', 'desc')
-            ->first();
-
-        // Use meta['initial_reading'] as stable anchor, fallback to meter->base_reading
-        $initialReading = $reading->meter->meta['initial_reading'] ?? $reading->meter->base_reading;
-        $prevValue = $prev ? $prev->reading_value : ($reading->meter ? $initialReading : 0);
-        
-        $reading->update([
-            'consumption' => $reading->reading_value - $prevValue
-        ]);
-    }
+    // recalculateConsumption has been moved to MeterReadingObserver@saving
 
     /**
      * Synchronize the meter's base_reading with its latest approved reading.
@@ -419,6 +470,9 @@ class MeterReadingService
     /**
      * Trigger a cascade recalculation for all subsequent readings.
      * Needed when a historical reading value changes.
+     *
+     * Optimization: instead of firing N individual MeterReadingApproved events,
+     * we recalculate consumption for each and then fire ONE BulkMeterReadingsApproved.
      */
     public function triggerCascadeRecalculation(\App\Models\Meter\Meter $meter, \Carbon\Carbon|string $startDate): void
     {
@@ -428,11 +482,18 @@ class MeterReadingService
             ->orderBy('period_start', 'asc')
             ->get();
 
+        if ($subsequentReadings->isEmpty()) {
+            return;
+        }
+
+        $approvedIds = [];
         foreach ($subsequentReadings as $reading) {
             $this->recalculateConsumption($reading);
-            // Also need to update the master aggregation for each affected period
-            $this->aggregateToMaster($reading);
+            $approvedIds[] = $reading->id;
         }
+
+        // ONE batch event instead of N individual MeterReadingApproved events
+        event(new BulkMeterReadingsApproved($approvedIds));
     }
 
     protected function attachProofs(MeterReading $reading, array $mediaIds)

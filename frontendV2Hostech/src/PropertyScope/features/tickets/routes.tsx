@@ -1,5 +1,7 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import TicketListPage from './pages/TicketListPage';
+
+const TicketListPage = lazy(() => import('./pages/TicketListPage'));
 
 export const ticketRoutes: RouteObject[] = [
   {

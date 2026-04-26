@@ -7,7 +7,11 @@ use App\Http\Controllers\Api\Property\RoomAssetController;
 use App\Http\Controllers\Api\Property\RoomController;
 use App\Http\Controllers\Api\Property\RoomQuickInvoiceController;
 use App\Http\Controllers\Api\Property\RoomTemplateController;
+use App\Http\Controllers\Api\Property\DocumentTemplateController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('document-templates/{id}/placeholders', [DocumentTemplateController::class, 'placeholders']);
+Route::apiResource('document-templates', DocumentTemplateController::class);
 
 // Properties
 Route::get('properties/trash', [PropertyController::class, 'trash']);

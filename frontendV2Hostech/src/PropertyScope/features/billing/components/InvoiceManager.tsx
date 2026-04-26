@@ -19,9 +19,10 @@ interface InvoiceManagerProps {
   roomId: string;
   data?: Invoice[];
   isLoading?: boolean;
+  isReadOnly?: boolean;
 }
 
-export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerProps) {
+export default function InvoiceManager({ data = [], isLoading, isReadOnly }: InvoiceManagerProps) {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const { mutateAsync: issueInvoice, isPending: isIssuing } = useIssueInvoice();
 
@@ -171,10 +172,12 @@ export default function InvoiceManager({ data = [], isLoading }: InvoiceManagerP
         ))}
       </div>
 
-      <button className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group">
-        <DollarSign className="w-5 h-5 group-hover:scale-110 transition-transform" />
-        Tạo hóa đơn tùy chỉnh
-      </button>
+      {!isReadOnly && (
+        <button className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group">
+          <DollarSign className="w-5 h-5 group-hover:scale-110 transition-transform" />
+          Tạo hóa đơn tùy chỉnh
+        </button>
+      )}
 
       {selectedInvoice && (
         <RecordPaymentModal 

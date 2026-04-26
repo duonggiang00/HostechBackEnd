@@ -38,13 +38,20 @@ export default function UserDetailPage() {
 
   if (isError || !user) {
     return (
-      <div className="text-center py-20">
-        <h2 className="text-xl font-bold text-[#111827] dark:text-slate-300">Không tìm thấy người dùng</h2>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm mx-auto max-w-2xl px-6 py-12">
+        <div className="w-20 h-20 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center mb-6">
+          <ShieldAlert className="w-10 h-10 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Không tìm thấy người dùng</h2>
+        <p className="text-slate-500 dark:text-slate-400 text-center mb-8 max-w-sm">
+          Tài khoản này có thể chưa được kích hoạt hoặc đã bị xóa khỏi hệ thống. Vui lòng kiểm tra lại ID người dùng.
+        </p>
         <button 
           onClick={handleBack}
-          className="mt-4 px-6 py-2 bg-[#1E3A8A] text-white rounded-lg font-bold"
+          className="flex items-center gap-2 px-8 py-3 bg-[#1E3A8A] text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all"
         >
-          Quay lại
+          <ArrowLeft className="w-5 h-5" />
+          Quay lại danh sách
         </button>
       </div>
     );

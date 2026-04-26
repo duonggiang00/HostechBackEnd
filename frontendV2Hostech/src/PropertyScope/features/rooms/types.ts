@@ -1,5 +1,5 @@
 import type { RoomContract } from '@/PropertyScope/features/contracts/types';
-import type { Invoice } from '../billing/types';
+import type { Invoice } from '@/PropertyScope/features/billing/types';
 
 
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'draft';
@@ -148,6 +148,7 @@ export interface RoomQueryParams {
   property_id?: string;
   floor_id?: string;
   status?: RoomStatus;
+  type?: string;
   search?: string;
   code?: string;
   include?: string;
@@ -190,6 +191,7 @@ export interface RoomTemplate {
   id: string;
   property_id: string;
   name: string;
+  room_type?: string;
   area: number;
   capacity: number;
   base_price: number;

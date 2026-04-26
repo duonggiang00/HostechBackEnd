@@ -59,11 +59,11 @@ class MeterReadingPolicy implements RbacModuleProvider
             return $this->checkPropertyScope($user, $meterReading);
         }
 
-        // Staff can revise their own DRAFT records before submission.
+        // Staff can revise their own DRAFT/REJECTED records before submission/resubmission.
         if (
             $user->hasRole('Staff')
             && $user->hasPermissionTo('create MeterReading')
-            && $meterReading->status === 'DRAFT'
+            && in_array($meterReading->status, ['DRAFT', 'REJECTED'])
             && $meterReading->submitted_by_user_id === $user->id
         ) {
             return $this->checkPropertyScope($user, $meterReading);

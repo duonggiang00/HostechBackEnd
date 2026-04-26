@@ -2,7 +2,8 @@
 
 namespace App\Services\Finance;
 
-use App\Models\Finance\LedgerEntry;
+use App\Events\Finance\PaymentApproved;
+use App\Events\Finance\PaymentVoided;
 use App\Models\Finance\Payment;
 use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
@@ -16,8 +17,7 @@ use Spatie\QueryBuilder\QueryBuilder;
 class PaymentService
 {
     public function __construct(
-        protected InvoiceService $invoiceService,
-        protected LedgerService $ledgerService
+        protected InvoiceService $invoiceService
     ) {
     }
 
@@ -166,9 +166,6 @@ class PaymentService
                 }
             }
 
-            // 3. Ghi sổ cái
-            $this->ledgerService->recordPayment($payment);
-
             return $payment->load(['property', 'allocations.invoice', 'receipt']);
         });
     }
@@ -248,6 +245,7 @@ class PaymentService
 
         return DB::transaction(function () use ($payment, $approver) {
             // 1. Approve Payment
+            $payment->status_history_note = 'Thanh toán trực tuyến được xác thực thành công';
             $payment->update([
                 'status'              => 'APPROVED',
                 'received_at'         => now(),
@@ -269,9 +267,6 @@ class PaymentService
                     $this->invoiceService->payInvoice($invoice, "Thanh toán VNPay qua Payment #{$payment->id}");
                 }
             }
-
-            // 3. Ghi sổ cái
-            $this->ledgerService->recordPayment($payment);
 
             return $payment->load(['property', 'allocations.invoice', 'receipt']);
         });
@@ -303,9 +298,6 @@ class PaymentService
                         : $invoice->status,
                 ]);
             }
-
-            // 2. Ghi bút toán đảo ngược
-            $this->ledgerService->reversePayment($payment);
 
             // 3. Soft delete payment
             $payment->delete();

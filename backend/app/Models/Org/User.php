@@ -41,6 +41,7 @@ class User extends Authenticatable implements HasMedia
         'identity_issued_place',
         'date_of_birth',
         'address',
+        'license_plate',
         'mfa_enabled',
         'mfa_method',
         'two_factor_secret',

@@ -150,7 +150,8 @@ class Room extends Model implements HasMedia
     public function services()
     {
         return $this->belongsToMany(\App\Models\Service\Service::class, 'room_services')
-            ->withPivot('override_price', 'is_active')
+            ->using(RoomService::class)
+            ->withPivot('quantity', 'included_units', 'meta', 'org_id')
             ->withTimestamps();
     }
 

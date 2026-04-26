@@ -1,6 +1,8 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-import ServiceListPage from './pages/ServiceListPage';
-import ServiceFormPage from './pages/ServiceFormPage';
+
+const ServiceListPage = lazy(() => import('./pages/ServiceListPage'));
+const ServiceFormPage = lazy(() => import('./pages/ServiceFormPage'));
 
 export const serviceRoutes: RouteObject[] = [
   {

@@ -27,7 +27,7 @@ interface SidebarProps {
   menuSections: SidebarSection[];
   switcher?: ReactNode;
   extraContent?: ReactNode;
-  profilePath: string;
+  profilePath?: string;
   scopeLabel?: string;
   exitLink?: ReactNode;
 }
@@ -53,20 +53,23 @@ export default function Sidebar({
       <div className={`flex shrink-0 items-center justify-between py-5 border-b border-gray-100 relative z-10 transition-all duration-300 ${isCollapsed ? 'px-0 justify-center flex-col gap-3' : 'px-5'}`}>
         <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center mx-auto' : ''}`}>
           {isCollapsed ? (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-900 shadow-sm transition-transform duration-200">
-               <Building2 className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 shadow-sm transition-transform duration-200">
+               <span className="text-white font-black text-lg tracking-tighter">H</span>
             </div>
           ) : (
-            <>
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-900 shadow-sm transition-transform duration-200">
-                <Building2 className="h-5 w-5 text-white" strokeWidth={2} />
+            <div className="flex items-center gap-3 px-2">
+              <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <span className="text-white font-black text-xl tracking-tighter">H</span>
               </div>
-              <div className="flex flex-col justify-center">
-                <h1 className="text-xl font-bold tracking-tight text-gray-900 font-sans leading-none mt-[2px]">
-                  Hostech
+              <div className="flex flex-col">
+                <h1 className="text-sm font-black tracking-tight text-slate-900 dark:text-white leading-none">
+                  Hostech<span className="text-brand-600">.</span>
                 </h1>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                  Property Manager
+                </span>
               </div>
-            </>
+            </div>
           )}
         </div>
         

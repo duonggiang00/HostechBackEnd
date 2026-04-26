@@ -101,13 +101,19 @@ class FloorService
         // Auto-assign org_id from Property
         $data['org_id'] = $property->org_id;
 
-        return Floor::create($data);
+        $floor = Floor::create($data);
+
+        \App\Events\Property\FloorCreated::dispatch($floor);
+
+        return $floor;
     }
 
     public function update(string $id, array $data): ?Floor
     {
         $floor = $this->find($id) ?? abort(404, 'Floor not found');
         $floor->update($data);
+
+        \App\Events\Property\FloorUpdated::dispatch($floor);
 
         return $floor;
     }
@@ -116,7 +122,13 @@ class FloorService
     {
         $floor = $this->find($id) ?? abort(404, 'Floor not found');
 
-        return $floor->delete();
+        $deleted = $floor->delete();
+        
+        if ($deleted) {
+            \App\Events\Property\FloorDeleted::dispatch($floor);
+        }
+
+        return $deleted;
     }
 
     public function restore(string $id): bool
@@ -177,6 +189,14 @@ class FloorService
                 );
             }
         });
+
+        // --- DECOUPLED: EVENT DISPATCH ---
+        \App\Events\Property\BuildingOverviewUpdated::dispatch(
+            $floor->property_id,
+            auth()->id() ?? 'system',
+            ['floor_id' => $floor->id, 'action' => 'sync_nodes']
+        );
+        // ---------------------------------
     }
 
     /**

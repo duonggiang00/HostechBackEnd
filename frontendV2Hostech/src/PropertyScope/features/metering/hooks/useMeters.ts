@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { meteringApi } from '../api/metering';
 import type { Meter, MeterReading } from '../types';
 import toast from 'react-hot-toast';
+import { useEffect } from 'react';
+import { echo } from '@/shared/utils/echo';
 
 export type { Meter, MeterReading };
 
@@ -12,6 +14,8 @@ export function useMeters(propertyId?: string | null, options: {
   page?: number;
   perPage?: number;
 } = {}) {
+  const queryClient = useQueryClient();
+
   const metersQuery = useQuery({
     queryKey: ['meters', propertyId, options.filters, options.search, options.page, options.perPage],
     queryFn: async () => {
@@ -21,6 +25,41 @@ export function useMeters(propertyId?: string | null, options: {
     },
     enabled: options.enabled !== undefined ? options.enabled && !!propertyId : !!propertyId,
   });
+
+  // Real-time synchronization
+  useEffect(() => {
+    if (!echo || !propertyId || !options.enabled) return;
+
+    const channel = echo.private(`property.${propertyId}`);
+    
+    // Listen for single approved event (legacy/individual)
+    channel.listen('.meter-reading.approved', () => {
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+    });
+
+    // Listen for bulk approved event (new)
+    channel.listen('.meter-readings.bulk_approved', () => {
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+      toast.success('Dữ liệu chỉ số đã được cập nhật (hàng loạt)');
+    });
+
+    // Listen for any status change (submitted, rejected, etc.)
+    channel.listen('.meter-reading.status_changed', () => {
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+    });
+
+    return () => {
+      channel.stopListening('.meter-reading.approved');
+      channel.stopListening('.meter-readings.bulk_approved');
+      channel.stopListening('.meter-reading.status_changed');
+    };
+  }, [echo, propertyId, options.enabled, queryClient]);
 
   return {
     meters: metersQuery.data?.data || [],
@@ -197,36 +236,56 @@ export function useBulkApproveReadings(propertyId?: string | null) {
   const queryClient = useQueryClient();
 
   const approveMutation = useMutation({
-    mutationFn: (items: { meterId: string; readingId: string }[]) =>
-      meteringApi.bulkApproveReadings(items),
-    onSuccess: (result) => {
+    mutationFn: (readingIds: string[]) =>
+      meteringApi.bulkApproveReadings(readingIds),
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
-      if (result.failed > 0) {
-        toast.error(`Duyệt thành công ${result.succeeded}, thất bại ${result.failed} chốt số.`);
-      } else {
-        toast.success(`Đã duyệt thành công ${result.succeeded} chốt số!`);
-      }
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+      
+      const count = Array.isArray(result) ? result.length : (result.count || 0);
+      toast.success(`Đã duyệt thành công ${count || 'các'} chốt số!`);
     },
-    onError: () => {
-      toast.error('Có lỗi xảy ra khi duyệt chốt số.');
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi duyệt chốt số.');
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: ({ items, reason }: { items: { meterId: string; readingId: string }[]; reason?: string }) =>
-      meteringApi.bulkRejectReadings(items, reason),
-    onSuccess: (result) => {
+    mutationFn: ({ readingIds, reason }: { readingIds: string[]; reason?: string }) =>
+      meteringApi.bulkRejectReadings(readingIds, reason),
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
-      toast.success(`Đã từ chối ${result.succeeded} chốt số.`);
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+
+      const count = Array.isArray(result) ? result.length : (result.count || 0);
+      toast.success(`Đã từ chối ${count || 'các'} chốt số.`);
     },
-    onError: () => {
-      toast.error('Có lỗi xảy ra khi từ chối chốt số.');
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi từ chối chốt số.');
     },
   });
 
   return { approveMutation, rejectMutation };
+}
+
+// Hook sửa hàng loạt (dùng cho resubmit)
+export function useBulkUpdateReadings(propertyId?: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (updates: { id: string; reading_value?: number; period_start?: string; period_end?: string; status?: string }[]) =>
+      meteringApi.bulkUpdateReadings(updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      toast.success('Cập nhật hàng loạt thành công!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật hàng loạt');
+    },
+  });
 }
 
 // Hook gửi duyệt hàng loạt (DRAFT → SUBMITTED) cho Staff

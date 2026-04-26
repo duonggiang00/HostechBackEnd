@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { useNavigation } from '@/shared/hooks/useNavigation';
+import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
 import { 
   Building2, 
   Users, 
@@ -20,36 +22,8 @@ interface OrgScopeLayoutProps {
 }
 
 export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
-  const { user } = useAuthStore();
+  const { menuSections, scopeLabel } = useNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const menuItems = [
-    { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner', 'Staff'] },
-    { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
-    { id: 'staff', icon: Users, label: 'Nhân sự hệ thống', path: '/org/staff', roles: ['Admin', 'Owner', 'Staff'] },
-    { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner', 'Staff'] },
-    { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner', 'Staff'] },
-  ].filter(item => !item.roles || (user?.role && item.roles.includes(user.role)));
-
-  const menuSections = [
-    {
-      id: 'overview',
-      label: 'Tổng quan',
-      defaultOpen: true,
-      items: menuItems.filter((item) => ['dashboard', 'properties'].includes(item.id)),
-    },
-    {
-      id: 'operations',
-      label: 'Điều hành',
-      items: menuItems.filter((item) => ['staff', 'invoices'].includes(item.id)),
-    },
-    {
-      id: 'analytics',
-      label: 'Báo cáo',
-      items: menuItems.filter((item) => item.id === 'finance'),
-    },
-  ].filter((section) => section.items.length > 0);
-
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
@@ -59,7 +33,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
         menuSections={menuSections}
         switcher={<PropertySwitcher variant="sidebar" />}
         profilePath="/org/profile"
-        scopeLabel="Phạm vi tổ chức"
+        scopeLabel={scopeLabel}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -99,6 +73,7 @@ export default function OrgScopeLayout({ children }: OrgScopeLayoutProps) {
 
         <main className="p-4 md:p-8 flex-1 overflow-auto">
           <div className="max-w-7xl mx-auto animate-in fade-in duration-700">
+            <Breadcrumbs />
             {children}
           </div>
         </main>

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Document\DocumentTemplate;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
@@ -56,8 +57,8 @@ class OrgSeeder extends Seeder
             'test'
         ];
         $orgCount = count($orgNames);
-        $usersPerOrg = 10;
-        $propertiesPerOrg = rand(2, 3);
+        $usersPerOrg = 5;
+        $propertiesPerOrg = 1;
         $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
@@ -75,9 +76,20 @@ class OrgSeeder extends Seeder
         $this->command->line("└─ Số lượng tổ chức: <fg=cyan>$orgCount</>");
 
         foreach ($orgNames as $name) {
-            $org = Org::factory()->create(['name' => $name]);
+            $org = Org::factory()->create([
+                'name' => $name,
+                'bank_accounts' => [
+                    [
+                        'bank_name' => 'Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)',
+                        'account_number' => '001100' . fake()->numerify('######'),
+                        'account_holder' => 'CÔNG TY TNHH ' . strtoupper($name),
+                        'branch' => 'Sở giao dịch',
+                        'is_default' => true
+                    ]
+                ]
+            ]);
             // Create staff users for this org (Owners, Managers, Staff)
-            $usersPerOrg = 10;
+            $usersPerOrg = 5;
             $this->command->info("\n👥 Tạo đội ngũ quản lý cho tổ chức: <fg=yellow>{$org->name}</>");
             $this->command->line("└─ Số lượng: <fg=cyan>$usersPerOrg</>");
 
@@ -86,23 +98,29 @@ class OrgSeeder extends Seeder
                 $email = "";
                 $role = "";
 
-                if ($index < 2) {
+                if ($index < 1) {
                     $role = 'Owner';
                     $email = "{$orgSlug}_owner_" . ($index + 1) . "@example.com";
-                } elseif ($index < 5) {
+                } elseif ($index < 3) {
                     $role = 'Manager';
-                    $email = "{$orgSlug}_manager_" . ($index - 1) . "@example.com";
+                    $email = "{$orgSlug}_manager_" . ($index) . "@example.com";
                 } else {
                     $role = 'Staff';
-                    $email = "{$orgSlug}_staff_" . ($index - 4) . "@example.com";
+                    $email = "{$orgSlug}_staff_" . ($index - 2) . "@example.com";
                 }
 
                 $user = User::updateOrCreate(
                     ['email' => $email],
                     [
                         'org_id' => $org->id,
-                        'full_name' => fake()->name(),
-                        'phone' => fake('vi_VN')->phoneNumber(),
+                        'full_name' => fake('vi_VN')->name(),
+                        'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+                        'identity_number' => fake()->numerify('0############'),
+                        'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+                        'identity_issued_date' => '2022-01-15',
+                        'date_of_birth' => fake()->dateTimeBetween('-45 years', '-25 years')->format('Y-m-d'),
+                        'address' => fake('vi_VN')->address(),
+                        'license_plate' => fake()->bothify('??-? ####'),
                         'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
                         'email_verified_at' => now(),
                         'is_active' => true,
@@ -110,6 +128,97 @@ class OrgSeeder extends Seeder
                 );
                 $user->syncRoles([$role]);
             }
+
+            // ---------------------------------------------------------
+            // 1.5 CREATE DEFAULT DOCUMENT TEMPLATE FOR CONTRACT (HTML/PDF)
+            // ---------------------------------------------------------
+            $this->command->info("\n📄 Tạo bản mẫu hợp đồng (PDF Template) cho tổ chức...");
+            DocumentTemplate::updateOrCreate(
+                ['org_id' => $org->id, 'type' => 'CONTRACT'],
+                [
+                    'id' => (string) Str::uuid(),
+                    'name' => 'Hợp đồng thuê mẫu (PDF)',
+                    'format' => 'HTML',
+                    'content' => '
+                        <div style="font-family: DejaVu Sans, sans-serif; font-size: 13px; line-height: 1.5; color: #333;">
+                            <div style="text-align: center; text-transform: uppercase;">
+                                <h3 style="margin-bottom: 5px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</h3>
+                                <h4 style="margin-bottom: 5px;">Độc lập - Tự do - Hạnh phúc</h4>
+                                <div style="margin: 10px auto; width: 150px; border-bottom: 1px solid #000;"></div>
+                            </div>
+                            
+                            <h2 style="text-align: center; margin-top: 30px; font-size: 20px;">HỢP ĐỒNG THUÊ NHÀ</h2>
+                            <p style="text-align: center;">Mã hợp đồng: ${contract_id}</p>
+
+                            <p>Hôm nay, ngày ${created_at} tại tòa nhà ${property_name}</p>
+                            <p>Địa chỉ: ${property_address}</p>
+                            <p>Chúng tôi gồm:</p>
+
+                            <h3 style="font-size: 14px; background: #f0f0f0; padding: 5px;">BÊN CHO THUÊ (BÊN A)</h3>
+                            <table style="width: 100%;">
+                                <tr><td><strong>Tổ chức:</strong> ${org_name}</td></tr>
+                                <tr><td><strong>Đại diện:</strong> ${rep_full_name}</td><td><strong>Chức vụ:</strong> ${rep_role}</td></tr>
+                                <tr><td><strong>CCCD số:</strong> ${rep_identity_number}</td><td><strong>Cấp tại:</strong> ${rep_identity_issued}</td></tr>
+                                <tr><td><strong>Địa chỉ:</strong> ${rep_address}</td></tr>
+                                <tr><td><strong>Điện thoại:</strong> ${rep_phone}</td></tr>
+                            </table>
+
+                            <h3 style="font-size: 14px; background: #f0f0f0; padding: 5px;">BÊN THUÊ NHÀ (BÊN B)</h3>
+                            <table style="width: 100%;">
+                                <tr><td><strong>Họ và tên:</strong> ${tenant_full_name}</td><td><strong>Năm sinh:</strong> ${tenant_dob}</td></tr>
+                                <tr><td><strong>CCCD số:</strong> ${tenant_identity_number}</td><td><strong>Điện thoại:</strong> ${tenant_phone}</td></tr>
+                                <tr><td><strong>Địa chỉ HKTT:</strong> ${tenant_address}</td></tr>
+                            </table>
+
+                            <h3 style="font-size: 14px; background: #f0f0f0; padding: 5px;">DANH SÁCH THÀNH VIÊN CÙNG Ở</h3>
+                            <div style="margin-bottom: 20px;">
+                                ${member_list}
+                            </div>
+
+                            <p><i>Sau khi hai bên đi đến thống nhất ký kết hợp đồng thuê nhà với các điều kiện sau:</i></p>
+
+                            <h4 style="margin-bottom: 5px;">ĐIỀU 1: NỘI DUNG HỢP ĐỒNG</h4>
+                            <p>1.1. Bên A cho bên B thuê phòng <strong>${room_code}</strong>, diện tích <strong>${room_area}m2</strong> tại <strong>${property_name}</strong>.</p>
+                            <p>1.2. Mục đích: Để ở. Sức chứa tối đa: ${room_capacity} người.</p>
+                            <p>1.3. Thời hạn: ${contract_start_date} đến ${contract_end_date}.</p>
+
+                            <h4 style="margin-bottom: 5px;">ĐIỀU 2: GIÁ THUÊ VÀ THANH TOÁN</h4>
+                            <p>2.1. Giá thuê: <strong>${contract_rent_price} VNĐ/tháng</strong>.</p>
+                            <p>2.2. Tiền cọc: <strong>${contract_deposit_amount} VNĐ</strong> (${contract_deposit_months} tháng).</p>
+                            <p>2.3. Chi phí dịch vụ khác:<br/>${room_service_list}</p>
+                            <p>2.4. Thanh toán: ${payment_range}.</p>
+                            <p>2.5. Tài khoản ngân hàng (Tòa nhà):<br/>${property_bank_info}</p>
+                            <p>2.6. Tài khoản ngân hàng (Công ty):<br/>${org_bank_info}</p>
+
+                            <h4 style="margin-bottom: 5px;">ĐIỀU 3: TRÁCH NHIỆM VÀ QUY ĐỊNH CHUNG</h4>
+                            <p><strong>3.1. Các quy định về hành vi và vệ sinh:</strong></p>
+                            <div style="white-space: pre-wrap; margin-left: 20px;">${property_house_rules}</div>
+                            <p>3.2. Bên thuê có trách nhiệm bảo quản tốt các tài sản, trang thiết bị trong nhà. Nếu hư hỏng do lỗi người dùng phải bồi thường theo giá thị trường.</p>
+                            <p>3.3. Tuyệt đối không được khoan tường, đóng đinh, dán giấy khi chưa được sự đồng ý của Bên A.</p>
+
+                            <h4 style="margin-bottom: 5px;">ĐIỀU 4: CHẤM DỨT HỢP ĐỒNG</h4>
+                            <p>4.1. Trong trường hợp một trong hai bên muốn chấm dứt hợp đồng trước hạn phải thông báo cho bên kia ít nhất 30 ngày.</p>
+                            <p>4.2. Nếu Bên B tự ý chấm dứt hợp đồng mà không báo trước hoặc vi phạm nghiêm trọng các quy định tại Điều 3, Bên A có quyền đơn phương chấm dứt và không hoàn trả tiền đặt cọc.</p>
+
+                            <div style="margin-top: 50px;">
+                                <table style="width: 100%; text-align: center;">
+                                    <tr>
+                                        <td style="width: 50%;">
+                                            <strong>BÊN CHO THUÊ (BÊN A)</strong><br/><br/><br/><br/>
+                                            ${rep_full_name}
+                                        </td>
+                                        <td style="width: 50%;">
+                                            <strong>BÊN THUÊ (BÊN B)</strong><br/><br/><br/><br/>
+                                            ${tenant_full_name}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    ',
+                    'is_active' => true,
+                ]
+            );
 
             // ---------------------------------------------------------
             // 2. CREATE SERVICES FOR THIS ORG
@@ -195,8 +304,18 @@ class OrgSeeder extends Seeder
             $this->command->info("\n🏢 Tạo bất động sản (Properties)...");
             $this->command->line("└─ Số lượng bất động sản: <fg=cyan>$propertiesPerOrg</>");
 
-            Property::factory(rand(2, 3))
-                ->state(['org_id' => $org->id])
+            Property::factory(1)
+                ->state([
+                    'org_id' => $org->id,
+                    'bank_accounts' => [
+                        [
+                            'bank_name' => 'VPBank',
+                            'account_number' => fake()->numerify('##########'),
+                            'account_holder' => 'LÊ THỊ NGỌC',
+                        ]
+                    ],
+                    'house_rules' => "- Sử dụng đúng mục đích thuê nhà để ở, có trách nhiệm bảo quản tốt các tài sản thiết bị trong nhà.\n- Tuyệt đối không được khoan tường đóng đinh, dán giấy lên tường nhà khi chưa được sự đồng ý của chủ nhà.\n- Tuyệt đối không vứt giấy vệ sinh, tóc và các vật lạ vào bồn cầu, đường ống thoát nước.\n- Giữ gìn vệ sinh chung, không được để rác trước cửa phòng và hành lang.\n- Không làm ồn sau 10h30 đêm để tránh ảnh hưởng đến các phòng xung quanh.\n- Không tự ý sang nhượng cho người khác. Nếu muốn thêm người ở phải báo với chủ nhà.\n- Trước khi dọn đi phải quét dọn sạch sẽ như lúc đến.",
+                ])
                 ->sequence(fn ($sequence) => [
                     'area' => rand(70, 200),
                     'shared_area' => rand(7, 20), // ~10% shared area
@@ -220,15 +339,53 @@ class OrgSeeder extends Seeder
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
-                    // Create 1-3 Room templates for this property
-                    $templateCount = rand(1, 3);
-                    $availableAreaPerFloor = $property->area - ($property->shared_area ?? 5);
-                    $templates = RoomTemplate::factory($templateCount)->create([
-                        'org_id' => $org->id,
-                        'property_id' => $property->id,
-                        // Realistic Vietnamese room sizes: 15-50m2, mostly 20-30m2
-                        'area' => fn() => min(rand(15, 30), $availableAreaPerFloor),
-                    ]);
+                    // Create exactly 4 Room templates for this property
+                    $templateCount = 4;
+                    // Available area per floor (this will be distributed among the 4 templates)
+                    $availableAreaPerFloor = $property->area - ($property->shared_area ?? 10);
+                    $baseArea = $availableAreaPerFloor / $templateCount;
+
+                    $templates = [];
+                    $totalAllocatedArea = 0;
+
+                    for ($t = 0; $t < $templateCount; $t++) {
+                        // Area variance: +/- 3-5m2
+                        $variance = rand(-5, 5);
+                        $templateArea = round($baseArea + $variance, 1);
+                        
+                        // Ensure it's within bounds and sum doesn't exceed total
+                        if ($t === $templateCount - 1) {
+                            $templateArea = round($availableAreaPerFloor - $totalAllocatedArea, 1);
+                        }
+                        
+                        if ($templateArea < 10) $templateArea = 10;
+                        $totalAllocatedArea += $templateArea;
+
+                        // Capacity logic:
+                        // < 10-20m2: 2 người
+                        // 20-30m2: 3 người
+                        // 30-60m2: 4-5 người
+                        // trên 60m2 không quá 6 người
+                        if ($templateArea < 20) {
+                            $capacity = 2;
+                        } elseif ($templateArea < 30) {
+                            $capacity = 3;
+                        } elseif ($templateArea < 60) {
+                            $capacity = rand(4, 5);
+                        } else {
+                            $capacity = 6;
+                        }
+
+                        $templateName = "Mẫu phòng " . $templateArea . " m2 cho " . $capacity . " người ở";
+
+                        $templates[] = RoomTemplate::factory()->create([
+                            'org_id' => $org->id,
+                            'property_id' => $property->id,
+                            'name' => $templateName,
+                            'area' => $templateArea,
+                            'capacity' => $capacity,
+                        ]);
+                    }
 
                     // Attach mandatory services (DIEN, NUOC) and some assets to every template
                     foreach ($templates as $template) {
@@ -251,8 +408,6 @@ class OrgSeeder extends Seeder
                     // Create floors
                     $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
 
-                    $totalRoomsInProperty = 0; 
-
                     for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
                             'org_id'       => $org->id,
@@ -263,44 +418,35 @@ class OrgSeeder extends Seeder
                             'sort_order'   => $i,
                         ]);
 
-                        $availableArea = $property->area - ($property->shared_area ?? 0);
-                        // Realistic room count based on area (min 15m2 per room)
-                        $maxRoomsByArea = max(1, floor($availableArea / 15));
-                        $roomsOnFloor = rand(max(1, floor($maxRoomsByArea / 2)), min(6, $maxRoomsByArea)); 
+                        $roomsOnFloor = $templateCount; // 4 rooms per floor
                         
-                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích khả dụng: {$availableArea}m2)");
+                        // Skip room creation for Floor 1 as requested
+                        if ($i === 1) {
+                            $this->command->line("     • {$floor->name} - <fg=gray>Tầng 1 không có phòng (Khu vực lễ tân/chung)</>");
+                            continue;
+                        }
 
-                        $remainingArea = $availableArea;
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích tối đa: {$availableAreaPerFloor}m2)");
+
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
-                            // Pick a random template
-                            $template = $templates->random();
+                            // Map room to template (one room per template type on each floor)
+                            $template = $templates[$j];
                             
-                            // Ensure each room leaves enough area for remaining rooms (min 15m2 each)
-                            $minAreaForOthers = ($roomsOnFloor - $j - 1) * 15;
-                            $maxAllowedForThis = $remainingArea - $minAreaForOthers;
-                            
-                            $roomArea = min($template->area, $maxAllowedForThis);
-                            if ($roomArea < 15) $roomArea = 15;
-                            if ($roomArea > $remainingArea) $roomArea = $remainingArea;
-
-                            $roomNumber = ($i * 100) + ($j + 1);
+                            $roomNumber = ($i * 100) + ($j + 2);
                             // Disable events to prevent RoomObserver from creating default meters
-                            // We will create them manually later with more control.
-                            Room::withoutEvents(function() use ($org, $property, $floor, $roomNumber, $roomArea, $template, $i) {
+                            Room::withoutEvents(function() use ($org, $property, $floor, $roomNumber, $template, $i) {
                                 Room::factory()->create([
                                     'org_id' => $org->id,
                                     'property_id' => $property->id,
                                     'floor_id' => $floor->id,
                                     'name' => (string)$roomNumber,
                                     'code' => 'R' . $roomNumber,
-                                    'area' => $roomArea,
+                                    'area' => $template->area,
                                     'capacity' => $template->capacity,
                                     'base_price' => $template->base_price,
                                     'floor_number' => $i,
                                 ]);
                             });
-
-                            $remainingArea -= $roomArea;
                         }
                     }
 
@@ -525,7 +671,7 @@ class OrgSeeder extends Seeder
         $emailName = Str::slug($fullName, '.');
         $email = $emailName . fake()->numberBetween(10, 99) . "@gmail.com";
         
-        $memberUser = User::create([
+        $u = User::create([
             'id' => Str::uuid()->toString(),
             'org_id' => $org->id,
             'full_name' => $fullName,
@@ -539,19 +685,36 @@ class OrgSeeder extends Seeder
             'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
             'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
             'address' => fake('vi_VN')->address(),
+            'license_plate' => fake()->bothify('??-? ####'),
         ]);
-        $memberUser->assignRole('Tenant');
+        $u->assignRole('Tenant');
 
-        ContractMember::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $contract->org_id,
-            'contract_id' => $contract->id,
-            'user_id' => $memberUser->id,
-            'full_name' => $fullName,
-            'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
-            'is_primary' => $i === 0,
-            'left_at' => $status === 'ENDED' ? $endDate : null,
+            ContractMember::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'contract_id' => $contract->id,
+                'user_id' => $u->id,
+                'full_name' => $fullName,
+                'phone' => $u->phone,
+                'identity_number' => $u->identity_number,
+                'date_of_birth' => $u->date_of_birth,
+                'license_plate' => $u->license_plate,
+                'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
+                'is_primary' => $i === 0,
+                'left_at' => $status === 'ENDED' ? $endDate : null,
+            ]);
+    }
+
+    // --- Generate Physical Contract Document ---
+    try {
+        $docPath = app(\App\Services\Contract\ContractDocumentService::class)->generateDocument($contract);
+        $contract->update([
+            'document_path' => $docPath,
+            'document_type' => 'PDF',
+            'signed_at' => $startDate,
         ]);
+    } catch (\Exception $e) {
+        $this->command->warn("  - Could not generate contract document: " . $e->getMessage());
     }
 
     // --- Invoicing Logic ---
@@ -661,6 +824,45 @@ class OrgSeeder extends Seeder
             'total_amount' => $total,
             'paid_amount' => $invoice->status === 'PAID' ? $total : 0
         ]);
+
+        // --- Generate Physical Invoice PDF ---
+        try {
+            app(\App\Services\Invoice\InvoicePdfService::class)->generate($invoice);
+        } catch (\Exception $e) {
+            $this->command->warn("  - Could not generate invoice PDF: " . $e->getMessage());
+        }
+
+        // --- Generate Payment & Receipt if PAID ---
+        if ($invoice->status === 'PAID') {
+            try {
+                $tenantMember = $contract->members()->where('role', 'TENANT')->first();
+                $payment = \App\Models\Finance\Payment::create([
+                    'id' => (string) Str::uuid(),
+                    'org_id' => $org->id,
+                    'property_id' => $invoice->property_id,
+                    'payer_user_id' => $tenantMember ? $tenantMember->user_id : $ownerId,
+                    'received_by_user_id' => $ownerId,
+                    'method' => 'CASH',
+                    'amount' => $total,
+                    'received_at' => $invoice->issue_date,
+                    'status' => 'APPROVED',
+                    'approved_by_user_id' => $ownerId,
+                    'approved_at' => $invoice->issue_date,
+                ]);
+
+                \App\Models\Finance\PaymentAllocation::create([
+                    'id' => (string) Str::uuid(),
+                    'org_id' => $org->id,
+                    'payment_id' => $payment->id,
+                    'invoice_id' => $invoice->id,
+                    'amount' => $total,
+                ]);
+
+                app(\App\Services\Finance\ReceiptService::class)->generateForPayment($payment);
+            } catch (\Exception $e) {
+                $this->command->warn("  - Could not generate receipt: " . $e->getMessage());
+            }
+        }
 
         $tempDate->addMonths(1);
     }

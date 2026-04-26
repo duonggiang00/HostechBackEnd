@@ -35,14 +35,14 @@ class MeterReadingResource extends JsonResource
             'submitted_by' => $this->whenLoaded('submittedBy', function () {
                 return [
                     'id' => $this->submittedBy?->id,
-                    'name' => $this->submittedBy?->name,
+                    'full_name' => $this->submittedBy?->full_name,
                     'email' => $this->submittedBy?->email,
                 ];
             }),
             'approved_by' => $this->whenLoaded('approvedBy', function () {
                 return [
                     'id' => $this->approvedBy?->id,
-                    'name' => $this->approvedBy?->name,
+                    'full_name' => $this->approvedBy?->full_name,
                     'email' => $this->approvedBy?->email,
                 ];
             }),

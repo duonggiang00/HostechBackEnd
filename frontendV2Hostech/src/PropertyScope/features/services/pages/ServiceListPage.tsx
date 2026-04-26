@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Plus, Search, Edit2, Trash2, Zap, Droplets } from 'lucide-react';
+import { Settings, Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { useServices, useUpdateService, useDeleteService } from '../hooks/useServices';
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -107,7 +107,7 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Mã / Tên dịch vụ</th>
+                <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Tên dịch vụ</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Cách tính phí</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Đơn giá / Đơn vị</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-center">Tự động</th>
@@ -141,23 +141,11 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                       className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
                     >
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-600">
-                                {service.type === 'ELECTRIC' ? (
-                                  <Zap className="w-5 h-5 text-amber-500" />
-                                ) : service.type === 'WATER' ? (
-                                  <Droplets className="w-5 h-5 text-blue-500" />
-                                ) : (
-                                  <Settings className="w-5 h-5 text-[#1E3A8A] dark:text-indigo-400" />
-                                )}
-                          </div>
                           <div>
                             <div className="font-bold text-[#111827] dark:text-white">
                               {service.name}
                             </div>
-                            <div className="text-xs text-[#4B5563]">Mã: {service.code}</div>
                           </div>
-                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-[#4B5563] dark:bg-slate-700 dark:text-slate-300">

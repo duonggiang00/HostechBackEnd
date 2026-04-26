@@ -24,7 +24,7 @@ class ContractUpdateRequest extends FormRequest
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'billing_cycle' => ['nullable', 'integer', 'min:1', 'max:12'],
             'due_day' => ['nullable', 'integer', 'min:1', 'max:31'],
-            'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:25'],
+            'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'rent_price' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'meta' => ['nullable', 'array'],
@@ -62,7 +62,7 @@ class ContractUpdateRequest extends FormRequest
             if (\Carbon\Carbon::parse($endDate)->lt(\Carbon\Carbon::parse($minimumEndDate))) {
                 $validator->errors()->add(
                     'end_date',
-                    "Ngay ket thuc khong duoc nho hon {$minimumEndDate} theo chu ky thue."
+                    "Ngày kết thúc không được nhỏ hơn {$minimumEndDate} theo chu kỳ thuê."
                 );
             }
         });
@@ -71,11 +71,11 @@ class ContractUpdateRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'status' => 'Trang thai',
-            'start_date' => 'Ngay bat dau',
-            'end_date' => 'Ngay ket thuc',
-            'rent_price' => 'Gia thue',
-            'deposit_amount' => 'Tien coc',
+            'status' => 'Trạng thái',
+            'start_date' => 'Ngày bắt đầu',
+            'end_date' => 'Ngày kết thúc',
+            'rent_price' => 'Giá thuê',
+            'deposit_amount' => 'Tiền cọc',
         ];
     }
 

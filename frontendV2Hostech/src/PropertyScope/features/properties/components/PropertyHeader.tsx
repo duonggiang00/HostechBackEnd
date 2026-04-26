@@ -57,7 +57,7 @@ export function PropertyHeader({ property }: PropertyHeaderProps) {
 
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => navigate(`/properties/${property.id}/templates/building`)}
+              onClick={() => navigate(`/properties/${property.id}/building-info`)}
               className="flex-1 md:flex-none flex items-center justify-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-xs hover:border-indigo-300 dark:hover:border-slate-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all shadow-sm group/btn whitespace-nowrap"
             >
               <FileEdit className="w-4 h-4 group-hover/btn:scale-120 transition-transform" />

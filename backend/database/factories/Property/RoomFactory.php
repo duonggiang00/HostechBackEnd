@@ -62,25 +62,8 @@ class RoomFactory extends Factory
             $description = "Phòng tầng {$room->floor_number}, rộng {$room->area} m2 cho {$room->capacity} người ở, có sẵn {$assetList}";
             $room->update(['description' => $description]);
 
-            // Sinh Price history (1 base price records based on room base_price)
-            RoomPrice::create([
-                'id' => Str::uuid(),
-                'org_id' => $room->org_id,
-                'room_id' => $room->id,
-                'effective_from' => Carbon::now()->startOfMonth()->format('Y-m-d'),
-                'price' => $room->base_price,
-            ]);
-
-            // Sinh Room Status History (Trạng thái khởi tạo)
-            RoomStatusHistory::create([
-                'id' => Str::uuid(),
-                'org_id' => $room->org_id,
-                'room_id' => $room->id,
-                'from_status' => null,
-                'to_status' => $room->status,
-                'reason' => 'Initial status setup',
-                'changed_by_user_id' => null,
-            ]);
+            // Logic for Price and Status history has been migrated to App\Listeners\Property\InitializeRoomServices
+            // which handles them asynchronously via EDARoomCreated/Updated events.
         });
     }
 }

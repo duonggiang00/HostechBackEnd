@@ -108,49 +108,53 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
       {/* Header */}
       {!hideHeader && (
         <div className="bg-white px-8 py-5 border-b border-gray-200 shadow-sm shrink-0 flex items-center justify-between z-10 relative">
-          <div>
-            <div className="flex items-center gap-3 mb-1.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center shadow-sm">
-                <Building2 className="w-4 h-4 text-white" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 dark:shadow-none">
+                <Building2 className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-gray-900 text-[20px] font-bold tracking-tight">Mặt Bằng Tòa Nhà</h1>
+              <div>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                  Mặt Bằng <span className="text-blue-900 dark:text-blue-400">Tòa Nhà</span>
+                </h1>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">Trực quan hóa không gian & trạng thái hiện tại</p>
+              </div>
             </div>
-            <p className="text-gray-500 text-[12px] font-medium tracking-wide ml-11">Trực quan hóa không gian & trạng thái hiện tại</p>
-          </div>
 
-          <div className="flex items-center gap-3">
-            {!isEditMode ? (
-              <button
-                onClick={handleEnterEdit}
-                disabled={isLoading}
-                className="flex items-center gap-2 px-5 py-2 bg-amber-500 text-white rounded-[6px] font-semibold hover:bg-amber-600 transition-colors shadow-sm text-[13px] disabled:opacity-50 focus-visible:outline-none focus:ring-2 focus:ring-amber-500/50"
-              >
-                <Pencil className="w-4 h-4" />
-                Chỉnh sửa mặt bằng
-              </button>
-            ) : (
-              <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+            <div className="flex items-center gap-3">
+              {!isEditMode ? (
                 <button
-                  onClick={handleCancel}
-                  disabled={syncMutation.isPending}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors text-[13px] focus-visible:outline-none focus:ring-2 focus:ring-gray-300"
+                  onClick={handleEnterEdit}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 px-5 py-2 bg-amber-500 text-white rounded-[6px] font-semibold hover:bg-amber-600 transition-colors shadow-sm text-[13px] disabled:opacity-50 focus-visible:outline-none focus:ring-2 focus:ring-amber-500/50"
                 >
-                  <X className="w-4 h-4" />
-                  Hủy bỏ
+                  <Pencil className="w-4 h-4" />
+                  Chỉnh sửa mặt bằng
                 </button>
-                <button
-                  onClick={handleSave}
-                  disabled={syncMutation.isPending}
-                  className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-[6px] font-semibold hover:bg-green-700 transition-colors text-[13px] shadow-sm disabled:opacity-70 focus-visible:outline-none focus:ring-2 focus:ring-green-600/50"
-                >
-                  {syncMutation.isPending
-                    ? <RefreshCw className="w-4 h-4 animate-spin" />
-                    : <Save className="w-4 h-4" />
-                  }
-                  {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
-                </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
+                  <button
+                    onClick={handleCancel}
+                    disabled={syncMutation.isPending}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors text-[13px] focus-visible:outline-none focus:ring-2 focus:ring-gray-300"
+                  >
+                    <X className="w-4 h-4" />
+                    Hủy bỏ
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={syncMutation.isPending}
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-[6px] font-semibold hover:bg-green-700 transition-colors text-[13px] shadow-sm disabled:opacity-70 focus-visible:outline-none focus:ring-2 focus:ring-green-600/50"
+                  >
+                    {syncMutation.isPending
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Save className="w-4 h-4" />
+                    }
+                    {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

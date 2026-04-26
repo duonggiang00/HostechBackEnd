@@ -94,7 +94,8 @@ class RoomResource extends JsonResource
                     'members' => $contract->members->map(fn($m) => [
                         'id' => $m->id,
                         'user_id' => $m->user_id,
-                        'full_name' => $m->user?->full_name,
+                        'full_name' => $m->full_name ?? $m->user?->full_name,
+                        'phone' => $m->phone ?? $m->user?->phone,
                         'role' => $m->role,
                         'status' => $m->status,
                         'is_primary' => $m->role === 'TENANT',
@@ -111,7 +112,8 @@ class RoomResource extends JsonResource
                     'monthly_rent' => (float) $contract->rent_price,
                     'deposit_amount' => (float) $contract->deposit_amount,
                     'members' => $contract->members->map(fn($m) => [
-                        'full_name' => $m->user?->full_name,
+                        'full_name' => $m->full_name ?? $m->user?->full_name,
+                        'phone' => $m->phone ?? $m->user?->phone,
                         'role' => $m->role,
                         'status' => $m->status,
                     ]),

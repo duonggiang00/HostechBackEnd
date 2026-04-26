@@ -309,7 +309,7 @@ export default function ServiceFormPage() {
 
               <div className="space-y-3">
                 {fields.map((field, index) => {
-                  const isInfinity = index === fields.length - 1 && watchedTieredRates[index]?.tier_to === null;
+                  const isInfinity = index === fields.length - 1 && watchedTieredRates?.[index]?.tier_to === null;
                   
                   return (
                     <div key={field.id} className={`flex flex-col sm:flex-row items-stretch sm:items-start gap-4 p-4 border rounded-xl relative transition-all ${getTierColor(index)}`}>

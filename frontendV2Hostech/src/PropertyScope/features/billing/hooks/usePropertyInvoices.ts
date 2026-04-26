@@ -7,6 +7,7 @@ import type {
   IssueInvoicePayload,
   RecordPaymentPayload,
   CancelInvoicePayload,
+  PaginatedInvoices,
 } from '../types';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -23,12 +24,13 @@ export const invoiceKeys = {
 /**
  * Lấy danh sách hóa đơn theo Property, hỗ trợ lọc và phân trang
  */
-export function usePropertyInvoices(propertyId: string, params?: InvoiceQueryParams) {
-  return useQuery({
+export function usePropertyInvoices(propertyId: string, params?: InvoiceQueryParams, options?: any) {
+  return useQuery<PaginatedInvoices>({
     queryKey: invoiceKeys.byProperty(propertyId, params),
     queryFn: () => billingApi.getPropertyInvoices(propertyId, params),
     enabled: !!propertyId,
     staleTime: 30_000,
+    ...options,
   });
 }
 

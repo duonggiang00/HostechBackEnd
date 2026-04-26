@@ -9,6 +9,7 @@ enum InvoiceItemType: string
     case PENALTY = 'PENALTY';
     case DISCOUNT = 'DISCOUNT';
     case ADJUSTMENT = 'ADJUSTMENT';
+    case DEBT = 'DEBT';
     case DEPOSIT = 'DEPOSIT';
 
     /**
@@ -27,6 +28,7 @@ enum InvoiceItemType: string
             self::PENALTY => 'Phạt',
             self::DISCOUNT => 'Giảm giá',
             self::ADJUSTMENT => 'Điều chỉnh',
+            self::DEBT => 'Nợ tồn đọng',
             self::DEPOSIT => 'Tiền đặt cọc',
         };
     }

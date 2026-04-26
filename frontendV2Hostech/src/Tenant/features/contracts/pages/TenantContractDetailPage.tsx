@@ -6,7 +6,7 @@ import {
   ArrowLeft,
   Building2,
   Calendar,
-  CheckCircle,
+
   CircleDollarSign,
   Clock3,
   CreditCard,
@@ -46,7 +46,7 @@ export default function TenantContractDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { data: contract, isLoading } = useContract(id);
-  const { signContract, acceptSignature, rejectSignature, downloadDocument } = useContractActions();
+  const { signContract, rejectSignature, downloadDocument } = useContractActions();
   const { createVnpayPayment } = useInvoice();
   const [showModal, setShowModal] = useState<'reject' | null>(null);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
@@ -101,7 +101,7 @@ export default function TenantContractDetailPage() {
     ? Math.max(0, (contract.initial_invoice.total_amount || 0) - (contract.initial_invoice.paid_amount || 0))
     : 0;
 
-  const handleAction = (action: 'reject') => {
+  const handleAction = () => {
     rejectSignature.mutate(contract.id, {
       onSuccess: () => {
         setShowModal(null);
@@ -499,7 +499,7 @@ export default function TenantContractDetailPage() {
               <div className="mt-8 space-y-3">
                 <button
                   disabled={rejectSignature.isPending}
-                  onClick={() => handleAction('reject')}
+                  onClick={() => handleAction()}
                   className="inline-flex w-full items-center justify-center rounded-2xl px-5 py-3.5 text-sm font-black text-white transition-colors bg-rose-600 hover:bg-rose-700"
                 >
                   {rejectSignature.isPending ? (

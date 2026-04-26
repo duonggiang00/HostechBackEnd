@@ -23,6 +23,7 @@ Route::get('orgs/{id}/services', [OrgController::class, 'services']);
 
 // Users
 Route::get('users/trash', [UserController::class, 'trash']);
+Route::get('users/check-email', [UserController::class, 'checkEmail']); // TenantSearchInput lookup
 Route::apiResource('users', UserController::class);
 Route::post('users/{id}/restore', [UserController::class, 'restore']);
 Route::delete('users/{id}/force', [UserController::class, 'forceDelete']);

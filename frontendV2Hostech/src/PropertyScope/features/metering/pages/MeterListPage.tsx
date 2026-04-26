@@ -185,10 +185,10 @@ export default function MeterListPage() {
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300 w-12">STT</th>
                   <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Phòng</th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Đồng hồ điện</th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Số điện dùng</th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Đồng hồ nước</th>
-                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Số nước dùng</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Chỉ số điện hiện tại</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Số điện dùng tháng này</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Chỉ số nước hiện tại</th>
+                  <th className="px-6 py-3 text-left font-semibold text-slate-900 dark:text-slate-300">Số nước dùng tháng này</th>
                   <th className="px-6 py-3 text-right font-semibold text-slate-900 dark:text-slate-300">Hành động</th>
                 </tr>
               </thead>
@@ -224,15 +224,11 @@ export default function MeterListPage() {
                         {/* Điện */}
                         <td className="px-6 py-4">
                           {electricMeter ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1.5">
-                                <Zap className={`w-3.5 h-3.5 ${electricMeter.is_active ? 'text-yellow-500' : 'text-slate-300'}`} />
-                                <span className="font-semibold text-slate-900 dark:text-white uppercase">{electricMeter.code}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full font-bold uppercase ring-1 ring-blue-500/10">CHỈ SỐ</span>
-                                <span className="font-mono text-slate-700 dark:text-slate-300">{electricMeter.latest_reading?.toLocaleString('vi-VN')}</span>
-                              </div>
+                            <div className="flex items-center gap-1.5">
+                              <Zap className={`w-3.5 h-3.5 ${electricMeter.is_active ? 'text-yellow-500' : 'text-slate-300'}`} />
+                              <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                {electricMeter.latest_reading?.toLocaleString('vi-VN')}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-slate-400">-</span>
@@ -255,15 +251,11 @@ export default function MeterListPage() {
                         {/* Nước */}
                         <td className="px-6 py-4">
                           {waterMeter ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1.5">
-                                <Droplet className={`w-3.5 h-3.5 ${waterMeter.is_active ? 'text-blue-500' : 'text-slate-300'}`} />
-                                <span className="font-semibold text-slate-900 dark:text-white uppercase">{waterMeter.code}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] px-1.5 py-0.5 bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 rounded-full font-bold uppercase ring-1 ring-teal-500/10">CHỈ SỐ</span>
-                                <span className="font-mono text-slate-700 dark:text-slate-300">{waterMeter.latest_reading?.toLocaleString('vi-VN')}</span>
-                              </div>
+                            <div className="flex items-center gap-1.5">
+                              <Droplet className={`w-3.5 h-3.5 ${waterMeter.is_active ? 'text-blue-500' : 'text-slate-300'}`} />
+                              <span className="font-mono font-bold text-slate-900 dark:text-white">
+                                {waterMeter.latest_reading?.toLocaleString('vi-VN')}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-slate-400">-</span>

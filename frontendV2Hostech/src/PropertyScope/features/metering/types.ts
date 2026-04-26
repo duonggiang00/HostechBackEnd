@@ -22,6 +22,26 @@ export interface Meter {
   updated_at?: string;
 }
 
+export type MeterReadingStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';
+export type AdjustmentNoteStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface AdjustmentNote {
+  id: string;
+  meter_reading_id: string;
+  reason: string;
+  before_value: number;
+  after_value: number;
+  status: AdjustmentNoteStatus;
+  requested_by?: { id: string; name: string; email?: string };
+  approved_by?: { id: string; name: string; email?: string };
+  approved_at?: string;
+  rejected_by?: { id: string; name: string; email?: string };
+  rejected_at?: string;
+  reject_reason?: string;
+  proofs?: { id: string; url: string; name?: string; file_name?: string; mime_type?: string; size?: number }[];
+  created_at?: string;
+}
+
 export interface MeterReading {
   id: string;
   meter_id: string;
@@ -29,18 +49,23 @@ export interface MeterReading {
   reading_date?: string;
   photo_url?: string;
   consumption?: number;
-  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
-  // New fields from backend
+  status: MeterReadingStatus;
+  // Period fields
   period_start?: string;
   period_end?: string;
+  // Submission tracking
   submitted_by_user_id?: string;
   submitted_at?: string;
-  submitted_by?: { id: string; name: string };
+  submitted_by?: { id: string; full_name: string; email?: string };
+  // Approval tracking
   approved_by_user_id?: string;
   approved_at?: string;
-  approved_by?: { id: string; name: string };
+  approved_by?: { id: string; full_name: string; email?: string };
+  // Lock tracking
   locked_at?: string;
+  // Metadata
   meta?: Record<string, any>;
+  // Media proofs from server
   proofs?: {
     id: string;
     url: string;
@@ -52,6 +77,10 @@ export interface MeterReading {
   }[];
   /** IDs từ temporary upload để gán ảnh khi tạo/cập nhật reading */
   proof_media_ids?: string[];
+  // Adjustment notes (loaded on demand)
+  adjustments?: AdjustmentNote[];
+  // Relations
+  meter?: Meter;
   created_at?: string;
   updated_at?: string;
 }

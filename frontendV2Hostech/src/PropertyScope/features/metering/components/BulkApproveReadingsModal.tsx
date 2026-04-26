@@ -75,33 +75,26 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
     });
   };
 
-  const buildItems = (ids: Set<string>) =>
-    pendingReadings
-      .filter(r => ids.has(r.id) && r.meter?.id)
-      .map(r => ({ meterId: r.meter!.id, readingId: r.id }));
-
   const handleApproveSelected = async () => {
-    const items = buildItems(selectedIds);
-    if (!items.length) return;
-    await approveMutation.mutateAsync(items);
+    const readingIds = Array.from(selectedIds);
+    if (!readingIds.length) return;
+    await approveMutation.mutateAsync(readingIds);
     setSelectedIds(new Set());
   };
 
   const handleApproveAll = async () => {
-    const items = pendingReadings
-      .filter(r => r.meter?.id)
-      .map(r => ({ meterId: r.meter!.id, readingId: r.id }));
-    if (!items.length) return;
-    await approveMutation.mutateAsync(items);
+    const readingIds = pendingReadings.map(r => r.id);
+    if (!readingIds.length) return;
+    await approveMutation.mutateAsync(readingIds);
     setSelectedIds(new Set());
   };
 
   const handleRejectSelected = async () => {
-    const items = buildItems(selectedIds);
-    if (!items.length) return;
+    const readingIds = Array.from(selectedIds);
+    if (!readingIds.length) return;
     const reason = window.prompt('Lý do từ chối (tùy chọn):');
     if (reason === null) return;
-    await rejectMutation.mutateAsync({ items, reason });
+    await rejectMutation.mutateAsync({ readingIds, reason });
     setSelectedIds(new Set());
   };
 
@@ -254,9 +247,8 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              const items = readings.filter(r => r.meter?.id).map(r => ({ meterId: r.meter!.id, readingId: r.id }));
-                              if (items.length > 0) {
-                                approveMutation.mutate(items);
+                              if (readings.length > 0) {
+                                approveMutation.mutate(readings.map(r => r.id));
                               }
                             }}
                             disabled={isProcessing}

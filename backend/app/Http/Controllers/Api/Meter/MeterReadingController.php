@@ -47,6 +47,66 @@ class MeterReadingController extends Controller
     }
 
     /**
+     * Duyệt hàng loạt chỉ số (SUBMITTED → APPROVED).
+     */
+    public function bulkApprove(Request $request)
+    {
+        $this->authorize('update', MeterReading::class);
+
+        $request->validate([
+            'reading_ids' => 'required|array|min:1',
+            'reading_ids.*' => 'string|exists:meter_readings,id',
+        ]);
+
+        $results = $this->service->bulkApprove($request->input('reading_ids'));
+
+        return MeterReadingResource::collection($results);
+    }
+
+    /**
+     * Từ chối hàng loạt chỉ số (SUBMITTED/DRAFT → REJECTED).
+     */
+    public function bulkReject(Request $request)
+    {
+        $this->authorize('update', MeterReading::class);
+
+        $request->validate([
+            'reading_ids' => 'required|array|min:1',
+            'reading_ids.*' => 'string|exists:meter_readings,id',
+            'rejection_reason' => 'nullable|string',
+        ]);
+
+        $results = $this->service->bulkReject(
+            $request->input('reading_ids'),
+            $request->input('rejection_reason')
+        );
+
+        return MeterReadingResource::collection($results);
+    }
+
+    /**
+     * Sửa hàng loạt chỉ số (DRAFT/REJECTED fixup).
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $this->authorize('update', MeterReading::class);
+
+        $request->validate([
+            'updates' => 'required|array|min:1',
+            'updates.*.id' => 'required|string|exists:meter_readings,id',
+            // Các field cho phép update hàng loạt
+            'updates.*.reading_value' => 'nullable|numeric',
+            'updates.*.period_start' => 'nullable|date',
+            'updates.*.period_end' => 'nullable|date',
+            'updates.*.status' => 'nullable|string|in:DRAFT,SUBMITTED',
+        ]);
+
+        $results = $this->service->bulkUpdate($request->input('updates'));
+
+        return MeterReadingResource::collection($results);
+    }
+
+    /**
      * Lấy danh sách Lịch sử chốt chỉ số (Toàn cục).
      * Hỗ trợ lọc theo property_id, status, v.v.
      */

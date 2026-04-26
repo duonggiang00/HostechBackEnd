@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
-import TenantNav from '@/shared/features/navigation/components/TenantNav';
+import Sidebar from '@/shared/components/ui/Sidebar';
+import { useNavigation } from '@/shared/hooks/useNavigation';
+import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 
 interface TenantLayoutProps {
@@ -29,13 +31,19 @@ const getPageDescription = (pathname: string) => {
 
 export default function TenantLayout({ children }: TenantLayoutProps) {
   const location = useLocation();
+  const { menuSections, scopeLabel } = useNavigation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div className="mx-auto min-h-screen max-w-[1440px] lg:grid lg:grid-cols-[256px_minmax(0,1fr)]">
-        <TenantNav />
+      <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
+        <Sidebar
+          isOpen={isMobileMenuOpen}
+          onClose={() => setIsMobileMenuOpen(false)}
+          menuSections={menuSections}
+          scopeLabel={scopeLabel}
+        />
 
-        <div className="flex min-h-screen flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
           <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
             <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-4 px-4 py-4 sm:px-6 lg:px-10">
               <div className="min-w-0">
@@ -56,11 +64,11 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
 
           <main className="flex-1 pb-20 lg:pb-8">
             <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-10">
+              <Breadcrumbs />
               {children}
             </div>
           </main>
         </div>
       </div>
-    </div>
   );
 }

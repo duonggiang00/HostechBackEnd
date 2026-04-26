@@ -23,8 +23,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatCurrency, formatNumber, parseNumber } from '@/lib/utils';
 import type { RoomStatus } from '../types';
 import toast from 'react-hot-toast';
-import QuickRoomManager from '../components/QuickRoomManager';
-
 import { useDebounce } from '@/shared/hooks/useDebounce';
 
 const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
@@ -43,7 +41,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
 
   // Helper to parse numbers safely from URL
   const getNumberParam = (key: string) => {
@@ -274,25 +271,25 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
       {/* Header */}
       {!hideHeader && (
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Danh mục phòng</h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1 font-medium">Quản lý và kiểm kê tất cả các phòng qua các tầng.</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg shadow-blue-100 dark:shadow-none">
+              <LayoutGrid className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                Danh sách phòng
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 font-medium leading-relaxed">Quản lý và kiểm kê tất cả tài sản phòng qua các phân khu (tầng).</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setIsQuickCreateOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-[6px] font-semibold hover:bg-gray-50 transition-colors shadow-sm text-[13px] outline-none focus:ring-2 focus:ring-blue-900/50"
-            >
-              <Zap className="w-5 h-5 text-amber-500" />
-              Tạo nhanh
-            </button>
             <ActionButton 
               onClick={() => navigate(`/properties/${propertyId}/rooms/create`)}
               label="Thêm phòng"
               icon={Plus}
-              variant="primary"
               size="md"
-              className="shadow-xl"
+              glow={false}
+              className="bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-lg px-6 py-2.5 font-semibold shadow-sm border-none transition-all active:scale-95"
             />
           </div>
         </div>
@@ -300,22 +297,45 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
 
       {/* Stats Summary */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-[8px] shadow-sm">
-            <p className="text-xs font-black uppercase text-gray-400 tracking-widest mb-1">Tổng cộng</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.total}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow group">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-black uppercase text-gray-400 tracking-widest">Tổng cộng</p>
+              <div className="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center text-gray-400">
+                <LayoutGrid className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-gray-900 dark:text-white">{stats.total}</p>
           </div>
-          <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-[8px] shadow-sm">
-            <p className="text-xs font-black uppercase text-emerald-400 tracking-widest mb-1">Sẵn có</p>
-            <p className="text-xl font-black text-emerald-600 dark:text-emerald-400">{stats.available}</p>
+
+          <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-black uppercase text-emerald-400 tracking-widest">Sẵn có</p>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <Zap className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform">{stats.available}</p>
           </div>
-          <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-[8px] shadow-sm">
-            <p className="text-xs font-black uppercase text-blue-400 tracking-widest mb-1">Đã thuê</p>
-            <p className="text-xl font-black text-blue-900 dark:text-blue-400">{stats.occupied}</p>
+
+          <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-black uppercase text-blue-400 tracking-widest">Đã thuê</p>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-900 dark:text-blue-400">
+                <Plus className="w-4 h-4 rotate-45" />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-blue-900 dark:text-blue-400">{stats.occupied}</p>
           </div>
-          <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-[8px] shadow-sm">
-            <p className="text-xs font-black uppercase text-amber-400 tracking-widest mb-1">Bảo trì</p>
-            <p className="text-xl font-black text-amber-600 dark:text-amber-400">{stats.maintenance}</p>
+
+          <div className="p-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800/80 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-black uppercase text-amber-400 tracking-widest">Bảo trì</p>
+              <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <RefreshCw className="w-4 h-4" />
+              </div>
+            </div>
+            <p className="text-3xl font-black text-amber-600 dark:text-amber-400">{stats.maintenance}</p>
           </div>
         </div>
       )}
@@ -328,7 +348,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
             <Search className="w-4 h-4 text-gray-400 group-focus-within:text-blue-900" />
             <input 
               type="text" 
-              placeholder="Tìm kiếm theo tên hoặc mã..."
+              placeholder="Tìm kiếm theo tên..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-gray-400 font-medium dark:text-white"
@@ -587,17 +607,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                 </th>
                 <th 
                   className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest cursor-pointer hover:text-blue-900 transition-colors"
-                  onClick={() => toggleSort('code')}
-                >
-                  <div className="flex items-center gap-1">
-                    Mã phòng
-                    {sort.includes('code') && (
-                      <ArrowDownUp className={`w-3 h-3 ${sort.startsWith('-') ? 'rotate-180' : ''}`} />
-                    )}
-                  </div>
-                </th>
-                <th 
-                  className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest cursor-pointer hover:text-blue-900 transition-colors"
                   onClick={() => toggleSort('name')}
                 >
                   <div className="flex items-center gap-1">
@@ -647,13 +656,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                       onChange={() => toggleSelect(room.id)}
                       className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900/50 text-blue-900 focus:ring-blue-500"
                     />
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-3">
-                       <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-black uppercase border border-gray-200 dark:border-gray-700">
-                         {room.code}
-                       </span>
-                    </div>
                   </td>
                   <td className="p-4">
                     <div className="flex flex-col cursor-pointer group/row" onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}>
@@ -738,7 +740,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
               ))}
               {rooms?.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-20 text-center">
+                  <td colSpan={7} className="p-20 text-center">
                     <div className="flex flex-col items-center gap-4">
                        <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800/50 rounded-full flex items-center justify-center">
                           <LayoutGrid className="w-8 h-8 text-gray-200 dark:text-gray-700" />
@@ -788,30 +790,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
            </div>
         </div>
       </div>
-      {/* Quick Room Manager Modal */}
-      {isQuickCreateOpen && propertyId && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-gray-950/40 backdrop-blur-sm" onClick={() => setIsQuickCreateOpen(false)} />
-          <div className="relative bg-white dark:bg-gray-900 rounded-[16px] shadow-2xl w-full max-w-lg p-8 space-y-6 overflow-hidden border border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Thêm nhanh phòng</h3>
-                <p className="text-xs text-gray-500 font-medium">Khởi tạo nhanh danh sách phòng dự thảo cho dự án</p>
-              </div>
-              <button onClick={() => setIsQuickCreateOpen(false)} className="p-2 rounded-[8px] hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            
-            <QuickRoomManager 
-              propertyId={propertyId} 
-              floorId={appliedFilters.floorId === 'all' ? '' : appliedFilters.floorId} 
-              onSuccess={() => setIsQuickCreateOpen(false)}
-              onCancel={() => setIsQuickCreateOpen(false)}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+

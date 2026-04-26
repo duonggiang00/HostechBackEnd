@@ -38,6 +38,13 @@ class CreateNewUser implements CreatesNewUsers
             ],
             'phone' => ['nullable', 'string', 'max:30'],
             'password' => $this->passwordRules(),
+            // Identity fields
+            'identity_number' => ['nullable', 'string', 'max:30'],
+            'identity_issued_date' => ['nullable', 'date'],
+            'identity_issued_place' => ['nullable', 'string', 'max:255'],
+            'date_of_birth' => ['nullable', 'date'],
+            'address' => ['nullable', 'string', 'max:500'],
+            'license_plate' => ['nullable', 'string', 'max:20'],
             // Only required if the invitation is for an Owner to create a new Org
             'org_name' => ['nullable', 'string', 'max:255'],
             'org_phone' => ['nullable', 'string', 'max:30'],
@@ -77,6 +84,13 @@ class CreateNewUser implements CreatesNewUsers
                 'password_hash' => Hash::make($input['password']),
                 'email_verified_at' => now(), // Assume verified since they received the email link
                 'is_active' => true,
+                // Identity / Personal
+                'identity_number' => $input['identity_number'] ?? null,
+                'identity_issued_date' => $input['identity_issued_date'] ?? null,
+                'identity_issued_place' => $input['identity_issued_place'] ?? null,
+                'date_of_birth' => $input['date_of_birth'] ?? null,
+                'address' => $input['address'] ?? null,
+                'license_plate' => $input['license_plate'] ?? null,
             ]);
 
             // 4. Assign Role
@@ -89,6 +103,17 @@ class CreateNewUser implements CreatesNewUsers
 
             // 6. Mark invitation as used
             $invitation->update(['registered_at' => now()]);
+
+            // 7. Backfill contract_members — Path B: email stored in contract_members
+            //    email + org_id + status cho phép định danh chính xác, không cần FK phụ.
+            \App\Models\Contract\ContractMember::where('email', $invitation->email)
+                ->where('org_id', $orgId)
+                ->where('status', 'PENDING_INVITE')
+                ->whereNull('user_id')
+                ->update([
+                    'user_id' => $user->id,
+                    'status'  => 'PENDING',  // cần ký e-signature
+                ]);
 
             return $user;
         });

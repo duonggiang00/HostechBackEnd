@@ -17,7 +17,7 @@ class RoomTemplateResource extends JsonResource
             'capacity'    => $this->capacity,
             'base_price'  => $this->base_price,
             'description' => $this->description,
-            'services'    => $this->whenLoaded('services'),
+            'services'    => \App\Http\Resources\Service\ServiceResource::collection($this->whenLoaded('services')),
             'assets'      => $this->whenLoaded('assets'),
             'images'      => $this->getMedia('gallery')->map(fn ($m) => [
                 'uuid'      => $m->uuid,

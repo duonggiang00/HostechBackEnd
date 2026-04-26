@@ -28,7 +28,7 @@ class RoomTemplateController extends Controller
         }
 
         $templates = RoomTemplate::where('property_id', $id)
-            ->with(['services', 'assets'])
+            ->with(['services.currentRate', 'assets'])
             ->with('media') // Eager load Spatie media
             ->get();
 
@@ -67,7 +67,7 @@ class RoomTemplateController extends Controller
                 $template->syncMediaAttachments($mediaIds, 'gallery');
             }
 
-            return new RoomTemplateResource($template->load(['services', 'assets', 'media']));
+            return new RoomTemplateResource($template->load(['services.currentRate', 'assets', 'media']));
         });
     }
 
@@ -75,7 +75,7 @@ class RoomTemplateController extends Controller
     {
         $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
         return new RoomTemplateResource(
-            $roomTemplate->load(['services', 'assets', 'media'])
+            $roomTemplate->load(['services.currentRate', 'assets', 'media'])
         );
     }
 
@@ -112,7 +112,7 @@ class RoomTemplateController extends Controller
             }
 
             return new RoomTemplateResource(
-                $roomTemplate->load(['services', 'assets', 'media'])
+                $roomTemplate->load(['services.currentRate', 'assets', 'media'])
             );
         });
     }

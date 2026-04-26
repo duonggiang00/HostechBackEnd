@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import {
   ArrowLeft,
   Info,
@@ -21,13 +22,13 @@ import {
   Tv,
   Archive,
   Droplet,
+  CheckCircle2,
+  Clock,
 } from 'lucide-react';
 import { useRoomDetail, useRoomActions } from '../hooks/useRooms';
-import ManagementModal from '@/shared/features/management/components/ManagementModal';
-import RoomForm from '../components/RoomForm';
 import { QuickInvoiceModal } from '../components/QuickInvoiceModal';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
-import UtilityManager from '@/PropertyScope/features/operations/components/UtilityManager';
+import RoomUtilityTab from '../components/RoomUtilityTab';
 import RoomImageGallery from '../components/RoomImageGallery';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import { formatCurrency } from '@/lib/utils';
@@ -82,20 +83,26 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function RoomDetailPage() {
-  const { propertyId, roomId } = useParams<{ propertyId: string; roomId: string }>();
+export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
+  const { propertyId, roomId: roomIdParam } = useParams<{ propertyId: string; roomId: string }>();
+  const roomId = forceId || roomIdParam;
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { data: room, isLoading, error, refetch } = useRoomDetail(roomId);
+  const isTenantPortal = location.pathname.startsWith('/app');
+
+  const { data: room, isLoading, error } = useRoomDetail(roomId);
   const { deleteRoom, restoreRoom } = useRoomActions();
 
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isQuickInvoiceOpen, setIsQuickInvoiceOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
   const handleBack = () => {
+    if (isTenantPortal) {
+      navigate('/app/dashboard');
+      return;
+    }
     if (location.state?.from === 'building-view') {
       navigate(`/properties/${propertyId}/building-view`);
     } else {
@@ -134,7 +141,7 @@ export default function RoomDetailPage() {
           onClick={handleBack}
           className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
         >
-          Quay lại danh sách
+          {isTenantPortal ? 'Quay lại trang chủ' : 'Quay lại danh sách'}
         </button>
       </div>
     );
@@ -159,15 +166,19 @@ export default function RoomDetailPage() {
           <div className="flex items-center justify-between gap-4">
 
             <div className="flex items-center gap-4 min-w-0">
-              <button
-                onClick={handleBack}
-                className="shrink-0 flex items-center gap-2 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm font-medium"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Quay lại</span>
-              </button>
+              {!isTenantPortal && (
+                <>
+                  <button
+                    onClick={handleBack}
+                    className="shrink-0 flex items-center gap-2 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm font-medium"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Quay lại</span>
+                  </button>
 
-              <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 shrink-0" />
+                  <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 shrink-0" />
+                </>
+              )}
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -193,54 +204,56 @@ export default function RoomDetailPage() {
                 {statusInfo.label}
               </span>
 
-              <PermissionGate role={['Owner', 'Manager']}>
-                <div className="flex items-center gap-2">
-                  {room.deleted_at ? (
-                    <button
-                      onClick={() => restoreRoom.mutate(room.id)}
-                      disabled={restoreRoom.isPending}
-                      className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${restoreRoom.isPending ? 'animate-spin' : ''}`} />
-                      Khôi phục
-                    </button>
-                  ) : (
-                    <>
+              {!isTenantPortal && (
+                <PermissionGate role={['Owner', 'Manager']}>
+                  <div className="flex items-center gap-2">
+                    {room.deleted_at ? (
                       <button
-                        onClick={() => setIsEditOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-all"
+                        onClick={() => restoreRoom.mutate(room.id)}
+                        disabled={restoreRoom.isPending}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
                       >
-                        <FileEdit className="w-4 h-4" />
-                        Chỉnh sửa
+                        <RefreshCw className={`w-4 h-4 ${restoreRoom.isPending ? 'animate-spin' : ''}`} />
+                        Khôi phục
                       </button>
-                      <button
-                        onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
-                      >
-                        <Zap className="w-4 h-4" />
-                        Tạo hợp đồng
-                      </button>
-                      {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
+                    ) : (
+                      <>
                         <button
-                          onClick={() => setIsQuickInvoiceOpen(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                          onClick={() => navigate(`/properties/${propertyId}/rooms/${roomId}/edit`)}
+                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-all"
                         >
-                          <Receipt className="w-4 h-4" />
-                          Chốt hóa đơn
+                          <FileEdit className="w-4 h-4" />
+                          Chỉnh sửa
                         </button>
-                      )}
-                      <button
-                        onClick={handleDelete}
-                        disabled={deleteRoom.isPending}
-                        className="p-2 text-gray-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all disabled:opacity-60"
-                        title="Xóa phòng"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </PermissionGate>
+                        <button
+                          onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
+                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
+                        >
+                          <Zap className="w-4 h-4" />
+                          Tạo hợp đồng
+                        </button>
+                        {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
+                          <button
+                            onClick={() => setIsQuickInvoiceOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                          >
+                            <Receipt className="w-4 h-4" />
+                            Chốt hóa đơn
+                          </button>
+                        )}
+                        <button
+                          onClick={handleDelete}
+                          disabled={deleteRoom.isPending}
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all disabled:opacity-60"
+                          title="Xóa phòng"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </PermissionGate>
+              )}
             </div>
           </div>
         </div>
@@ -401,7 +414,7 @@ export default function RoomDetailPage() {
             <div className="px-6 py-4 flex items-center justify-between border-b border-gray-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
               <h3 className="text-base font-bold text-gray-900 dark:text-white">Danh sách thành viên hiện tại</h3>
               
-              {room.status === 'occupied' && room.contracts?.some(c => String(c.status).toLowerCase() === 'active') && (
+              {!isTenantPortal && room.status === 'occupied' && room.contracts?.some(c => String(c.status).toLowerCase() === 'active') && (
                 <button
                   onClick={() => setIsAddMemberOpen(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-sm"
@@ -421,7 +434,7 @@ export default function RoomDetailPage() {
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 dark:text-slate-300">Số điện thoại</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 dark:text-slate-300">Vai trò</th>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-900 dark:text-slate-300">Trạng thái</th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-gray-900 dark:text-slate-300">Hành động</th>
+                      {!isTenantPortal && <th className="px-6 py-3 text-center text-xs font-semibold text-gray-900 dark:text-slate-300">Hành động</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-slate-800">
@@ -446,25 +459,48 @@ export default function RoomDetailPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
-                            member.status === 'APPROVED'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
-                              : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
-                          }`}>
-                            {member.status === 'APPROVED' ? 'Đã xác nhận' : member.status === 'PENDING' ? 'Chờ xác nhận' : member.status}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
+                              member.status === 'APPROVED'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30'
+                                : 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700'
+                            }`}>
+                              {member.status === 'APPROVED' ? 'Đã xác nhận' : member.status === 'PENDING' ? 'Chờ xác nhận' : member.status}
+                            </span>
+                            {member.user_id ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> Đã đăng ký
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                <Clock className="w-2.5 h-2.5" /> Chờ đăng ký
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => navigate(`/properties/${propertyId}/users/${member.user_id || member.id}`, { 
-                              state: { from: 'room-detail', roomId: roomId, activeTab: 'tenants' } 
-                            })}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-xs font-medium"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            Xem chi tiết
-                          </button>
-                        </td>
+                        {!isTenantPortal && (
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => {
+                                if (member.user_id) {
+                                  navigate(`/properties/${propertyId}/users/${member.user_id}`, { 
+                                    state: { from: 'room-detail', roomId: roomId, activeTab: 'tenants' } 
+                                  });
+                                } else {
+                                  toast.error('Cư dân này chưa kích hoạt tài khoản hệ thống.');
+                                }
+                              }}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors text-xs font-medium ${
+                                member.user_id
+                                  ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20'
+                                  : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                              }`}
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              Xem chi tiết
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -556,7 +592,7 @@ export default function RoomDetailPage() {
 
                     <div className="flex justify-end">
                       <button
-                        onClick={() => navigate(`/properties/${propertyId}/contracts/${contract.id}`)}
+                        onClick={() => navigate(isTenantPortal ? `/app/contracts/${contract.id}` : `/properties/${propertyId}/contracts/${contract.id}`)}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-sm font-medium"
                       >
                         <Eye className="w-4 h-4" />
@@ -577,10 +613,11 @@ export default function RoomDetailPage() {
 
         {/* ── Đồng hồ ──────────────────────────────────────────────────── */}
         {activeTab === 'utilities' && (
-          <UtilityManager
-            propertyId={propertyId!}
+          <RoomUtilityTab
+            propertyId={isTenantPortal ? room.property_id : propertyId!}
             roomId={room.id}
-            data={room.meters}
+            meters={room.meters}
+            isReadOnly={isTenantPortal}
           />
         )}
 
@@ -589,40 +626,28 @@ export default function RoomDetailPage() {
           <InvoiceManager
             roomId={room.id}
             data={room.invoices}
+            isReadOnly={isTenantPortal}
           />
         )}
 
       </div>
 
-      <ManagementModal
-        isOpen={isEditOpen}
-        onClose={() => setIsEditOpen(false)}
-        roomName={room.name}
-        title={`Chỉnh sửa ${room.name}`}
-      >
-        <RoomForm
-          initialData={room}
-          propertyId={propertyId as string}
-          floorId={room.floor_id || undefined}
-          onSuccess={() => {
-            setIsEditOpen(false);
-            refetch();
-          }}
-          onCancel={() => setIsEditOpen(false)}
-        />
-      </ManagementModal>
 
-      <QuickInvoiceModal
-        isOpen={isQuickInvoiceOpen}
-        onClose={() => setIsQuickInvoiceOpen(false)}
-        room={room}
-      />
+      {!isTenantPortal && (
+        <>
+          <QuickInvoiceModal
+            isOpen={isQuickInvoiceOpen}
+            onClose={() => setIsQuickInvoiceOpen(false)}
+            room={room}
+          />
 
-      <AddMemberModal
-        isOpen={isAddMemberOpen}
-        onClose={() => setIsAddMemberOpen(false)}
-        contractId={room.contracts?.find(c => String(c.status).toLowerCase() === 'active')?.id || ''}
-      />
+          <AddMemberModal
+            isOpen={isAddMemberOpen}
+            onClose={() => setIsAddMemberOpen(false)}
+            contractId={room.contracts?.find(c => String(c.status).toLowerCase() === 'active')?.id || ''}
+          />
+        </>
+      )}
     </div>
   );
 }
