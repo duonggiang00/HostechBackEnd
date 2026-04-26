@@ -42,7 +42,6 @@ export function ContractPreviewModal({ isOpen, onClose, contractId, contract }: 
         }
       } catch (err) {
         console.error('Error fetching document:', err);
-        toast.error('Không thể tải tệp bản mềm hợp đồng.');
       } finally {
         setIsLoading(false);
       }

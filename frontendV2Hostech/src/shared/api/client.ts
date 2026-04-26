@@ -69,7 +69,10 @@ apiClient.interceptors.response.use(
     
     if (error.response) {
       const data = error.response.data as any;
-      if (data && data.message) {
+      if (error.response.status === 422 && data?.errors) {
+        // Validation errors
+        errorMessage = Object.values(data.errors)[0]?.[0] as string || data.message;
+      } else if (data && data.message) {
         errorMessage = data.message;
       } else if (error.response.status === 401) {
         errorMessage = 'Session expired. Please log in again.';
@@ -89,8 +92,9 @@ apiClient.interceptors.response.use(
     // Don't show toast for 401s if it's the initial check or passive fetch to avoid spamming the user
     const configUrl = error.config?.url || '';
     const isPassive = configUrl.includes('/me') || configUrl.includes('/dashboard');
+    const isLoginEndpoint = configUrl.includes('/login');
     
-    if (!(error.response?.status === 401 && isPassive)) {
+    if (!(error.response?.status === 401 && isPassive) && !isLoginEndpoint) {
       toast.error(errorMessage);
     }
     

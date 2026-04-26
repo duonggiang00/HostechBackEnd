@@ -36,11 +36,11 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     if (!identifier) {
-      setError('Email or Phone is required');
+      setError('Vui lòng nhập Email hoặc Số điện thoại.');
       return;
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+      setError('Mật khẩu phải có ít nhất 8 ký tự.');
       return;
     }
 
@@ -76,10 +76,14 @@ export default function LoginPage() {
       navigate('/');
     } catch (err: any) {
       console.error('Login error:', err);
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        'Login failed. Please check your credentials.';
+      let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
+      
+      if (err.response?.status === 401 || err.response?.status === 422) {
+        errorMessage = 'Email, số điện thoại hoặc mật khẩu không chính xác.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
       setError(errorMessage);
       setLoading(false);
     }
@@ -106,10 +110,14 @@ export default function LoginPage() {
       navigate('/');
     } catch (err: any) {
       console.error('MFA error:', err);
-      const errorMessage =
-        err.response?.data?.message ||
-        err.message ||
-        'Mã xác thực không hợp lệ hoặc đã hết hạn.';
+      let errorMessage = 'Mã xác thực không hợp lệ hoặc đã hết hạn.';
+      
+      if (err.response?.status === 422) {
+        errorMessage = 'Mã xác thực không chính xác.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
       setError(errorMessage);
       setLoading(false);
     }
@@ -147,8 +155,8 @@ export default function LoginPage() {
                 className="space-y-6"
               >
                 <div className="space-y-2 text-center mb-8">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Administrative Login</h2>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Access your secure dashboard</p>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Đăng nhập hệ thống</h2>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Truy cập bảng điều khiển quản trị</p>
                 </div>
 
                 <div className="space-y-4">
@@ -160,7 +168,7 @@ export default function LoginPage() {
                       type="text"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="Email or Phone Number"
+                      placeholder="Email hoặc Số điện thoại"
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
@@ -178,7 +186,7 @@ export default function LoginPage() {
                           handleLogin();
                         }
                       }}
-                      placeholder="Security Password"
+                      placeholder="Mật khẩu bảo mật"
                       className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     />
                   </div>
@@ -196,7 +204,7 @@ export default function LoginPage() {
                   disabled={isLoading}
                   className="w-full py-5 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Log In Securely <ArrowRight className="w-5 h-5" /></>}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>ĐĂNG NHẬP<ArrowRight className="w-5 h-5" /></>}
                 </button>
               </motion.div>
             )}
@@ -213,13 +221,13 @@ export default function LoginPage() {
                   onClick={() => setStep('LOGIN')}
                   className="flex items-center gap-2 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Change Details
+                  <ArrowLeft className="w-4 h-4" /> Quay lại
                 </button>
 
                 <div className="space-y-2 text-center">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Verification Code</h2>
+                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Mã xác thực</h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    We've sent a 6-digit code to <br/>
+                    Chúng tôi đã gửi mã gồm 6 chữ số đến <br/>
                     <span className="font-bold text-slate-900 dark:text-white">{identifier}</span>
                   </p>
                 </div>
@@ -240,7 +248,7 @@ export default function LoginPage() {
                      className="text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 mx-auto disabled:text-slate-300 dark:disabled:text-slate-600 text-indigo-600 dark:text-indigo-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                    >
                      <RefreshCw className={`w-4 h-4 ${otpCooldown > 0 ? '' : 'animate-spin-slow'}`} />
-                     {otpCooldown > 0 ? `Resend OTP in ${otpCooldown}s` : 'Resend Code Now'}
+                     {otpCooldown > 0 ? `Gửi lại mã sau ${otpCooldown}s` : 'Gửi lại mã xác thực'}
                    </button>
                 </div>
               </motion.div>

@@ -223,6 +223,23 @@ class ContractController extends Controller
     }
 
     /**
+     * Tải lên chữ ký tay của Quản lý để xác nhận thủ công hợp đồng PENDING_SIGNATURE
+     */
+    public function managerConfirmSignature(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+        $this->authorize('update', $contract);
+
+        $validated = $request->validate([
+            'signature_image' => 'required|string',
+        ]);
+
+        $this->service->managerConfirmSignature($contract, $validated['signature_image'], $request->user());
+
+        return response()->json(['message' => 'Đã xác nhận ký hợp đồng thủ công thành công.']);
+    }
+
+    /**
      * Từ chối hợp đồng
      *
      * Tenant từ chối tham gia hợp đồng.

@@ -12,7 +12,7 @@ setup('authenticate', async ({ page }) => {
   await page.fill('input[placeholder*="Mật khẩu"]', '12345678');
   
   // Submit
-  await page.click('button:has-text("Đăng nhập An toàn")');
+  await page.click('button:has-text("ĐĂNG NHẬP")');
   
   // Wait until the page resolves to either select-property or dashboard
   await page.waitForURL(url => url.pathname.includes('select-property') || url.pathname === '/', { timeout: 15000 });
