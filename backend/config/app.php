@@ -128,7 +128,7 @@ return [
     | Frontend Navigation URL
     |--------------------------------------------------------------------------
     |
-    | This URL is used by the system to generate links pointing to the 
+    | This URL is used by the system to generate links pointing to the
     | React/Frontend application (e.g. for registration, password reset).
     |
     */

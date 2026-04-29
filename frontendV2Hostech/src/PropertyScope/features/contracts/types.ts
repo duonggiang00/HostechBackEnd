@@ -23,13 +23,15 @@ export interface RoomContract {
   status: ContractStatus;
   start_date: string;
   end_date: string;
+  expected_move_out_date?: string | null;
   monthly_rent: number;
+  base_rent: number;
+  fixed_services_fee: number;
+  total_rent: number;
+  rent_price: number;
   deposit_amount: number;
-  billing_cycle?: string | number;
-  tenant?: {
-    id: string;
-    name: string;
-  };
+  due_day?: number;
+  tenant_full_name?: string;
   members?: Array<{ 
     id: string; 
     user_id?: string;
@@ -51,6 +53,7 @@ export interface ContractMember {
   identity_number: string | null;
   date_of_birth: string | null;
   license_plate: string | null;
+  permanent_address?: string | null;
   role: string;
   status: ContractMemberStatus;
   is_primary: boolean;
@@ -59,7 +62,10 @@ export interface ContractMember {
   left_at: string | null;
   created_at: string;
   updated_at: string;
-  
+
+  identity_front_url?: string | null;
+  identity_back_url?: string | null;
+
   // Relations
   user?: User;
 }
@@ -94,6 +100,7 @@ export interface Contract {
   cancelled_at?: string | null;
   notice_days?: number;
   notice_given_at?: string | null;
+  expected_move_out_date?: string | null;
 
   base_rent: number | null;
   fixed_services_fee: number | null;
@@ -107,9 +114,11 @@ export interface Contract {
   signed_document_url: string | null;
   initial_invoice?: {
     id: string;
+    code?: string;
     status: string;
     total_amount: number;
     paid_amount: number;
+    debt?: number;
     due_date: string | null;
   } | null;
   created_at: string;
@@ -124,13 +133,25 @@ export interface Contract {
   statusHistories?: ContractStatusHistory[];
 }
 
+/** POST /contracts/{id}/request-termination */
+export interface RequestTerminationNoticeResponse {
+  message: string;
+  warnings: string[];
+  is_early_termination: boolean;
+  contract: {
+    id: string;
+    status: ContractStatus;
+    expected_move_out_date: string | null;
+    end_date: string | null;
+  };
+}
+
 export interface ContractQueryParams {
   property_id?: string;
   room_id?: string;
   status?: string; // ContractStatus
   search?: string;
   sort?: string;
-  include?: string;
   with_trashed?: boolean;
   page?: number;
   per_page?: number;
@@ -159,15 +180,20 @@ export interface ContractListResponse {
 export type ContractMemberRole = 'TENANT' | 'ROOMMATE' | 'GUARANTOR';
 
 export interface CreateContractMemberPayload {
-  user_id: string;
+  user_id?: string;
+  email?: string;
   full_name?: string;
   phone?: string;
   identity_number?: string;
   date_of_birth?: string;
   license_plate?: string;
+  permanent_address?: string;
   role?: ContractMemberRole;
   is_primary?: boolean;
   joined_at?: string;
+  /** Bắt buộc khi thành viên ≥18 tuổi (hoặc chủ hợp đồng); có thể bỏ qua nếu dưới 18 — khớp backend */
+  identity_front_media_id?: string;
+  identity_back_media_id?: string;
 }
 
 export interface CreateContractPayload {
@@ -187,7 +213,7 @@ export interface CreateContractPayload {
 }
 
 export interface ScanContractResponse {
-  tenant_name?: string;
+  tenant_full_name?: string;
   tenant_phone?: string;
   tenant_id_number?: string;
   room_code?: string;
@@ -201,3 +227,41 @@ export interface ScanContractResponse {
   _db_user_found?: boolean;
 }
 
+// ─── Pending Requests (Aggregated Manager View) ───────────────────────────────
+
+export type PendingRequestType = 'ROOM_TRANSFER' | 'ADD_MEMBER' | 'TERMINATION';
+
+export interface PendingRequest {
+  type: PendingRequestType;
+  contract_id: string;
+  room_name?: string;
+  requested_at: string;
+
+  // ROOM_TRANSFER
+  from_room?: string;
+  from_room_id?: string;
+  to_room?: string;
+  to_room_id?: string;
+  request_index?: number;
+  tenant_full_name?: string;
+  reason?: string;
+
+  // ADD_MEMBER
+  member_id?: string;
+  member_full_name?: string;
+  member_phone?: string;
+  member_role?: string;
+  requester_full_name?: string;
+}
+
+export interface PendingRequestsMeta {
+  total: number;
+  transfer_count: number;
+  add_member_count: number;
+  termination_count: number;
+}
+
+export interface PendingRequestsResponse {
+  data: PendingRequest[];
+  meta: PendingRequestsMeta;
+}

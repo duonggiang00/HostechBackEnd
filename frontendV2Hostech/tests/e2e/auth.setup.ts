@@ -1,25 +1,39 @@
-import { test as setup, expect } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { test as setup, type Browser } from '@playwright/test';
+import { E2E_DEFAULT_PASSWORD, E2E_MANAGER_EMAIL, E2E_STAFF_EMAIL, loginAs } from './helpers/login';
 
+const authDir = 'playwright/.auth';
 
-const authFile = 'playwright/.auth/user.json';
+function ensureAuthDir(filePath: string) {
+  mkdirSync(dirname(filePath), { recursive: true });
+}
 
-setup('authenticate', async ({ page }) => {
-  // Go to login page
-  await page.goto('/login');
-  
-  // Fill both identity and password
-  await page.fill('input[placeholder*="Email"]', 'test_manager_1@example.com');
-  await page.fill('input[placeholder*="Mật khẩu"]', '12345678');
-  
-  // Submit
-  await page.click('button:has-text("Đăng nhập An toàn")');
-  
-  // Wait until the page resolves to either select-property or dashboard
-  await page.waitForURL(url => url.pathname.includes('select-property') || url.pathname === '/', { timeout: 15000 });
-  
-  // Wait for network idle to ensure everything loaded
-  await page.waitForLoadState('networkidle');
+/**
+ * Mỗi role một browser context riêng → file storageState riêng (manager / staff / tenant).
+ */
+async function saveStorageForEmail(browser: Browser, email: string, outPath: string): Promise<void> {
+  ensureAuthDir(outPath);
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await loginAs(page, email, E2E_DEFAULT_PASSWORD);
+  await context.storageState({ path: outPath });
+  await context.close();
+}
 
-  // Save storage state to a file
-  await page.context().storageState({ path: authFile });
+setup('auth: manager', async ({ browser }) => {
+  await saveStorageForEmail(browser, E2E_MANAGER_EMAIL, `${authDir}/manager.json`);
+});
+
+setup('auth: staff', async ({ browser }) => {
+  await saveStorageForEmail(browser, E2E_STAFF_EMAIL, `${authDir}/staff.json`);
+});
+
+setup('auth: tenant (optional)', async ({ browser }, testInfo) => {
+  const tenantEmail = process.env.E2E_TENANT_EMAIL?.trim();
+  if (!tenantEmail) {
+    testInfo.skip(true, 'Thiếu E2E_TENANT_EMAIL — tạo playwright/.env từ playwright/.env.example.');
+    return;
+  }
+  await saveStorageForEmail(browser, tenantEmail, `${authDir}/tenant.json`);
 });

@@ -21,9 +21,13 @@ class PropertyFactory extends Factory
             'default_due_day' => 5,
             'default_cutoff_day' => 30,
             'default_deposit_months' => fake()->randomElement([1, 2]),
-            'bank_accounts' => json_encode([
-                ['bank' => 'Vietcombank', 'account' => '1234567890'],
-            ]),
+            'bank_accounts' => [
+                [
+                    'bank_name' => 'Vietcombank',
+                    'account_number' => '1234567890',
+                    'account_name' => 'CHU TAI KHOAN DEMO',
+                ],
+            ],
         ];
     }
 }

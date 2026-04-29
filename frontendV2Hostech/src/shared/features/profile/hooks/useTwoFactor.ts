@@ -1,22 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { profileApi } from '../api/profile';
 import { twoFactorApi } from '../api/twoFactor';
-import type { MfaEnablePayload } from '../types';
+import type { MfaEnablePayload, MfaDisablePayload } from '../types';
 
-const MFA_STATUS_KEY = ['mfa-status'] as const;
 const MFA_SETUP_KEY = ['mfa-setup'] as const;
 
-/** Fetch MFA status from profile controller (GET /api/profile/mfa-status) */
-export const useMfaStatus = () => {
-  return useQuery({
-    queryKey: MFA_STATUS_KEY,
-    queryFn: profileApi.getMfaStatus,
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
-/** Fetch MFA setup info (GET /api/user/mfa/setup) */
+/** Fetch full MFA setup state (enabled_methods, per-method flags) */
 export const useMfaSetup = () => {
   return useQuery({
     queryKey: MFA_SETUP_KEY,
@@ -26,8 +15,9 @@ export const useMfaSetup = () => {
 };
 
 /**
- * Initialize MFA — generates TOTP secret + QR code
- * POST /api/user/mfa/initialize { method: 'totp' }
+ * Initialize MFA for a given method.
+ * TOTP: returns { secret_key, qr_code_svg }
+ * Email: sends OTP, returns { message }
  */
 export const useInitializeMfa = () => {
   return useMutation({
@@ -39,8 +29,7 @@ export const useInitializeMfa = () => {
 };
 
 /**
- * Enable MFA — confirms TOTP code + password
- * POST /api/user/mfa/enable { method, code, password }
+ * Enable (add) a new MFA method after verifying code + password.
  */
 export const useEnableMfa = () => {
   const queryClient = useQueryClient();
@@ -48,7 +37,6 @@ export const useEnableMfa = () => {
   return useMutation({
     mutationFn: (payload: MfaEnablePayload) => twoFactorApi.enable(payload),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: MFA_STATUS_KEY });
       queryClient.invalidateQueries({ queryKey: MFA_SETUP_KEY });
       toast.success(data.message || 'Đã kích hoạt xác thực 2 lớp.');
     },
@@ -59,16 +47,14 @@ export const useEnableMfa = () => {
 };
 
 /**
- * Disable MFA — requires password confirmation
- * DELETE /api/user/mfa/disable { password }
+ * Disable a specific MFA method (or all if method is omitted).
  */
 export const useDisableMfa = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (password: string) => twoFactorApi.disable(password),
+    mutationFn: (payload: MfaDisablePayload) => twoFactorApi.disable(payload),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: MFA_STATUS_KEY });
       queryClient.invalidateQueries({ queryKey: MFA_SETUP_KEY });
       toast.success(data.message || 'Đã tắt xác thực 2 lớp.');
     },

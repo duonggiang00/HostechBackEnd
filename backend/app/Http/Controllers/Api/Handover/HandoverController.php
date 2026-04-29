@@ -41,7 +41,7 @@ class HandoverController extends Controller
     {
         $this->authorize('create', Handover::class);
         $handover = $this->handoverService->createDraft(
-            $request->user()->org,
+            $request->user()?->org_id,
             $request->validated()
         );
 

@@ -23,24 +23,6 @@ export interface Meter {
 }
 
 export type MeterReadingStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';
-export type AdjustmentNoteStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-
-export interface AdjustmentNote {
-  id: string;
-  meter_reading_id: string;
-  reason: string;
-  before_value: number;
-  after_value: number;
-  status: AdjustmentNoteStatus;
-  requested_by?: { id: string; name: string; email?: string };
-  approved_by?: { id: string; name: string; email?: string };
-  approved_at?: string;
-  rejected_by?: { id: string; name: string; email?: string };
-  rejected_at?: string;
-  reject_reason?: string;
-  proofs?: { id: string; url: string; name?: string; file_name?: string; mime_type?: string; size?: number }[];
-  created_at?: string;
-}
 
 export interface MeterReading {
   id: string;
@@ -77,8 +59,6 @@ export interface MeterReading {
   }[];
   /** IDs từ temporary upload để gán ảnh khi tạo/cập nhật reading */
   proof_media_ids?: string[];
-  // Adjustment notes (loaded on demand)
-  adjustments?: AdjustmentNote[];
   // Relations
   meter?: Meter;
   created_at?: string;

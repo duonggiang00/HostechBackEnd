@@ -2,11 +2,10 @@
 
 namespace App\Listeners\Property;
 
-use App\Events\Property\RoomCreated;
-use App\Events\Property\RoomDeleted;
-use App\Events\Property\RoomUpdated;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Listener to refresh property stats reactively when rooms change.
@@ -16,32 +15,40 @@ class RefreshPropertyStats implements ShouldQueue
 {
     use InteractsWithQueue;
 
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Handle the event.
      */
     public function handle(object $event): void
     {
-        $room = $event->room;
-        $property = $room->property;
+        $property = null;
+        $floorId = null;
 
-        if (!$property) {
+        if (isset($event->room)) {
+            $property = $event->room->property;
+            $floorId = $event->room->floor_id;
+        } elseif (isset($event->floor)) {
+            $property = $event->floor->property;
+            $floorId = $event->floor->id;
+        } elseif (isset($event->property)) {
+            $property = $event->property;
+        }
+
+        if (! $property) {
             return;
         }
 
         // --- DECOUPLED: CACHE BUSTING ---
         // Busting property-level caches
-        \Illuminate\Support\Facades\Cache::forget("property_detail_{$property->id}");
-        \Illuminate\Support\Facades\Cache::forget("property_stats_{$property->id}");
-        
-        if ($room->floor_id) {
-            \Illuminate\Support\Facades\Cache::forget("floor_detail_{$room->floor_id}");
+        Cache::forget("property_detail_{$property->id}");
+        Cache::forget("property_stats_{$property->id}");
+
+        if ($floorId) {
+            Cache::forget("floor_detail_{$floorId}");
         }
 
-        \Illuminate\Support\Facades\Log::info("Busted cache for Property {$property->id} and Floor {$room->floor_id} due to room change.");
+        Log::info("Busted cache for Property {$property->id} due to system update.");
         // --------------------------------
     }
 }

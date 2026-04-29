@@ -1,11 +1,12 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Box } from 'lucide-react';
+import { Box } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { roomTemplatesApi } from '../api/roomTemplatesApi';
 import { RoomTemplateForm, type RoomTemplateFormData } from '../components/templates/RoomTemplateForm';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export function RoomTemplateCreatePage() {
   const navigate = useNavigate();
@@ -34,10 +35,6 @@ export function RoomTemplateCreatePage() {
     createMutation.mutate(data);
   };
 
-  const handleBack = () => {
-    navigate(`/properties/${propertyId}/templates`);
-  };
-
   if (isPropertyLoading) {
     return (
       <div className="flex-1 p-8 flex items-center justify-center">
@@ -60,15 +57,7 @@ export function RoomTemplateCreatePage() {
           className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6"
         >
           <div className="space-y-4">
-            <button 
-              onClick={handleBack}
-              className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors group"
-            >
-              <div className="p-1.5 rounded-lg bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 group-hover:border-slate-300 dark:group-hover:border-slate-600">
-                <ArrowLeft className="w-4 h-4" />
-              </div>
-              Quay lại danh sách
-            </button>
+            <PageBackButton className="text-sm font-bold" />
             <div className="flex items-center gap-4">
               <div className="p-3 bg-indigo-500/10 rounded-2xl">
                 <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />

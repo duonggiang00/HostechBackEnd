@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Plus, Edit2, Trash2, ArrowLeft, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useRoomTemplates, useRoomTemplateActions } from '../hooks/useTemplates';
 import { RoomTemplateWizard } from './RoomTemplateWizard';
 import { Button } from '@/shared/components/ui/button';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import type { RoomTemplate } from '../types';
 
 interface RoomTemplateListProps {
@@ -41,14 +42,10 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
     return (
       <div className="space-y-6 animate-in slide-in-from-right duration-500">
         <div className="flex items-center gap-5 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-          <Button 
-            variant="ghost" 
-            size="icon"
-            onClick={() => setShowWizard(false)}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
-          >
-            <ArrowLeft className="w-5 h-5 text-gray-500" />
-          </Button>
+          <PageBackButton
+            onBack={() => setShowWizard(false)}
+            className="rounded-xl text-gray-700 dark:text-gray-200"
+          />
           <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg">
              <Plus className="w-6 h-6 text-white" />
           </div>

@@ -153,3 +153,12 @@ Dựa vào ma trận quyền, Frontend cần thiết kế luồng trải nghiệ
 | Filtering | ❌ | ❌ | ✅ | ✅ |
 | Sorting | ❌ | ❌ | ✅ | ✅ |
 | Pagination | ❌ | ❌ | ✅ | ✅ |
+
+---
+
+## Production checklist: Sanctum, SPA, CORS
+
+- **`SANCTUM_STATEFUL_DOMAINS`:** liệt kê host của SPA (ví dụ `localhost:3000`, `app.example.com`) để cookie session / CSRF hoạt động khi dùng chế độ stateful của Sanctum.
+- **`CORS` / `allowed_origins`:** chỉ whitelist origin thật của frontend; tránh `*` khi kèm credentials.
+- **Cookie vs Bearer:** SPA hiện tại dùng `Authorization: Bearer` (token từ `/api/auth/login`). Nếu chuyển sang cookie, cần đồng bộ `withCredentials`, SameSite, và HTTPS-only ở production.
+- **Rate limits:** Fortify dùng limiter `login` và `two-factor` (xem `AppServiceProvider::configureRateLimiting()`). Các route nhạy cảm bổ sung (tenant gửi chứng từ, gửi số đồng hồ) có throttle riêng trên route — kiểm tra `429` trên staging trước khi siết thêm.

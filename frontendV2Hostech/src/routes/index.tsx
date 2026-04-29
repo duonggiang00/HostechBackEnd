@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 
 // Layouts
 import OrgScopeLayout from '@/OrgScope/layouts/OrgScopeLayout';
+import OrgFinanceConsoleLayout from '@/OrgScope/layouts/OrgFinanceConsoleLayout';
 import PropertyScopeLayout from '@/PropertyScope/layouts/PropertyScopeLayout';
 import TenantLayout from '@/Tenant/layouts/TenantLayout';
 import SelectionLayout from '@/shared/layouts/SelectionLayout';
@@ -17,6 +18,7 @@ import PropertySelectionPage from '@/shared/features/properties/pages/PropertySe
 
 // Modular Routes
 import { orgScopeRoutes } from '@/OrgScope/routes';
+import { orgFinanceConsoleRoutes } from '@/OrgScope/features/finance/routes';
 import { propertyScopeRoutes } from '@/PropertyScope/routes';
 import { tenantScopeRoutes } from '@/Tenant/routes';
 
@@ -72,7 +74,11 @@ const RootRedirect = () => {
     case 'Manager':
     case 'Staff': {
       if (user.properties && user.properties.length === 1) {
-        return <Navigate to={`/properties/${user.properties[0].id}/dashboard`} replace />;
+        const pid = user.properties[0].id;
+        if (user.role === 'Staff') {
+          return <Navigate to={`/properties/${pid}/staff-home`} replace />;
+        }
+        return <Navigate to={`/properties/${pid}/dashboard`} replace />;
       }
       if (user.org_id) {
          return <Navigate to="/select-property" replace />;
@@ -124,28 +130,40 @@ export default function AppRoutes() {
           } 
         />
 
-        {/* 2. Organization Scope Layout */}
-        <Route 
+        {/* 2. Organization: console tài chính (shell tối) vs phần còn lại (OrgScopeLayout sáng) */}
+        <Route
           path="/org"
           element={
-            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager', 'Staff']}>
-              <OrgScopeLayout><Outlet /></OrgScopeLayout>
+            <ProtectedRoute allowedRoles={['Admin', 'Owner', 'Manager']}>
+              <Outlet />
             </ProtectedRoute>
           }
         >
-          {orgScopeRoutes.map((route, idx) => {
-            const children = route.children?.map((child, cIdx) => (
-              child.index ? 
-                <Route key={cIdx} index element={child.element} /> : 
-                <Route key={cIdx} path={child.path} element={child.element} />
-            ));
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route element={<OrgFinanceConsoleLayout />}>
+            {orgFinanceConsoleRoutes.map((route, idx) => (
+              <Route key={`org-fin-${idx}`} path={route.path} element={route.element} />
+            ))}
+          </Route>
+          <Route element={<OrgScopeLayout />}>
+            {orgScopeRoutes.map((route, idx) => {
+              const children = route.children?.map((child, cIdx) =>
+                child.index ? (
+                  <Route key={cIdx} index element={child.element} />
+                ) : (
+                  <Route key={cIdx} path={child.path} element={child.element} />
+                ),
+              );
 
-            return route.index ? (
-              <Route key={idx} index element={route.element} />
-            ) : (
-              <Route key={idx} path={route.path} element={route.element}>{children}</Route>
-            );
-          })}
+              return route.index ? (
+                <Route key={`org-cls-${idx}`} index element={route.element} />
+              ) : (
+                <Route key={`org-cls-${idx}`} path={route.path} element={route.element}>
+                  {children}
+                </Route>
+              );
+            })}
+          </Route>
         </Route>
 
         {/* 3. Property Scope Layout */}

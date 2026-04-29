@@ -15,7 +15,7 @@ class BuildingOverviewUpdated implements ShouldBroadcast
     public function __construct(
         public readonly string $propertyId,
         public readonly string $userId,
-        public readonly array  $summary = [],
+        public readonly array $summary = [],
     ) {}
 
     /**
@@ -24,7 +24,7 @@ class BuildingOverviewUpdated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('org.' . auth()->user()?->org_id),
+            new PrivateChannel('org.'.auth()->user()?->org_id),
         ];
     }
 

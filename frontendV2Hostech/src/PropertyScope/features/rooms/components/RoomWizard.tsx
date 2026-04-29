@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { 
   Home, Tag, Users, Maximize2, DollarSign, ImageIcon, Zap, 
-  ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
+  ShieldAlert, X, Check, Loader2, ArrowRight,
   Package, CloudUpload, Layout, ChevronDown, ChevronUp,
   FileText, Hash, Calendar, Shield
 } from 'lucide-react';
@@ -18,6 +18,7 @@ import { RoomTemplateSelector } from './RoomTemplateSelector';
 import type { RoomTemplate } from "@/PropertyScope/features/properties/templates/types";
 import { useService } from '@/shared/features/billing/hooks/useService';
 import type { Service } from '@/shared/features/billing/types';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 interface RoomWizardProps {
   initialData?: Room | null;
@@ -514,7 +515,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                           />
                         </div>
                         {formData.base_price === 0 && property?.default_rent_price_per_m2 && (
-                          <p className="text-[10px] text-amber-600 font-bold ml-1 italic mt-1 leading-tight">
+                          <p className="text-[10px] text-amber-600 font-bold ml-1 mt-1 leading-tight">
                             * Sẽ tự động tính: {formatNumber(formData.area * property.default_rent_price_per_m2)}đ ({formatNumber(property.default_rent_price_per_m2)}đ/m²)
                           </p>
                         )}
@@ -527,7 +528,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                         value={formData.description}
                         onChange={e => setFormData({ ...formData, description: e.target.value })}
                         rows={3}
-                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[32px] outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-600 italic"
+                        className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-[32px] outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium text-slate-600 "
                         placeholder="Mô tả thêm về phòng..."
                       />
                     </div>
@@ -571,7 +572,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-indigo-100/50 italic text-xs text-slate-400 font-medium leading-relaxed">
+                      <div className="pt-4 border-t border-indigo-100/50 text-xs text-slate-400 font-medium leading-relaxed">
                         * Các tiêu chuẩn trên giúp đảm bảo chất lượng vận hành và an toàn phòng cháy chữa cháy.
                       </div>
                     </div>
@@ -833,14 +834,21 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
 
         {/* ─── Footer Actions ─── */}
         <div className="p-8 md:p-12 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-          <button 
-            type="button" 
-            onClick={activeStep === 0 ? onCancel : handleBack}
-            className="flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-slate-500 hover:text-slate-800 transition-all uppercase tracking-widest text-xs"
-          >
-            {activeStep === 0 ? <X className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-            {activeStep === 0 ? 'Hủy bỏ' : 'Quay lại'}
-          </button>
+          {activeStep === 0 ? (
+            <button 
+              type="button" 
+              onClick={onCancel}
+              className="flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-slate-500 hover:text-slate-800 transition-all uppercase tracking-widest text-xs"
+            >
+              <X className="w-4 h-4" />
+              Hủy bỏ
+            </button>
+          ) : (
+            <PageBackButton
+              onBack={handleBack}
+              className="rounded-2xl px-6 py-4 font-black uppercase tracking-widest text-xs"
+            />
+          )}
 
           <div className="flex items-center gap-4">
             {activeStep === 0 && (

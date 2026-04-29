@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('contracts', function (Blueprint $table) {
             $table->mediumText('custom_content')->nullable()->after('meta')
-                  ->comment('Lưu nội dung hợp đồng vật lý (HTML) đã được tinh chỉnh riêng');
+                ->comment('Lưu nội dung hợp đồng vật lý (HTML) đã được tinh chỉnh riêng');
         });
     }
 

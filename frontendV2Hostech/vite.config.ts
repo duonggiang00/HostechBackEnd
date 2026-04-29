@@ -1,11 +1,12 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 import { VitePWA } from 'vite-plugin-pwa'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [
     react(), 
     tailwindcss(),
@@ -30,8 +31,15 @@ export default defineConfig({
           }
         ]
       }
-    })
-  ],
+    }),
+    mode === 'analyze' &&
+      visualizer({
+        filename: 'dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+        open: false,
+      }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -49,6 +57,15 @@ export default defineConfig({
         target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
+      "/storage": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
     },
   },
-});
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+    passWithNoTests: true,
+  },
+}));

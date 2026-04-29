@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Auth\TwoFactorAuthenticationController;
 use App\Http\Controllers\Api\Org\ProfileController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -26,7 +27,8 @@ Route::prefix('user/mfa')->group(function () {
 });
 
 // Logout (Overriding Fortify to support Sanctum tokens)
-Route::post('auth/logout', function (\Illuminate\Http\Request $request) {
+Route::post('auth/logout', function (Request $request) {
     $request->user()->currentAccessToken()->delete();
+
     return response()->json(['message' => 'Logged out successfully'], 200);
 });

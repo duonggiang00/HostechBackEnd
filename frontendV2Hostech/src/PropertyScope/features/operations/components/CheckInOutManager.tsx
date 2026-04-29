@@ -6,10 +6,10 @@ export default function CheckInOutManager() {
   const [activeMode, setActiveMode] = useState<'checkin' | 'checkout'>('checkin');
   
   const checklist = [
-    { id: 'walls', label: 'Walls & Paint Condition', status: 'pending' },
-    { id: 'floor', label: 'Flooring & Tiles', status: 'pending' },
-    { id: 'electric', label: 'Electrical Sockets & Lights', status: 'pending' },
-    { id: 'assets', label: 'Furniture & Appliances', status: 'pending' },
+    { id: 'walls', label: 'Tình trạng Tường & Sơn', status: 'pending' },
+    { id: 'floor', label: 'Sàn nhà & Gạch ốp', status: 'pending' },
+    { id: 'electric', label: 'Ổ cắm điện & Đèn chiếu sáng', status: 'pending' },
+    { id: 'assets', label: 'Nội thất & Thiết bị', status: 'pending' },
   ];
 
   return (
@@ -22,7 +22,7 @@ export default function CheckInOutManager() {
             activeMode === 'checkin' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'
           }`}
         >
-          Check-In
+          Nhận phòng
         </button>
         <button 
           onClick={() => setActiveMode('checkout')}
@@ -30,7 +30,7 @@ export default function CheckInOutManager() {
             activeMode === 'checkout' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'
           }`}
         >
-          Check-Out
+          Trả phòng
         </button>
       </div>
 
@@ -39,9 +39,9 @@ export default function CheckInOutManager() {
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-5 h-5 text-indigo-500" />
-            <span className="font-bold text-slate-800">Condition Protocol</span>
+            <span className="font-bold text-slate-800">Biên bản bàn giao</span>
           </div>
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">0/4 Completed</span>
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Hoàn thành 0/4</span>
         </div>
 
         <div className="space-y-2">
@@ -62,9 +62,9 @@ export default function CheckInOutManager() {
         <div className="flex items-center justify-between mb-6 px-2">
           <div className="flex items-center gap-2">
             <Camera className="w-5 h-5 text-emerald-500" />
-            <span className="font-bold text-slate-800">Visual Evidence</span>
+            <span className="font-bold text-slate-800">Hình ảnh minh chứng</span>
           </div>
-          <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">Add Batch</button>
+          <button className="text-xs font-black text-indigo-600 uppercase tracking-widest hover:underline">Thêm hàng loạt</button>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -72,12 +72,12 @@ export default function CheckInOutManager() {
             <div className="p-3 bg-white rounded-2xl shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
               <Camera className="w-6 h-6" />
             </div>
-            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Snap Entry</span>
+            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Chụp ảnh</span>
           </div>
           <div className="aspect-square bg-slate-100 rounded-3xl flex items-center justify-center relative overflow-hidden group">
             <ImageIcon className="w-8 h-8 text-slate-300 group-hover:scale-110 transition-transform duration-500" />
             <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span className="text-white text-xs font-black uppercase tracking-widest">Preview</span>
+              <span className="text-white text-xs font-black uppercase tracking-widest">Xem trước</span>
             </div>
           </div>
         </div>
@@ -92,14 +92,14 @@ export default function CheckInOutManager() {
             ? 'bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700' 
             : 'bg-rose-600 text-white shadow-rose-200 hover:bg-rose-700'
         }`}>
-          Finalize {activeMode === 'checkin' ? 'Check-In' : 'Check-Out'}
+          Hoàn tất {activeMode === 'checkin' ? 'Nhận phòng' : 'Trả phòng'}
         </button>
       </div>
 
       <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-3">
         <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
         <p className="text-xs text-amber-800 font-medium leading-relaxed">
-          Locking the {activeMode} report will generate an immutable PDF version of this protocol for both parties.
+          Việc khóa báo cáo {activeMode === 'checkin' ? 'nhận phòng' : 'trả phòng'} sẽ tạo ra bản PDF không thể chỉnh sửa cho cả hai bên.
         </p>
       </div>
     </div>

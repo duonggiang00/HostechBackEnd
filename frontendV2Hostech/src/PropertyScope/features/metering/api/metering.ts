@@ -146,12 +146,20 @@ export const meteringApi = {
     return response.data.data as MeterReading;
   },
 
-  createReading: async (meterId: string, data: { reading_value: number; period_start: string; period_end: string; meta?: Record<string, any>; proof_media_ids?: string[] }) => {
+  createReading: async (meterId: string, data: {
+    reading_value: number;
+    period_start: string;
+    period_end: string;
+    status?: 'SUBMITTED' | 'APPROVED';
+    meta?: Record<string, any>;
+    proof_media_ids?: string[];
+  }) => {
     // Ensure dates are in YYYY-MM-DD format
     const payload = {
       reading_value: data.reading_value,
       period_start: data.period_start, // Should be YYYY-MM-DD from input type="date"
       period_end: data.period_end,     // Should be YYYY-MM-DD from input type="date"
+      ...(data.status && { status: data.status }),
       ...(data.meta && { meta: data.meta }),
       ...(data.proof_media_ids && data.proof_media_ids.length > 0 ? { proof_media_ids: data.proof_media_ids } : {}),
     };
@@ -218,9 +226,17 @@ export const meteringApi = {
     return response;
   },
 
-  bulkCreateReadings: async (propertyId: string, readings: any[]) => {
-    const response = await apiClient.post(`/properties/${propertyId}/meters/bulk-readings`, { readings });
-    console.log(`📡 API: POST bulk readings:`, response.data);
+  bulkCreateReadings: async (
+    propertyId: string,
+    readings: any[],
+    status?: 'SUBMITTED' | 'APPROVED'
+  ) => {
+    // Gắn status vào từng reading nếu được chỉ định rõ ràng từ caller
+    const payload = status
+      ? readings.map((r) => ({ ...r, status }))
+      : readings;
+    const response = await apiClient.post(`/properties/${propertyId}/meters/bulk-readings`, { readings: payload });
+    console.log(`📡 API: POST bulk readings (status=${status ?? 'auto'}):`, response.data);
     return response.data.data || response.data;
   },
 
@@ -339,59 +355,6 @@ export const meteringApi = {
     });
 
     return { data: allReadings, meta: { total: allReadings.length } };
-  },
-
-
-
-  // ─── Adjustment Notes ─────────────────────────────────────────────────────
-
-  /**
-   * Lấy danh sách ghi chú điều chỉnh cho một chốt số.
-   * NOTE: Chỉ áp dụng cho readings ở trạng thái LOCKED.
-   */
-  getAdjustmentNotes: async (readingId: string) => {
-    const response = await apiClient.get(`/meter-readings/${readingId}/adjustments`, {
-      params: { include: 'requestedBy,approvedBy,rejectedBy,media' },
-    });
-    return (response.data.data || response.data) as import('../types').AdjustmentNote[];
-  },
-
-  /**
-   * Tạo phiếu xin sửa chỉ số.
-   * Bắt buộc: reason, after_value, proof_media_ids (ít nhất 1 ảnh minh chứng).
-   */
-  createAdjustmentNote: async (
-    readingId: string,
-    data: { reason: string; after_value: number; proof_media_ids: string[] }
-  ) => {
-    const response = await apiClient.post(`/meter-readings/${readingId}/adjustments`, data);
-    console.log(`📡 API: POST /meter-readings/${readingId}/adjustments:`, response.data);
-    return (response.data.data || response.data) as import('../types').AdjustmentNote;
-  },
-
-  /**
-   * Duyệt phiếu xin sửa chỉ số (Manager only).
-   * Tự động cập nhật reading_value + recalculate consumption.
-   */
-  approveAdjustmentNote: async (readingId: string, adjustmentId: string) => {
-    const response = await apiClient.put(
-      `/meter-readings/${readingId}/adjustments/${adjustmentId}/approve`,
-      {}
-    );
-    console.log(`📡 API: Approved adjustment note:`, response.data);
-    return (response.data.data || response.data) as import('../types').AdjustmentNote;
-  },
-
-  /**
-   * Từ chối phiếu xin sửa chỉ số (Manager only).
-   */
-  rejectAdjustmentNote: async (readingId: string, adjustmentId: string, reject_reason: string) => {
-    const response = await apiClient.put(
-      `/meter-readings/${readingId}/adjustments/${adjustmentId}/reject`,
-      { reject_reason }
-    );
-    console.log(`📡 API: Rejected adjustment note:`, response.data);
-    return (response.data.data || response.data) as import('../types').AdjustmentNote;
   },
 
   // ─── Legacy method ────────────────────────────────────────────────────────

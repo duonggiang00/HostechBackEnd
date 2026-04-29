@@ -2,6 +2,9 @@
 
 namespace App\Models\Contract;
 
+use App\Enums\ContractCancellationParty;
+use App\Enums\ContractStatus;
+use App\Enums\DepositStatus;
 use App\Models\Concerns\MultiTenant;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
@@ -9,19 +12,21 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Traits\SystemLoggable;
+use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Contract extends Model implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\ContractFactory> */
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable, InteractsWithMedia;
+    /** @use HasFactory<ContractFactory> */
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
 
@@ -65,40 +70,47 @@ class Contract extends Model implements HasMedia
         'cancelled_at',         // Thời điểm chính thức hủy
         'notice_days',          // Số ngày phải báo trước
         'notice_given_at',      // Thời điểm Tenant gửi thông báo dời
+        'expected_move_out_date', // Ngày dự kiến dọn đi (thông báo trả phòng)
     ];
 
     protected function casts(): array
     {
         return [
-            'status'               => \App\Enums\ContractStatus::class,
-            'deposit_status'       => \App\Enums\DepositStatus::class,
-            'cancellation_party'   => \App\Enums\ContractCancellationParty::class,
-            'start_date'           => 'date',
-            'end_date'             => 'date',
-            'next_billing_date'    => 'date',
-            'base_rent'            => 'decimal:2',
-            'fixed_services_fee'   => 'decimal:2',
-            'total_rent'           => 'decimal:2',
-            'cycle_months'         => 'integer',
-            'notice_days'          => 'integer',
-            'rent_price'           => 'decimal:2',
-            'deposit_amount'       => 'decimal:2',
-            'refunded_amount'      => 'decimal:2',
-            'forfeited_amount'     => 'decimal:2',
-            'rent_token_balance'   => 'integer',
+            'status' => ContractStatus::class,
+            'deposit_status' => DepositStatus::class,
+            'cancellation_party' => ContractCancellationParty::class,
+            'start_date' => 'date',
+            'end_date' => 'date',
+            'next_billing_date' => 'date',
+            'base_rent' => 'decimal:2',
+            'fixed_services_fee' => 'decimal:2',
+            'total_rent' => 'decimal:2',
+            'cycle_months' => 'integer',
+            'notice_days' => 'integer',
+            'rent_price' => 'decimal:2',
+            'deposit_amount' => 'decimal:2',
+            'refunded_amount' => 'decimal:2',
+            'forfeited_amount' => 'decimal:2',
+            'rent_token_balance' => 'integer',
             'join_code_expires_at' => 'datetime',
             'join_code_revoked_at' => 'datetime',
-            'signed_at'            => 'datetime',
-            'terminated_at'        => 'datetime',
-            'cancelled_at'         => 'datetime',
-            'notice_given_at'      => 'datetime',
-            'meta'                 => 'array',
+            'signed_at' => 'datetime',
+            'terminated_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'notice_given_at' => 'datetime',
+            'expected_move_out_date' => 'date',
+            'meta' => 'array',
         ];
     }
 
     public function members(): HasMany
     {
         return $this->hasMany(ContractMember::class);
+    }
+
+    public function primaryMember(): HasOne
+    {
+        return $this->hasOne(ContractMember::class)->where('role', 'PRIMARY');
     }
 
     public function room(): BelongsTo

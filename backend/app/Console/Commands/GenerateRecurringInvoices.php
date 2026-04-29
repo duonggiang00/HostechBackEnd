@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Org\Org;
+use App\Services\Invoice\RecurringBillingService;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class GenerateRecurringInvoices extends Command
@@ -23,15 +26,15 @@ class GenerateRecurringInvoices extends Command
     /**
      * Execute the console command.
      */
-    public function handle(\App\Services\Invoice\RecurringBillingService $billingService)
+    public function handle(RecurringBillingService $billingService)
     {
         $monthStr = $this->option('month') ?: now()->format('Y-m');
-        $periodMonth = \Carbon\Carbon::parse($monthStr);
+        $periodMonth = Carbon::parse($monthStr);
         $orgId = $this->option('org');
 
-        $this->info('Generating recurring invoices for period: ' . $periodMonth->format('M Y'));
+        $this->info('Generating recurring invoices for period: '.$periodMonth->format('M Y'));
 
-        $query = \App\Models\Org\Org::query();
+        $query = Org::query();
         if ($orgId) {
             $query->where('id', $orgId);
         }

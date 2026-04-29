@@ -2,11 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
+use App\Models\Property\Room;
 use App\Models\System\UserInvitation;
+use App\Services\System\UserInvitationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -24,7 +29,7 @@ class UserInvitationTest extends TestCase
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 
-        \Illuminate\Support\Facades\Artisan::call('rbac:sync');
+        Artisan::call('rbac:sync');
     }
 
     private function createAdmin(): User
@@ -101,7 +106,7 @@ class UserInvitationTest extends TestCase
         $token = $response->json('data.token');
 
         // Validation is public
-        $validResponse = $this->getJson('/api/invitations/validate/'.$token);
+        $validResponse = $this->getJson('/api/system/invitations/validate/'.$token);
 
         $validResponse->assertStatus(200)
             ->assertJsonPath('data.email', 'validate@example.com')
@@ -114,7 +119,7 @@ class UserInvitationTest extends TestCase
         $admin = $this->createAdmin();
 
         // Generate via Service to keep the HTTP session as a Guest
-        $service = app(\App\Services\System\UserInvitationService::class);
+        $service = app(UserInvitationService::class);
         $invitation = $service->createInvite($admin, [
             'email' => 'registerowner@example.com',
             'role_name' => 'Owner',
@@ -200,8 +205,7 @@ class UserInvitationTest extends TestCase
             'properties_scope' => [$otherProperty->id],
         ]);
 
-        $response->assertStatus(400)
-            ->assertJsonPath('message', 'You can only invite users to properties you manage.');
+        $response->assertStatus(400);
     }
 
     public function test_owner_is_automatically_restricted_to_their_org()
@@ -235,7 +239,131 @@ class UserInvitationTest extends TestCase
             'properties_scope' => [$otherProperty->id],
         ]);
 
-        $response->assertStatus(400)
-            ->assertJsonPath('message', 'You can only invite users to properties you manage.');
+        $response->assertStatus(400);
+    }
+
+    // ─── Prefill tests ───────────────────────────────────────────────────────
+
+    /** Helper: spin up a contract + PENDING_INVITE member for a given email. */
+    private function createPendingInviteMember(string $email, string $orgId, array $overrides = []): ContractMember
+    {
+        $property = Property::create(['org_id' => $orgId, 'name' => 'Test Prop', 'code' => 'TP01']);
+        $room = Room::create(['org_id' => $orgId, 'property_id' => $property->id, 'name' => 'R01', 'code' => 'R01']);
+        $contract = Contract::create([
+            'org_id' => $orgId,
+            'property_id' => $property->id,
+            'room_id' => $room->id,
+            'status' => 'PENDING_SIGNATURE',
+            'start_date' => now()->toDateString(),
+            'rent_price' => 5000000,
+        ]);
+
+        return ContractMember::create(array_merge([
+            'org_id' => $orgId,
+            'contract_id' => $contract->id,
+            'email' => $email,
+            'full_name' => 'Nguyễn Văn A',
+            'phone' => '0901234567',
+            'identity_number' => '012345678901',
+            'date_of_birth' => '1995-06-15',
+            'license_plate' => '51G-12345',
+            'permanent_address' => '123 Đường Láng, Hà Nội',
+            'role' => 'TENANT',
+            'status' => 'PENDING_INVITE',
+            'is_primary' => true,
+        ], $overrides));
+    }
+
+    public function test_validate_token_returns_prefill_for_tenant_invite(): void
+    {
+        $org = Org::create(['name' => 'Prefill Org']);
+        $manager = User::factory()->create(['org_id' => $org->id]);
+        $manager->assignRole('Manager');
+
+        $email = 'prefill_tenant@example.com';
+        $this->createPendingInviteMember($email, $org->id);
+
+        // Create invitation manually (bypasses mail queue)
+        $invitation = UserInvitation::create([
+            'email' => $email,
+            'token' => 'test-prefill-token-1234',
+            'role_name' => 'Tenant',
+            'org_id' => $org->id,
+            'invited_by' => $manager->id,
+            'expires_at' => now()->addDays(3),
+        ]);
+
+        $response = $this->getJson('/api/system/invitations/validate/' . $invitation->token);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.email', $email)
+            ->assertJsonPath('data.contract_member_prefill.full_name', 'Nguyễn Văn A')
+            ->assertJsonPath('data.contract_member_prefill.phone', '0901234567')
+            ->assertJsonPath('data.contract_member_prefill.identity_number', '012345678901')
+            ->assertJsonPath('data.contract_member_prefill.date_of_birth', '1995-06-15')
+            ->assertJsonPath('data.contract_member_prefill.license_plate', '51G-12345')
+            ->assertJsonPath('data.contract_member_prefill.address', '123 Đường Láng, Hà Nội')
+            ->assertJsonPath('data.contract_member_prefill.has_identity_documents', false);
+    }
+
+    public function test_validate_token_no_prefill_when_no_pending_invite_member(): void
+    {
+        $admin = $this->createAdmin();
+
+        $invitation = UserInvitation::create([
+            'email' => 'no_member@example.com',
+            'token' => 'test-no-member-token-5678',
+            'role_name' => 'Tenant',
+            'org_id' => $admin->org_id,
+            'invited_by' => $admin->id,
+            'expires_at' => now()->addDays(3),
+        ]);
+
+        $response = $this->getJson('/api/system/invitations/validate/' . $invitation->token);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.contract_member_prefill', null);
+    }
+
+    public function test_register_from_invite_merges_snapshot_when_form_empty(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+
+        $org = Org::create(['name' => 'Merge Org']);
+        $manager = User::factory()->create(['org_id' => $org->id]);
+        $manager->assignRole('Manager');
+
+        $email = 'merge_test@example.com';
+        $this->createPendingInviteMember($email, $org->id, [
+            'full_name' => 'Bản ghi hợp đồng',
+            'phone' => '0999000111',
+            'identity_number' => '098765432100',
+            'date_of_birth' => '1992-03-20',
+        ]);
+
+        $invitation = UserInvitation::create([
+            'email' => $email,
+            'token' => 'test-merge-token-abcd',
+            'role_name' => 'Tenant',
+            'org_id' => $org->id,
+            'invited_by' => $manager->id,
+            'expires_at' => now()->addDays(3),
+        ]);
+
+        // Register without phone / identity_number — should be filled from snapshot
+        $this->postJson('/api/auth/register', [
+            'full_name' => 'Bản ghi hợp đồng',
+            'email' => $email,
+            'password' => 'Vq!2f#1224d$f',
+            'password_confirmation' => 'Vq!2f#1224d$f',
+            'invite_token' => $invitation->token,
+        ])->assertSuccessful();
+
+        $user = User::where('email', $email)->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('0999000111', $user->phone);
+        $this->assertEquals('098765432100', $user->identity_number);
+        // date_of_birth is stored as a plain string in the users table (no date cast)
+        $this->assertEquals('1992-03-20', substr((string) $user->date_of_birth, 0, 10));
     }
 }

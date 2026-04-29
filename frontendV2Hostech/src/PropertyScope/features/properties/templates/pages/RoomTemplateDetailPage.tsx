@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft,
   Info,
   ImageIcon,
   Archive,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useRoomTemplate } from '../../hooks/useRoomTemplate';
 import { formatCurrency } from '@/lib/utils';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 // --- Helpers ---
 
@@ -46,10 +46,6 @@ export default function RoomTemplateDetailPage() {
   const { data: template, isLoading, error } = useRoomTemplate(propertyId, templateId);
   const [activeTab, setActiveTab] = useState<TabId>('info');
 
-  const handleBack = () => {
-    navigate(`/properties/${propertyId}/rooms`); // Back to room list / templates tab
-  };
-
   if (isLoading) {
     return (
       <div className="flex h-[80vh] items-center justify-center">
@@ -65,12 +61,7 @@ export default function RoomTemplateDetailPage() {
         <p className="text-rose-500 dark:text-rose-400/70 text-sm mb-4">
           {(error as any)?.message || 'Mẫu phòng không tồn tại hoặc có lỗi xảy ra.'}
         </p>
-        <button
-          onClick={handleBack}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
-        >
-          Quay lại danh sách
-        </button>
+        <PageBackButton className="rounded-xl px-6 py-2" />
       </div>
     );
   }
@@ -82,13 +73,7 @@ export default function RoomTemplateDetailPage() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4 min-w-0">
-              <button
-                onClick={handleBack}
-                className="shrink-0 flex items-center gap-2 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm font-medium"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Quay lại</span>
-              </button>
+              <PageBackButton className="shrink-0 text-sm" />
 
               <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 shrink-0" />
 
@@ -177,7 +162,7 @@ export default function RoomTemplateDetailPage() {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Dịch vụ mặc định</h2>
                 {template.services && template.services.length > 0 ? (
                   <div className="space-y-3">
-                    {template.services.map((service) => {
+                    {template.services.map((service: any) => {
                       const ServiceIcon = getServiceIcon(service.name ?? '');
                       const calcMode = service.calc_mode;
                       const isFixed = calcMode === 'fixed' || calcMode === 'FIXED';

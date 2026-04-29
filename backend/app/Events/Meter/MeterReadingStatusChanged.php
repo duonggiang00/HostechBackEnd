@@ -17,20 +17,18 @@ class MeterReadingStatusChanged implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct(public MeterReading $reading)
-    {
-    }
+    public function __construct(public MeterReading $reading) {}
 
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
         $channels = [
-            new PrivateChannel('property.' . $this->reading->meter->property_id),
-            new PrivateChannel('user.' . $this->reading->submitted_by_user_id),
+            new PrivateChannel('property.'.$this->reading->meter->property_id),
+            new PrivateChannel('user.'.$this->reading->submitted_by_user_id),
         ];
 
         // Khi APPROVED → broadcast cho Tenant (chuẩn bị hạ tầng cho App Tenant)
@@ -39,13 +37,13 @@ class MeterReadingStatusChanged implements ShouldBroadcast
             $room = $this->reading->meter->room;
             if ($room) {
                 $tenantIds = $room->contracts
-                    ->where('status', 'ACTIVE')
+                    ->whereIn('status', ['ACTIVE', 'PENDING_TERMINATION'])
                     ->flatMap(fn ($c) => $c->members)
                     ->where('status', 'APPROVED')
                     ->pluck('user_id')
                     ->unique();
                 foreach ($tenantIds as $tenantId) {
-                    $channels[] = new PrivateChannel('user.' . $tenantId);
+                    $channels[] = new PrivateChannel('user.'.$tenantId);
                 }
             }
         }

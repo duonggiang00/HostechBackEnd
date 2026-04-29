@@ -24,7 +24,7 @@ class ContractSignatureConfirmed implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new PrivateChannel('App.Models.Org.User.' . $this->contract->created_by_user_id),
+            new PrivateChannel('App.Models.Org.User.'.$this->contract->created_by_user_id),
         ];
 
         // Also notify the primary tenant if they have a user account
@@ -34,7 +34,7 @@ class ContractSignatureConfirmed implements ShouldBroadcast
             ->first();
 
         if ($primaryTenant) {
-            $channels[] = new PrivateChannel('App.Models.Org.User.' . $primaryTenant->user_id);
+            $channels[] = new PrivateChannel('App.Models.Org.User.'.$primaryTenant->user_id);
         }
 
         return $channels;
@@ -54,9 +54,9 @@ class ContractSignatureConfirmed implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id'    => $this->contract->id,
-            'role'  => $this->role,
-            'meta'  => $this->contract->meta, // To check who has signed
+            'id' => $this->contract->id,
+            'role' => $this->role,
+            'meta' => $this->contract->meta, // To check who has signed
         ];
     }
 }

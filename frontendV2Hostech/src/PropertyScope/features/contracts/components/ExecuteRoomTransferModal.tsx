@@ -11,16 +11,17 @@ interface ExecuteRoomTransferModalProps {
   isOpen: boolean;
   onClose: () => void;
   contract: Contract;
+  defaultTargetRoomId?: string; // Pre-select from pending request
   onSuccess?: () => void;
 }
 
-export function ExecuteRoomTransferModal({ isOpen, onClose, contract, onSuccess }: ExecuteRoomTransferModalProps) {
+export function ExecuteRoomTransferModal({ isOpen, onClose, contract, defaultTargetRoomId, onSuccess }: ExecuteRoomTransferModalProps) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
   const [fetchingRooms, setFetchingRooms] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<any[]>([]);
 
-  const [targetRoomId, setTargetRoomId] = useState('');
+  const [targetRoomId, setTargetRoomId] = useState(defaultTargetRoomId ?? '');
   const [transferDate, setTransferDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [rentPrice, setRentPrice] = useState<string>('');
   const [depositAmount, setDepositAmount] = useState<string>('');
@@ -30,6 +31,7 @@ export function ExecuteRoomTransferModal({ isOpen, onClose, contract, onSuccess 
   useEffect(() => {
     if (isOpen) {
       setFetchingRooms(true);
+      if (defaultTargetRoomId) setTargetRoomId(defaultTargetRoomId);
       contractsApi.getAvailableRooms(contract.id)
         .then((res: any) => {
           setAvailableRooms(res.data || []);
@@ -37,13 +39,13 @@ export function ExecuteRoomTransferModal({ isOpen, onClose, contract, onSuccess 
         .catch(() => toast.error('Lỗi khi tải danh sách phòng trống'))
         .finally(() => setFetchingRooms(false));
     } else {
-      setTargetRoomId('');
+      setTargetRoomId(defaultTargetRoomId ?? '');
       setTransferDate(format(new Date(), 'yyyy-MM-dd'));
       setRentPrice('');
       setDepositAmount('');
       setTransferUnusedRent(true);
     }
-  }, [isOpen, contract.id]);
+  }, [isOpen, contract.id, defaultTargetRoomId]);
 
   useEffect(() => {
     if (targetRoomId) {

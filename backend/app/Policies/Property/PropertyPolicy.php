@@ -3,6 +3,7 @@
 namespace App\Policies\Property;
 
 use App\Contracts\RbacModuleProvider;
+use App\Models\Contract\Contract;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Traits\HandlesPropertyScope;
@@ -43,7 +44,7 @@ class PropertyPolicy implements RbacModuleProvider
 
         if ($user->hasRole('Tenant')) {
             // Tenant chỉ được xem chi tiết Tòa nhà nếu đang có Contract ACTIVE hoặc PENDING_PAYMENT tại đó
-            return \App\Models\Contract\Contract::where('property_id', $property->id)
+            return Contract::where('property_id', $property->id)
                 ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
                 ->whereHas('members', function ($q) use ($user) {
                     $q->where('user_id', $user->id)->where('status', 'APPROVED');

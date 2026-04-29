@@ -73,7 +73,12 @@ app/
 ### 3.2. Phân hệ Sổ cái & Dòng tiền (Ledger & Cashflow)
 - **GET** `/api/finance/ledger`
     - *Mô tả*: Truy vấn lịch sử bút toán sổ cái để đối soát tài chính.
-    - *Query Params*: `filter[ref_type]`, `filter[ref_id]`, `filter[occurred_between]`.
+    - *Query Params*: `filter[ref_type]`, `filter[ref_id]`, `filter[property_id]` (meta.property_id), `filter[occurred_between]`.
+    - *Org context*: Ưu tiên `TenantManager` (middleware `ResolveTenant`: non-admin = `user.org_id`; Admin = `X-Org-Id` / `org_id` query, hoặc **suy từ `X-Property-Id`** qua `properties.org_id`).
+- **GET** `/api/finance/ledger/summary`
+    - *Mô tả*: Ba chỉ tiêu tài chính (không phải lợi nhuận): **tổng tiền thu vào quỹ**, **tổng đã hoàn trả (xuất quỹ khi void payment)**, **tổng cọc đang giữ** (theo hợp đồng).
+    - *Kế toán kép*: Mỗi payment tạo 2 dòng ledger (CASH_BANK debit + A/R credit). `GET /api/finance/ledger/balance` (`SUM(debit)` / `SUM(credit)` toàn bộ dòng) **không** dùng làm thu/hoàn — chỉ dùng đối soát kép.
+    - *Query Params*: `filter[property_id]` (lọc `meta.property_id` trên ledger + `property_id` hợp đồng cho cọc), `filter[occurred_between]` (chỉ áp dụng cho hai tổng tiền từ ledger, định dạng `Y-m-d,Y-m-d`).
 - **GET** `/api/finance/cashflow`
     - *Mô tả*: Báo cáo dòng tiền thực tế In/Out theo thời gian.
 - **POST** `/api/finance/cashflow`

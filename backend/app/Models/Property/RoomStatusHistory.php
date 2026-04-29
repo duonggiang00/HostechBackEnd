@@ -3,7 +3,6 @@
 namespace App\Models\Property;
 
 use App\Models\Concerns\MultiTenant;
-
 use App\Models\Org\User;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

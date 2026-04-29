@@ -7,13 +7,13 @@ export default function ContractWizard({ onSuccess, onCancel }: { onSuccess?: ()
         <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-indigo-100">
           <FilePlus className="w-8 h-8 text-white" />
         </div>
-        <h2 className="text-4xl font-black text-slate-900 italic uppercase tracking-tighter">Trình tạo Hợp đồng</h2>
+        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">Trình tạo Hợp đồng</h2>
         <p className="text-slate-500 font-medium">Khởi tạo ràng buộc pháp lý kỹ thuật số giữa cơ sở và khách thuê.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {[
-          { title: 'Điều khoản', desc: 'Thiết lập ngày bắt đầu, thời hạn và chính sách gia hạn', icon: ShieldCheck, status: 'active' },
+          { title: 'Điều khoản', desc: 'Ngày bắt đầu và kết thúc hợp đồng; gia hạn thực hiện bằng cập nhật ngày kết thúc trên hợp đồng (quản lý) khi hai bên thống nhất', icon: ShieldCheck, status: 'active' },
           { title: 'Cấu trúc Giá', desc: 'Tiền cọc, tiền thuê hàng tháng và dịch vụ tiện ích', icon: Check, status: 'pending' },
           { title: 'Chữ ký điện tử', desc: 'Xác minh an toàn và ký kết thỏa thuận', icon: Check, status: 'pending' },
         ].map((step, i) => (
@@ -23,7 +23,7 @@ export default function ContractWizard({ onSuccess, onCancel }: { onSuccess?: ()
                 <step.icon className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-lg font-black text-slate-900 italic uppercase tracking-tighter">{step.title}</h3>
+                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter">{step.title}</h3>
                 <p className="text-xs text-slate-500 font-bold">{step.desc}</p>
               </div>
             </div>

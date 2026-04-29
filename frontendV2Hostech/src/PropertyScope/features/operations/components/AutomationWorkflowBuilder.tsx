@@ -24,14 +24,8 @@ interface AutomationRule {
   successRate?: number;
 }
 
-const MOCK_RULES: AutomationRule[] = [
-  { id: '1', name: 'Rent Overdue Reminder (T+3)', trigger: 'Date > Due Date + 3 days', action: 'Send Email + SMS', status: 'active', lastRun: '2 hours ago', successRate: 98 },
-  { id: '2', name: 'Contract Expiry Notice (T-30)', trigger: 'Contract Ends in 30 days', action: 'Tenant Notification', status: 'paused', lastRun: 'Yesterday', successRate: 100 },
-  { id: '3', name: 'Utility Bill Arrival', trigger: 'Utility Invoice Generated', action: 'Push Notification', status: 'active', lastRun: '5 mins ago', successRate: 95 },
-];
-
 export default function AutomationWorkflowBuilder() {
-  const [rules, setRules] = useState<AutomationRule[]>(MOCK_RULES);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
   const [isAdding, setIsAdding] = useState(false);
 
   const deleteRule = (id: string) => setRules(rules.filter(r => r.id !== id));
@@ -47,30 +41,30 @@ export default function AutomationWorkflowBuilder() {
             <Zap className="w-8 h-8 fill-current" />
           </div>
           <div>
-            <h2 className="text-3xl font-black uppercase italic tracking-tighter">Workflow Engine</h2>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Autonomous management lifecycle protocols</p>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">Bộ máy Tự động hóa</h2>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Giao thức quản lý vòng đời tự động</p>
           </div>
         </div>
         <button 
           onClick={() => setIsAdding(true)}
-          className="flex items-center gap-3 px-8 py-4 bg-white text-[#0A0A0B] rounded-2xl font-black uppercase italic tracking-wider hover:scale-[1.05] transition-all shadow-xl shadow-white/10"
+          className="flex items-center gap-3 px-8 py-4 bg-white text-[#0A0A0B] rounded-2xl font-black uppercase tracking-wider hover:scale-[1.05] transition-all shadow-xl shadow-white/10"
         >
           <Plus className="w-5 h-5" />
-          Deploy New Logic
+          Triển khai Logic mới
         </button>
       </div>
 
       {/* Stats Bar */}
       <div className="grid grid-cols-4 gap-4 relative z-10">
         {[
-          { label: 'Total Automations', value: rules.length, color: 'text-white' },
-          { label: 'Successful Runs', value: '14,202', color: 'text-emerald-400' },
-          { label: 'Operational Uptime', value: '99.9%', color: 'text-indigo-400' },
-          { label: 'Est. Hours Saved', value: '420h', color: 'text-amber-400' },
+          { label: 'Tổng số quy trình', value: String(rules.length), color: 'text-white' },
+          { label: 'Số lần chạy thành công', value: '—', color: 'text-slate-500' },
+          { label: 'Thời gian hoạt động', value: '—', color: 'text-slate-500' },
+          { label: 'Giờ tiết kiệm ước tính', value: '—', color: 'text-slate-500' },
         ].map((stat, i) => (
           <div key={i} className="bg-white/5 border border-white/10 rounded-3xl p-6">
             <p className="text-xs font-black uppercase text-slate-500 tracking-widest mb-1">{stat.label}</p>
-            <p className={`text-2xl font-black italic ${stat.color}`}>{stat.value}</p>
+            <p className={`text-2xl font-black ${stat.color}`}>{stat.value}</p>
           </div>
         ))}
       </div>
@@ -78,8 +72,8 @@ export default function AutomationWorkflowBuilder() {
       {/* Rules Palette */}
       <div className="flex-1 space-y-4 relative z-10 overflow-y-auto pr-2">
         <div className="flex items-center justify-between px-4 mb-2">
-          <span className="text-xs font-black uppercase text-slate-500 tracking-[0.3em]">Active Guardrails</span>
-          <span className="text-xs font-bold text-slate-700 uppercase">Sorted by Priority</span>
+          <span className="text-xs font-black uppercase text-slate-500 tracking-[0.3em]">Quy tắc hoạt động</span>
+          <span className="text-xs font-bold text-slate-700 uppercase">Sắp xếp theo ưu tiên</span>
         </div>
 
         {rules.map((rule) => (
@@ -100,18 +94,18 @@ export default function AutomationWorkflowBuilder() {
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-black text-lg uppercase italic text-white tracking-tight group-hover:text-indigo-400 transition-colors">
+                  <h4 className="font-black text-lg uppercase text-white tracking-tight group-hover:text-indigo-400 transition-colors">
                     {rule.name}
                   </h4>
                   <div className="flex items-center gap-4 mt-1">
                     <div className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase">
                       <Clock className="w-3 h-3" />
-                      Runs {rule.trigger}
+                      Kích hoạt: {rule.trigger}
                     </div>
                     <div className="w-1 h-1 rounded-full bg-slate-800" />
-                    <div className="flex items-center gap-1.5 text-xs font-black text-indigo-400 uppercase italic">
+                    <div className="flex items-center gap-1.5 text-xs font-black text-indigo-400 uppercase ">
                       <Settings2 className="w-3 h-3" />
-                      EXECUTE: {rule.action}
+                      THỰC THI: {rule.action}
                     </div>
                   </div>
                 </div>
@@ -123,7 +117,7 @@ export default function AutomationWorkflowBuilder() {
                     <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                     <span className="text-xs font-black uppercase text-emerald-500">{rule.successRate}% OK</span>
                   </div>
-                  <p className="text-xs font-bold text-slate-600 uppercase">Last: {rule.lastRun}</p>
+                  <p className="text-xs font-bold text-slate-600 uppercase">Gần nhất: {rule.lastRun}</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -150,9 +144,9 @@ export default function AutomationWorkflowBuilder() {
             <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
               <Calendar className="w-5 h-5" />
             </div>
-            <span className="text-sm font-black uppercase italic tracking-wider">Scheduled Execution Timeline</span>
+            <span className="text-sm font-black uppercase tracking-wider">Lịch trình thực thi quy trình</span>
           </div>
-          <span className="text-xs font-black uppercase text-indigo-400/50 tracking-widest italic">Simulation Mode Active</span>
+          <span className="text-xs font-black uppercase text-indigo-400/50 tracking-widest ">Chế độ mô phỏng đang bật</span>
         </div>
         
         <div className="flex gap-4">
@@ -166,7 +160,7 @@ export default function AutomationWorkflowBuilder() {
                 )}
                 <div className="absolute top-2 right-2 text-[8px] font-black text-slate-700">MAR {17 + day}</div>
               </div>
-              <p className="text-xs text-center font-black uppercase tracking-tighter text-slate-600">Day {day}</p>
+              <p className="text-xs text-center font-black uppercase tracking-tighter text-slate-600">Ngày {day}</p>
             </div>
           ))}
         </div>

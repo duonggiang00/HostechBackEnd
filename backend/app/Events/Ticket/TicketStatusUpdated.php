@@ -21,7 +21,7 @@ class TicketStatusUpdated implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
@@ -29,8 +29,8 @@ class TicketStatusUpdated implements ShouldBroadcast
         // 1. The manager (Org channel)
         // 2. The tenant (Personal channel)
         return [
-            new PrivateChannel('org.' . $this->ticket->org_id),
-            new PrivateChannel('App.Models.Org.User.' . $this->ticket->created_by_user_id),
+            new PrivateChannel('org.'.$this->ticket->org_id),
+            new PrivateChannel('App.Models.Org.User.'.$this->ticket->created_by_user_id),
         ];
     }
 
@@ -50,9 +50,9 @@ class TicketStatusUpdated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id'          => $this->ticket->id,
-            'status'      => $this->ticket->status,
-            'updated_at'  => $this->ticket->updated_at->toIso8601String(),
+            'id' => $this->ticket->id,
+            'status' => $this->ticket->status,
+            'updated_at' => $this->ticket->updated_at->toIso8601String(),
         ];
     }
 }

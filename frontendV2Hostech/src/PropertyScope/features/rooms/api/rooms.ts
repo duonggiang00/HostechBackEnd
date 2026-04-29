@@ -82,7 +82,7 @@ export const roomsApi = {
 
   getRoom: async (id: string, params?: { include?: string }) => {
     const response = await apiClient.get(`/rooms/${id}`, {
-      params: { include: params?.include || 'floor,property,assets,prices,statusHistories,media,contracts.members,contracts.tenant,meters.readings,invoices,roomServices.service' },
+      params: { include: params?.include || 'floor,property,assets,prices,statusHistories,media,contracts.members,contracts.tenant,meters.readings,meters.latestApprovedReading,invoices,roomServices.service' },
     });
     console.log(`📡 API: GET /rooms/${id} detail:`, response.data.data);
     return response.data.data as Room;

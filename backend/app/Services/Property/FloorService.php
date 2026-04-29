@@ -2,17 +2,27 @@
 
 namespace App\Services\Property;
 
+use App\Events\Property\BuildingOverviewUpdated;
+use App\Events\Property\FloorCreated;
+use App\Events\Property\FloorDeleted;
+use App\Events\Property\FloorUpdated;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\Property\RoomFloorPlanNode;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class FloorService
 {
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $propertyId = null, bool $withTrashed = false, ?User $performer = null, bool $onlyTrashed = false): LengthAwarePaginator
     {
-        $allowedFilters = array_merge($allowedFilters, [\Spatie\QueryBuilder\AllowedFilter::exact('property_id')]);
+        $allowedFilters = array_merge($allowedFilters, [AllowedFilter::exact('property_id')]);
 
         $query = QueryBuilder::for(Floor::class)
             ->allowedFilters($allowedFilters)
@@ -103,7 +113,7 @@ class FloorService
 
         $floor = Floor::create($data);
 
-        \App\Events\Property\FloorCreated::dispatch($floor);
+        FloorCreated::dispatch($floor);
 
         return $floor;
     }
@@ -113,7 +123,7 @@ class FloorService
         $floor = $this->find($id) ?? abort(404, 'Floor not found');
         $floor->update($data);
 
-        \App\Events\Property\FloorUpdated::dispatch($floor);
+        FloorUpdated::dispatch($floor);
 
         return $floor;
     }
@@ -123,9 +133,9 @@ class FloorService
         $floor = $this->find($id) ?? abort(404, 'Floor not found');
 
         $deleted = $floor->delete();
-        
+
         if ($deleted) {
-            \App\Events\Property\FloorDeleted::dispatch($floor);
+            FloorDeleted::dispatch($floor);
         }
 
         return $deleted;
@@ -148,8 +158,8 @@ class FloorService
     /**
      * Đồng bộ hóa (xóa/thêm/sửa) hàng loạt vị trí phòng trên bản vẽ mặt bằng
      *
-     * @param string $id Floor ID
-     * @param array $nodes Array of room floor plan nodes
+     * @param  string  $id  Floor ID
+     * @param  array  $nodes  Array of room floor plan nodes
      */
     public function syncFloorPlanNodes(string $id, array $nodes): void
     {
@@ -157,7 +167,7 @@ class FloorService
 
         // Verify that all rooms in the request belong to the Org (Security check)
         $roomIds = array_column($nodes, 'room_id');
-        $validRoomsCount = \App\Models\Property\Room::whereIn('id', $roomIds)
+        $validRoomsCount = Room::whereIn('id', $roomIds)
             ->where('org_id', $floor->org_id)
             ->count();
 
@@ -166,17 +176,17 @@ class FloorService
         }
 
         // Use transaction to ensure data integrity
-        \Illuminate\Support\Facades\DB::transaction(function () use ($floor, $nodes, $roomIds) {
+        DB::transaction(function () use ($floor, $nodes, $roomIds) {
             // Delete any existing nodes for rooms that are no longer in the payload OR are strictly associated passing by the floor
             // Note: If a room shifts to a different floor, we just overwrite its node.
-            \App\Models\Property\RoomFloorPlanNode::whereIn('room_id', function ($query) use ($floor) {
+            RoomFloorPlanNode::whereIn('room_id', function ($query) use ($floor) {
                 // Find all rooms currently belonging to this floor
                 $query->select('id')->from('rooms')->where('floor_id', $floor->id);
             })->whereNotIn('room_id', $roomIds)->delete();
 
             // Insert or Update new nodes
             foreach ($nodes as $nodeData) {
-                \App\Models\Property\RoomFloorPlanNode::updateOrCreate(
+                RoomFloorPlanNode::updateOrCreate(
                     ['room_id' => $nodeData['room_id']],
                     [
                         'x' => $nodeData['x'],
@@ -191,7 +201,7 @@ class FloorService
         });
 
         // --- DECOUPLED: EVENT DISPATCH ---
-        \App\Events\Property\BuildingOverviewUpdated::dispatch(
+        BuildingOverviewUpdated::dispatch(
             $floor->property_id,
             auth()->id() ?? 'system',
             ['floor_id' => $floor->id, 'action' => 'sync_nodes']
@@ -202,7 +212,7 @@ class FloorService
     /**
      * Upload ảnh mặt bằng của tầng
      */
-    public function uploadFloorPlanImage(string $id, \Illuminate\Http\UploadedFile $image): \Spatie\MediaLibrary\MediaCollections\Models\Media
+    public function uploadFloorPlanImage(string $id, UploadedFile $image): Media
     {
         $floor = $this->find($id) ?? abort(404, 'Floor not found');
 

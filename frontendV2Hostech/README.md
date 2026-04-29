@@ -70,7 +70,11 @@ npm run dev
 
 Ensure you have mapped your `.env` (or `.env.local`) file properly to interface with the core Laravel backend:
 ```env
-VITE_API_BASE_URL="http://localhost:8000/api"
+VITE_API_URL="http://localhost:8000/api/"
+# Optional alias (same as VITE_API_URL if you prefer this name):
+# VITE_API_BASE_URL="http://localhost:8000/api/"
+# Optional: log every Axios request/response in the browser console (default: off except in dev)
+# VITE_DEBUG_API=1
 VITE_APP_NAME="Hostech V2"
 ```
 

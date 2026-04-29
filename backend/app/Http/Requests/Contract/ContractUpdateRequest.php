@@ -5,6 +5,7 @@ namespace App\Http\Requests\Contract;
 use App\Enums\ContractStatus;
 use App\Models\Contract\Contract;
 use App\Models\Property\Property;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -55,11 +56,11 @@ class ContractUpdateRequest extends FormRequest
                 ?? 1
             );
 
-            $minimumEndDate = \Carbon\Carbon::parse($startDate)
+            $minimumEndDate = Carbon::parse($startDate)
                 ->addMonths($effectiveBillingCycle)
                 ->toDateString();
 
-            if (\Carbon\Carbon::parse($endDate)->lt(\Carbon\Carbon::parse($minimumEndDate))) {
+            if (Carbon::parse($endDate)->lt(Carbon::parse($minimumEndDate))) {
                 $validator->errors()->add(
                     'end_date',
                     "Ngày kết thúc không được nhỏ hơn {$minimumEndDate} theo chu kỳ thuê."

@@ -2,14 +2,19 @@
 
 namespace Database\Seeders;
 
+use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Document\DocumentTemplate;
+use App\Models\Finance\LedgerEntry;
+use App\Models\Finance\Payment;
+use App\Models\Finance\PaymentAllocation;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Meter\Meter;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
@@ -19,21 +24,33 @@ use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomTemplate;
 use App\Models\Service\Service;
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
+use App\Services\Contract\ContractDocumentService;
+use App\Services\Finance\LedgerService;
+use App\Services\Finance\ReceiptService;
+use App\Services\Identity\IdCardImageRenderService;
+use App\Services\Invoice\InvoicePdfService;
 use App\Services\Meter\MeterReadingService;
+use App\Services\Property\RoomService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 
 class OrgSeeder extends Seeder
 {
     private static $testTenantCounter = 1;
+
     private static $freeTenantCounter = 1;
 
     public function run(): void
     {
+        Mail::fake();
+        Notification::fake();
+
         $this->command->info("\n================================");
         $this->command->info('📊 BẮT ĐẦU SEED DỮ LIỆU');
         $this->command->info("================================\n");
@@ -44,7 +61,7 @@ class OrgSeeder extends Seeder
             ['email' => 'admin@example.com'],
             [
                 'full_name' => 'System Administrator',
-                'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
+                'password_hash' => Hash::make('12345678'),
                 'org_id' => null,
                 'email_verified_at' => now(),
                 'is_active' => true,
@@ -54,7 +71,7 @@ class OrgSeeder extends Seeder
         $this->command->line("✅ System Admin: admin@example.com (Mật khẩu: 12345678)\n");
 
         $orgNames = [
-            'test'
+            'test',
         ];
         $orgCount = count($orgNames);
         $usersPerOrg = 5;
@@ -62,10 +79,10 @@ class OrgSeeder extends Seeder
         $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
-        
+
         // Cleanup existing 'test' org to avoid unique constraint issues on re-run
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        Org::whereIn('name', $orgNames)->withTrashed()->each(function($org) {
+        Org::whereIn('name', $orgNames)->withTrashed()->each(function ($org) {
             $this->command->line("🗑️  Xóa dữ liệu cũ của tổ chức: <fg=red>{$org->name}</>");
             // Explicitly force delete users and the org to completely clear unique constraint conflicts
             User::where('org_id', $org->id)->withTrashed()->forceDelete();
@@ -81,12 +98,12 @@ class OrgSeeder extends Seeder
                 'bank_accounts' => [
                     [
                         'bank_name' => 'Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)',
-                        'account_number' => '001100' . fake()->numerify('######'),
-                        'account_holder' => 'CÔNG TY TNHH ' . strtoupper($name),
+                        'account_number' => '001100'.fake()->numerify('######'),
+                        'account_name' => 'CÔNG TY TNHH '.strtoupper($name),
                         'branch' => 'Sở giao dịch',
-                        'is_default' => true
-                    ]
-                ]
+                        'is_default' => true,
+                    ],
+                ],
             ]);
             // Create staff users for this org (Owners, Managers, Staff)
             $usersPerOrg = 5;
@@ -95,18 +112,18 @@ class OrgSeeder extends Seeder
 
             for ($index = 0; $index < $usersPerOrg; $index++) {
                 $orgSlug = Str::slug($org->name);
-                $email = "";
-                $role = "";
+                $email = '';
+                $role = '';
 
                 if ($index < 1) {
                     $role = 'Owner';
-                    $email = "{$orgSlug}_owner_" . ($index + 1) . "@example.com";
+                    $email = "{$orgSlug}_owner_".($index + 1).'@example.com';
                 } elseif ($index < 3) {
                     $role = 'Manager';
-                    $email = "{$orgSlug}_manager_" . ($index) . "@example.com";
+                    $email = "{$orgSlug}_manager_".($index).'@example.com';
                 } else {
                     $role = 'Staff';
-                    $email = "{$orgSlug}_staff_" . ($index - 2) . "@example.com";
+                    $email = "{$orgSlug}_staff_".($index - 2).'@example.com';
                 }
 
                 $user = User::updateOrCreate(
@@ -114,14 +131,14 @@ class OrgSeeder extends Seeder
                     [
                         'org_id' => $org->id,
                         'full_name' => fake('vi_VN')->name(),
-                        'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+                        'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
                         'identity_number' => fake()->numerify('0############'),
                         'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
                         'identity_issued_date' => '2022-01-15',
                         'date_of_birth' => fake()->dateTimeBetween('-45 years', '-25 years')->format('Y-m-d'),
                         'address' => fake('vi_VN')->address(),
                         'license_plate' => fake()->bothify('??-? ####'),
-                        'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
+                        'password_hash' => Hash::make('12345678'),
                         'email_verified_at' => now(),
                         'is_active' => true,
                     ]
@@ -311,8 +328,8 @@ class OrgSeeder extends Seeder
                         [
                             'bank_name' => 'VPBank',
                             'account_number' => fake()->numerify('##########'),
-                            'account_holder' => 'LÊ THỊ NGỌC',
-                        ]
+                            'account_name' => 'LÊ THỊ NGỌC',
+                        ],
                     ],
                     'house_rules' => "- Sử dụng đúng mục đích thuê nhà để ở, có trách nhiệm bảo quản tốt các tài sản thiết bị trong nhà.\n- Tuyệt đối không được khoan tường đóng đinh, dán giấy lên tường nhà khi chưa được sự đồng ý của chủ nhà.\n- Tuyệt đối không vứt giấy vệ sinh, tóc và các vật lạ vào bồn cầu, đường ống thoát nước.\n- Giữ gìn vệ sinh chung, không được để rác trước cửa phòng và hành lang.\n- Không làm ồn sau 10h30 đêm để tránh ảnh hưởng đến các phòng xung quanh.\n- Không tự ý sang nhượng cho người khác. Nếu muốn thêm người ở phải báo với chủ nhà.\n- Trước khi dọn đi phải quét dọn sạch sẽ như lúc đến.",
                 ])
@@ -332,10 +349,16 @@ class OrgSeeder extends Seeder
                     $manager = $managers[$index % $managers->count()];
                     $staff1 = $staffs[($index * 2) % $staffs->count()];
                     $staff2 = $staffs[($index * 2 + 1) % $staffs->count()];
-                    
-                    if ($manager) $property->managers()->attach($manager->id);
-                    if ($staff1) $property->managers()->attach($staff1->id);
-                    if ($staff2) $property->managers()->attach($staff2->id);
+
+                    if ($manager) {
+                        $property->managers()->attach($manager->id);
+                    }
+                    if ($staff1) {
+                        $property->managers()->attach($staff1->id);
+                    }
+                    if ($staff2) {
+                        $property->managers()->attach($staff2->id);
+                    }
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
@@ -352,13 +375,15 @@ class OrgSeeder extends Seeder
                         // Area variance: +/- 3-5m2
                         $variance = rand(-5, 5);
                         $templateArea = round($baseArea + $variance, 1);
-                        
+
                         // Ensure it's within bounds and sum doesn't exceed total
                         if ($t === $templateCount - 1) {
                             $templateArea = round($availableAreaPerFloor - $totalAllocatedArea, 1);
                         }
-                        
-                        if ($templateArea < 10) $templateArea = 10;
+
+                        if ($templateArea < 10) {
+                            $templateArea = 10;
+                        }
                         $totalAllocatedArea += $templateArea;
 
                         // Capacity logic:
@@ -376,7 +401,7 @@ class OrgSeeder extends Seeder
                             $capacity = 6;
                         }
 
-                        $templateName = "Mẫu phòng " . $templateArea . " m2 cho " . $capacity . " người ở";
+                        $templateName = 'Mẫu phòng '.$templateArea.' m2 cho '.$capacity.' người ở';
 
                         $templates[] = RoomTemplate::factory()->create([
                             'org_id' => $org->id,
@@ -385,6 +410,18 @@ class OrgSeeder extends Seeder
                             'area' => $templateArea,
                             'capacity' => $capacity,
                         ]);
+                    }
+
+                    // Attach seeded room images to templates (phong 1 anh 1, phong 2 anh 2, ...)
+                    $templateImageGroups = $this->resolveRoomTemplateImageGroups();
+                    foreach ($templates as $idx => $template) {
+                        $groupIndex = $idx + 1;
+                        $imagePaths = $templateImageGroups[$groupIndex] ?? [];
+                        foreach ($imagePaths as $imgPath) {
+                            $template->addMedia($imgPath)
+                                ->preservingOriginal()
+                                ->toMediaCollection('gallery');
+                        }
                     }
 
                     // Attach mandatory services (DIEN, NUOC) and some assets to every template
@@ -408,21 +445,24 @@ class OrgSeeder extends Seeder
                     // Create floors
                     $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
 
+                    $roomService = app(RoomService::class);
+
                     for ($i = 1; $i <= $floorsCount; $i++) {
                         $floor = Floor::factory()->create([
-                            'org_id'       => $org->id,
-                            'property_id'  => $property->id,
-                            'name'         => "Tầng $i",
+                            'org_id' => $org->id,
+                            'property_id' => $property->id,
+                            'name' => "Tầng $i",
                             'floor_number' => $i,
-                            'code'         => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
-                            'sort_order'   => $i,
+                            'code' => 'F'.str_pad($i, 2, '0', STR_PAD_LEFT),
+                            'sort_order' => $i,
                         ]);
 
                         $roomsOnFloor = $templateCount; // 4 rooms per floor
-                        
+
                         // Skip room creation for Floor 1 as requested
                         if ($i === 1) {
                             $this->command->line("     • {$floor->name} - <fg=gray>Tầng 1 không có phòng (Khu vực lễ tân/chung)</>");
+
                             continue;
                         }
 
@@ -431,29 +471,21 @@ class OrgSeeder extends Seeder
                         for ($j = 0; $j < $roomsOnFloor; $j++) {
                             // Map room to template (one room per template type on each floor)
                             $template = $templates[$j];
-                            
+
                             $roomNumber = ($i * 100) + ($j + 2);
-                            // Disable events to prevent RoomObserver from creating default meters
-                            Room::withoutEvents(function() use ($org, $property, $floor, $roomNumber, $template, $i) {
-                                Room::factory()->create([
-                                    'org_id' => $org->id,
-                                    'property_id' => $property->id,
-                                    'floor_id' => $floor->id,
-                                    'name' => (string)$roomNumber,
-                                    'code' => 'R' . $roomNumber,
-                                    'area' => $template->area,
-                                    'capacity' => $template->capacity,
-                                    'base_price' => $template->base_price,
-                                    'floor_number' => $i,
-                                ]);
-                            });
+                            $roomService->createFromTemplate($template->id, [
+                                'floor_id' => $floor->id,
+                                'name' => (string) $roomNumber,
+                                'code' => 'R'.$roomNumber,
+                                'floor_number' => $i,
+                            ], $manager);
                         }
                     }
 
-                    $this->command->line("     ✅ Tổng cộng <fg=green>" . Room::where('property_id', $property->id)->count() . "</> phòng");
+                    $this->command->line('     ✅ Tổng cộng <fg=green>'.Room::where('property_id', $property->id)->count().'</> phòng');
 
                     // CREATE MASTER METERS
-                    $this->command->line("     📡 Tạo đồng hồ tổng cho tòa nhà...");
+                    $this->command->line('     📡 Tạo đồng hồ tổng cho tòa nhà...');
                     $masterMeterConfigs = [
                         ['type' => 'ELECTRIC', 'prefix' => 'M-E-', 'service_code' => 'DIEN_BT'],
                         ['type' => 'WATER', 'prefix' => 'M-W-', 'service_code' => 'NUOC_BT'],
@@ -465,7 +497,7 @@ class OrgSeeder extends Seeder
                             'org_id' => $org->id,
                             'property_id' => $property->id,
                             'room_id' => null,
-                            'code' => $mConfig['prefix'] . $property->code,
+                            'code' => $mConfig['prefix'].$property->code,
                             'type' => $mConfig['type'],
                             'is_master' => true,
                             'base_reading' => 0, // Will be updated if sum is needed
@@ -479,7 +511,7 @@ class OrgSeeder extends Seeder
 
             // ---------------------------------------------------------
             // 3. ASSIGN ROOM SERVICES, CONTRACTS, INVOICES
-                $properties = Property::where('org_id', $org->id)->get();
+            $properties = Property::where('org_id', $org->id)->get();
             $baseCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
             $ownerId = User::where('org_id', $org->id)->first()->id;
 
@@ -515,29 +547,40 @@ class OrgSeeder extends Seeder
                     ];
 
                     foreach ($meterConfigs as $mConfig) {
-                        $meterId = Str::uuid()->toString();
-                        $initialValue = rand(10, 100);
-                        Meter::create([
-                            'id' => $meterId,
-                            'org_id' => $org->id,
-                            'property_id' => $room->property_id,
-                            'room_id' => $room->id,
-                            'code' => $mConfig['prefix'] . 'P' . ($propertyIdx + 1) . '-' . $room->code . '-' . strtoupper(Str::random(3)),
-                            'type' => $mConfig['type'],
-                            'is_master' => false,
-                            'base_reading' => $initialValue,
-                            'installed_at' => '2025-01-01',
-                            'is_active' => true,
-                            'created_at' => '2025-01-01',
-                            'updated_at' => '2025-01-01',
-                        ]);
+                        $existingMeter = Meter::where('room_id', $room->id)
+                            ->where('type', $mConfig['type'])
+                            ->first();
+
+                        if ($existingMeter) {
+                            $meterId = $existingMeter->id;
+                            $initialValue = (int) $existingMeter->base_reading;
+                        } else {
+                            $meterId = Str::uuid()->toString();
+                            $initialValue = 0;
+                            Meter::create([
+                                'id' => $meterId,
+                                'org_id' => $org->id,
+                                'property_id' => $room->property_id,
+                                'room_id' => $room->id,
+                                'code' => $mConfig['prefix'].'P'.($propertyIdx + 1).'-'.$room->code.'-'.strtoupper(Str::random(3)),
+                                'type' => $mConfig['type'],
+                                'is_master' => false,
+                                'base_reading' => $initialValue,
+                                'installed_at' => '2026-01-01',
+                                'is_active' => true,
+                                'created_at' => '2026-01-01',
+                                'updated_at' => '2026-01-01',
+                            ]);
+                        }
+
                         $meters[] = ['id' => $meterId, 'config' => $mConfig, 'last_value' => $initialValue];
                         $initialMeterSum[$mConfig['type']] += $initialValue;
                     }
 
+                    // createFromTemplate đã sync DIEN/NUOC/INTERNET — chỉ bổ sung QL/VS (insertOrIgnore tránh trùng unique room_id+service_id)
                     $selectedCodes = ['DIEN', 'NUOC', 'INTERNET', 'QL', 'VS'];
                     foreach ($selectedCodes as $code) {
-                        DB::table('room_services')->insert([
+                        DB::table('room_services')->insertOrIgnore([
                             'id' => Str::uuid()->toString(),
                             'org_id' => $org->id,
                             'room_id' => $room->id,
@@ -550,18 +593,20 @@ class OrgSeeder extends Seeder
                     }
 
                     // B. Sequential Contracts
-                    $currentDate = Carbon::parse('2025-01-01');
+                    $currentDate = Carbon::parse('2026-01-01');
                     $cutoffDate = Carbon::parse('2026-03-31');
                     $numEndedContracts = rand(1, 2);
                     $isActiveRoom = in_array($room->id, $occupiedRoomIds);
 
                     // 1. Ended Contracts
                     for ($k = 0; $k < $numEndedContracts; $k++) {
-                        if ($currentDate->gt($cutoffDate->copy()->subMonths(6))) break;
+                        if ($currentDate->gt($cutoffDate->copy()->subMonths(6))) {
+                            break;
+                        }
 
                         $duration = rand(3, 6);
                         $endDate = $currentDate->copy()->addMonths($duration);
-                        
+
                         $this->createContractWithInvoices(
                             $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
@@ -574,7 +619,7 @@ class OrgSeeder extends Seeder
                         $this->createContractWithInvoices(
                             $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
-                        /** @var \App\Models\Property\Room $room */
+                        /** @var Room $room */
                         $room->update(['status' => 'occupied']);
                     } else {
                         // $room->update(['status' => 'draft']);
@@ -587,9 +632,9 @@ class OrgSeeder extends Seeder
                         ->where('type', $type)
                         ->where('is_master', true)
                         ->first();
-                    
+
                     if ($masterMeter) {
-                        /** @var \App\Models\Meter\Meter $masterMeter */
+                        /** @var Meter $masterMeter */
                         $masterMeter->update(['base_reading' => $sum]);
                     }
                 }
@@ -597,324 +642,498 @@ class OrgSeeder extends Seeder
         }
 
         $this->command->info("\n================================");
-    $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
-    $this->command->info('================================');
-    $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
-    $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
-    $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
-    $this->command->line('✅ Bất động sản: <fg=cyan>'.Property::count().'</>');
-    $this->command->line('✅ Tầng: <fg=cyan>'.Floor::count().'</>');
-    $this->command->line('✅ Phòng: <fg=cyan>'.Room::count().'</>');
-    $this->command->line('✅ Room Templates: <fg=cyan>'.RoomTemplate::count().'</>');
+        $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
+        $this->command->info('================================');
+        $this->command->line('✅ System Admin: <fg=cyan>1</> (admin@example.com 🔓)');
+        $this->command->line("✅ Tổ chức: <fg=cyan>$orgCount</>");
+        $this->command->line('✅ Tổng người dùng: <fg=cyan>'.($orgCount * $usersPerOrg).'</>');
+        $this->command->line('✅ Bất động sản: <fg=cyan>'.Property::count().'</>');
+        $this->command->line('✅ Tầng: <fg=cyan>'.Floor::count().'</>');
+        $this->command->line('✅ Phòng: <fg=cyan>'.Room::count().'</>');
+        $this->command->line('✅ Room Templates: <fg=cyan>'.RoomTemplate::count().'</>');
 
-    // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
-    $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
-    $this->command->line('✅ Lịch sử giá (Prices): <fg=cyan>'.RoomPrice::count().'</>');
-    $this->command->line('✅ Dịch vụ (Services): <fg=cyan>'.Service::count().'</>');
-    $this->command->line('✅ Hợp đồng (Contracts): <fg=cyan>'.Contract::count().'</>');
-    $this->command->line('✅ Hóa đơn (Invoices): <fg=cyan>'.Invoice::count().'</>');
-    $this->command->line('✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>'.DB::table('tickets')->count().'</>');
-    $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
-}
+        // Cập nhật số lượng dữ liệu chi tiết phòng (được sinh ngẫu nhiên)
+        $this->command->line('✅ Tài sản phòng (Assets): <fg=cyan>'.RoomAsset::count().'</>');
+        $this->command->line('✅ Lịch sử giá (Prices): <fg=cyan>'.RoomPrice::count().'</>');
+        $this->command->line('✅ Dịch vụ (Services): <fg=cyan>'.Service::count().'</>');
+        $this->command->line('✅ Hợp đồng (Contracts): <fg=cyan>'.Contract::count().'</>');
+        $this->command->line('✅ Hóa đơn (Invoices): <fg=cyan>'.Invoice::count().'</>');
+        $this->command->line('✅ Sự cố/Yêu cầu (Tickets): <fg=cyan>'.DB::table('tickets')->count().'</>');
+        $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
+    }
 
     private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $propertyStaffId, &$propertyMonthlyUsage)
-{
-    $cutoffLimit = Carbon::parse('2026-03-31');
-    $readingService = app(MeterReadingService::class);
-    
-    // Calculate fixed services fee (non-metered services)
-    $roomServiceIds = DB::table('room_services')->where('room_id', $room->id)->pluck('service_id');
-    $fixedServicesFee = DB::table('services')
-        ->join('service_rates', 'services.id', '=', 'service_rates.service_id')
-        ->whereIn('services.id', $roomServiceIds)
-        ->where('services.calc_mode', '!=', 'PER_METER')
-        ->sum('service_rates.price');
+    {
+        $cutoffLimit = Carbon::parse('2026-03-31');
+        $readingService = app(MeterReadingService::class);
 
-    $baseRent = $room->base_price ?: 5000000;
-    $property = $room->property;
-    $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
-    
-    $contract = Contract::factory()->create([
-        'org_id' => $room->org_id,
-        'property_id' => $room->property_id,
-        'room_id' => $room->id,
-        'status' => $status,
-        'start_date' => $startDate,
-        'end_date' => $endDate,
-        'terminated_at' => $status === 'ENDED' ? $endDate : null,
-        'created_by_user_id' => $ownerId,
-        'rent_price' => $baseRent,
-        'base_rent' => $baseRent,
-        'fixed_services_fee' => $fixedServicesFee,
-        'total_rent' => $baseRent + $fixedServicesFee,
-        'deposit_amount' => $depositAmount,
-        'deposit_status' => $status === 'ACTIVE' ? \App\Enums\DepositStatus::HELD : \App\Enums\DepositStatus::REFUNDED,
-        'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
-        'due_day' => $property->default_due_day ?? 5,
-        'cutoff_day' => $property->default_cutoff_day ?? 30,
-        'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
-    ]);
+        // Calculate fixed services fee (non-metered services)
+        $roomServiceIds = DB::table('room_services')->where('room_id', $room->id)->pluck('service_id');
+        $fixedServicesFee = DB::table('services')
+            ->join('service_rates', 'services.id', '=', 'service_rates.service_id')
+            ->whereIn('services.id', $roomServiceIds)
+            ->where('services.calc_mode', '!=', 'PER_METER')
+            ->sum('service_rates.price');
 
-    // Create IN Handover
-    $this->createHandoverForContract($contract, 'IN', $startDate);
+        $baseRent = $room->base_price ?: 5000000;
+        $property = $room->property;
+        $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
 
-    // Create OUT Handover if ENDED
-    if ($status === 'ENDED') {
-        $this->createHandoverForContract($contract, 'OUT', $endDate);
-    }
-    
-    $numMembers = rand(2, 3);
-    for ($i = 0; $i < $numMembers; $i++) {
-        // Dynamically create a tenant user for each contract member
-        $fullName = fake('vi_VN')->name();
-        
-        $emailName = Str::slug($fullName, '.');
-        $email = $emailName . fake()->numberBetween(10, 99) . "@gmail.com";
-        
-        $u = User::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $org->id,
-            'full_name' => $fullName,
-            'email' => $email,
-            'password_hash' => \Illuminate\Support\Facades\Hash::make('12345678'),
-            'email_verified_at' => now(),
-            'is_active' => true,
-            'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
-            'identity_number' => fake()->numerify('0############'),
-            'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
-            'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
-            'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
-            'address' => fake('vi_VN')->address(),
-            'license_plate' => fake()->bothify('??-? ####'),
+        $contract = Contract::factory()->create([
+            'org_id' => $room->org_id,
+            'property_id' => $room->property_id,
+            'room_id' => $room->id,
+            'status' => $status,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'terminated_at' => $status === 'ENDED' ? $endDate : null,
+            'created_by_user_id' => $ownerId,
+            'rent_price' => $baseRent,
+            'base_rent' => $baseRent,
+            'fixed_services_fee' => $fixedServicesFee,
+            'total_rent' => $baseRent + $fixedServicesFee,
+            'deposit_amount' => $depositAmount,
+            'deposit_status' => $status === 'ACTIVE' ? DepositStatus::HELD : DepositStatus::REFUNDED,
+            'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
+            'due_day' => $property->default_due_day ?? 5,
+            'cutoff_day' => $property->default_cutoff_day ?? 30,
+            'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
         ]);
-        $u->assignRole('Tenant');
 
-            ContractMember::create([
+        // Create OUT Handover if ENDED
+        if ($status === 'ENDED') {
+            $this->createHandoverForContract($contract, 'OUT', $endDate);
+        }
+
+        $numMembers = rand(2, 3);
+        $cccdFront = $this->resolveCccdTemplateFrontPath();
+        $cccdBack = $this->resolveCccdTemplateBackPath();
+        $idCardRender = app(IdCardImageRenderService::class);
+
+        if ((! $cccdFront || ! $cccdBack) && $numMembers > 0) {
+            $this->command->warn('  - CCCD: thiếu file mẫu (database/data/identity hoặc mặt trước/sau CC.png ở thư mục repo).');
+        } elseif (! $idCardRender->canRender() && $numMembers > 0) {
+            $this->command->warn('  - CCCD: không render được (PHP gd + font TTF).');
+        }
+
+        for ($i = 0; $i < $numMembers; $i++) {
+            // Dynamically create a tenant user for each contract member
+            $fullName = fake('vi_VN')->name();
+
+            $emailName = Str::slug($fullName, '.');
+            $email = $emailName.fake()->numberBetween(10, 99).'@gmail.com';
+            $gender = fake()->randomElement(['Nam', 'Nữ']);
+
+            $u = User::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $org->id,
+                'full_name' => $fullName,
+                'email' => $email,
+                'password_hash' => Hash::make('12345678'),
+                'email_verified_at' => now(),
+                'is_active' => true,
+                'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
+                'identity_number' => fake()->numerify('0############'),
+                'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+                'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+                'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+                'address' => fake('vi_VN')->address(),
+                'license_plate' => fake()->bothify('??-? ####'),
+            ]);
+            $u->assignRole('Tenant');
+
+            $member = ContractMember::create([
                 'id' => Str::uuid()->toString(),
                 'org_id' => $contract->org_id,
                 'contract_id' => $contract->id,
                 'user_id' => $u->id,
+                'email' => $email,
                 'full_name' => $fullName,
                 'phone' => $u->phone,
                 'identity_number' => $u->identity_number,
                 'date_of_birth' => $u->date_of_birth,
+                'gender' => $gender,
+                'nationality' => 'Việt Nam',
                 'license_plate' => $u->license_plate,
                 'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
                 'is_primary' => $i === 0,
                 'left_at' => $status === 'ENDED' ? $endDate : null,
             ]);
-    }
 
-    // --- Generate Physical Contract Document ---
-    try {
-        $docPath = app(\App\Services\Contract\ContractDocumentService::class)->generateDocument($contract);
-        $contract->update([
-            'document_path' => $docPath,
-            'document_type' => 'PDF',
-            'signed_at' => $startDate,
-        ]);
-    } catch (\Exception $e) {
-        $this->command->warn("  - Could not generate contract document: " . $e->getMessage());
-    }
-
-    // --- Invoicing Logic ---
-    $tempDate = $startDate->copy();
-    $isFirstInvoice = true;
-
-    while ($tempDate->lte($endDate) && $tempDate->lte($cutoffLimit)) {
-        $invoiceDate = $tempDate->copy()->addDays(rand(0, 5));
-        if ($invoiceDate->gt($cutoffLimit)) break;
-
-        $invoice = Invoice::create([
-            'id' => Str::uuid()->toString(),
-            'org_id' => $org->id,
-            'property_id' => $room->property_id,
-            'contract_id' => $contract->id,
-            'room_id' => $room->id,
-            'status' => ($status === 'ENDED' || $tempDate->lt(now()->subMonth())) ? 'PAID' : 'PENDING',
-            'issue_date' => $invoiceDate,
-            'due_date' => $invoiceDate->copy()->addDays(7),
-            'period_start' => $tempDate->copy()->startOfMonth(),
-            'period_end' => $tempDate->copy()->endOfMonth(),
-            'total_amount' => 0,
-            'paid_amount' => 0,
-            'created_by_user_id' => $ownerId,
-        ]);
-        if ($isFirstInvoice) {
-            // First Invoice: Rent + Deposit
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền đặt cọc',
-                'amount' => $contract->deposit_amount,
-                'unit_price' => $contract->deposit_amount,
-                'quantity' => 1,
-                'type' => 'DEPOSIT',
-            ]);
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền phòng tháng đầu',
-                'amount' => $contract->total_rent,
-                'unit_price' => $contract->total_rent,
-                'quantity' => 1,
-                'type' => 'RENT',
-            ]);
-            $isFirstInvoice = false;
-        }
-
-        if (!$isFirstInvoice && $tempDate->gt($startDate)) {
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền phòng',
-                'amount' => $contract->total_rent,
-                'unit_price' => $contract->total_rent,
-                'quantity' => 1,
-                'type' => 'RENT',
-            ]);
-        }
-
-        // --- Utility Readings ---
-        $pStart = $tempDate->copy()->startOfMonth();
-        $pEnd = $tempDate->copy()->endOfMonth();
-
-        foreach ($meters as &$m) {
-            $usage = rand($m['config']['min'], $m['config']['max']);
-            $newValue = $m['last_value'] + $usage;
-            $readingId = Str::uuid()->toString();
-
-            $reading = $readingService->create([
-                'org_id' => $org->id,
-                'meter_id' => $m['id'],
-                'period_start' => $pStart->toDateString(),
-                'period_end' => $pEnd->toDateString(),
-                'reading_value' => $newValue,
-                'status' => 'SUBMITTED',
-                'submitted_by_user_id' => $propertyStaffId,
-                'submitted_at' => $pEnd->copy()->addDay(),
-            ]);
-
-            // Approve to trigger master aggregation
-            $readingService->update($reading, ['status' => 'APPROVED']);
-
-            // Aggregate to property monthly total
-            $monthKey = $tempDate->toDateString();
-            $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
-
-            InvoiceItem::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'invoice_id' => $invoice->id,
-                'description' => 'Tiền ' . $m['config']['type'],
-                'amount' => $usage * ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
-                'unit_price' => ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
-                'quantity' => $usage,
-                'type' => 'SERVICE',
-            ]);
-
-            $m['last_value'] = $newValue;
-        }
-
-        $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
-        $invoice->update([
-            'total_amount' => $total,
-            'paid_amount' => $invoice->status === 'PAID' ? $total : 0
-        ]);
-
-        // --- Generate Physical Invoice PDF ---
-        try {
-            app(\App\Services\Invoice\InvoicePdfService::class)->generate($invoice);
-        } catch (\Exception $e) {
-            $this->command->warn("  - Could not generate invoice PDF: " . $e->getMessage());
-        }
-
-        // --- Generate Payment & Receipt if PAID ---
-        if ($invoice->status === 'PAID') {
-            try {
-                $tenantMember = $contract->members()->where('role', 'TENANT')->first();
-                $payment = \App\Models\Finance\Payment::create([
-                    'id' => (string) Str::uuid(),
-                    'org_id' => $org->id,
-                    'property_id' => $invoice->property_id,
-                    'payer_user_id' => $tenantMember ? $tenantMember->user_id : $ownerId,
-                    'received_by_user_id' => $ownerId,
-                    'method' => 'CASH',
-                    'amount' => $total,
-                    'received_at' => $invoice->issue_date,
-                    'status' => 'APPROVED',
-                    'approved_by_user_id' => $ownerId,
-                    'approved_at' => $invoice->issue_date,
-                ]);
-
-                \App\Models\Finance\PaymentAllocation::create([
-                    'id' => (string) Str::uuid(),
-                    'org_id' => $org->id,
-                    'payment_id' => $payment->id,
-                    'invoice_id' => $invoice->id,
-                    'amount' => $total,
-                ]);
-
-                app(\App\Services\Finance\ReceiptService::class)->generateForPayment($payment);
-            } catch (\Exception $e) {
-                $this->command->warn("  - Could not generate receipt: " . $e->getMessage());
+            if ($cccdFront && $cccdBack && $idCardRender->canRender()) {
+                try {
+                    $identity = [
+                        'full_name' => $fullName,
+                        'identity_number' => (string) $u->identity_number,
+                        'date_of_birth' => Carbon::parse($u->date_of_birth)->format('d/m/Y'),
+                        'gender' => $gender,
+                        'nationality' => 'Việt Nam',
+                    ];
+                    [$tmpFront, $tmpBack] = $idCardRender->renderPair($cccdFront, $cccdBack, $identity);
+                    $member->addMedia($tmpFront)->toMediaCollection('identity_front');
+                    $member->addMedia($tmpBack)->toMediaCollection('identity_back');
+                    @unlink($tmpFront);
+                    @unlink($tmpBack);
+                } catch (\Throwable $e) {
+                    $this->command->warn('  - CCCD render: '.$e->getMessage());
+                }
             }
         }
 
-        $tempDate->addMonths(1);
+        // --- Generate Physical Contract Document ---
+        try {
+            $docPath = app(ContractDocumentService::class)->generateDocument($contract);
+            $contract->update([
+                'document_path' => $docPath,
+                'document_type' => 'PDF',
+                'signed_at' => $startDate,
+            ]);
+        } catch (\Exception $e) {
+            $this->command->warn('  - Could not generate contract document: '.$e->getMessage());
+        }
+
+        // --- Invoicing Logic ---
+        $tempDate = $startDate->copy();
+        $isFirstInvoice = true;
+
+        while ($tempDate->lte($endDate) && $tempDate->lte($cutoffLimit)) {
+            $invoiceDate = $tempDate->copy()->addDays(rand(0, 5));
+            if ($invoiceDate->gt($cutoffLimit)) {
+                break;
+            }
+
+            $invoice = Invoice::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $org->id,
+                'property_id' => $room->property_id,
+                'contract_id' => $contract->id,
+                'room_id' => $room->id,
+                'status' => ($status === 'ENDED' || $tempDate->lt(now()->subMonth())) ? 'PAID' : 'ISSUED',
+                'issue_date' => $invoiceDate,
+                'due_date' => $invoiceDate->copy()->addDays(7),
+                'period_start' => $tempDate->copy()->startOfMonth(),
+                'period_end' => $tempDate->copy()->endOfMonth(),
+                'total_amount' => 0,
+                'paid_amount' => 0,
+                'created_by_user_id' => $ownerId,
+            ]);
+            if ($isFirstInvoice) {
+                // First Invoice: Rent + Deposit
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền đặt cọc',
+                    'amount' => $contract->deposit_amount,
+                    'unit_price' => $contract->deposit_amount,
+                    'quantity' => 1,
+                    'type' => 'DEPOSIT',
+                ]);
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền phòng tháng đầu',
+                    'amount' => $contract->total_rent,
+                    'unit_price' => $contract->total_rent,
+                    'quantity' => 1,
+                    'type' => 'RENT',
+                ]);
+                $isFirstInvoice = false;
+            }
+
+            if (! $isFirstInvoice && $tempDate->gt($startDate)) {
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền phòng',
+                    'amount' => $contract->total_rent,
+                    'unit_price' => $contract->total_rent,
+                    'quantity' => 1,
+                    'type' => 'RENT',
+                ]);
+            }
+
+            // --- Utility Readings ---
+            $pStart = $tempDate->copy()->startOfMonth();
+            $pEnd = $tempDate->copy()->endOfMonth();
+
+            foreach ($meters as &$m) {
+                // FIXED VALUES FOR JAN, FEB, MAR 2026
+                $month = $tempDate->month;
+                $usage = 0;
+
+                if ($m['config']['type'] === 'ELECTRIC') {
+                    $usage = [1 => 150, 2 => 130, 3 => 140][$month] ?? 100;
+                } else {
+                    $usage = [1 => 12, 2 => 13, 3 => 14][$month] ?? 10;
+                }
+
+                $newValue = $m['last_value'] + $usage;
+                $readingId = Str::uuid()->toString();
+
+                $reading = $readingService->create([
+                    'org_id' => $org->id,
+                    'meter_id' => $m['id'],
+                    'period_start' => $pStart->toDateString(),
+                    'period_end' => $pEnd->toDateString(),
+                    'reading_value' => $newValue,
+                    'consumption' => $usage,
+                    'status' => 'APPROVED', // Tự động duyệt để dễ xem
+                    'submitted_by_user_id' => $propertyStaffId,
+                    'submitted_at' => $pEnd->copy()->addDay(),
+                    'approved_at' => $pEnd->copy()->addDay(),
+                ]);
+
+                // Sync media based on month and type
+                $typeLower = strtolower($m['config']['type']);
+                $imgPath = database_path("data/meters/{$typeLower}_month_{$month}.png");
+                if (file_exists($imgPath)) {
+                    $reading->addMedia($imgPath)
+                        ->preservingOriginal()
+                        ->toMediaCollection('reading_proofs');
+                }
+
+                $m['last_value'] = $newValue;
+
+                // Approve and Lock because invoice is issued (skip broadcasting during seeding)
+                $readingService->update($reading, ['status' => 'LOCKED'], false);
+
+                // Aggregate to property monthly total
+                $monthKey = $tempDate->toDateString();
+                $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
+
+                InvoiceItem::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'invoice_id' => $invoice->id,
+                    'description' => 'Tiền '.$m['config']['type'],
+                    'amount' => $usage * ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
+                    'unit_price' => ($m['config']['type'] === 'ELECTRIC' ? 4000 : 30000),
+                    'quantity' => $usage,
+                    'type' => 'SERVICE',
+                ]);
+
+                $m['last_value'] = $newValue;
+            }
+
+            $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
+            $invoice->update([
+                'total_amount' => $total,
+                'paid_amount' => $invoice->status === 'PAID' ? $total : 0,
+            ]);
+
+            // --- Generate Physical Invoice PDF ---
+            try {
+                app(InvoicePdfService::class)->generate($invoice);
+            } catch (\Exception $e) {
+                $this->command->warn('  - Could not generate invoice PDF: '.$e->getMessage());
+            }
+
+            // --- Payment + sổ cái kép + biên lai (PAID) — khớp EDA: PaymentObserver → PaymentSuccessfullyVerified → RecordPaymentLedger (có thể queue) ---
+            if ($invoice->status === 'PAID') {
+                try {
+                    $tenantMember = $contract->members()->where('role', 'TENANT')->first();
+                    $payment = Payment::create([
+                        'id' => (string) Str::uuid(),
+                        'org_id' => $org->id,
+                        'property_id' => $invoice->property_id,
+                        'payer_user_id' => $tenantMember ? $tenantMember->user_id : $ownerId,
+                        'received_by_user_id' => $ownerId,
+                        'method' => 'CASH',
+                        'amount' => $total,
+                        'reference' => 'SEED-'.Str::substr((string) $invoice->id, 0, 8),
+                        'note' => 'OrgSeeder — thanh toán demo theo hóa đơn',
+                        'received_at' => $invoice->issue_date,
+                        'status' => 'APPROVED',
+                        'approved_by_user_id' => $ownerId,
+                        'approved_at' => $invoice->issue_date,
+                    ]);
+
+                    PaymentAllocation::create([
+                        'id' => (string) Str::uuid(),
+                        'org_id' => $org->id,
+                        'payment_id' => $payment->id,
+                        'invoice_id' => $invoice->id,
+                        'amount' => $total,
+                    ]);
+
+                    // Listener chạy async: đảm bảo vẫn có bút toán CASH_BANK + A/R trong seed
+                    $this->seedLedgerForPaymentIfMissing($payment);
+
+                    app(ReceiptService::class)->generateForPayment($payment);
+                } catch (\Exception $e) {
+                    $this->command->warn('  - Could not generate payment/receipt/ledger: '.$e->getMessage());
+                }
+            }
+
+            $tempDate->addMonths(1);
+        }
+
+        return $contract;
     }
 
-    return $contract;
-}
+    /**
+     * Create Handover, Items and Meter Snapshots for a contract
+     */
+    /**
+     * Ghi sổ cái kép giống RecordPaymentLedger khi queue chưa chạy (database/redis).
+     */
+    private function seedLedgerForPaymentIfMissing(Payment $payment): void
+    {
+        $existing = LedgerEntry::withoutGlobalScope('org_id')
+            ->where('ref_type', 'payment')
+            ->where('ref_id', $payment->id)
+            ->count();
+        if ($existing > 0) {
+            return;
+        }
+        try {
+            app(LedgerService::class)->recordPayment($payment);
+        } catch (\Throwable $e) {
+            $this->command->warn('  - Ledger (seed fallback): '.$e->getMessage());
+        }
+    }
 
-/**
- * Create Handover, Items and Meter Snapshots for a contract
- */
-private function createHandoverForContract($contract, $type, $date)
-{
-    $handover = Handover::create([
-        'id' => \Illuminate\Support\Str::uuid()->toString(),
-        'org_id' => $contract->org_id,
-        'contract_id' => $contract->id,
-        'room_id' => $contract->room_id,
-        'type' => $type,
-        'status' => 'COMPLETED',
-        'confirmed_at' => $date,
-        'confirmed_by_user_id' => $contract->created_by_user_id,
-        'locked_at' => $date,
-        'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
-    ]);
-
-    // Create Handover Items from Room Assets
-    $assets = $contract->room->assets;
-    foreach ($assets as $index => $asset) {
-        HandoverItem::create([
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
+    private function createHandoverForContract($contract, $type, $date)
+    {
+        $handover = Handover::create([
+            'id' => Str::uuid()->toString(),
             'org_id' => $contract->org_id,
-            'handover_id' => $handover->id,
-            'room_asset_id' => $asset->id,
-            'name' => $asset->name,
-            'status' => 'GOOD',
-            'sort_order' => $index,
+            'contract_id' => $contract->id,
+            'room_id' => $contract->room_id,
+            'type' => $type,
+            'status' => 'COMPLETED',
+            'confirmed_at' => $date,
+            'confirmed_by_user_id' => $contract->created_by_user_id,
+            'locked_at' => $date,
+            'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
         ]);
+
+        // Create Handover Items from Room Assets
+        $assets = $contract->room->assets;
+        foreach ($assets as $index => $asset) {
+            HandoverItem::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'handover_id' => $handover->id,
+                'room_asset_id' => $asset->id,
+                'name' => $asset->name,
+                'status' => 'GOOD',
+                'sort_order' => $index,
+            ]);
+        }
+
+        // Create Handover Meter Snapshots from Room Meters
+        $meters = $contract->room->meters;
+        foreach ($meters as $meter) {
+            $baseReading = 100; // Mock base
+            $readingValue = $type === 'IN' ? $baseReading : $baseReading + rand(50, 200);
+
+            HandoverMeterSnapshot::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'handover_id' => $handover->id,
+                'meter_id' => $meter->id,
+                'reading_value' => $readingValue,
+            ]);
+        }
     }
 
-    // Create Handover Meter Snapshots from Room Meters
-    $meters = $contract->room->meters;
-    foreach ($meters as $meter) {
-        $baseReading = 100; // Mock base
-        $readingValue = $type === 'IN' ? $baseReading : $baseReading + rand(50, 200);
+    private function resolveCccdTemplateFrontPath(): ?string
+    {
+        $candidates = [
+            database_path('data/identity/cccd_front.png'),
+            dirname(base_path()).DIRECTORY_SEPARATOR.'mặt trước CC.png',
+        ];
+        foreach ($candidates as $path) {
+            if ($path && is_readable($path)) {
+                return $path;
+            }
+        }
 
-        HandoverMeterSnapshot::create([
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
-            'org_id' => $contract->org_id,
-            'handover_id' => $handover->id,
-            'meter_id' => $meter->id,
-            'reading_value' => $readingValue,
-        ]);
+        return null;
     }
-}
+
+    /**
+     * Resolve local room sample images and group them by template index.
+     * Supports names like "phòng 1 ảnh 1.jpg", "phong_2_anh_3.png", "room_3_1.webp".
+     *
+     * @return array<int, array<int, string>>
+     */
+    private function resolveRoomTemplateImageGroups(): array
+    {
+        $directories = [
+            base_path(),
+            dirname(base_path()),
+            database_path('data/rooms'),
+            database_path('data'),
+        ];
+
+        $groups = [];
+
+        foreach ($directories as $dir) {
+            if (! is_dir($dir)) {
+                continue;
+            }
+
+            $files = File::files($dir);
+            foreach ($files as $file) {
+                $ext = strtolower($file->getExtension());
+                if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                    continue;
+                }
+
+                $baseName = $file->getFilename();
+                $normalized = $this->normalizeAscii($baseName);
+
+                preg_match_all('/\d+/', $normalized, $matches);
+                $numbers = array_map('intval', $matches[0] ?? []);
+                if (count($numbers) < 2) {
+                    continue;
+                }
+
+                $templateIndex = $numbers[0];
+                $imageIndex = $numbers[1];
+                if ($templateIndex <= 0 || $imageIndex <= 0) {
+                    continue;
+                }
+
+                $groups[$templateIndex][$imageIndex] = $file->getPathname();
+            }
+        }
+
+        foreach ($groups as $templateIndex => $images) {
+            ksort($images);
+            $groups[$templateIndex] = array_values($images);
+        }
+
+        ksort($groups);
+
+        return $groups;
+    }
+
+    private function normalizeAscii(string $value): string
+    {
+        $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        $normalized = strtolower($ascii !== false ? $ascii : $value);
+
+        return preg_replace('/\s+/', ' ', $normalized) ?? $normalized;
+    }
+
+    private function resolveCccdTemplateBackPath(): ?string
+    {
+        $candidates = [
+            database_path('data/identity/cccd_back.png'),
+            dirname(base_path()).DIRECTORY_SEPARATOR.'mặt sau CC.png',
+        ];
+        foreach ($candidates as $path) {
+            if ($path && is_readable($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Org\User;
+use App\Models\Property\Property;
 use Illuminate\Database\Eloquent\Model;
 
 trait HandlesPropertyScope
@@ -27,7 +28,7 @@ trait HandlesPropertyScope
         if ($user->hasRole(['Manager', 'Staff'])) {
             $propertyId = null;
 
-            if ($model instanceof \App\Models\Property\Property) {
+            if ($model instanceof Property) {
                 $propertyId = $model->id;
             } elseif (! empty($model->property_id)) {
                 $propertyId = $model->property_id;

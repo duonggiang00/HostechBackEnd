@@ -2,10 +2,11 @@
 
 namespace Database\Factories\Handover;
 
+use App\Models\Handover\HandoverMeterSnapshot;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Handover\HandoverMeterSnapshot>
+ * @extends Factory<HandoverMeterSnapshot>
  */
 class HandoverMeterSnapshotFactory extends Factory
 {

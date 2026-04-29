@@ -26,7 +26,7 @@ return new class extends Migration
         Schema::table('room_templates', function (Blueprint $table) {
             $table->char('electric_service_id', 36)->nullable()->comment('Dịch vụ điện mặc định');
             $table->char('water_service_id', 36)->nullable()->comment('Dịch vụ nước mặc định');
-            
+
             $table->foreign('electric_service_id')->references('id')->on('services')->onDelete('set null');
             $table->foreign('water_service_id')->references('id')->on('services')->onDelete('set null');
         });

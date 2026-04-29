@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, ShieldAlert, BadgeCheck, Loader2 } from 'lucide-react';
+import { X, Mail, ShieldAlert, BadgeCheck, Loader2, Crown } from 'lucide-react';
 import { usePropertyUsers } from '../hooks/usePropertyUsers';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -8,16 +8,25 @@ import { toast } from 'react-hot-toast';
 interface InviteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Trang đang mở modal: quyết định vai trò mặc định và các lựa chọn. */
+  variant: 'staff' | 'tenants';
 }
 
-export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
+export default function InviteUserModal({ isOpen, onClose, variant }: InviteUserModalProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
   const { inviteMutation } = usePropertyUsers();
-  
+
   const [email, setEmail] = useState('');
-  const [roleName, setRoleName] = useState('Tenant');
+  const [roleName, setRoleName] = useState(variant === 'staff' ? 'Staff' : 'Tenant');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setRoleName(variant === 'staff' ? 'Staff' : 'Tenant');
+  }, [isOpen, variant]);
 
   if (!isOpen) return null;
+
+  const defaultRoleAfterSubmit = variant === 'staff' ? 'Staff' : 'Tenant';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +41,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
       toast.success('Gửi lời mời thành công!');
       onClose();
       setEmail('');
-      setRoleName('Tenant');
+      setRoleName(defaultRoleAfterSubmit);
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi gửi lời mời.');
     }
@@ -41,8 +50,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Nền làm mờ */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -50,14 +58,12 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
           className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         />
 
-        {/* Nội dung Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-700"
         >
-          {/* Tiêu đề Modal */}
           <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] dark:bg-indigo-900/40 flex items-center justify-center text-[#1E3A8A] dark:text-indigo-400">
@@ -65,23 +71,22 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               </div>
               <div>
                 <h3 className="text-lg font-bold text-[#111827] dark:text-slate-100">Gửi lời mời</h3>
-                <p className="text-xs text-[#4B5563] dark:text-slate-400">Thêm người dùng vào tòa nhà</p>
+                <p className="text-xs text-[#4B5563] dark:text-slate-400">
+                  {variant === 'staff' ? 'Mời nhân sự vận hành tòa nhà' : 'Mời người thuê / cư dân'}
+                </p>
               </div>
             </div>
-            <button 
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-[#1E3A8A] transition-colors"
-            >
+            <button type="button" onClick={onClose} className="p-2 text-slate-400 hover:text-[#1E3A8A] transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Form nhập liệu */}
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="space-y-4">
-              {/* Nhập Email */}
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">Email người nhận</label>
+                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">
+                  Email người nhận
+                </label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
@@ -95,62 +100,122 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                 </div>
               </div>
 
-              {/* Chọn vai trò */}
               <div className="space-y-3 pt-2">
-                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">Vai trò (Role)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Khách thuê */}
-                  <label className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                    roleName === 'Tenant' 
-                      ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20' 
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
-                  }`}>
-                    <input type="radio" name="role" value="Tenant" checked={roleName === 'Tenant'} onChange={(e) => setRoleName(e.target.value)} className="sr-only" />
+                <label className="text-xs font-bold text-[#4B5563] dark:text-slate-300 uppercase tracking-wider">Vai trò</label>
+                {variant === 'tenants' ? (
+                  <label
+                    className={`relative flex cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                      roleName === 'Tenant'
+                        ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="role"
+                      value="Tenant"
+                      checked={roleName === 'Tenant'}
+                      onChange={(e) => setRoleName(e.target.value)}
+                      className="sr-only"
+                    />
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg flex-shrink-0 ${
-                        roleName === 'Tenant' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                      }`}>
+                      <div
+                        className={`p-2 rounded-lg flex-shrink-0 ${
+                          roleName === 'Tenant' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                        }`}
+                      >
                         <BadgeCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className={`text-sm font-bold ${roleName === 'Tenant' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'}`}>
-                          Khách thuê
+                        <p
+                          className={`text-sm font-bold ${
+                            roleName === 'Tenant' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'
+                          }`}
+                        >
+                          Khách thuê (Tenant)
                         </p>
-                        <p className={`text-[10px] mt-0.5 font-bold ${roleName === 'Tenant' ? 'text-[#1E3A8A]/70 dark:text-indigo-400' : 'text-slate-500'}`}>
-                          Thuê phòng, hóa đơn
-                        </p>
+                        <p className="text-[10px] mt-0.5 font-bold text-slate-500">Truy cập cổng cư dân, thanh toán</p>
                       </div>
                     </div>
                   </label>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label
+                      className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                        roleName === 'Staff'
+                          ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value="Staff"
+                        checked={roleName === 'Staff'}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-2 rounded-lg flex-shrink-0 ${
+                            roleName === 'Staff' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                          }`}
+                        >
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p
+                            className={`text-sm font-bold ${
+                              roleName === 'Staff' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'
+                            }`}
+                          >
+                            Nhân viên
+                          </p>
+                          <p className="text-[10px] mt-0.5 font-bold text-slate-500">Vận hành theo phân quyền</p>
+                        </div>
+                      </div>
+                    </label>
 
-                  {/* Nhân viên */}
-                  <label className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                    roleName === 'Staff' 
-                      ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20' 
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
-                  }`}>
-                    <input type="radio" name="role" value="Staff" checked={roleName === 'Staff'} onChange={(e) => setRoleName(e.target.value)} className="sr-only" />
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg flex-shrink-0 ${
-                        roleName === 'Staff' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
-                      }`}>
-                        <ShieldAlert className="w-4 h-4" />
+                    <label
+                      className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all ${
+                        roleName === 'Manager'
+                          ? 'border-[#1E3A8A] bg-[#EFF6FF] dark:bg-indigo-900/20'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="role"
+                        value="Manager"
+                        checked={roleName === 'Manager'}
+                        onChange={(e) => setRoleName(e.target.value)}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-2 rounded-lg flex-shrink-0 ${
+                            roleName === 'Manager' ? 'bg-[#1E3A8A] text-white shadow-md' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'
+                          }`}
+                        >
+                          <Crown className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p
+                            className={`text-sm font-bold ${
+                              roleName === 'Manager' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'
+                            }`}
+                          >
+                            Quản lý
+                          </p>
+                          <p className="text-[10px] mt-0.5 font-bold text-slate-500">Quản lý tòa nhà</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className={`text-sm font-bold ${roleName === 'Staff' ? 'text-[#1E3A8A] dark:text-indigo-200' : 'text-[#4B5563] dark:text-slate-300'}`}>
-                          Nhân viên
-                        </p>
-                        <p className={`text-[10px] mt-0.5 font-bold ${roleName === 'Staff' ? 'text-[#1E3A8A]/70 dark:text-indigo-400' : 'text-slate-500'}`}>
-                          Vận hành tòa nhà
-                        </p>
-                      </div>
-                    </div>
-                  </label>
-                </div>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Nút hành động */}
             <div className="flex items-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-700/50">
               <button
                 type="button"

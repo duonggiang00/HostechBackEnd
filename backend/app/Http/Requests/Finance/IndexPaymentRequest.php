@@ -24,15 +24,15 @@ class IndexPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'per_page'                    => ['nullable', 'integer', 'min:1', 'max:100'],
-            'page'                        => ['nullable', 'integer', 'min:1'],
-            'search'                      => ['nullable', 'string', 'max:255'],
-            'filter.property_id'          => ['nullable', 'uuid'],
-            'filter.status'               => ['nullable', 'string', 'in:PENDING,APPROVED,REJECTED'],
-            'filter.method'               => ['nullable', 'string', 'in:CASH,TRANSFER,WALLET,QR'],
-            'filter.payer_user_id'        => ['nullable', 'uuid'],
-            'filter.received_between'     => ['nullable', 'string', 'regex:/^\d{4}-\d{2}-\d{2},\d{4}-\d{2}-\d{2}$/'],
-            'sort'                        => ['nullable', 'string', 'in:received_at,amount,created_at,status,-received_at,-amount,-created_at,-status'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'search' => ['nullable', 'string', 'max:255'],
+            'filter.property_id' => ['nullable', 'uuid'],
+            'filter.status' => ['nullable', 'string', 'in:PENDING,APPROVED,REJECTED'],
+            'filter.method' => ['nullable', 'string', 'in:CASH,TRANSFER,WALLET,QR'],
+            'filter.payer_user_id' => ['nullable', 'uuid'],
+            'filter.received_between' => ['nullable', 'string', 'regex:/^\d{4}-\d{2}-\d{2},\d{4}-\d{2}-\d{2}$/'],
+            'sort' => ['nullable', 'string', 'in:received_at,amount,created_at,status,-received_at,-amount,-created_at,-status'],
         ];
     }
 }

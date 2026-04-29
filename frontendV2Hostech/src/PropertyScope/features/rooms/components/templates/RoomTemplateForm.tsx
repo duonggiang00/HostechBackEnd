@@ -5,11 +5,12 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, Maximize2, Users, Coins, Zap, Gauge, 
-  Trash2, Plus, Check, Box, ArrowRight, ArrowLeft, Loader2
+  Trash2, Plus, Check, Box, ArrowRight, Loader2
 } from 'lucide-react';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import { formatNumber, parseNumber } from '@/lib/utils';
-import type { RoomTemplate } from '../../types';
+import type { GlobalRoomTemplate } from '../../types';
 
 // Zod Schema
 export const roomTemplateSchema = z.object({
@@ -28,7 +29,7 @@ export const roomTemplateSchema = z.object({
 export type RoomTemplateFormData = z.infer<typeof roomTemplateSchema>;
 
 interface RoomTemplateFormProps {
-  initialData?: RoomTemplate | null;
+  initialData?: GlobalRoomTemplate | null;
   propertyArea?: number | null;
   onSave: (data: RoomTemplateFormData) => void;
   isSaving: boolean;
@@ -327,13 +328,10 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
           {/* Action Footer */}
           <div className="mt-8 flex gap-4">
             {step === 2 && (
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center gap-3"
-              >
-                <ArrowLeft className="w-5 h-5" /> Quay lại
-              </button>
+              <PageBackButton
+                onBack={() => setStep(1)}
+                className="rounded-2xl border border-slate-200 bg-white px-8 py-4 font-black uppercase tracking-widest active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              />
             )}
             {step === 1 ? (
               <button
@@ -375,7 +373,7 @@ export function RoomTemplateForm({ initialData, propertyArea, onSave, isSaving }
               <div className="mb-8">
                 <p className="text-sm font-medium text-slate-400 mb-1">Tên biểu mẫu</p>
                 <div className="text-2xl font-black leading-tight">
-                  {watchAll.name || <span className="text-slate-600 italic">Chưa đặt tên</span>}
+                  {watchAll.name || <span className="text-slate-600 ">Chưa đặt tên</span>}
                 </div>
               </div>
 

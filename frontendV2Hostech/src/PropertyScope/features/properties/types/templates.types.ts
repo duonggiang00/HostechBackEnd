@@ -8,6 +8,8 @@ export interface RoomTemplateImage {
 export interface RoomTemplate {
   id: string;
   property_id: string;
+  /** Khi API include property */
+  property_name?: string;
   name: string;
   room_type?: string;
   base_price: number;

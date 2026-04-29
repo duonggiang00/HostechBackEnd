@@ -14,7 +14,5 @@ class RoomUpdated
     /**
      * Create a new event instance.
      */
-    public function __construct(public Room $room, public ?array $changes = null, public ?string $performerId = null)
-    {
-    }
+    public function __construct(public Room $room, public ?array $changes = null, public ?string $performerId = null) {}
 }

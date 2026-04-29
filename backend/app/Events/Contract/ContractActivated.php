@@ -28,7 +28,7 @@ class ContractActivated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         $channels = [
-            new PrivateChannel('App.Models.Org.User.' . $this->contract->created_by_user_id),
+            new PrivateChannel('App.Models.Org.User.'.$this->contract->created_by_user_id),
         ];
 
         // Also notify the primary tenant if they have a user account
@@ -38,7 +38,7 @@ class ContractActivated implements ShouldBroadcast
             ->first();
 
         if ($primaryTenant) {
-            $channels[] = new PrivateChannel('App.Models.Org.User.' . $primaryTenant->user_id);
+            $channels[] = new PrivateChannel('App.Models.Org.User.'.$primaryTenant->user_id);
         }
 
         return $channels;

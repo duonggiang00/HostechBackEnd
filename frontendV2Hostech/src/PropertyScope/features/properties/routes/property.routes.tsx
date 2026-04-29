@@ -5,14 +5,14 @@ import PropertyDetailPage from '../pages/PropertyDetailPage';
 export const propertyRoutes: RouteObject[] = [
   {
     path: 'dashboard',
-    element: <PropertyDetailPage defaultTab="dashboard" />,
+    element: <PropertyDetailPage />,
   },
   {
     path: 'building-view',
-    element: <PropertyDetailPage defaultTab="layout" />,
+    element: <PropertyDetailPage />,
   },
   {
     path: 'rooms',
-    element: <PropertyDetailPage defaultTab="rooms" />,
+    element: <PropertyDetailPage />,
   },
 ];

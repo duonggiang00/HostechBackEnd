@@ -7,6 +7,8 @@ uses(RefreshDatabase::class);
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Service\Service;
+use Database\Seeders\RBACSeeder;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
@@ -18,7 +20,7 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('admin can create service with initial rate', function () {
@@ -108,7 +110,7 @@ test('owner can view their services only', function () {
 
     // Create service for Org 2 manually since we don't have Factory for Service yet
     $service2 = Service::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org2->id,
         'code' => 'SVC_ORG_2',
         'name' => 'Service Org 2',
@@ -155,7 +157,7 @@ test('admin can list services of specific org', function () {
 
     // Create service for this org
     $service = Service::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org->id,
         'code' => 'ORG_SVC',
         'name' => 'Org Service',

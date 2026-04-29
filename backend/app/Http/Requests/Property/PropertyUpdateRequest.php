@@ -13,7 +13,7 @@ class PropertyUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $propertyId = $this->route('id');
+        $propertyId = $this->route('property') ?? $this->route('id');
 
         return [
             'code' => ['sometimes', 'string', 'max:50', 'unique:properties,code,'.$propertyId.',id'],

@@ -8,10 +8,8 @@ use App\Models\Meter\MeterReading;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PerformMasterAggregation implements ShouldQueue
 {
@@ -26,7 +24,7 @@ class PerformMasterAggregation implements ShouldQueue
         $meter = $reading->meter;
 
         // Skip if already a master meter or if no property link
-        if ($meter->is_master || !$meter->property_id) {
+        if ($meter->is_master || ! $meter->property_id) {
             return;
         }
 
@@ -36,7 +34,7 @@ class PerformMasterAggregation implements ShouldQueue
             ->where('is_master', true)
             ->first();
 
-        if (!$masterMeter) {
+        if (! $masterMeter) {
             return;
         }
 
@@ -58,17 +56,17 @@ class PerformMasterAggregation implements ShouldQueue
             DB::transaction(function () use ($masterMeter, $periodStartStr, $periodEndStr, $reading) {
                 // Sum up the consumption for all room meters for the given period
                 $totalPropertyUsage = MeterReading::whereHas('meter', function ($query) use ($masterMeter) {
-                        $query->where('property_id', $masterMeter->property_id)
-                            ->where('type', $masterMeter->type)
-                            ->where('is_master', false);
-                    })
+                    $query->where('property_id', $masterMeter->property_id)
+                        ->where('type', $masterMeter->type)
+                        ->where('is_master', false);
+                })
                     ->whereDate('period_start', $periodStartStr)
                     ->whereDate('period_end', $periodEndStr)
-                    ->where('status', 'APPROVED')
+                    ->whereIn('status', MeterReading::FINALIZED_STATUSES)
                     ->sum('consumption');
 
                 // Ensure Master Meter has initial reading anchor
-                if (!isset($masterMeter->meta['initial_reading'])) {
+                if (! isset($masterMeter->meta['initial_reading'])) {
                     $meta = $masterMeter->meta ?? [];
                     $meta['initial_reading'] = $masterMeter->base_reading;
                     $masterMeter->update(['meta' => $meta]);
@@ -77,7 +75,7 @@ class PerformMasterAggregation implements ShouldQueue
                 // Get previous master reading
                 $prevMaster = MeterReading::where('meter_id', $masterMeter->id)
                     ->whereDate('period_end', '<=', $periodStartStr)
-                    ->where('status', 'APPROVED')
+                    ->whereIn('status', MeterReading::FINALIZED_STATUSES)
                     ->orderBy('period_end', 'desc')
                     ->first();
 

@@ -86,7 +86,7 @@ class NotificationTemplate extends Model
     {
         $replacePairs = [];
         foreach ($data as $key => $value) {
-            $replacePairs["{{" . $key . "}}"] = (string) $value;
+            $replacePairs['{{'.$key.'}}'] = (string) $value;
         }
 
         return [

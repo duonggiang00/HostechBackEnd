@@ -4,13 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import {
   CheckCircle, XCircle, Send, Loader2, Filter,
   Zap, Droplet, RefreshCw, ChevronLeft, ChevronRight,
-  FileText, Camera, LayoutList
+  FileText, LayoutList
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { meteringApi } from '../api/metering';
 import type { MeterReading, MeterReadingStatus } from '../types';
 import { ReadingStatusBadge } from '../components/ReadingStatusBadge';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { ReadingDetailModal } from '../components/ReadingDetailModal';
 
 const formatDate = (s?: string | null) => {
   if (!s) return '-';
@@ -37,6 +38,7 @@ export default function GlobalMeterReadingPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const hasRole = useAuthStore((s) => s.hasRole);
   const isManager = hasRole(['Manager', 'Owner']);
+  const isStaff = hasRole('Staff');
 
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
@@ -45,10 +47,14 @@ export default function GlobalMeterReadingPage() {
 
   // Track selected rows for bulk actions (Manager only)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedForSubmit, setSelectedForSubmit] = useState<Set<string>>(new Set()); // For staff bulk submit
   const [isBulkActing, setIsBulkActing] = useState(false);
 
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
+
+  // Detail Modal State
+  const [selectedReadingForModal, setSelectedReadingForModal] = useState<MeterReading | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['global-readings', propertyId, statusFilter, typeFilter, page],
@@ -58,7 +64,7 @@ export default function GlobalMeterReadingPage() {
         status: statusFilter || undefined,
         page,
         per_page: perPage,
-        include: 'meter,meter.room,submittedBy,approvedBy',
+        include: 'meter,meter.room,submittedBy,approvedBy,media',
       });
       return res;
     },
@@ -104,8 +110,8 @@ export default function GlobalMeterReadingPage() {
       toast.success(`Đã duyệt ${selectedIds.size} chốt số`);
       setSelectedIds(new Set());
       refetch();
-    } catch {
-      toast.error('Có lỗi khi duyệt hàng loạt');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi khi duyệt hàng loạt');
     } finally {
       setIsBulkActing(false);
     }
@@ -121,8 +127,24 @@ export default function GlobalMeterReadingPage() {
       setShowRejectModal(false);
       setRejectReason('');
       refetch();
-    } catch {
-      toast.error('Có lỗi khi từ chối hàng loạt');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi khi từ chối hàng loạt');
+    } finally {
+      setIsBulkActing(false);
+    }
+  };
+
+  // Staff bulk submit DRAFT readings
+  const handleBulkSubmit = async () => {
+    if (selectedForSubmit.size === 0) return;
+    setIsBulkActing(true);
+    try {
+      await meteringApi.bulkSubmitReadings(Array.from(selectedForSubmit));
+      toast.success(`Đã gửi ${selectedForSubmit.size} bản nháp để duyệt`);
+      setSelectedForSubmit(new Set());
+      refetch();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Có lỗi khi gửi hàng loạt');
     } finally {
       setIsBulkActing(false);
     }
@@ -210,6 +232,31 @@ export default function GlobalMeterReadingPage() {
         </div>
       )}
 
+      {/* Bulk Action Bar — Staff submit DRAFT readings */}
+      {isStaff && !isManager && selectedForSubmit.size > 0 && (
+        <div className="flex items-center gap-3 px-5 py-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-[12px]">
+          <span className="text-sm font-bold text-amber-900 dark:text-amber-300">
+            Đã chọn {selectedForSubmit.size} bản nháp để gửi duyệt
+          </span>
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={handleBulkSubmit}
+              disabled={isBulkActing}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl transition-colors"
+            >
+              {isBulkActing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Gửi duyệt
+            </button>
+            <button
+              onClick={() => setSelectedForSubmit(new Set())}
+              className="px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+            >
+              Bỏ chọn
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-[12px] shadow-sm overflow-hidden">
         {isLoading ? (
@@ -230,13 +277,24 @@ export default function GlobalMeterReadingPage() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800/60">
-                  {/* Checkbox col — only show when Manager views SUBMITTED */}
-                  {isManager && statusFilter === 'SUBMITTED' && (
+                  {/* Checkbox col — Manager: SUBMITTED only | Staff: DRAFT only */}
+                  {((isManager && statusFilter === 'SUBMITTED') || (isStaff && !isManager && statusFilter === 'DRAFT')) && (
                     <th className="p-4 w-12 text-center">
                       <input
                         type="checkbox"
-                        checked={selectedIds.size === submittedReadings.length && submittedReadings.length > 0}
-                        onChange={toggleSelectAll}
+                        checked={isManager ? (selectedIds.size === submittedReadings.length && submittedReadings.length > 0) : (selectedForSubmit.size > 0 && selectedForSubmit.size === readings.length)}
+                        onChange={() => {
+                          if (isManager) {
+                            toggleSelectAll();
+                          } else {
+                            // Staff select all drafts
+                            if (selectedForSubmit.size === readings.length) {
+                              setSelectedForSubmit(new Set());
+                            } else {
+                              setSelectedForSubmit(new Set(readings.map(r => r.id)));
+                            }
+                          }
+                        }}
                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900/50 text-blue-900 focus:ring-blue-500"
                       />
                     </th>
@@ -248,6 +306,7 @@ export default function GlobalMeterReadingPage() {
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Tiêu thụ</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Trạng thái</th>
                   <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest">Người chốt</th>
+                  <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-center">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -255,19 +314,30 @@ export default function GlobalMeterReadingPage() {
                   const meter = reading.meter;
                   const room = meter?.room;
                   const unit = meter?.type === 'ELECTRIC' ? 'kWh' : 'm³';
-                  const isSelected = selectedIds.has(reading.id);
+                  const isSelected = isManager ? selectedIds.has(reading.id) : selectedForSubmit.has(reading.id);
+                  const isSelectableByManager = isManager && statusFilter === 'SUBMITTED';
+                  const isSelectableByStaff = isStaff && !isManager && statusFilter === 'DRAFT';
 
                   return (
                     <tr
                       key={reading.id}
                       className={`group border-b border-gray-50 dark:border-gray-800/60 transition-colors hover:bg-gray-50/50 dark:hover:bg-gray-800/20 ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
                     >
-                      {isManager && statusFilter === 'SUBMITTED' && (
+                      {(isSelectableByManager || isSelectableByStaff) && (
                         <td className="p-4 w-12 text-center">
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => toggleSelect(reading.id)}
+                            onChange={() => {
+                              if (isManager) {
+                                toggleSelect(reading.id);
+                              } else {
+                                const next = new Set(selectedForSubmit);
+                                if (next.has(reading.id)) next.delete(reading.id);
+                                else next.add(reading.id);
+                                setSelectedForSubmit(next);
+                              }
+                            }}
                             className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900/50 text-blue-900 focus:ring-blue-500"
                           />
                         </td>
@@ -332,6 +402,15 @@ export default function GlobalMeterReadingPage() {
                            (reading as any).approvedBy?.full_name || 
                            '-'}
                         </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <button
+                          onClick={() => setSelectedReadingForModal(reading)}
+                          className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-all active:scale-90 group-hover:shadow-sm border border-transparent hover:border-indigo-100 dark:hover:border-indigo-500/20"
+                          title="Xem chi tiết"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -402,6 +481,12 @@ export default function GlobalMeterReadingPage() {
           </div>
         </div>
       )}
+
+      {/* Detail Modal */}
+      <ReadingDetailModal 
+        reading={selectedReadingForModal}
+        onClose={() => setSelectedReadingForModal(null)}
+      />
     </div>
   );
 }

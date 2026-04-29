@@ -32,7 +32,7 @@ export function ContractStatusTimeline({ histories, isLoading }: ContractStatusT
 
   if (!histories || histories.length === 0) {
     return (
-      <div className="text-center p-8 text-slate-500 italic">
+      <div className="text-center p-8 text-slate-500 ">
         Chưa có thiết lập lịch sử cập nhật.
       </div>
     );
@@ -66,7 +66,7 @@ export function ContractStatusTimeline({ histories, isLoading }: ContractStatusT
                     {history.new_status}
                   </span>
                 </div>
-                <time className="text-xs font-semibold text-slate-400 italic shrink-0">
+                <time className="text-xs font-semibold text-slate-400 shrink-0">
                   {format(new Date(history.created_at), 'dd/MM/yyyy HH:mm')}
                 </time>
               </div>

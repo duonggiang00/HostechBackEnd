@@ -11,9 +11,9 @@ class BillingBatchStarted
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public string  $propertyId,
-        public Carbon  $periodMonth,
-        public int     $totalContracts,
+        public string $propertyId,
+        public Carbon $periodMonth,
+        public int $totalContracts,
         public ?string $triggeredByUserId = null
     ) {}
 }

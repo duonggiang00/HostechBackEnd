@@ -1,32 +1,21 @@
 import { useState } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useUser, usePropertyUsers } from '../hooks/usePropertyUsers';
 import { toast } from 'react-hot-toast';
 import { 
-  ArrowLeft, Mail, Phone, ShieldAlert, 
+  Mail, Phone, ShieldAlert, 
   MapPin, Calendar, CreditCard, Clock, 
   Lock, Unlock, ShieldCheck, BadgeCheck, DoorOpen
 } from 'lucide-react';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function UserDetailPage() {
-  const { propertyId, userId } = useParams<{ propertyId: string, userId: string }>();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const { userId } = useParams<{ propertyId: string, userId: string }>();
   
   const { data: user, isLoading, isError } = useUser(userId);
   const { updateUserMutation } = usePropertyUsers();
   const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleBack = () => {
-    if (location.state?.from === 'room-detail' && location.state?.roomId) {
-      navigate(`/properties/${propertyId}/rooms/${location.state.roomId}`, { 
-        state: { activeTab: 'tenants' } 
-      });
-    } else {
-      navigate(`/properties/${propertyId}/users`);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -46,13 +35,7 @@ export default function UserDetailPage() {
         <p className="text-slate-500 dark:text-slate-400 text-center mb-8 max-w-sm">
           Tài khoản này có thể chưa được kích hoạt hoặc đã bị xóa khỏi hệ thống. Vui lòng kiểm tra lại ID người dùng.
         </p>
-        <button 
-          onClick={handleBack}
-          className="flex items-center gap-2 px-8 py-3 bg-[#1E3A8A] text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:scale-[1.02] active:scale-95 transition-all"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Quay lại danh sách
-        </button>
+        <PageBackButton className="px-8 py-3 rounded-xl shadow-lg shadow-blue-500/20" />
       </div>
     );
   }
@@ -81,12 +64,7 @@ export default function UserDetailPage() {
       {/* Nút Quay lại & Tiêu đề */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={handleBack}
-            className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[#4B5563] hover:text-[#1E3A8A] dark:hover:text-[#1E3A8A] transition-all shadow-sm group"
-          >
-            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-          </button>
+          <PageBackButton className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm" />
           <div>
             <h1 className="text-24 font-bold text-[#111827] dark:text-white">
               Hồ sơ người dùng
@@ -197,7 +175,7 @@ export default function UserDetailPage() {
                 <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
                   <DoorOpen className="w-5 h-5" />
                 </div>
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 italic">Chưa được gán phòng nào</p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 ">Chưa được gán phòng nào</p>
               </div>
             )}
           </motion.div>

@@ -32,7 +32,7 @@ return [
 
     // URL frontend redirect sau khi khách thanh toán xong
     // VNPay sẽ redirect browser về đây kèm query params
-    'return_url' => env('VNPAY_RETURN_URL', env('FRONTEND_URL', 'http://127.0.0.1:5173') . '/payment/vnpay/return'),
+    'return_url' => env('VNPAY_RETURN_URL', env('FRONTEND_URL', 'http://127.0.0.1:5173').'/payment/vnpay/return'),
 
     // Local sandbox fallback: nếu chưa có IPN public, cho phép chốt giao dịch từ return URL.
     'trust_return_as_ipn' => filter_var(env('VNPAY_TRUST_RETURN_AS_IPN', env('APP_ENV', 'production') === 'local'), FILTER_VALIDATE_BOOL),

@@ -1,7 +1,11 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\FortifyServiceProvider;
+
 return [
-    App\Providers\AuthServiceProvider::class,
-    App\Providers\AppServiceProvider::class,
-    App\Providers\FortifyServiceProvider::class,
+    AuthServiceProvider::class,
+    AppServiceProvider::class,
+    FortifyServiceProvider::class,
 ];

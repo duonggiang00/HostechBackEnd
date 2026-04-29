@@ -8,10 +8,12 @@ import {
 
 // Import local components
 import FinancialOverview from '@/OrgScope/features/finance/components/FinancialOverview';
+import OrgDashboardSummary from '@/OrgScope/features/finance/components/OrgDashboardSummary';
 import InvoiceGenerator from '@/OrgScope/features/finance/components/InvoiceGenerator';
 import PaymentAllocationEngine from '@/OrgScope/features/finance/components/PaymentAllocationEngine';
 import ServiceCatalog from '@/PropertyScope/features/operations/components/ServiceCatalog';
 import InvoiceProfessionalView from '@/OrgScope/features/finance/components/InvoiceProfessionalView';
+import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 
 type FinanceTab = 'overview' | 'generation' | 'reconciliation' | 'catalog';
 
@@ -27,7 +29,7 @@ export default function FinanceDashboard() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0A0A0B]">
+    <div className="flex h-full min-h-0 flex-col bg-[#0A0A0B]">
       {/* Tab Navigation Bar */}
       <div className="bg-[#0A0A0B] border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -59,18 +61,31 @@ export default function FinanceDashboard() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
+        <div className="hidden items-center gap-3 sm:flex">
+          <button
+            type="button"
             onClick={() => setShowInvoicePreview(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 transition-all text-xs font-bold"
+            className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-xs font-bold text-slate-300 transition-all hover:bg-white/10"
           >
-            <Printer className="w-4 h-4" /> Mẫu hóa đơn
+            <Printer className="h-4 w-4" /> Mẫu hóa đơn
           </button>
+          <ThemeToggle />
         </div>
       </div>
 
+      <div className="flex border-b border-white/10 px-4 py-2 sm:hidden">
+        <button
+          type="button"
+          onClick={() => setShowInvoicePreview(true)}
+          className="mr-2 flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-slate-300"
+        >
+          <Printer className="h-4 w-4" /> Mẫu hóa đơn
+        </button>
+        <ThemeToggle />
+      </div>
+
       {/* Main Content Area */}
-      <div className="flex-1 overflow-auto p-8 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent_50%)]">
+      <div className="min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent_50%)] p-4 md:p-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -80,7 +95,12 @@ export default function FinanceDashboard() {
             transition={{ duration: 0.2 }}
             className="max-w-[1400px] mx-auto"
           >
-            {activeTab === 'overview' && <FinancialOverview />}
+            {activeTab === 'overview' && (
+              <>
+                <OrgDashboardSummary />
+                <FinancialOverview />
+              </>
+            )}
             {activeTab === 'generation' && <InvoiceGenerator />}
             {activeTab === 'reconciliation' && <PaymentAllocationEngine />}
             {activeTab === 'catalog' && <ServiceCatalog />}

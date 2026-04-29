@@ -41,6 +41,21 @@ class UserController extends Controller
                     $q->where('name', 'like', "%{$value}%");
                 });
             }),
+            AllowedFilter::callback('role_group', function (Builder $query, $value) {
+                $group = strtolower((string) $value);
+                if ($group === 'tenant') {
+                    $query->whereHas('roles', function (Builder $q) {
+                        $q->where('name', 'Tenant');
+                    });
+
+                    return;
+                }
+                if ($group === 'property_staff') {
+                    $query->whereHas('roles', function (Builder $q) {
+                        $q->whereIn('name', ['Staff', 'Manager']);
+                    });
+                }
+            }),
             'email',
             'is_active',
             AllowedFilter::callback('property_id', function (Builder $query, $value) {

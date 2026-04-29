@@ -2,7 +2,7 @@
 
 namespace App\Observers;
 
-use App\Events\Finance\PaymentApproved;
+use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Events\Finance\PaymentVoided;
 use App\Models\Finance\Payment;
 use App\Models\Finance\PaymentStatusHistory;
@@ -19,7 +19,7 @@ class PaymentObserver
         $this->recordStatusHistory($payment, true);
 
         if ($payment->status === 'APPROVED') {
-            PaymentApproved::dispatch($payment);
+            PaymentSuccessfullyVerified::dispatch($payment);
         }
 
         $this->clearFinancialCaches($payment);
@@ -34,7 +34,7 @@ class PaymentObserver
             $this->recordStatusHistory($payment);
 
             if ($payment->status === 'APPROVED') {
-                PaymentApproved::dispatch($payment);
+                PaymentSuccessfullyVerified::dispatch($payment);
             } elseif ($payment->status === 'VOIDED' && $payment->getOriginal('status') === 'APPROVED') {
                 // Đảo ngược sổ cái nếu thanh toán đã duyệt bị hủy
                 PaymentVoided::dispatch($payment);
@@ -75,7 +75,7 @@ class PaymentObserver
                 'changed_by_user_id' => request()->user()?->id,
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to record payment status history: " . $e->getMessage());
+            Log::error('Failed to record payment status history: '.$e->getMessage());
         }
     }
 
@@ -97,10 +97,10 @@ class PaymentObserver
 
             // Xóa cache Manager cá nhân
             DB::table('cache')
-                ->where('key', 'like', "%dashboard:manager:%")
+                ->where('key', 'like', '%dashboard:manager:%')
                 ->delete();
         } catch (\Exception $e) {
-            Log::warning("Failed to clear dashboard cache for payment: " . $e->getMessage());
+            Log::warning('Failed to clear dashboard cache for payment: '.$e->getMessage());
         }
     }
 }

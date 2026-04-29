@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Plus, Minus, Trash2, Layers, X, Info } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { BuildingFloor, BuildingRoom, RoomTemplateOption } from '../types';
 import type { RoomStatus } from '@/PropertyScope/features/rooms/types';
 
@@ -12,6 +13,8 @@ interface BuildingOverviewProps {
   selectedRoom?: BuildingRoom | null;
   // Edit Mode callbacks — state lives in Page
   onFloorsChange?: (floors: BuildingFloor[]) => void;
+  propertyArea?: number;
+  propertySharedArea?: number;
 }
 
 export function BuildingOverview({
@@ -21,11 +24,26 @@ export function BuildingOverview({
   isLoading = false,
   onRoomSelect,
   onFloorsChange,
+  propertyArea = 0,
+  propertySharedArea = 0,
 }: BuildingOverviewProps) {
   const [hoveredDivider, setHoveredDivider] = useState<number | null>(null);
   const [hoveredRoom, setHoveredRoom] = useState<string | null>(null);
   const [hoveredFloorAdd, setHoveredFloorAdd] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const hasAutoSelected = useRef(false);
+
+  useEffect(() => {
+    if (isEditMode) {
+      if (templates.length > 0 && !hasAutoSelected.current) {
+        setSelectedTemplate(templates[0].id);
+        hasAutoSelected.current = true;
+      }
+    } else {
+      setSelectedTemplate('');
+      hasAutoSelected.current = false;
+    }
+  }, [isEditMode, templates]);
 
   // Calculate max columns for uniform grid (based on actual occupancy, not count)
   const maxColumns = Math.max(4, ...(floors || []).map(f => 
@@ -72,6 +90,18 @@ export function BuildingOverview({
     const roomTempId = `temp-room-${Date.now()}`;
     
     const template = templates.find(t => t.id === selectedTemplate);
+    const newRoomArea = template?.area || 25;
+
+    const usableArea = Math.max(0, propertyArea - propertySharedArea);
+    const usedArea = floor.rooms.reduce((sum, r) => sum + Number(r.area || 0), 0);
+    const remainingArea = Math.max(0, usableArea - usedArea);
+
+    if (usableArea > 0 && newRoomArea > remainingArea) {
+      toast.error(`Không đủ diện tích khả dụng! Còn trống: ${remainingArea.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}m², yêu cầu: ${newRoomArea.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}m²`, {
+        style: { maxWidth: 500, fontSize: '14px', fontWeight: 'bold' }
+      });
+      return;
+    }
     
     const newRoom: BuildingRoom = {
       id: roomTempId,
@@ -79,7 +109,7 @@ export function BuildingOverview({
       code: `${floorNumber}${roomSuffix}`, // E.g., 101, 102, 201...
       floor_id: floorId,
       status: 'available' as RoomStatus,
-      area: template?.area || 25,
+      area: newRoomArea,
       base_price: template?.base_price || 3000000,
       template_id: selectedTemplate || undefined,
       isDraft: true,
@@ -172,7 +202,7 @@ export function BuildingOverview({
                 <select
                   value={selectedTemplate}
                   onChange={e => setSelectedTemplate(e.target.value)}
-                  className="flex-1 bg-transparent border-none text-sm font-bold text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer py-2"
+                  className="flex-1 bg-transparent border-none text-base font-bold text-slate-700 dark:text-slate-200 focus:ring-0 cursor-pointer py-2"
                 >
                   <option value="">— Chọn mẫu phòng để vẽ nhanh —</option>
                   {templates.map(tpl => (
@@ -207,7 +237,7 @@ export function BuildingOverview({
             </div>
             
             {selectedTemplate && (
-              <div className="mt-2 ml-6 flex items-center gap-2 text-[10px] text-slate-400 font-bold italic animate-in fade-in duration-700">
+              <div className="mt-2 ml-6 flex items-center gap-2 text-[10px] text-slate-400 font-bold animate-in fade-in duration-700">
                 <Info className="w-3 h-3 text-indigo-400" />
                 Giá thuê, diện tích & dịch vụ sẽ được tự động kế thừa vào mỗi ô phòng bạn vẽ.
               </div>
@@ -225,7 +255,7 @@ export function BuildingOverview({
           ].map(({ color, label }) => (
             <div key={label} className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded ${color} border`} />
-              <span className="text-xs text-slate-600 font-medium whitespace-nowrap">{label}</span>
+              <span className="text-sm text-slate-600 font-medium whitespace-nowrap">{label}</span>
             </div>
           ))}
         </div>
@@ -254,14 +284,34 @@ export function BuildingOverview({
               <div key={floorData.id}>
                 <div className="flex">
                   {/* Floor label */}
-                  <div className="w-20 flex flex-col items-center justify-center bg-slate-50/80 border-r-2 border-slate-300 py-6">
-                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Tầng</span>
-                    <span className={`text-slate-800 text-xl font-black leading-none ${floorData.isDraft ? 'text-indigo-400' : ''}`}>
+                  <div className="w-32 flex flex-col items-center justify-center bg-slate-50/80 border-r-2 border-slate-300 py-6">
+                    <span className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-0.5">Tầng</span>
+                    <span className={`text-slate-800 text-2xl font-black leading-none ${floorData.isDraft ? 'text-indigo-400' : ''}`}>
                       {floorData.floor_number}
                     </span>
                     {floorData.isDraft && (
                       <span className="text-[8px] text-indigo-400 font-bold mt-0.5">MỚI</span>
                     )}
+
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 w-full px-2 flex flex-col items-center gap-2">
+                      {(() => {
+                        const usableArea = Math.max(0, propertyArea - propertySharedArea);
+                        const usedArea = floorData.rooms.reduce((sum, r) => sum + Number(r.area || 0), 0);
+                        const remainingArea = Math.max(0, usableArea - usedArea);
+                        
+                        return (
+                            <div className="flex flex-col items-center w-full">
+                               <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter mb-0.5" title="Diên tích tòa nhà - Lối đi chung - DT đã dùng">Còn trống</span>
+                              <div className="flex items-baseline gap-0.5">
+                                <span className="text-base font-black text-emerald-600">
+                                  {remainingArea > 0 ? remainingArea.toLocaleString('vi-VN', { maximumFractionDigits: 2 }) : 0}
+                                </span>
+                                <span className="text-[10px] font-bold text-emerald-500 uppercase">m²</span>
+                              </div>
+                            </div>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* Rooms area */}
@@ -290,13 +340,18 @@ export function BuildingOverview({
                             onClick={() => onRoomSelect?.(room)}
                           >
                             <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover/room:opacity-100 transition-opacity rounded-lg pointer-events-none" />
-                            <span className="text-base font-bold leading-none z-10">{room.code}</span>
-                            <span className="text-[9px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none z-10">
+                            <span className="text-xl font-bold leading-none z-10">{room.code}</span>
+                            <span className="text-[11px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none z-10">
                               {room.isDraft ? 'Draft' :
                                 room.status === 'occupied' ? 'Đã thuê' :
                               room.status === 'available' ? 'Trống' :
                               room.status === 'draft' ? 'Nháp/Chưa duyệt' : 'Bảo trì'}
                             </span>
+                            {room.area ? (
+                              <span className="text-[10px] mt-1.5 font-bold opacity-70 z-10">
+                                {Number(room.area).toLocaleString('vi-VN', { maximumFractionDigits: 2 })}m²
+                              </span>
+                            ) : null}
                             {room.template_id && isEditMode && (
                               <div className="absolute bottom-1 right-1">
                                 <Layers className="w-2.5 h-2.5 text-indigo-400" />

@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { X, DollarSign, Calendar, CreditCard, Hash, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { usePayInvoice } from '../hooks/useBilling';
-import type { Invoice } from '@/PropertyScope/features/rooms/types';
+import { FileText } from 'lucide-react';
+import { useRecordPayment } from '../hooks/usePropertyInvoices';
+import type { Invoice } from '../types';
 
 const paySchema = z.object({
-  payment_method: z.string().min(1, 'Vui lòng chọn phương thức thanh toán'),
-  payment_date: z.string().min(1, 'Vui lòng chọn ngày thanh toán'),
+  method: z.string().min(1, 'Vui lòng chọn phương thức thanh toán'),
+  received_at: z.string().min(1, 'Vui lòng chọn ngày thanh toán'),
   amount: z.coerce.number().min(1, 'Số tiền phải lớn hơn 0'),
-  reference_number: z.string().optional(),
+  reference: z.string().optional(),
+  note: z.string().optional(),
 });
 
 type PayFormValues = z.infer<typeof paySchema>;
@@ -23,25 +25,26 @@ interface RecordPaymentModalProps {
 }
 
 export function RecordPaymentModal({ isOpen, onClose, invoice }: RecordPaymentModalProps) {
-  const { mutateAsync: payInvoice } = usePayInvoice();
+  const { mutateAsync: recordPayment } = useRecordPayment();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const remainingAmount = invoice.total_amount - invoice.paid_amount;
 
   const { register, handleSubmit, formState: { errors } } = useForm<PayFormValues>({
-    resolver: zodResolver(paySchema),
+    resolver: zodResolver(paySchema) as Resolver<PayFormValues>,
     defaultValues: {
-      payment_method: 'bank_transfer',
-      payment_date: new Date().toISOString().split('T')[0],
+      method: 'CASH',
+      received_at: new Date().toISOString().split('T')[0],
       amount: remainingAmount,
-      reference_number: '',
+      reference: '',
+      note: '',
     },
   });
 
   const onSubmit = async (data: PayFormValues) => {
     try {
       setIsSubmitting(true);
-      await payInvoice({ invoiceId: invoice.id, payload: data });
+      await recordPayment({ id: invoice.id, payload: data });
       toast.success('Đã ghi nhận thanh toán thành công!');
       onClose();
     } catch (error: any) {
@@ -65,7 +68,10 @@ export function RecordPaymentModal({ isOpen, onClose, invoice }: RecordPaymentMo
           <div>
             <h2 className="text-xl font-black text-slate-900 dark:text-white">Thanh toán hóa đơn</h2>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-              Hóa đơn ngày {new Date(invoice.issue_date).toLocaleDateString('vi-VN')}
+              Hóa đơn ngày{' '}
+              {invoice.issue_date
+                ? new Date(invoice.issue_date).toLocaleDateString('vi-VN')
+                : '—'}
             </p>
           </div>
           <button 
@@ -122,32 +128,31 @@ export function RecordPaymentModal({ isOpen, onClose, invoice }: RecordPaymentMo
                 Phương thức
               </label>
               <select
-                {...register('payment_method')}
+                {...register('method')}
                 className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all ${
-                  errors.payment_method ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
+                  errors.method ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
                 }`}
               >
-                <option value="bank_transfer">Chuyển khoản</option>
-                <option value="cash">Tiền mặt</option>
-                <option value="credit_card">Thẻ tín dụng</option>
+                <option value="BANK_TRANSFER">Chuyển khoản</option>
+                <option value="CASH">Tiền mặt</option>
               </select>
-              {errors.payment_method && <p className="text-rose-500 text-xs font-medium">{errors.payment_method.message}</p>}
+              {errors.method && <p className="text-rose-500 text-xs font-medium">{errors.method.message}</p>}
             </div>
 
             {/* Payment Date */}
             <div className="space-y-1.5">
               <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                Ngày thanh toán
+                Ngày nhận
               </label>
               <input
                 type="date"
-                {...register('payment_date')}
+                {...register('received_at')}
                 className={`w-full px-4 py-3 bg-white dark:bg-slate-900 border rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all ${
-                  errors.payment_date ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
+                  errors.received_at ? 'border-rose-300 dark:border-rose-500/50 focus:border-rose-500' : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500'
                 }`}
               />
-              {errors.payment_date && <p className="text-rose-500 text-xs font-medium">{errors.payment_date.message}</p>}
+              {errors.received_at && <p className="text-rose-500 text-xs font-medium">{errors.received_at.message}</p>}
             </div>
 
             {/* Reference */}
@@ -159,7 +164,21 @@ export function RecordPaymentModal({ isOpen, onClose, invoice }: RecordPaymentMo
               <input
                 type="text"
                 placeholder="VD: FT211..."
-                {...register('reference_number')}
+                {...register('reference')}
+                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all"
+              />
+            </div>
+
+            {/* Note */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-slate-400" />
+                Ghi chú (Không bắt buộc)
+              </label>
+              <input
+                type="text"
+                placeholder="Ghi chú nội bộ cho giao dịch"
+                {...register('note')}
                 className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all"
               />
             </div>

@@ -7,6 +7,7 @@ use App\Listeners\Meter\PerformBatchMasterAggregation;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Org\Org;
+use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Service\Service;
@@ -14,6 +15,7 @@ use App\Services\Meter\MeterReadingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MeterAggregationTest extends TestCase
@@ -23,9 +25,13 @@ class MeterAggregationTest extends TestCase
     // ─── Fixtures ────────────────────────────────────────────────────────────
 
     private Org $org;
+
     private Property $property;
+
     private Meter $masterMeter;
+
     private Meter $roomMeter;
+
     private MeterReadingService $service;
 
     protected function setUp(): void
@@ -33,37 +39,37 @@ class MeterAggregationTest extends TestCase
         parent::setUp();
         $this->service = app(MeterReadingService::class);
 
-        $this->org      = Org::factory()->create();
+        $this->org = Org::factory()->create();
         $this->property = Property::factory()->create(['org_id' => $this->org->id]);
-        $room           = Room::factory()->create([
+        $room = Room::factory()->create([
             'property_id' => $this->property->id,
-            'org_id'      => $this->org->id,
+            'org_id' => $this->org->id,
         ]);
 
         $electricService = Service::factory()->create([
-            'org_id'    => $this->org->id,
-            'name'      => 'Điện',
+            'org_id' => $this->org->id,
+            'name' => 'Điện',
             'calc_mode' => 'PER_METER',
-            'unit'      => 'kWh',
+            'unit' => 'kWh',
         ]);
 
         $this->masterMeter = Meter::factory()->create([
             'property_id' => $this->property->id,
-            'org_id'      => $this->org->id,
-            'is_master'   => true,
+            'org_id' => $this->org->id,
+            'is_master' => true,
             'base_reading' => 1000,
-            'service_id'  => $electricService->id,
-            'type'        => 'ELECTRIC',
+            'service_id' => $electricService->id,
+            'type' => 'ELECTRIC',
         ]);
 
         $this->roomMeter = Meter::factory()->create([
-            'room_id'     => $room->id,
+            'room_id' => $room->id,
             'property_id' => $this->property->id,
-            'org_id'      => $this->org->id,
-            'is_master'   => false,
+            'org_id' => $this->org->id,
+            'is_master' => false,
             'base_reading' => 0,
-            'service_id'  => $electricService->id,
-            'type'        => 'ELECTRIC',
+            'service_id' => $electricService->id,
+            'type' => 'ELECTRIC',
         ]);
     }
 
@@ -75,7 +81,7 @@ class MeterAggregationTest extends TestCase
      */
     private function handleBatchAggregation(array $readingIds): void
     {
-        $event    = new BulkMeterReadingsApproved($readingIds);
+        $event = new BulkMeterReadingsApproved($readingIds);
         $listener = app(PerformBatchMasterAggregation::class);
         $listener->handle($event);
     }
@@ -87,13 +93,13 @@ class MeterAggregationTest extends TestCase
     {
         // Room reads 50 in January (base = 0), consumption = 50
         $reading = MeterReading::factory()->create([
-            'meter_id'     => $this->roomMeter->id,
+            'meter_id' => $this->roomMeter->id,
             'reading_value' => 50,
-            'consumption'  => 50,
-            'status'       => 'APPROVED',
+            'consumption' => 50,
+            'status' => 'APPROVED',
             'period_start' => '2024-01-01',
-            'period_end'   => '2024-01-31',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-01-31',
+            'org_id' => $this->org->id,
         ]);
 
         $this->handleBatchAggregation([$reading->id]);
@@ -105,7 +111,7 @@ class MeterAggregationTest extends TestCase
         // Master should be base (1000) + room consumption (50) = 1050
         $this->assertNotNull($masterReading, 'Master meter reading should be created');
         $this->assertEquals(1050, $masterReading->reading_value);
-        $this->assertEquals(50,   $masterReading->consumption);
+        $this->assertEquals(50, $masterReading->consumption);
         $this->assertEquals('APPROVED', $masterReading->status);
     }
 
@@ -114,25 +120,25 @@ class MeterAggregationTest extends TestCase
     {
         // Period 1: Jan — consumption 50
         $r1 = MeterReading::factory()->create([
-            'meter_id'     => $this->roomMeter->id,
+            'meter_id' => $this->roomMeter->id,
             'reading_value' => 50,
-            'consumption'  => 50,
-            'status'       => 'APPROVED',
+            'consumption' => 50,
+            'status' => 'APPROVED',
             'period_start' => '2024-01-01',
-            'period_end'   => '2024-01-31',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-01-31',
+            'org_id' => $this->org->id,
         ]);
         $this->handleBatchAggregation([$r1->id]);
 
         // Period 2: Feb — consumption 70
         $r2 = MeterReading::factory()->create([
-            'meter_id'     => $this->roomMeter->id,
+            'meter_id' => $this->roomMeter->id,
             'reading_value' => 120,
-            'consumption'  => 70,
-            'status'       => 'APPROVED',
+            'consumption' => 70,
+            'status' => 'APPROVED',
             'period_start' => '2024-02-01',
-            'period_end'   => '2024-02-28',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-02-28',
+            'org_id' => $this->org->id,
         ]);
         $this->handleBatchAggregation([$r2->id]);
 
@@ -142,7 +148,7 @@ class MeterAggregationTest extends TestCase
 
         // 1050 (prev master) + 70 = 1120
         $this->assertEquals(1120, $master2->reading_value);
-        $this->assertEquals(70,   $master2->consumption);
+        $this->assertEquals(70, $master2->consumption);
     }
 
     /** @test */
@@ -151,37 +157,37 @@ class MeterAggregationTest extends TestCase
         // Add a second room meter to the same property
         $room2 = Room::factory()->create([
             'property_id' => $this->property->id,
-            'org_id'      => $this->org->id,
+            'org_id' => $this->org->id,
         ]);
 
         $roomMeter2 = Meter::factory()->create([
-            'room_id'     => $room2->id,
+            'room_id' => $room2->id,
             'property_id' => $this->property->id,
-            'org_id'      => $this->org->id,
-            'is_master'   => false,
+            'org_id' => $this->org->id,
+            'is_master' => false,
             'base_reading' => 0,
-            'service_id'  => $this->masterMeter->service_id,
-            'type'        => 'ELECTRIC',
+            'service_id' => $this->masterMeter->service_id,
+            'type' => 'ELECTRIC',
         ]);
 
         // Both rooms read in January
         $r1 = MeterReading::factory()->create([
-            'meter_id'     => $this->roomMeter->id,
+            'meter_id' => $this->roomMeter->id,
             'reading_value' => 50,
-            'consumption'  => 50,
-            'status'       => 'APPROVED',
+            'consumption' => 50,
+            'status' => 'APPROVED',
             'period_start' => '2024-01-01',
-            'period_end'   => '2024-01-31',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-01-31',
+            'org_id' => $this->org->id,
         ]);
         $r2 = MeterReading::factory()->create([
-            'meter_id'     => $roomMeter2->id,
+            'meter_id' => $roomMeter2->id,
             'reading_value' => 80,
-            'consumption'  => 80,
-            'status'       => 'APPROVED',
+            'consumption' => 80,
+            'status' => 'APPROVED',
             'period_start' => '2024-01-01',
-            'period_end'   => '2024-01-31',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-01-31',
+            'org_id' => $this->org->id,
         ]);
 
         // Both IDs in ONE batch event
@@ -194,7 +200,7 @@ class MeterAggregationTest extends TestCase
         // Master = 1000 + (50 + 80) = 1130
         $this->assertNotNull($master, 'Master meter reading should exist');
         $this->assertEquals(1130, $master->reading_value);
-        $this->assertEquals(130,  $master->consumption);
+        $this->assertEquals(130, $master->consumption);
     }
 
     /** @test */
@@ -202,13 +208,13 @@ class MeterAggregationTest extends TestCase
     {
         // A reading on the master meter itself should be ignored
         $masterReading = MeterReading::factory()->create([
-            'meter_id'     => $this->masterMeter->id,
+            'meter_id' => $this->masterMeter->id,
             'reading_value' => 1050,
-            'consumption'  => 50,
-            'status'       => 'APPROVED',
+            'consumption' => 50,
+            'status' => 'APPROVED',
             'period_start' => '2024-01-01',
-            'period_end'   => '2024-01-31',
-            'org_id'       => $this->org->id,
+            'period_end' => '2024-01-31',
+            'org_id' => $this->org->id,
         ]);
 
         $this->handleBatchAggregation([$masterReading->id]);
@@ -224,20 +230,20 @@ class MeterAggregationTest extends TestCase
         Event::fake([BulkMeterReadingsApproved::class]);
 
         // Simulate Manager creating readings (auto-approved because of role)
-        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Manager']);
-        $manager = \App\Models\Org\User::factory()->create(['org_id' => $this->org->id]);
+        Role::firstOrCreate(['name' => 'Manager']);
+        $manager = User::factory()->create(['org_id' => $this->org->id]);
         $manager->assignRole('Manager');
 
         $this->actingAs($manager);
 
         $this->service->bulkStore([
             [
-                'meter_id'      => $this->roomMeter->id,
+                'meter_id' => $this->roomMeter->id,
                 'reading_value' => 50,
-                'period_start'  => '2024-01-01',
-                'period_end'    => '2024-01-31',
-                'org_id'        => $this->org->id,
-                'status'        => 'APPROVED',
+                'period_start' => '2024-01-01',
+                'period_end' => '2024-01-31',
+                'org_id' => $this->org->id,
+                'status' => 'APPROVED',
             ],
         ]);
 

@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Api\Property;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Property\RoomFloorPlanRequest;
-use App\Http\Requests\Property\RoomIndexRequest;
-use App\Http\Requests\Property\RoomPublishRequest;
-use App\Http\Requests\Property\RoomQuickCreateRequest;
-use App\Http\Requests\Property\RoomStoreRequest;
-use App\Http\Requests\Property\RoomUpdateRequest;
 use App\Http\Requests\Property\RoomBatchDeleteRequest;
 use App\Http\Requests\Property\RoomBatchFloorPlanRequest;
 use App\Http\Requests\Property\RoomCreateFromTemplateRequest;
+use App\Http\Requests\Property\RoomFloorPlanRequest;
+use App\Http\Requests\Property\RoomIndexRequest;
+use App\Http\Requests\Property\RoomPublishRequest;
 use App\Http\Requests\Property\RoomQuickCreateBatchRequest;
+use App\Http\Requests\Property\RoomQuickCreateRequest;
+use App\Http\Requests\Property\RoomStoreRequest;
+use App\Http\Requests\Property\RoomUpdateRequest;
 use App\Http\Resources\Property\RoomResource;
 use App\Models\Property\Room;
 use App\Services\Property\RoomService;
@@ -44,10 +44,10 @@ class RoomController extends Controller
         $perPage = (int) $request->query('per_page', 15);
         $search = $request->input('search');
         $allowed = [
-            'code', 
-            'status', 
-            'type', 
-            AllowedFilter::exact('property_id'), 
+            'code',
+            'status',
+            'type',
+            AllowedFilter::exact('property_id'),
             AllowedFilter::exact('floor_id'),
             AllowedFilter::scope('price_min'),
             AllowedFilter::scope('price_max'),
@@ -109,9 +109,10 @@ class RoomController extends Controller
             'contracts.members.user',
             'activeContract.members.user',
             'meters.latestApprovedReading',
+            'meters.latestInvoiceEligibleReading',
             'invoices',
             'roomServices.service.currentRate',
-            'floorPlanNode'
+            'floorPlanNode',
         ]);
 
         return new RoomResource($room);
@@ -155,7 +156,7 @@ class RoomController extends Controller
 
         return response()->json([
             'message' => "Deleted {$result['deleted']} rooms.",
-            'failed' => $result['failed']
+            'failed' => $result['failed'],
         ]);
     }
 
@@ -198,7 +199,7 @@ class RoomController extends Controller
 
         return response()->json([
             'message' => "Restored {$result['restored']} rooms.",
-            'failed' => $result['failed']
+            'failed' => $result['failed'],
         ]);
     }
 
@@ -213,7 +214,7 @@ class RoomController extends Controller
 
         return response()->json([
             'message' => "Permanently deleted {$result['deleted']} rooms.",
-            'failed' => $result['failed']
+            'failed' => $result['failed'],
         ]);
     }
 
@@ -317,7 +318,7 @@ class RoomController extends Controller
 
         return response()->json([
             'message' => 'Floor plan node updated successfully.',
-            'data'    => $node,
+            'data' => $node,
         ]);
     }
 
@@ -346,7 +347,7 @@ class RoomController extends Controller
 
         return response()->json([
             'message' => 'Batch floor plan updated successfully.',
-            'data'    => $nodes,
+            'data' => $nodes,
         ]);
     }
 

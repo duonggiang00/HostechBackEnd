@@ -4,6 +4,7 @@ import type { Meter, MeterReading } from '../types';
 import toast from 'react-hot-toast';
 import { useEffect } from 'react';
 import { echo } from '@/shared/utils/echo';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 
 export type { Meter, MeterReading };
 
@@ -15,6 +16,7 @@ export function useMeters(propertyId?: string | null, options: {
   perPage?: number;
 } = {}) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const metersQuery = useQuery({
     queryKey: ['meters', propertyId, options.filters, options.search, options.page, options.perPage],
@@ -28,38 +30,48 @@ export function useMeters(propertyId?: string | null, options: {
 
   // Real-time synchronization
   useEffect(() => {
-    if (!echo || !propertyId || !options.enabled) return;
+    if (!echo || !options.enabled) return;
 
-    const channel = echo.private(`property.${propertyId}`);
-    
-    // Listen for single approved event (legacy/individual)
-    channel.listen('.meter-reading.approved', () => {
+    // Subscribe to property channel (Manager/Staff) and user channel (Tenant)
+    const propertyChannel = propertyId ? echo.private(`property.${propertyId}`) : null;
+    const userChannel = user?.id ? echo.private(`App.Models.User.${user.id}`) : null;
+
+    const invalidateMeters = () => {
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
-    });
+      queryClient.invalidateQueries({ queryKey: ['meter-readings'] });
+    };
 
-    // Listen for bulk approved event (new)
-    channel.listen('.meter-readings.bulk_approved', () => {
-      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
-      toast.success('Dữ liệu chỉ số đã được cập nhật (hàng loạt)');
-    });
+    if (propertyChannel) {
+      propertyChannel.listen('.meter-reading.approved', invalidateMeters);
+      propertyChannel.listen('.meter-readings.bulk_approved', () => {
+        invalidateMeters();
+        toast.success('Dữ liệu chỉ số đã được cập nhật (hàng loạt)');
+      });
+      propertyChannel.listen('.meter-reading.status_changed', invalidateMeters);
+    }
 
-    // Listen for any status change (submitted, rejected, etc.)
-    channel.listen('.meter-reading.status_changed', () => {
-      queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
-    });
+    if (userChannel) {
+      userChannel.listen('.meter-reading.approved', invalidateMeters);
+      userChannel.listen('.meter-readings.bulk_approved', () => {
+        invalidateMeters();
+        toast.success('Dữ liệu chỉ số đã được cập nhật');
+      });
+    }
 
     return () => {
-      channel.stopListening('.meter-reading.approved');
-      channel.stopListening('.meter-readings.bulk_approved');
-      channel.stopListening('.meter-reading.status_changed');
+      if (propertyChannel) {
+        propertyChannel.stopListening('.meter-reading.approved');
+        propertyChannel.stopListening('.meter-readings.bulk_approved');
+        propertyChannel.stopListening('.meter-reading.status_changed');
+      }
+      if (userChannel) {
+        userChannel.stopListening('.meter-reading.approved');
+        userChannel.stopListening('.meter-readings.bulk_approved');
+      }
     };
-  }, [echo, propertyId, options.enabled, queryClient]);
+  }, [echo, propertyId, options.enabled, queryClient, user?.id]);
 
   return {
     meters: metersQuery.data?.data || [],
@@ -111,9 +123,11 @@ export function useMeterActions(propertyId?: string | null) {
   });
 
   const bulkCreateReadingsMutation = useMutation({
-    mutationFn: (data: any[]) => meteringApi.bulkCreateReadings(propertyId!, data),
+    mutationFn: ({ data, status }: { data: any[]; status?: 'SUBMITTED' | 'APPROVED' }) =>
+      meteringApi.bulkCreateReadings(propertyId!, data, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
     },
   });
 
@@ -227,7 +241,6 @@ export function usePendingReadingsCount(propertyId?: string | null) {
       return res.meta?.total || 0;
     },
     enabled: !!propertyId,
-    refetchInterval: 60_000, // Tự động làm mới mỗi phút
   });
 }
 
@@ -304,3 +317,67 @@ export function useBulkSubmitReadings(propertyId?: string | null) {
     },
   });
 }
+
+// ─── TERMINATION WIZARD HOOKS ────────────────────────────────────────────────
+
+/**
+ * Lấy danh sách meters của một phòng cụ thể.
+ * Dùng trong TerminationWizard Step 2 để hiển thị danh sách chốt số.
+ */
+export function useRoomMeters(roomId?: string | null) {
+  return useQuery({
+    queryKey: ['room-meters', roomId],
+    queryFn: async () => {
+      if (!roomId) return [];
+      // Dùng global meters endpoint với filter room_id
+      const { default: apiClient } = await import('@/shared/api/client');
+      const res = await apiClient.get('/meters', {
+        params: {
+          'filter[room_id]': roomId,
+          'filter[is_active]': 1,
+          include: 'room,latestReading,latestApprovedReading',
+          per_page: 50,
+        },
+      });
+      const data = res.data?.data ?? (Array.isArray(res.data) ? res.data : []);
+      return data as Meter[];
+    },
+    enabled: !!roomId,
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * Tạo reading và duyệt ngay (DRAFT → APPROVED trong 1 lần bấm).
+ * Dùng cho TerminationWizard Step 2 (Manager flow, strict mode).
+ */
+export function useCreateAndApproveReading() {
+  return useMutation({
+    mutationFn: async ({
+      meterId,
+      readingValue,
+      periodStart,
+      periodEnd,
+    }: {
+      meterId: string;
+      readingValue: number;
+      periodStart: string;
+      periodEnd: string;
+    }) => {
+      // 1. Tạo reading (DRAFT)
+      const created = await meteringApi.createReading(meterId, {
+        reading_value: readingValue,
+        period_start: periodStart,
+        period_end: periodEnd,
+      });
+
+      const readingId = (created as any)?.id;
+      if (!readingId) throw new Error('Không nhận được ID của bản ghi.');
+
+      // 2. Duyệt ngay (DRAFT → APPROVED)
+      const approved = await meteringApi.approveReading(meterId, readingId);
+      return approved;
+    },
+  });
+}
+

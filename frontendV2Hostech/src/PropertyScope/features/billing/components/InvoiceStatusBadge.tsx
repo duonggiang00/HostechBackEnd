@@ -28,23 +28,30 @@ const STATUS_CONFIG: Record<
     className:
       'bg-[#D1FAE5] text-[#10B981] border border-[#A7F3D0]',
   },
-  PARTIALLY_PAID: {
+  PARTIAL: {
     label: 'Thanh toán 1 phần',
     icon: <CreditCard className="w-3 h-3" />,
     className:
-      'bg-[#DBEAFE] text-[#1E3A8A] border border-[#BFDBFE]',
+      'bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]',
   },
+
   OVERDUE: {
     label: 'Quá hạn',
     icon: <AlertCircle className="w-3 h-3" />,
     className:
-      'bg-[#FEE2E2] text-[#EF4444] border border-[#FECACA]',
+      'bg-[#FEE2E2] text-[#DC2626] border border-[#FCA5A5] font-black',
   },
   CANCELLED: {
     label: 'Đã hủy',
     icon: <Ban className="w-3 h-3" />,
     className:
       'bg-[#F3F4F6] text-[#9CA3AF] border border-[#E5E7EB] line-through',
+  },
+  PENDING: {
+    label: 'Đang chờ',
+    icon: <Clock className="w-3 h-3" />,
+    className:
+      'bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD]',
   },
 };
 

@@ -1,8 +1,14 @@
 <?php
 
+use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\ResolveTenant;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->api(append: [\App\Http\Middleware\ResolveTenant::class]);
+        $middleware->api(append: [
+            AssignRequestId::class,
+            ResolveTenant::class,
+        ]);
 
         $middleware->redirectTo(
             guests: fn () => response()->json(['message' => 'Unauthenticated.'], 401),
@@ -22,7 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Standardize JSON error responses for API requests
-        $exceptions->renderable(function (\Illuminate\Validation\ValidationException $e, $request) {
+        $exceptions->renderable(function (ValidationException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'The given data was invalid.',
@@ -31,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->renderable(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+        $exceptions->renderable(function (AuthenticationException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Unauthenticated.',
@@ -39,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->renderable(function (\Illuminate\Auth\Access\AuthorizationException $e, $request) {
+        $exceptions->renderable(function (AuthorizationException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'You do not have permission to perform this action.',
@@ -47,7 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
-        $exceptions->renderable(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {
+        $exceptions->renderable(function (NotFoundHttpException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'The requested resource was not found.',

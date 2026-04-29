@@ -1,4 +1,4 @@
-import { ArrowRight, CreditCard, FileSignature, Receipt, Wrench } from 'lucide-react';
+import { ArrowRight, CreditCard, FileSignature, Gauge, Wrench } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
@@ -28,12 +28,12 @@ export default function TenantDashboard() {
   const invoices = invoicesResponse?.data || [];
 
   const outstandingInvoices = useMemo(
-    () => invoices.filter((invoice: any) => ['ISSUED', 'OVERDUE'].includes(invoice.status)),
+    () => invoices.filter((invoice: any) => ['ISSUED', 'OVERDUE', 'PARTIAL'].includes(invoice.status)),
     [invoices],
   );
 
   const totalOutstanding = outstandingInvoices.reduce(
-    (total: number, invoice: any) => total + Math.max(0, (invoice.total || 0) - (invoice.paid_amount || 0)),
+    (totalCount: number, invoice: any) => totalCount + Math.max(0, (invoice.total_amount || 0) - (invoice.paid_amount || 0)),
     0,
   );
 
@@ -186,10 +186,10 @@ export default function TenantDashboard() {
               className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
             >
               <div>
-                <p className="text-sm font-black text-slate-950 dark:text-white">Gửi chỉ số</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Cập nhật điện, nước khi cần.</p>
+                <p className="text-sm font-black text-slate-950 dark:text-white">Xem chỉ số đồng hồ</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Chỉ số đã chốt theo phòng của bạn.</p>
               </div>
-              <Receipt className="h-5 w-5 text-slate-400" />
+              <Gauge className="h-5 w-5 text-slate-400" />
             </button>
           </div>
         </div>
@@ -220,7 +220,7 @@ export default function TenantDashboard() {
                   </p>
                 </div>
                 <div className="text-sm font-black text-rose-600 dark:text-rose-300">
-                  {formatCurrency(Math.max(0, (invoice.total || 0) - (invoice.paid_amount || 0)))}
+                  {formatCurrency(Math.max(0, (invoice.total_amount || 0) - (invoice.paid_amount || 0)))}
                 </div>
               </button>
             ))}

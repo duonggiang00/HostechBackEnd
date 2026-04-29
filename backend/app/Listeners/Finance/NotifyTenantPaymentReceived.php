@@ -4,16 +4,15 @@ namespace App\Listeners\Finance;
 
 use App\Events\Finance\ReceiptGenerated;
 use App\Models\Org\User;
+use App\Notifications\Finance\PaymentReceivedNotification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Notification;
-use App\Notifications\Finance\PaymentReceivedNotification;
 
 /**
  * Notifies the payer (tenant) after a receipt is successfully generated.
- * 
- * By listening to ReceiptGenerated instead of PaymentApproved,
+ *
+ * By listening to ReceiptGenerated instead of PaymentSuccessfullyVerified,
  * we ensure the download link is available in the message.
  */
 class NotifyTenantPaymentReceived implements ShouldQueue
@@ -31,6 +30,7 @@ class NotifyTenantPaymentReceived implements ShouldQueue
             Log::debug('[Finance][EDA] No payer attached to payment — skipping tenant notification', [
                 'payment_id' => $payment->id,
             ]);
+
             return;
         }
 
@@ -38,15 +38,16 @@ class NotifyTenantPaymentReceived implements ShouldQueue
 
         if (! $payer) {
             Log::warning('[Finance][EDA] Payer user not found for notification', [
-                'payment_id'    => $payment->id,
+                'payment_id' => $payment->id,
                 'payer_user_id' => $payment->payer_user_id,
             ]);
+
             return;
         }
 
         Log::info('[Finance][EDA] Sending payment received notification to tenant', [
             'payment_id' => $payment->id,
-            'payer_id'   => $payer->id,
+            'payer_id' => $payer->id,
         ]);
 
         try {
@@ -54,7 +55,7 @@ class NotifyTenantPaymentReceived implements ShouldQueue
         } catch (\Exception $e) {
             Log::warning('[Finance][EDA] Failed to send payment notification', [
                 'payment_id' => $payment->id,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
         }
     }

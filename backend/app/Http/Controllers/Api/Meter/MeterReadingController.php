@@ -16,8 +16,7 @@ class MeterReadingController extends Controller
 {
     public function __construct(
         protected MeterReadingService $service
-    ) {
-    }
+    ) {}
 
     /**
      * Chốt số hàng loạt cho nhiều đồng hồ.
@@ -36,6 +35,8 @@ class MeterReadingController extends Controller
      */
     public function bulkSubmit(Request $request)
     {
+        $this->authorize('update', MeterReading::class);
+
         $request->validate([
             'reading_ids' => 'required|array|min:1',
             'reading_ids.*' => 'string|exists:meter_readings,id',
@@ -51,7 +52,7 @@ class MeterReadingController extends Controller
      */
     public function bulkApprove(Request $request)
     {
-        $this->authorize('update', MeterReading::class);
+        $this->authorize('approve', MeterReading::class);
 
         $request->validate([
             'reading_ids' => 'required|array|min:1',
@@ -68,7 +69,7 @@ class MeterReadingController extends Controller
      */
     public function bulkReject(Request $request)
     {
-        $this->authorize('update', MeterReading::class);
+        $this->authorize('approve', MeterReading::class);
 
         $request->validate([
             'reading_ids' => 'required|array|min:1',

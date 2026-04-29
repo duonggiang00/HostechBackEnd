@@ -17,18 +17,19 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class RoomTemplate extends Model implements HasMedia
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
-    use InteractsWithMedia, HasMediaAttachments;
+    use HasMediaAttachments, InteractsWithMedia;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [
         'id', 'org_id', 'property_id', 'name',
-        'area', 'capacity', 'base_price', 'description'
+        'area', 'capacity', 'base_price', 'description',
     ];
 
     protected $casts = [
-        'area'       => 'decimal:2',
+        'area' => 'decimal:2',
         'base_price' => 'decimal:2',
     ];
 

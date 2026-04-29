@@ -14,7 +14,5 @@ class PropertyUpdated
     /**
      * Create a new event instance.
      */
-    public function __construct(public Property $property)
-    {
-    }
+    public function __construct(public Property $property) {}
 }

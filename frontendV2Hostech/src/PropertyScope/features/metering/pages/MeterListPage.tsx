@@ -10,7 +10,6 @@ import {
   ChevronRight,
   RotateCcw,
   ClipboardList,
-  Plus,
   Eye,
 } from 'lucide-react';
 import { useMeters, usePendingReadingsCount, type Meter } from '../hooks/useMeters';
@@ -111,14 +110,6 @@ export default function MeterListPage() {
           >
             <Zap className="w-4 h-4 text-[#F59E0B]" />
             Chốt số nhanh
-          </button>
-          
-          <button
-            onClick={() => {/* Open Form Modal */}}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F59E0B] text-white rounded-[8px] text-sm font-semibold hover:bg-[#D97706] transition-all shadow-sm active:scale-95"
-          >
-            <Plus className="w-4 h-4" />
-            Thêm đồng hồ
           </button>
         </div>
       </div>
@@ -244,7 +235,7 @@ export default function MeterListPage() {
                               <span className="text-[10px] text-slate-400 uppercase font-medium">kWh</span>
                             </div>
                           ) : (
-                            <span className="text-slate-400 text-xs italic">Chưa chốt</span>
+                            <span className="text-slate-400 text-xs ">Chưa chốt</span>
                           )}
                         </td>
 
@@ -271,7 +262,7 @@ export default function MeterListPage() {
                               <span className="text-[10px] text-slate-400 uppercase font-medium">m³</span>
                             </div>
                           ) : (
-                            <span className="text-slate-400 text-xs italic">Chưa chốt</span>
+                            <span className="text-slate-400 text-xs ">Chưa chốt</span>
                           )}
                         </td>
 

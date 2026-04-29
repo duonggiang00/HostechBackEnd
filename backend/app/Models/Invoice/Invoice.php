@@ -13,15 +13,15 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class Invoice extends Model
 {
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
-    
+
     public $status_history_note;
 
     public $incrementing = false;
-
 
     protected $keyType = 'string';
 
@@ -44,6 +44,7 @@ class Invoice extends Model
         'is_termination',
         'cancelled_at',
         'pdf_path',
+        'payer_user_id',
     ];
 
     /**
@@ -51,7 +52,7 @@ class Invoice extends Model
      */
     public function getPdfUrlAttribute(): ?string
     {
-        return $this->pdf_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->pdf_path) : null;
+        return $this->pdf_path ? Storage::disk('public')->url($this->pdf_path) : null;
     }
 
     protected function casts(): array

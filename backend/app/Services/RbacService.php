@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\File;
 use ReflectionClass;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RbacService
 {
@@ -23,7 +24,7 @@ class RbacService
         ];
 
         // 1. Clear permission cache
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         // 2. Scan Policies
         $policyPath = app_path('Policies');

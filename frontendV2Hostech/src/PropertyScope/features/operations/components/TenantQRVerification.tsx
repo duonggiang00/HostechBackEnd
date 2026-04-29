@@ -42,14 +42,14 @@ export default function TenantQRVerification() {
           </div>
           
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-md border border-slate-100 flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-tighter text-slate-400">Secure Token</span>
+            <span className="text-xs font-black uppercase tracking-tighter text-slate-400">Mã bảo mật</span>
             <span className="text-xs font-bold text-slate-900">ROOM-101-X92</span>
           </div>
         </div>
 
-        <h3 className="text-xl font-black text-slate-900 mb-2">Invite Resident</h3>
+        <h3 className="text-xl font-black text-slate-900 mb-2">Mời Cư trú</h3>
         <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-xs mb-8">
-          Share this unique code with the tenant to let them register and upload their documents.
+          Chia sẻ mã duy nhất này cho khách thuê để họ đăng ký và tải lên các tài liệu cần thiết.
         </p>
 
         <div className="flex items-center gap-3 w-full max-w-sm">
@@ -58,7 +58,7 @@ export default function TenantQRVerification() {
             className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-2xl font-bold transition-all active:scale-95"
           >
             {isCopied ? <UserCheck className="w-5 h-5 text-emerald-500" /> : <Copy className="w-5 h-5" />}
-            {isCopied ? 'Copied!' : 'Copy Link'}
+            {isCopied ? 'Đã chép!' : 'Chép liên kết'}
           </button>
           <button className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl hover:bg-indigo-100 transition-all active:scale-95">
             <Download className="w-5 h-5" />
@@ -78,24 +78,24 @@ export default function TenantQRVerification() {
               <FileText className="w-5 h-5 text-indigo-300" />
             </div>
             <div>
-              <h4 className="font-bold text-sm">Residency Evidence</h4>
-              <p className="text-xs text-white/40 font-black uppercase tracking-widest">Pending Verification</p>
+              <h4 className="font-bold text-sm">Minh chứng Cư trú</h4>
+              <p className="text-xs text-white/40 font-black uppercase tracking-widest">Đang chờ xác minh</p>
             </div>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
-              <span className="text-xs font-medium text-white/60">ID / Passport Scan</span>
-              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
+              <span className="text-xs font-medium text-white/60">Bản quét CMND/CCCD/Hộ chiếu</span>
+              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Chưa bắt đầu</span>
             </div>
             <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-2xl">
-              <span className="text-xs font-medium text-white/60">Proof of Employment</span>
-              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Not Started</span>
+              <span className="text-xs font-medium text-white/60">Minh chứng Nghề nghiệp</span>
+              <span className="text-xs font-black bg-amber-500/20 text-amber-500 px-2 py-1 rounded-md uppercase tracking-widest">Chưa bắt đầu</span>
             </div>
           </div>
 
           <button className="w-full mt-6 py-3 bg-white text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-50 transition-all active:scale-95">
-            Manual Upload
+            Tải lên thủ công
           </button>
         </div>
       </div>

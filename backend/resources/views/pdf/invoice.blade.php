@@ -121,15 +121,28 @@
                 <div class="section-title">Đơn vị cung cấp</div>
                 <strong>{{ $invoice->property->name ?? $invoice->org->name }}</strong><br>
                 <span>Địa chỉ: {{ $invoice->property->address ?? 'N/A' }}</span><br>
-                <span>Mã tổ chức: {{ $invoice->org_id }}</span>
+                @php
+                    $bankAccounts = $invoice->property->bank_accounts ?? [];
+                    $firstBank = is_array($bankAccounts) && count($bankAccounts) > 0 ? $bankAccounts[0] : null;
+                @endphp
+                @if($firstBank)
+                    <span>Ngân hàng: <strong>{{ $firstBank['bank_name'] ?? $firstBank['bank'] ?? '' }}</strong></span><br>
+                    <span>STK: <strong>{{ $firstBank['account_number'] ?? $firstBank['account'] ?? '' }}</strong></span><br>
+                    @if(!empty($firstBank['account_name'] ?? $firstBank['account_holder'] ?? $firstBank['holder'] ?? ''))
+                    <span>Chủ TK: {{ $firstBank['account_name'] ?? $firstBank['account_holder'] ?? $firstBank['holder'] ?? '' }}</span>
+                    @endif
+                @endif
             </div>
             <div class="info-col" style="margin-left: 20px;">
                 <div class="section-title">Thông tin khách thuê</div>
                 <strong>Phòng: {{ $invoice->room->name ?? $invoice->room->code ?? 'N/A' }}</strong><br>
                 @php
-                    $tenant = $invoice->contract->members->where('status', 'APPROVED')->first()?->user;
+                    $tenant = null;
+                    if ($invoice->contract && $invoice->contract->members) {
+                        $tenant = $invoice->contract->members->where('status', 'APPROVED')->first()?->user;
+                    }
                 @endphp
-                <span>Họ tên: {{ $tenant->name ?? 'N/A' }}</span><br>
+                <span>Họ tên: {{ $tenant->full_name ?? $tenant->name ?? 'N/A' }}</span><br>
                 <span>SĐT: {{ $tenant->phone ?? 'N/A' }}</span>
             </div>
         </div>

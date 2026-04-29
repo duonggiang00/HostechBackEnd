@@ -6,6 +6,7 @@ use App\Models\Contract\Contract;
 use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketCost;
 use App\Models\Ticket\TicketEvent;
+use App\Services\OrgContextResolver;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -54,9 +55,13 @@ class TicketService
                 $q->where('user_id', $user->id);
             });
         } else {
-            $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-            if ($orgId) {
-                $query->where('tickets.org_id', $orgId);
+            $resolved = OrgContextResolver::resolveOrgId($user);
+            $effectiveOrgId = $orgId ?? $resolved;
+            if ($user?->hasRole('Admin')) {
+                abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+            }
+            if ($effectiveOrgId) {
+                $query->where('tickets.org_id', $effectiveOrgId);
             }
         }
 

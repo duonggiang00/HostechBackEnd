@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('meters', function (Blueprint $table) {
-            if (!Schema::hasColumn('meters', 'service_id')) {
+            if (! Schema::hasColumn('meters', 'service_id')) {
                 $table->foreignUuid('service_id')->nullable()->after('type')
                     ->constrained('services')->nullOnDelete();
             }

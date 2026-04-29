@@ -17,6 +17,7 @@ class Payment extends Model
     use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

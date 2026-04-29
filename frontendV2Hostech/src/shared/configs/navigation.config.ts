@@ -13,12 +13,20 @@ import {
   CreditCard,
   User,
   Ticket,
-
+  Wallet,
+  BookOpen,
+  Inbox,
   Info,
+
   LayoutTemplate,
   ClipboardList,
   FileSignature,
   LayoutList,
+  ClipboardCheck,
+  Sun,
+  Shield,
+  Settings,
+  Briefcase,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { SidebarDropdownItem } from '@/shared/components/ui/SidebarDropdownSection';
@@ -29,6 +37,8 @@ export interface NavigationSection {
   icon?: LucideIcon;
   defaultOpen?: boolean;
   path?: string;
+  /** Nếu có, chỉ các role này thấy cả nhóm trong sidebar. */
+  roles?: string[];
   items: NavigationItem[];
 }
 
@@ -46,7 +56,7 @@ export const ORG_NAVIGATION: NavigationSection[] = [
     label: 'Tổng quan',
     defaultOpen: true,
     items: [
-      { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner', 'Staff'] },
+      { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/org/dashboard', exact: true, roles: ['Admin', 'Owner', 'Manager'] },
       { id: 'properties', icon: Building2, label: 'Danh sách cơ sở', path: '/org/properties', exact: true },
     ],
   },
@@ -54,15 +64,25 @@ export const ORG_NAVIGATION: NavigationSection[] = [
     id: 'operations',
     label: 'Điều hành',
     items: [
-      { id: 'staff', icon: Users, label: 'Nhân sự hệ hệ thống', path: '/org/staff', roles: ['Admin', 'Owner', 'Staff'] },
-      { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner', 'Staff'] },
+      { id: 'staff', icon: Users, label: 'Nhân sự hệ hệ thống', path: '/org/staff', roles: ['Admin', 'Owner', 'Manager'] },
+      { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner', 'Manager'] },
     ],
   },
   {
     id: 'analytics',
     label: 'Báo cáo',
     items: [
-      { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner', 'Staff'] },
+      { id: 'finance', icon: BarChart3, label: 'Tài chính tổng quát', path: '/org/finance', roles: ['Admin', 'Owner', 'Manager'] },
+    ],
+  },
+  {
+    id: 'governance',
+    label: 'Tuân thủ & cấu hình',
+    defaultOpen: false,
+    roles: ['Admin', 'Owner'],
+    items: [
+      { id: 'compliance', icon: Shield, label: 'Tuân thủ & nhật ký', path: '/org/compliance', exact: true, roles: ['Admin', 'Owner'] },
+      { id: 'org_settings', icon: Settings, label: 'Cấu hình tổ chức', path: '/org/organization-settings', exact: true, roles: ['Admin', 'Owner'] },
     ],
   },
 ];
@@ -73,21 +93,37 @@ export const ORG_NAVIGATION: NavigationSection[] = [
  */
 export const PROPERTY_NAVIGATION: NavigationSection[] = [
   {
+    id: 'staff_today',
+    label: 'Hôm nay',
+    icon: Sun,
+    defaultOpen: true,
+    roles: ['Staff'],
+    items: [
+      {
+        id: 'staff_home',
+        icon: ClipboardList,
+        label: 'Tác vụ hôm nay',
+        path: '/properties/:propertyId/staff-home',
+        exact: true,
+      },
+    ],
+  },
+  {
     id: 'property_core',
-    label: 'Cơ Sở & Vận Hành',
+    label: 'Cơ sở vật chất',
     icon: Building2,
     defaultOpen: true,
     items: [
       { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/properties/:propertyId/dashboard', exact: true },
+      { id: 'building_info', icon: Info, label: 'Thông tin chi tiết', path: '/properties/:propertyId/building-info', exact: true },
       { id: 'floorplan', icon: Layers, label: 'Mặt bằng tòa nhà', path: '/properties/:propertyId/building-view' },
       { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: '/properties/:propertyId/rooms' },
-      { id: 'building_info', icon: Info, label: 'Thông tin chi tiết', path: '/properties/:propertyId/building-info', exact: true },
       { id: 'room_templates', icon: LayoutTemplate, label: 'Mẫu thiết lập phòng', path: '/properties/:propertyId/room-templates', exact: true },
     ],
   },
   {
     id: 'service_metering',
-    label: 'Dịch Vụ & Chỉ Số',
+    label: 'Vận hành tòa nhà',
     icon: Gauge,
     defaultOpen: true,
     items: [
@@ -105,14 +141,6 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         label: 'Lịch sử chốt số',
         path: '/properties/:propertyId/meters/history',
       },
-    ],
-  },
-  {
-    id: 'finance_business',
-    label: 'Tài Chính & Hợp Đồng',
-    icon: CreditCard,
-    defaultOpen: true,
-    items: [
       { 
         id: 'contracts', 
         icon: ScrollText, 
@@ -120,12 +148,11 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         path: '/properties/:propertyId/contracts',
         badgeKey: 'contractAttention'
       },
-      { 
-        id: 'invoices', 
-        icon: CreditCard, 
-        label: 'Hóa đơn & Thu tiền', 
-        path: '/properties/:propertyId/billing',
-        badgeKey: 'issuedInvoices'
+      {
+        id: 'handovers',
+        icon: ClipboardCheck,
+        label: 'Giấy tờ & Bàn giao',
+        path: '/properties/:propertyId/handovers',
       },
     ],
   },
@@ -135,13 +162,71 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
     icon: Users,
     defaultOpen: true,
     items: [
-      { id: 'users', icon: User, label: 'Danh sách cư dân', path: '/properties/:propertyId/users' },
+      {
+        id: 'tenants',
+        icon: User,
+        label: 'Người thuê & cư dân',
+        path: '/properties/:propertyId/tenants',
+      },
+      {
+        id: 'property_staff',
+        icon: Briefcase,
+        label: 'Nhân viên tòa nhà',
+        path: '/properties/:propertyId/staff',
+        roles: ['Owner', 'Manager'],
+      },
       { 
         id: 'tickets', 
         icon: Ticket, 
         label: 'Yêu cầu hỗ trợ', 
         path: '/properties/:propertyId/tickets',
         badgeKey: 'openTickets'
+      },
+      {
+        id: 'pending-requests',
+        icon: Inbox,
+        label: 'Yêu cầu cư dân',
+        path: '/properties/:propertyId/requests',
+        roles: ['Owner', 'Manager'],
+        badgeKey: 'pendingRequests',
+      },
+    ],
+  },
+  {
+    id: 'finance_ledger',
+    label: 'Kế Toán / Sổ Quỹ',
+    icon: Wallet,
+    defaultOpen: false,
+    items: [
+      {
+        id: 'finance-ledger',
+        icon: BookOpen,
+        label: 'Sổ Cái',
+        path: '/properties/:propertyId/finance/ledger',
+        roles: ['Owner', 'Manager'],
+      },
+      { 
+        id: 'invoices', 
+        icon: Receipt, 
+        label: 'Hóa đơn', 
+        path: '/properties/:propertyId/billing',
+        badgeKey: 'issuedInvoices'
+      },
+
+      {
+        id: 'finance-payments',
+        icon: Wallet,
+        label: 'Biên lai',
+        path: '/properties/:propertyId/finance/payments',
+        roles: ['Owner', 'Manager'],
+      },
+      {
+        id: 'payment-verifications',
+        icon: ClipboardCheck,
+        label: 'Xét duyệt thanh toán',
+        path: '/properties/:propertyId/billing/payment-verifications',
+        roles: ['Owner', 'Manager', 'Staff'],
+        badgeKey: 'pendingVerifications',
       },
     ],
   },
@@ -180,6 +265,8 @@ export const getBreadcrumbLabel = (path: string): string => {
     '/app': 'Cư dân',
     '/org/dashboard': 'Bảng điều khiển',
     '/org/properties': 'Danh sách cơ sở',
+    '/org/compliance': 'Tuân thủ & nhật ký',
+    '/org/organization-settings': 'Cấu hình tổ chức',
   };
 
   if (staticLabels[path]) return staticLabels[path];

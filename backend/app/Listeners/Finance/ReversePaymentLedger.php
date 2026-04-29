@@ -30,7 +30,7 @@ class ReversePaymentLedger implements ShouldQueue
 
         Log::info('[Finance][EDA] Reversing ledger entry for voided payment', [
             'payment_id' => $payment->id,
-            'amount'     => $payment->amount,
+            'amount' => $payment->amount,
         ]);
 
         try {
@@ -42,7 +42,7 @@ class ReversePaymentLedger implements ShouldQueue
         } catch (\Exception $e) {
             Log::error('[Finance][EDA] Failed to reverse ledger entry', [
                 'payment_id' => $payment->id,
-                'error'      => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             throw $e;

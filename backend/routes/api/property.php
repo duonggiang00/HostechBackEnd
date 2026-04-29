@@ -1,13 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\Property\BuildingOverviewController;
+use App\Http\Controllers\Api\Property\DocumentTemplateController;
 use App\Http\Controllers\Api\Property\FloorController;
+use App\Http\Controllers\Api\Property\PriceHistoryController;
 use App\Http\Controllers\Api\Property\PropertyController;
 use App\Http\Controllers\Api\Property\RoomAssetController;
 use App\Http\Controllers\Api\Property\RoomController;
 use App\Http\Controllers\Api\Property\RoomQuickInvoiceController;
 use App\Http\Controllers\Api\Property\RoomTemplateController;
-use App\Http\Controllers\Api\Property\DocumentTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('document-templates/{id}/placeholders', [DocumentTemplateController::class, 'placeholders']);
@@ -50,7 +51,7 @@ Route::post('rooms/{id}/quick-invoice', [RoomQuickInvoiceController::class, 'cre
 Route::apiResource('rooms', RoomController::class);
 Route::post('rooms/{id}/restore', [RoomController::class, 'restore']);
 Route::delete('rooms/{id}/force', [RoomController::class, 'forceDelete']);
-Route::apiResource('rooms.price-histories', \App\Http\Controllers\Api\Property\PriceHistoryController::class)->only(['index', 'store', 'destroy']);
+Route::apiResource('rooms.price-histories', PriceHistoryController::class)->only(['index', 'store', 'destroy']);
 
 // Nested Floors API
 Route::apiResource('properties.floors', FloorController::class)->shallow();

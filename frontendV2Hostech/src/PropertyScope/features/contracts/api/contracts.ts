@@ -1,5 +1,11 @@
 import apiClient from '@/shared/api/client';
-import type { Contract, ContractQueryParams, ContractListResponse, CreateContractPayload } from '../types';
+import type {
+  Contract,
+  ContractListResponse,
+  ContractQueryParams,
+  CreateContractPayload,
+  RequestTerminationNoticeResponse,
+} from '../types';
 
 export const contractsApi = {
   getContracts: async (params?: ContractQueryParams, signal?: AbortSignal): Promise<ContractListResponse> => {
@@ -10,7 +16,6 @@ export const contractsApi = {
       search: params?.search || undefined,
       sort: params?.sort || undefined,
       with_trashed: params?.with_trashed ? 1 : undefined,
-      include: params?.include || 'property,room,members.user,createdBy',
       page: params?.page ?? 1,
       per_page: params?.per_page ?? 15,
     };
@@ -37,7 +42,6 @@ export const contractsApi = {
       'filter[status]': params?.status || undefined,
       search: params?.search || undefined,
       sort: params?.sort || undefined,
-      include: params?.include || 'property,room,members.user,createdBy',
       page: params?.page ?? 1,
       per_page: params?.per_page ?? 15,
     };
@@ -47,10 +51,7 @@ export const contractsApi = {
   },
 
   getContract: async (id: string, signal?: AbortSignal) => {
-    const response = await apiClient.get(`/contracts/${id}`, {
-      params: { include: 'property,room,members.user,createdBy,invoices' },
-      signal,
-    });
+    const response = await apiClient.get(`/contracts/${id}`, { signal });
     return response.data?.data as Contract;
   },
 
@@ -126,9 +127,12 @@ export const contractsApi = {
     return response.data;
   },
 
-  requestTermination: async (id: string, data: { reason?: string }) => {
+  requestTermination: async (
+    id: string,
+    data: { expected_move_out_date: string; reason?: string },
+  ) => {
     const response = await apiClient.post(`/contracts/${id}/request-termination`, data);
-    return response.data;
+    return response.data as RequestTerminationNoticeResponse;
   },
 
   getStatusHistories: async (id: string) => {
@@ -136,9 +140,22 @@ export const contractsApi = {
     return response.data?.data;
   },
 
-  terminateContract: async (id: string, data: { termination_date?: string, cancellation_party?: string, cancellation_reason?: string, waive_penalty?: boolean, refund_remaining_rent?: boolean }) => {
+  terminateContract: async (id: string, data: { termination_date?: string, cancellation_party?: string, cancellation_reason?: string, waive_penalty?: boolean, refund_remaining_rent?: boolean, damage_fee_total?: number }) => {
     const response = await apiClient.post(`/contracts/${id}/terminate`, data);
     return response.data;
+  },
+
+  getLiquidationPreview: async (
+    id: string,
+    params: {
+      termination_date?: string;
+      cancellation_party?: string;
+      waive_penalty?: boolean;
+      damage_fee_total?: number;
+    },
+  ) => {
+    const response = await apiClient.get(`/contracts/${id}/termination/liquidation-preview`, { params });
+    return response.data as { message?: string; data: Record<string, unknown> };
   },
 
   generateDocument: async (id: string, data?: { extra_notes?: string; landlord_name?: string; landlord_phone?: string }) => {
@@ -146,9 +163,16 @@ export const contractsApi = {
     return response.data; // { message, document_path, download_url }
   },
 
-  downloadDocument: async (id: string): Promise<Blob> => {
+  downloadDocument: async (id: string, revision?: string): Promise<Blob> => {
     const response = await apiClient.get(`/contracts/${id}/document/download`, {
       responseType: 'blob',
+      params: {
+        _t: revision || Date.now().toString(),
+      },
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
     });
     return response.data;
   },
@@ -170,13 +194,24 @@ export const contractsApi = {
     return response.data?.data;
   },
 
+  updateContractMember: async (contractId: string, memberId: string, data: Record<string, unknown>) => {
+    const response = await apiClient.put(`/contracts/${contractId}/members/${memberId}`, data);
+    return response.data?.data;
+  },
+
   removeContractMember: async (contractId: string, memberId: string) => {
     const response = await apiClient.delete(`/contracts/${contractId}/members/${memberId}`);
     return response.data;
   },
 
   approveContractMember: async (contractId: string, memberId: string) => {
-    const response = await apiClient.post(`/contracts/${contractId}/members/${memberId}/approve`);
+    // Backend route uses PUT: contracts/{contract}/members/{member}/approve
+    const response = await apiClient.put(`/contracts/${contractId}/members/${memberId}/approve`);
     return response.data?.data;
-  }
+  },
+
+  getPendingRequests: async (propertyId: string) => {
+    const response = await apiClient.get(`/properties/${propertyId}/pending-requests`);
+    return response.data as import('../types').PendingRequestsResponse;
+  },
 };

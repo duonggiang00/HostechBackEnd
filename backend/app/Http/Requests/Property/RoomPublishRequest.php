@@ -18,7 +18,7 @@ class RoomPublishRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code'       => ['nullable', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:50'],
             'base_price' => ['nullable', 'numeric', 'min:0.01'],
         ];
     }

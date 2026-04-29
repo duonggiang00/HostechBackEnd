@@ -69,8 +69,14 @@ export interface MfaStatus {
 
 /** Response from GET /api/user/mfa/setup */
 export interface MfaSetupResponse {
+  /** All methods the user has currently enabled */
+  enabled_methods: ('totp' | 'email')[];
+  /** Whether any method is enabled */
   mfa_enabled: boolean;
-  mfa_method: string;
+  /** Legacy primary method field */
+  mfa_method: string | null;
+  has_totp: boolean;
+  has_email: boolean;
   has_totp_secret: boolean;
 }
 
@@ -86,6 +92,13 @@ export interface MfaEnablePayload {
   method: 'totp' | 'email';
   code: string;
   password: string;
+}
+
+/** Payload for DELETE /api/user/mfa/disable */
+export interface MfaDisablePayload {
+  password: string;
+  /** Omit to disable all methods */
+  method?: 'totp' | 'email';
 }
 
 /** Avatar upload response */

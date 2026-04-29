@@ -101,7 +101,7 @@ class NotificationRuleController extends Controller
     public function toggle(string $id): JsonResponse
     {
         $rule = NotificationRule::findOrFail($id);
-        $rule->update(['is_active' => !$rule->is_active]);
+        $rule->update(['is_active' => ! $rule->is_active]);
 
         $status = $rule->is_active ? 'kích hoạt' : 'tắt';
 

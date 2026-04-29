@@ -24,7 +24,7 @@ export default function PriceHistoryManager({ data, isLoading }: PriceHistoryMan
           <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20">Tỷ giá thị trường</span>
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-black italic text-slate-900 dark:text-white">$1,250</span>
+          <span className="text-3xl font-black text-slate-900 dark:text-white">$1,250</span>
           <span className="text-sm font-bold text-slate-400">/ tháng</span>
         </div>
       </div>
@@ -38,13 +38,13 @@ export default function PriceHistoryManager({ data, isLoading }: PriceHistoryMan
             history.map((item, i) => (
               <div key={item.id || i} className="flex items-center justify-between group">
                 <div className="space-y-1">
-                  <p className="text-xs font-black text-slate-900 dark:text-slate-200 italic tracking-tight">Mục giá</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-slate-200 tracking-tight">Mục giá</p>
                   <p className="text-xs text-slate-400 font-bold uppercase">
                     Hiệu lực: {new Date(item.start_date).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-black text-emerald-500 italic">
+                  <span className="text-sm font-black text-emerald-500 ">
                     ${Number(item.price).toLocaleString()}
                   </span>
                 </div>

@@ -66,7 +66,7 @@ export function PropertyFloorsList({ property }: PropertyFloorsListProps) {
         ) : (
           <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
              <DoorOpen className="w-12 h-12 mb-3 opacity-20" />
-             <p className="text-sm font-black italic uppercase tracking-widest">Chưa có thông tin tầng</p>
+             <p className="text-sm font-black uppercase tracking-widest">Chưa có thông tin tầng</p>
           </div>
         )}
       </div>

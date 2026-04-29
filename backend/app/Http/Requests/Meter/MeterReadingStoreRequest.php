@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Meter;
 
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
 
@@ -73,7 +74,7 @@ class MeterReadingStoreRequest extends FormRequest
     /**
      * Handle a failed validation attempt.
      */
-    protected function failedValidation(\Illuminate\Contracts\Validation\Validator $validator)
+    protected function failedValidation(Validator $validator)
     {
         $logData = [
             'errors' => $validator->errors()->toArray(),

@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 5 * * 0'
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Copy environment
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      - name: Generate application key
+        run: php artisan key:generate --force
+      - name: Validate environment (CI)
+        run: php artisan env:validate --for-ci
+      - name: Run tests
+        run: php artisan test
+      - name: Run Pint
+        run: ./vendor/bin/pint --test
+      - name: Run PHPStan
+        run: composer run analyse
+      - name: Composer audit (critical CVEs fail the build)
+        run: composer audit --no-interaction --ignore-severity=low --ignore-severity=medium --ignore-severity=high
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontendV2Hostech
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontendV2Hostech/package-lock.json
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: npm audit (critical CVEs fail the build)
+        run: npm audit --audit-level=critical
+
+  playwright:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontendV2Hostech
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontendV2Hostech/package-lock.json
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright
+        run: npm run test:e2e
+        env:
+          CI: 'true'

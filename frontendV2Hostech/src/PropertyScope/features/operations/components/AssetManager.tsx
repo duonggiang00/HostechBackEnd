@@ -33,12 +33,22 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
     }
   };
 
+  const getConditionLabel = (condition?: string) => {
+    switch (condition) {
+      case 'new': return 'Mới';
+      case 'good': return 'Tốt';
+      case 'fair': return 'Trung bình';
+      case 'poor': return 'Kém';
+      default: return 'Không rõ';
+    }
+  };
+
   if (!roomId) {
     return (
       <div className="py-12 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-700/50">
         <Package className="w-12 h-12 mb-4 opacity-20" />
-        <p className="font-bold">No Room Selected</p>
-        <p className="text-xs font-medium">Select a room on the floor plan to view its assets</p>
+        <p className="font-bold">Chưa chọn phòng</p>
+        <p className="text-xs font-medium">Chọn một phòng trên sơ đồ để xem danh sách tài sản</p>
       </div>
     );
   }
@@ -58,7 +68,7 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input 
             type="text" 
-            placeholder="Search assets or serials..."
+            placeholder="Tìm kiếm tài sản hoặc số series..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none transition-all text-sm font-medium dark:text-slate-200"
@@ -66,7 +76,7 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
         </div>
         <button className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95 whitespace-nowrap">
           <Plus className="w-4 h-4" />
-          Add Asset
+          Thêm tài sản
         </button>
       </div>
 
@@ -102,7 +112,7 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
 
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <span className={`px-2.5 py-0.5 rounded-full border font-bold ${getConditionColor(asset.condition)}`}>
-                      {asset.condition}
+                      {getConditionLabel(asset.condition)}
                     </span>
                     {asset.serial && (
                       <>
@@ -122,8 +132,8 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
         {filteredAssets.length === 0 && (
           <div className="py-12 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-700/50">
             <Package className="w-12 h-12 mb-4 opacity-20" />
-            <p className="font-bold">No assets found matching "{searchTerm}"</p>
-            <p className="text-xs font-medium">Try searching for a different item or serial number</p>
+            <p className="font-bold">Không tìm thấy tài sản nào khớp với "{searchTerm}"</p>
+            <p className="text-xs font-medium">Thử tìm kiếm với tên hoặc số series khác</p>
           </div>
         )}
       </div>
@@ -131,10 +141,10 @@ export default function AssetManager({ roomId, data, isLoading }: AssetManagerPr
       <div className="p-4 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-3xl flex items-start gap-3">
         <Info className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0 mt-0.5" />
         <div>
-          <h5 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-1">Asset Policy</h5>
+          <h5 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-1">Chính sách tài sản</h5>
           <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed font-medium">
-            Condition reports are synced with the digital check-in/out explorer. 
-            Flagging an item for maintenance will automatically create a high-priority ticket.
+            Báo cáo tình trạng được đồng bộ với quá trình nhận/trả phòng. 
+            Gắn cờ bảo trì tài sản sẽ tự động tạo một sự cố ưu tiên cao.
           </p>
         </div>
       </div>

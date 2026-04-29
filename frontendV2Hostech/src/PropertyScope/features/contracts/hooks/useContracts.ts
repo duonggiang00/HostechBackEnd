@@ -14,6 +14,7 @@ export const CONTRACT_KEY = 'contract';
 export const TRASH_CONTRACTS_KEY = 'contracts-trash';
 export const PENDING_CONTRACTS_KEY = 'contracts-pending';
 export const MY_CONTRACTS_KEY = 'contracts-my';
+export const PENDING_REQUESTS_KEY = 'pending-requests';
 
 // ─── List Hooks ───────────────────────────────────────────────────────────────
 
@@ -112,6 +113,8 @@ export const useContractActions = () => {
     queryClient.invalidateQueries({ queryKey: [CONTRACTS_KEY] });
     queryClient.invalidateQueries({ queryKey: [TRASH_CONTRACTS_KEY] });
     queryClient.invalidateQueries({ queryKey: [PENDING_CONTRACTS_KEY] });
+    queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+    queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
   };
 
   /** POST /api/contracts */
@@ -160,10 +163,11 @@ export const useContractActions = () => {
   /** POST /api/contracts/{id}/sign */
   const signContract = useMutation({
     mutationFn: ({ id, signatureDataUrl }: { id: string, signatureDataUrl: string }) => contractsApi.signContract(id, signatureDataUrl),
-    onSuccess: (_, variables) => {
+    onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
       invalidateContracts();
+      await queryClient.refetchQueries({ queryKey: [CONTRACT_KEY, variables.id], type: 'active' });
     },
   });
 
@@ -195,13 +199,19 @@ export const useContractActions = () => {
     },
   });
 
-  /** POST /api/contracts/{id}/terminate */
+  /** POST /api/contracts/{id}/terminate — 200 (đồng bộ) hoặc 202 (queue EDA) */
   const terminateContract = useMutation({
     mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.terminateContract(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
       invalidateContracts();
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['handovers'] });
+      queryClient.invalidateQueries({ queryKey: ['meter-readings'] });
+      queryClient.invalidateQueries({ queryKey: ['meters'] });
+      queryClient.invalidateQueries({ queryKey: ['property-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['property-readings'] });
     },
   });
 
@@ -217,7 +227,7 @@ export const useContractActions = () => {
 
   /** GET /api/contracts/{id}/document/download */
   const downloadDocument = useMutation({
-    mutationFn: (id: string) => contractsApi.downloadDocument(id),
+    mutationFn: ({ id, revision }: { id: string; revision?: string }) => contractsApi.downloadDocument(id, revision),
   });
 
   /** POST /api/contracts/{id}/members */
@@ -225,7 +235,27 @@ export const useContractActions = () => {
     mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.addContractMember(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] }); // To refresh room detail tenants list
+    },
+  });
+
+  /** PUT /api/contracts/{id}/members/{memberId} */
+  const updateContractMember = useMutation({
+    mutationFn: ({
+      contractId,
+      memberId,
+      data,
+    }: {
+      contractId: string;
+      memberId: string;
+      data: Record<string, unknown>;
+    }) => contractsApi.updateContractMember(contractId, memberId, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.contractId] });
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
     },
   });
 
@@ -235,6 +265,7 @@ export const useContractActions = () => {
       contractsApi.removeContractMember(contractId, memberId),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.contractId] });
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
     },
   });
@@ -265,7 +296,41 @@ export const useContractActions = () => {
     generateDocument,
     downloadDocument,
     addContractMember,
+    updateContractMember,
     removeContractMember,
     approveContractMember,
   };
+};
+
+// ─── Pending Requests (Manager Queue) ─────────────────────────────────────────
+
+/**
+ * GET /api/properties/{id}/pending-requests
+ * Tập hợp tất cả yêu cầu chờ duyệt: chuyển phòng, thêm thành viên, báo dời đi.
+ */
+export const usePendingRequests = (propertyId?: string) => {
+  return useQuery({
+    queryKey: [PENDING_REQUESTS_KEY, propertyId],
+    queryFn: () => contractsApi.getPendingRequests(propertyId!),
+    enabled: !!propertyId,
+    staleTime: 30 * 1000, // 30s — refresh thường xuyên hơn để cập nhật hàng chờ
+    refetchOnWindowFocus: true,
+  });
+};
+
+/**
+ * PUT /api/contracts/{contractId}/members/{memberId}/approve
+ * Duyệt thêm thành viên mới vào hợp đồng.
+ */
+export const useApproveMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ contractId, memberId }: { contractId: string; memberId: string }) =>
+      contractsApi.approveContractMember(contractId, memberId),
+    onSuccess: (_, { contractId }) => {
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, contractId] });
+    },
+  });
 };

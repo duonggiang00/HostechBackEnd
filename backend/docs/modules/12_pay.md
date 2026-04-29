@@ -103,7 +103,7 @@ GET /api/properties/{property_id}/invoices?filter[status]=ISSUED
 
 | Parameter | Type | Mô tả |
 |-----------|------|-------|
-| `filter[status]` | string | `ISSUED`, `PARTIALLY_PAID` — hóa đơn chờ thanh toán |
+| `filter[status]` | string | `ISSUED`, `PARTIAL` — hóa đơn chờ thanh toán |
 | `filter[room_id]` | uuid | Hóa đơn của phòng cụ thể |
 | `filter[contract_id]` | uuid | Hóa đơn của hợp đồng cụ thể |
 | `per_page` | int | Số bản ghi mỗi trang (default 15) |
@@ -374,7 +374,7 @@ async function pollPaymentStatus(paymentId: string) {
 ## 5. State Machine — Invoice Status
 
 ```
-                  ┌──►  PARTIALLY_PAID ──┐
+                  ┌──►  PARTIAL ──┐
                   │    (thanh toán một   │
 DRAFT ──► ISSUED ─┤     phần)            ├──► PAID
                   │                      │
@@ -387,11 +387,11 @@ DRAFT ──► ISSUED ─┤     phần)            ├──► PAID
 |------------|---------|---------------------|
 | `DRAFT` | Hóa đơn nháp | Chỉnh sửa, Xóa, Phát hành |
 | `ISSUED` | Đã phát hành, chờ thanh toán | **Thanh toán (tạo Payment)** |
-| `PARTIALLY_PAID` | Thanh toán một phần | **Tiếp tục thanh toán** |
+| `PARTIAL` | Thanh toán một phần | **Tiếp tục thanh toán** |
 | `PAID` | Đã thanh toán đủ | Xem, Không thể hủy |
 | `CANCELLED` | Đã hủy | Không thể thanh toán |
 
-> Frontend **chỉ cho phép tạo Payment** khi hóa đơn ở trạng thái `ISSUED` hoặc `PARTIALLY_PAID`.
+> Frontend **chỉ cho phép tạo Payment** khi hóa đơn ở trạng thái `ISSUED` hoặc `PARTIAL`.
 
 ---
 
@@ -487,11 +487,11 @@ ledger_entries
 - [ ] Hiển thị cột `status` với badge màu sắc:
   - `DRAFT` → xám
   - `ISSUED` → xanh dương (chờ thanh toán)
-  - `PARTIALLY_PAID` → cam
+  - `PARTIAL` → cam
   - `PAID` → xanh lá
   - `CANCELLED` → đỏ
 - [ ] Bộ lọc nhanh theo status
-- [ ] Nút **"Ghi nhận thanh toán"** chỉ hiện khi status = `ISSUED` hoặc `PARTIALLY_PAID`
+- [ ] Nút **"Ghi nhận thanh toán"** chỉ hiện khi status = `ISSUED` hoặc `PARTIAL`
 - [ ] Hiển thị `paid_amount` / `total_amount` dạng progress bar
 
 ### 10.2 Màn hình Tạo giao dịch VNPay
@@ -595,7 +595,7 @@ Frontend nhận redirect sau khi khách thanh toán xong trên VNPay portal.
 > [!IMPORTANT]
 > **Kiểm tra bắt buộc trước khi gửi API:**
 > - `SUM(allocations[].amount)` **phải bằng** `amount` (chênh lệch > 0.01 sẽ bị từ chối)
-> - Hóa đơn phải ở trạng thái `ISSUED` hoặc `PARTIALLY_PAID` mới được gạch nợ
+> - Hóa đơn phải ở trạng thái `ISSUED` hoặc `PARTIAL` mới được gạch nợ
 > - Tất cả hóa đơn phải thuộc cùng `org_id` với user đang thao tác
 
 > [!WARNING]

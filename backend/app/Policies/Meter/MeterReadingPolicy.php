@@ -52,8 +52,12 @@ class MeterReadingPolicy implements RbacModuleProvider
         return $user->hasPermissionTo('create MeterReading');
     }
 
-    public function update(User $user, MeterReading $meterReading): bool
+    public function update(User $user, ?MeterReading $meterReading = null): bool
     {
+        if (! $meterReading) {
+            return $user->hasPermissionTo('update MeterReading');
+        }
+
         // Manager/Owner keep full update permission in property scope.
         if ($user->hasPermissionTo('update MeterReading')) {
             return $this->checkPropertyScope($user, $meterReading);
@@ -102,8 +106,12 @@ class MeterReadingPolicy implements RbacModuleProvider
     /**
      * Only Managers can approve or reject meter readings.
      */
-    public function approve(User $user, MeterReading $meterReading): bool
+    public function approve(User $user, ?MeterReading $meterReading = null): bool
     {
+        if (! $meterReading) {
+            return $user->hasPermissionTo('update MeterReading') && $user->hasRole(['Manager', 'Owner']);
+        }
+
         // Only Manager and Owner can approve (has 'U' permission which includes approve operations)
         if (! $user->hasPermissionTo('update MeterReading')) {
             return false;

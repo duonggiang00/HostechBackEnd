@@ -21,6 +21,7 @@ export const billingApi = {
         search: params?.search || undefined,
         'filter[status]': params?.status || undefined,
         'filter[room_id]': params?.room_id || undefined,
+        'filter[is_termination]': params?.is_termination !== undefined ? (params.is_termination ? 1 : 0) : undefined,
         page: params?.page ?? 1,
         per_page: params?.per_page ?? 20,
         include: 'property,room',
@@ -33,7 +34,7 @@ export const billingApi = {
   getInvoice: async (id: string): Promise<Invoice> => {
     const response = await apiClient.get(`/invoices/${id}`, {
       params: {
-        include: 'property,room,items,statusHistories.actor,createdBy,issuedBy',
+        include: 'property,room,items,statusHistories.changedBy,createdBy,issuedBy',
       },
     });
     return response.data.data as Invoice;
@@ -43,7 +44,13 @@ export const billingApi = {
   generateMonthly: async (
     propertyId: string,
     payload?: GenerateMonthlyPayload,
-  ): Promise<{ message: string; count: number }> => {
+  ): Promise<{
+    message: string;
+    count: number;
+    failed?: number;
+    errors?: string[];
+    total?: number;
+  }> => {
     const response = await apiClient.post(
       `/properties/${propertyId}/invoices/generate-monthly`,
       payload,
@@ -81,12 +88,23 @@ export const billingApi = {
     return response.data.data as Invoice;
   },
 
-  // ─── Thanh toán nhanh (pay endpoint) ──────────────────────────────────
-  payInvoice: async (
-    invoiceId: string,
-    payload: { payment_method: string; amount?: number; note?: string },
-  ): Promise<any> => {
-    const response = await apiClient.put(`/invoices/${invoiceId}/pay`, payload);
+  /** Tạo hóa đơn định kỳ cho một tòa (POST …/generate-monthly). */
+  generateInvoices: async (args: {
+    property_id: string;
+    execution_date?: string;
+    billing_date?: string;
+  }): Promise<{
+    message: string;
+    count: number;
+    failed?: number;
+    errors?: string[];
+    total?: number;
+  }> => {
+    const billing_date = args.billing_date ?? args.execution_date;
+    const response = await apiClient.post(
+      `/properties/${args.property_id}/invoices/generate-monthly`,
+      billing_date ? { billing_date } : {},
+    );
     return response.data;
   },
 };

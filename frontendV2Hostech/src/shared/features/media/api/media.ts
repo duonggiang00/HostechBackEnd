@@ -23,6 +23,7 @@ export const mediaApi = {
       url: result.url,
       id: result.temporary_upload_id || result.id,
       name: result.file_name || result.name,
+      mediaId: result.media_id,
     };
   },
 };

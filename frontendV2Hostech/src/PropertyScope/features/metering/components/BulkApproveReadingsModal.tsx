@@ -3,7 +3,7 @@ import { X, CheckCircle2, XCircle, Loader2, Zap, Droplet, AlertCircle, CheckSqua
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { usePropertyReadings, useBulkApproveReadings } from '../hooks/useMeters';
-import type { MeterReading } from '../types';
+import type { Meter, MeterReading } from '../types';
 
 interface Props {
   propertyId: string;
@@ -11,14 +11,11 @@ interface Props {
   onClose: () => void;
 }
 
-interface ReadingWithMeter extends MeterReading {
-  meter?: {
-    id: string;
-    code: string;
-    type: 'ELECTRIC' | 'WATER';
+type ReadingWithMeter = Omit<MeterReading, 'meter'> & {
+  meter?: Pick<Meter, 'id' | 'property_id' | 'code' | 'type' | 'is_active' | 'base_reading' | 'latest_reading'> & {
     room?: { id: string; name: string; code: string };
   };
-}
+};
 
 export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props) {
   const thisMonthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');

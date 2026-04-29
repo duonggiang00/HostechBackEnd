@@ -2,9 +2,13 @@
 
 namespace App\Observers;
 
+use App\Events\Contract\ContractActivated;
+use App\Events\Contract\ContractPendingPayment;
+use App\Events\Contract\ContractSignatureConfirmed;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractStatusHistory;
 use App\Models\Property\RoomStatusHistory;
+use App\Notifications\Contract\ContractSignedNotification;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
@@ -38,19 +42,19 @@ class ContractObserver
         }
 
         $fromStatus = $contract->getOriginal('status');
-        $toStatus   = $contract->status;
+        $toStatus = $contract->status;
 
         // Chuyển Enum thành string nếu cần
         $fromStatusValue = $fromStatus instanceof \BackedEnum ? $fromStatus->value : (string) $fromStatus;
-        $toStatusValue   = $toStatus   instanceof \BackedEnum ? $toStatus->value   : (string) $toStatus;
+        $toStatusValue = $toStatus   instanceof \BackedEnum ? $toStatus->value : (string) $toStatus;
 
         ContractStatusHistory::create([
-            'org_id'             => $contract->org_id,
-            'contract_id'        => $contract->id,
-            'from_status'        => $fromStatusValue ?: null,
-            'to_status'          => $toStatusValue,
+            'org_id' => $contract->org_id,
+            'contract_id' => $contract->id,
+            'from_status' => $fromStatusValue ?: null,
+            'to_status' => $toStatusValue,
             'changed_by_user_id' => auth()->id(),
-            'notes'              => $this->generateNotes($fromStatusValue, $toStatusValue),
+            'notes' => $this->generateNotes($fromStatusValue, $toStatusValue),
         ]);
     }
 
@@ -69,7 +73,11 @@ class ContractObserver
 
             // EDA: Fire ContractActivated when contract becomes ACTIVE
             if ($newStatusValue === 'ACTIVE') {
-                \App\Events\Contract\ContractActivated::dispatch($contract);
+                ContractActivated::dispatch($contract);
+            }
+
+            if ($newStatusValue === 'PENDING_PAYMENT') {
+                ContractPendingPayment::dispatch($contract);
             }
         }
 
@@ -80,7 +88,7 @@ class ContractObserver
 
             // Case: Tenant just signed
             if (! isset($oldMeta['tenant_signed_at']) && isset($newMeta['tenant_signed_at'])) {
-                \App\Events\Contract\ContractSignatureConfirmed::dispatch($contract, 'tenant');
+                ContractSignatureConfirmed::dispatch($contract, 'tenant');
 
                 // Notify only the creator (Manager) as per user feedback
                 $creator = $contract->createdBy;
@@ -88,7 +96,7 @@ class ContractObserver
                     $primaryTenant = $contract->members()->where('is_primary', true)->first();
                     $signerName = $primaryTenant?->full_name ?? 'Cư dân';
 
-                    $creator->notify(new \App\Notifications\Contract\ContractSignedNotification(
+                    $creator->notify(new ContractSignedNotification(
                         $contract,
                         $signerName
                     ));
@@ -97,7 +105,7 @@ class ContractObserver
 
             // Case: Manager just signed
             if (! isset($oldMeta['manager_signed_at']) && isset($newMeta['manager_signed_at'])) {
-                \App\Events\Contract\ContractSignatureConfirmed::dispatch($contract, 'manager');
+                ContractSignatureConfirmed::dispatch($contract, 'manager');
             }
         }
     }
@@ -108,18 +116,18 @@ class ContractObserver
     private function generateNotes(string $from, string $to): string
     {
         return match ("{$from}->{$to}") {
-            'DRAFT->PENDING_SIGNATURE'           => 'Hợp đồng được gửi cho khách ký.',
+            'DRAFT->PENDING_SIGNATURE' => 'Hợp đồng được gửi cho khách ký.',
             'PENDING_SIGNATURE->PENDING_PAYMENT' => 'Khách đã ký xác nhận, chờ thanh toán cọc + tiền phòng.',
-            'PENDING_SIGNATURE->DRAFT'           => 'Khách từ chối ký. Hợp đồng quay lại bản nháp.',
-            'PENDING_PAYMENT->ACTIVE'            => 'Thanh toán được xác nhận. Hợp đồng bắt đầu hiệu lực.',
-            'ACTIVE->PENDING_TERMINATION'        => 'Tenant đã gửi thông báo dời đi. Chờ Manager xác nhận thanh lý.',
-            'ACTIVE->TERMINATED'                 => 'Hợp đồng được thanh lý (kết thúc đúng hạn hoặc thỏa thuận).',
-            'ACTIVE->CANCELLED'                  => 'Hợp đồng bị hủy ngang (phạt cọc do vi phạm điều khoản).',
-            'ACTIVE->EXPIRED'                    => 'Hợp đồng đã qua ngày kết thúc, chờ Manager xử lý.',
-            'PENDING_TERMINATION->TERMINATED'    => 'Manager xác nhận thanh lý. Hợp đồng kết thúc.',
-            'PENDING_TERMINATION->CANCELLED'     => 'Manager xác nhận hủy (phạt cọc do vi phạm điều khoản).',
-            'EXPIRED->TERMINATED'                => 'Manager đã xử lý hợp đồng hết hạn. Hoàn tất thanh lý.',
-            default                              => "Chuyển trạng thái từ {$from} sang {$to}.",
+            'PENDING_SIGNATURE->DRAFT' => 'Khách từ chối ký. Hợp đồng quay lại bản nháp.',
+            'PENDING_PAYMENT->ACTIVE' => 'Thanh toán được xác nhận. Hợp đồng bắt đầu hiệu lực.',
+            'ACTIVE->PENDING_TERMINATION' => 'Tenant đã gửi thông báo trả phòng. Chờ Manager xác nhận thanh lý.',
+            'ACTIVE->TERMINATED' => 'Hợp đồng được thanh lý (kết thúc đúng hạn hoặc thỏa thuận).',
+            'ACTIVE->CANCELLED' => 'Hợp đồng bị hủy ngang (phạt cọc do vi phạm điều khoản).',
+            'ACTIVE->EXPIRED' => 'Hợp đồng đã qua ngày kết thúc, chờ Manager xử lý.',
+            'PENDING_TERMINATION->TERMINATED' => 'Manager xác nhận thanh lý. Hợp đồng kết thúc.',
+            'PENDING_TERMINATION->CANCELLED' => 'Manager xác nhận hủy (phạt cọc do vi phạm điều khoản).',
+            'EXPIRED->TERMINATED' => 'Manager đã xử lý hợp đồng hết hạn. Hoàn tất thanh lý.',
+            default => "Chuyển trạng thái từ {$from} sang {$to}.",
         };
     }
 
@@ -156,12 +164,12 @@ class ContractObserver
             $room->update(['status' => $newStatus]);
 
             RoomStatusHistory::create([
-                'id'                 => Str::uuid()->toString(),
-                'org_id'             => $room->org_id,
-                'room_id'            => $room->id,
-                'from_status'        => $oldStatus,
-                'to_status'          => $newStatus,
-                'reason'             => 'Status auto-synced from Contract status (' . ($contract->status instanceof \BackedEnum ? $contract->status->value : $contract->status) . ')',
+                'id' => Str::uuid()->toString(),
+                'org_id' => $room->org_id,
+                'room_id' => $room->id,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'reason' => 'Status auto-synced from Contract status ('.($contract->status instanceof \BackedEnum ? $contract->status->value : $contract->status).')',
                 'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
             ]);
         }

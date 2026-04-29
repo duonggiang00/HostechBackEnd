@@ -41,10 +41,10 @@ class RoomQuickInvoiceController extends Controller
 
         $validated = $request->validate([
             'period_start' => 'required|date',
-            'period_end'   => 'required|date|after_or_equal:period_start',
-            'readings'     => 'required|array',
+            'period_end' => 'required|date|after_or_equal:period_start',
+            'readings' => 'required|array',
             'readings.*.meter_id' => 'required|uuid|exists:meters,id',
-            'readings.*.value'    => 'required|numeric|min:0',
+            'readings.*.value' => 'required|numeric|min:0',
         ]);
 
         $contract = Contract::where('room_id', $room->id)
@@ -63,7 +63,7 @@ class RoomQuickInvoiceController extends Controller
                 // 1. Ghi nhận chỉ số mới cho các đồng hồ
                 foreach ($validated['readings'] as $readingData) {
                     $meter = Meter::find($readingData['meter_id']);
-                    
+
                     if ($meter && $meter->room_id === $contract->room_id) {
                         // Kiểm tra nếu đã có reading trong tháng này thì cập nhật, nếu chưa thì tạo mới
                         $existingReading = MeterReading::where('meter_id', $meter->id)
@@ -74,26 +74,26 @@ class RoomQuickInvoiceController extends Controller
                         if ($existingReading) {
                             $existingReading->update([
                                 'reading_value' => $readingData['value'],
-                                'reading_date'  => now(),
-                                'status'        => 'APPROVED', // Chốt số do quản lý làm nên được auto-approve
+                                'reading_date' => now(),
+                                'status' => 'APPROVED', // Chốt số do quản lý làm nên được auto-approve
                                 'approved_by_user_id' => request()->user()?->id,
-                                'approved_at'   => now(),
+                                'approved_at' => now(),
                             ]);
                         } else {
                             MeterReading::create([
-                                'org_id'         => $meter->org_id,
-                                'property_id'    => $meter->property_id,
-                                'meter_id'       => $meter->id,
-                                'period_start'   => $periodStart->toDateString(),
-                                'period_end'     => $periodEnd->toDateString(),
-                                'reading_date'   => now(),
-                                'reading_value'  => $readingData['value'],
-                                'proof_image'    => null, // Chốt tay không bắt buộc ảnh
-                                'status'         => 'APPROVED',
-                                'notes'          => 'Chốt bằng công cụ Tạo hóa đơn nhanh.',
+                                'org_id' => $meter->org_id,
+                                'property_id' => $meter->property_id,
+                                'meter_id' => $meter->id,
+                                'period_start' => $periodStart->toDateString(),
+                                'period_end' => $periodEnd->toDateString(),
+                                'reading_date' => now(),
+                                'reading_value' => $readingData['value'],
+                                'proof_image' => null, // Chốt tay không bắt buộc ảnh
+                                'status' => 'APPROVED',
+                                'notes' => 'Chốt bằng công cụ Tạo hóa đơn nhanh.',
                                 'submitted_by_user_id' => request()->user()?->id,
-                                'approved_by_user_id'  => request()->user()?->id,
-                                'approved_at'    => now(),
+                                'approved_by_user_id' => request()->user()?->id,
+                                'approved_at' => now(),
                             ]);
                         }
                     }
@@ -112,11 +112,11 @@ class RoomQuickInvoiceController extends Controller
 
             return response()->json([
                 'message' => 'Đã chốt số và tạo hóa đơn thành công.',
-                'invoice' => $invoice
+                'invoice' => $invoice,
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Lỗi khi tạo hóa đơn: ' . $e->getMessage()
+                'message' => 'Lỗi khi tạo hóa đơn: '.$e->getMessage(),
             ], 422);
         }
     }

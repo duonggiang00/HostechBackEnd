@@ -17,7 +17,7 @@ class MeterResource extends JsonResource
     {
         // Get property from room relationship or direct property_id
         $property = $this->room?->property;
-        
+
         return [
             'id' => $this->id,
             'code' => $this->code,
@@ -33,12 +33,13 @@ class MeterResource extends JsonResource
             'meta' => $this->meta,
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
-            // Latest APPROVED reading for quick reading "số cũ"
-            'latest_reading' => $this->latestApprovedReading?->reading_value ?? $this->base_reading,
-            'last_read_at' => $this->latestApprovedReading?->period_end ? $this->latestApprovedReading->period_end->format('Y-m-d') : null,
-            'consumption' => $this->latestApprovedReading?->consumption ?? 0,
+            // Quick Invoice must rely on latest APPROVED only (exclude LOCKED).
+            'latest_reading_id' => $this->latestInvoiceEligibleReading?->id,
+            'latest_reading' => $this->latestInvoiceEligibleReading?->reading_value ?? $this->base_reading,
+            'last_read_at' => $this->latestInvoiceEligibleReading?->period_end ? $this->latestInvoiceEligibleReading->period_end->format('Y-m-d') : null,
+            'consumption' => $this->latestInvoiceEligibleReading?->consumption ?? 0,
             'room' => new RoomResource($this->whenLoaded('room')),
-            'media' => $this->getMedia('meter_attachments')->map(fn($media) => [
+            'media' => $this->getMedia('meter_attachments')->map(fn ($media) => [
                 'id' => $media->id,
                 'url' => $media->getFullUrl(),
                 'name' => $media->file_name,

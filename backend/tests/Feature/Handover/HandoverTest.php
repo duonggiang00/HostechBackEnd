@@ -14,6 +14,7 @@ use App\Models\Property\Property;
 use App\Models\Property\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -39,7 +40,7 @@ class HandoverTest extends TestCase
         $this->artisan('rbac:sync');
 
         // Flush Spatie permission cache so assignRole() takes effect immediately
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -67,7 +68,7 @@ class HandoverTest extends TestCase
         // Only assign PascalCase to match RbacSyncCommand output
         $user->assignRole($role);
         // Flush cache after each role assignment
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return $user;
     }
@@ -330,7 +331,7 @@ class HandoverTest extends TestCase
         [$org, $property, $floor, $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-001',
         ]);
@@ -353,7 +354,7 @@ class HandoverTest extends TestCase
         [$org, $property, $floor, $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'WATER', 'code' => 'W-001',
         ]);
@@ -379,7 +380,7 @@ class HandoverTest extends TestCase
         [$org, $property, , $room, $contract] = $this->setupOrg();
         $manager = $this->makeUser($org, 'Manager');
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-002',
         ]);
@@ -400,7 +401,7 @@ class HandoverTest extends TestCase
         $manager = $this->makeUser($org, 'Manager');
         $tenant = $this->makeApprovedTenant($org, $contract);
 
-        $meter = \App\Models\Meter\Meter::create([
+        $meter = Meter::create([
             'org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id,
             'type' => 'ELECTRICITY', 'code' => 'EL-003',
         ]);

@@ -24,6 +24,7 @@ enum DepositStatus: string
         return match ($this) {
             self::UNPAID => 'Chưa đóng',
             self::HELD => 'Đang giữ',
+            self::REFUND_PENDING => 'Chờ hoàn cọc',
             self::REFUNDED => 'Đã hoàn trả',
             self::PARTIAL_REFUND => 'Hoàn trả 1 phần',
             self::FORFEITED => 'Bị phạt (mất cọc)',

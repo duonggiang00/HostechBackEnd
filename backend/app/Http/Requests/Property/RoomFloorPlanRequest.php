@@ -25,13 +25,13 @@ class RoomFloorPlanRequest extends FormRequest
     {
         return [
             'floor_id' => ['required', 'uuid', 'exists:floors,id'],
-            'x'        => ['required', 'numeric'],
-            'y'        => ['required', 'numeric'],
-            'width'    => ['nullable', 'numeric', 'min:1'],
-            'height'   => ['nullable', 'numeric', 'min:1'],
+            'x' => ['required', 'numeric'],
+            'y' => ['required', 'numeric'],
+            'width' => ['nullable', 'numeric', 'min:1'],
+            'height' => ['nullable', 'numeric', 'min:1'],
             'rotation' => ['nullable', 'numeric'],
-            'label'    => ['nullable', 'string', 'max:50'],
-            'meta'     => ['nullable', 'json'],
+            'label' => ['nullable', 'string', 'max:50'],
+            'meta' => ['nullable', 'json'],
         ];
     }
 }

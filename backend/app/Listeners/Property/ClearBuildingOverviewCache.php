@@ -2,15 +2,7 @@
 
 namespace App\Listeners\Property;
 
-use App\Events\Property\RoomCreated;
 use App\Events\Property\RoomUpdated;
-use App\Events\Property\RoomDeleted;
-use App\Events\Property\FloorCreated;
-use App\Events\Property\FloorUpdated;
-use App\Events\Property\FloorDeleted;
-use App\Events\Property\PropertyCreated;
-use App\Events\Property\PropertyUpdated;
-use App\Events\Property\BuildingOverviewUpdated;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
@@ -25,8 +17,8 @@ class ClearBuildingOverviewCache implements ShouldQueue
     public function handle(mixed $event): void
     {
         $propertyId = $this->getPropertyIdFromEvent($event);
-        
-        if (!$propertyId) {
+
+        if (! $propertyId) {
             return;
         }
 
@@ -36,15 +28,15 @@ class ClearBuildingOverviewCache implements ShouldQueue
             $changes = $event->changes ?? [];
             $layoutFields = ['status', 'code', 'name', 'floor_id', 'position', 'is_active'];
             $hasImpact = false;
-            
+
             foreach ($layoutFields as $field) {
                 if (array_key_exists($field, $changes)) {
                     $hasImpact = true;
                     break;
                 }
             }
-            
-            if (!$hasImpact) {
+
+            if (! $hasImpact) {
                 return;
             }
         }

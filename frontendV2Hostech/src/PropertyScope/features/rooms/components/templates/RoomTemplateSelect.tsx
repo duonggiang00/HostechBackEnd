@@ -3,12 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Search, ChevronDown, Box, LayoutGrid, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { roomTemplatesApi } from '../../api/roomTemplatesApi';
-import type { RoomTemplate } from '../../types';
+import type { GlobalRoomTemplate } from '../../types';
 import { formatNumber } from '@/lib/utils';
 
 interface RoomTemplateSelectProps {
   propertyId: string;
-  onSelect: (template: RoomTemplate) => void;
+  onSelect: (template: GlobalRoomTemplate) => void;
   selectedId?: string;
 }
 
@@ -50,7 +50,7 @@ export function RoomTemplateSelect({ propertyId, onSelect, selectedId }: RoomTem
               </p>
             </div>
           ) : (
-            <span className="text-sm font-bold text-slate-400 italic">Chọn một mẫu để áp dụng nhanh...</span>
+            <span className="text-sm font-bold text-slate-400 ">Chọn một mẫu để áp dụng nhanh...</span>
           )}
         </div>
         <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -116,7 +116,7 @@ export function RoomTemplateSelect({ propertyId, onSelect, selectedId }: RoomTem
                     ))}
                   </div>
                 ) : (
-                  <div className="py-8 text-center text-slate-400 text-xs font-bold italic lowercase tracking-wider">
+                  <div className="py-8 text-center text-slate-400 text-xs font-bold lowercase tracking-wider">
                     Không tìm thấy mẫu nào
                   </div>
                 )}

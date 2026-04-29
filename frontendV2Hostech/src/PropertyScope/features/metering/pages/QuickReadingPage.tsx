@@ -4,21 +4,26 @@ import { useEffect } from 'react';
 import { echo } from '@/shared/utils/echo';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
 import { useBulkSubmitReadings } from '../hooks/useMeters';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { meteringApi } from '../api/metering';
-import { Zap, Droplet, ArrowLeft, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X, Send } from 'lucide-react';
+import { Zap, Droplet, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X, Send } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import toast from 'react-hot-toast';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function QuickReadingPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const isManager = hasRole(['Manager', 'Owner']);
 
   // WebSocket Listener for real-time status updates
   useEffect(() => {
     if (!propertyId || !echo) return;
 
     console.log('Subscribing to property channel:', `property.${propertyId}`);
-    const channel = echo.private(`property.${propertyId}`)
+    echo
+      .private(`property.${propertyId}`)
       .listen('.App.Events.Meter.MeterReadingStatusChanged', (data: any) => {
         toast.success(data.message, {
           duration: 6000,
@@ -28,13 +33,13 @@ export default function QuickReadingPage() {
       });
 
     return () => {
-      echo.leave(`property.${propertyId}`);
+      echo?.leave(`property.${propertyId}`);
     };
   }, [propertyId]);
 
-  // Fetch ALL active meters for the property (without pagination for quick reading)
+  // Fetch meters for rooms with ACTIVE contracts only (quick reading should not show empty rooms)
   const { meters: metersData, isLoading } = useMeters(propertyId!, {
-    filters: { is_active: true },
+    filters: { is_active: true, has_active_contract: true },
     perPage: 1000, // Fetch up to 1000 meters at once
     page: 1,
   });
@@ -194,8 +199,13 @@ export default function QuickReadingPage() {
     return Math.max(0, current - prev);
   };
 
-  const handleSave = async () => {
-    // Collect valid readings
+  /**
+   * Xây dựng payload chung, validate rồi gọi API với status được chỉ định.
+   * - status='SUBMITTED'  → lưu bản nháp, chờ Manager duyệt
+   * - status='APPROVED'   → chốt và duyệt ngay (chỉ Manager/Owner)
+   */
+  const handleSaveAndSubmit = async (status: 'SUBMITTED' | 'APPROVED') => {
+    // Thu thập các chỉ số hợp lệ đã nhập
     const basePayload = Object.entries(readings)
       .map(([meterId, value]) => ({
         meter_id: meterId,
@@ -210,49 +220,49 @@ export default function QuickReadingPage() {
       return;
     }
 
-    // Validation Check: ensure new reading is not smaller than previous
-    let hasError = false;
+    // Kiểm tra đơn điệu: chỉ số mới không được nhỏ hơn chỉ số cũ
     for (const item of basePayload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
       const prevReading = meter?.latest_reading ?? meter?.base_reading ?? 0;
       if (item.reading_value < prevReading) {
-        toast.error(`Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`);
-        hasError = true;
-        break;
+        toast.error(
+          `Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`
+        );
+        return;
       }
     }
 
-    if (hasError) return;
-
     try {
       setIsSubmitting(true);
+
+      // Upload ảnh chứng minh nếu có
       const payload = await Promise.all(
         basePayload.map(async (item) => {
           const proof = proofFiles[item.meter_id];
           if (!proof) return item;
-
           const uploaded = await meteringApi.uploadReadingProof(proof);
-          return {
-            ...item,
-            proof_media_ids: [uploaded.temporary_upload_id],
-          };
+          return { ...item, proof_media_ids: [uploaded.temporary_upload_id] };
         }),
       );
 
-      const result = await bulkCreateReadings.mutateAsync(payload);
-      // Kiểm tra kết quả trả về: Manager → APPROVED, Staff → DRAFT
+      const result = await bulkCreateReadings.mutateAsync({ data: payload, status });
       const createdItems = Array.isArray(result) ? result : [];
-      const draftIds = createdItems.filter((r: any) => r.status === 'DRAFT').map((r: any) => r.id);
 
-      if (draftIds.length > 0) {
-        // Staff flow: có bản nháp → hiện prompt gửi duyệt
-        setSavedDraftIds(draftIds);
-        toast.success(`Đã lưu ${payload.length} bản nháp thành công.`);
-        setShowSubmitPrompt(true);
-      } else {
-        // Manager flow: tự động APPROVED → chuyển về danh sách
-        toast.success(`Đã chốt thành công ${payload.length} chỉ số.`);
+      if (status === 'APPROVED') {
+        // Luồng 2: Manager chốt thẳng → APPROVED
+        toast.success(`✅ Đã chốt và duyệt thành công ${createdItems.length} chỉ số.`);
         navigate(`/properties/${propertyId}/meters`);
+      } else {
+        // Luồng 1: SUBMITTED — kiểm tra xem có bản Draft không (fallback cũ)
+        const draftIds = createdItems.filter((r: any) => r.status === 'DRAFT').map((r: any) => r.id);
+        if (draftIds.length > 0) {
+          setSavedDraftIds(draftIds);
+          toast.success(`Đã lưu ${payload.length} bản nháp. Bấm gửi duyệt để hoàn tất.`);
+          setShowSubmitPrompt(true);
+        } else {
+          toast.success(`Đã gửi ${payload.length} chỉ số chờ duyệt.`);
+          navigate(`/properties/${propertyId}/meters`);
+        }
       }
     } catch (error: any) {
       const details = error?.response?.data?.errors
@@ -269,13 +279,9 @@ export default function QuickReadingPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-6">
         <div>
-          <button
-            onClick={() => navigate(`/properties/${propertyId}/meters`)}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-[#1E3A8A] hover:text-blue-900 transition-colors mb-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại danh sách
-          </button>
+          <div className="mb-2">
+            <PageBackButton />
+          </div>
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-50 dark:bg-blue-500/10 rounded-[12px]">
               <Zap className="w-6 h-6 text-[#1E3A8A] dark:text-blue-400" />
@@ -304,14 +310,38 @@ export default function QuickReadingPage() {
             </div>
           </div>
           <div className="hidden sm:block h-8 w-px bg-slate-200 dark:bg-white/10 mx-2" />
-          <button
-            onClick={handleSave}
-            disabled={isSubmitting || Object.keys(readings).length === 0}
-            className="px-6 py-2.5 bg-[#F59E0B] text-white rounded-[8px] text-sm font-semibold hover:bg-[#D97706] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2 whitespace-nowrap"
-          >
-            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Lưu ngay
-          </button>
+          {/* ── Nút Submit --- phân quyền theo role ── */}
+          {isManager ? (
+            // Manager/Owner: 2 lựa chọn
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleSaveAndSubmit('SUBMITTED')}
+                disabled={isSubmitting || Object.keys(readings).length === 0}
+                className="px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 rounded-[8px] text-sm font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2 whitespace-nowrap"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Lưu để duyệt
+              </button>
+              <button
+                onClick={() => handleSaveAndSubmit('APPROVED')}
+                disabled={isSubmitting || Object.keys(readings).length === 0}
+                className="px-4 py-2.5 bg-emerald-600 text-white rounded-[8px] text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2 whitespace-nowrap"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                Chốt &amp; Duyệt ngay
+              </button>
+            </div>
+          ) : (
+            // Staff: chỉ gửi duyệt
+            <button
+              onClick={() => handleSaveAndSubmit('SUBMITTED')}
+              disabled={isSubmitting || Object.keys(readings).length === 0}
+              className="px-6 py-2.5 bg-[#1E3A8A] text-white rounded-[8px] text-sm font-semibold hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm active:scale-95 flex items-center gap-2 whitespace-nowrap"
+            >
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              Gửi duyệt
+            </button>
+          )}
         </div>
       )}
 

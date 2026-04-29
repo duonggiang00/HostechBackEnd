@@ -1,300 +1,259 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Save, X, Plus, Trash2, 
-  Package, Droplets, Zap, Info,
-  ClipboardList,
-  Camera, Activity, Loader2
+import { motion } from 'framer-motion';
+import {
+  Save, X, ClipboardList, Loader2, CheckCircle2, FileText,
+  AlertCircle, User, Building2
 } from 'lucide-react';
 import { useHandover } from '@/shared/features/operations/hooks/useHandover';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import { toast } from 'react-hot-toast';
 
-export default function HandoverForm({ 
-  onClose, 
-  roomId, 
-  contractId, 
-  type = 'check_in' 
-}: { 
-  onClose: () => void, 
-  roomId?: string, 
-  contractId?: string,
-  type?: 'check_in' | 'check_out'
-}) {
+interface HandoverFormProps {
+  /** 'modal' = có overlay (standalone), 'embedded' = dùng trong wizard (không overlay) */
+  mode?: 'modal' | 'embedded';
+  onClose?: () => void;
+  roomId?: string;
+  roomName?: string;
+  contractId?: string;
+  tenantName?: string;
+  /** Chỉ dùng cho biên bản bàn giao khi kết thúc hợp đồng */
+  type?: 'OUT';
+  initialData?: any;
+  readOnly?: boolean;
+  /** Callback sau khi tạo DRAFT thành công */
+  onSubmitted?: (handoverId: string) => void;
+}
+
+export default function HandoverForm({
+  mode = 'modal',
+  onClose,
+  roomId,
+  roomName,
+  contractId,
+  tenantName,
+  type = 'OUT',
+  initialData = null,
+  readOnly = false,
+  onSubmitted,
+}: HandoverFormProps) {
   const { createHandover } = useHandover();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    room_id: roomId || '',
-    contract_id: contractId || '',
-    type: type,
-    handover_date: new Date().toISOString().split('T')[0],
-    notes: '',
-    items: [
-      { name: 'Key Set', condition: 'good' as const, notes: '' },
-      { name: 'Air Conditioner', condition: 'good' as const, notes: '' },
-      { name: 'Bed & Mattress', condition: 'good' as const, notes: '' }
-    ],
-    snapshots: [
-      { meter_type: 'Electricity', reading_value: '' as any, unit: 'kWh' },
-      { meter_type: 'Water', reading_value: '' as any, unit: 'm3' }
-    ]
-  });
+
+  const [note, setNote] = useState<string>(initialData?.note ?? '');
+  const [submitted, setSubmitted] = useState(false);
+  const [createdHandover, setCreatedHandover] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
+    if (readOnly) { onClose?.(); return; }
+    setError(null);
     try {
-      await createHandover.mutateAsync(formData);
-      onClose();
-    } catch (err) {
-      console.error(err);
+      const payload = {
+        room_id: roomId,
+        contract_id: contractId,
+        type,
+        note: note.trim() || null,
+      };
+      const created = await createHandover.mutateAsync(payload);
+      setCreatedHandover(created);
+      setSubmitted(true);
+      onSubmitted?.(created.id);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Có lỗi xảy ra khi tạo biên bản bàn giao.';
+      setError(msg);
+      toast.error(msg);
     }
   };
 
+  const typeLabel = 'Bàn giao kết thúc hợp đồng';
+  const typeColor = 'rose';
+
+  const body = (
+    <div className={
+      mode === 'embedded'
+        ? 'flex flex-col gap-5'
+        : 'relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[16px] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]'
+    }>
+      {/* Header — chỉ hiển thị trong modal mode */}
+      {mode === 'modal' && (
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-[8px] bg-${typeColor}-50 dark:bg-${typeColor}-500/10 flex items-center justify-center`}>
+              <ClipboardList className={`w-5 h-5 text-${typeColor}-600 dark:text-${typeColor}-400`} />
+            </div>
+            <div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                {typeLabel}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Biên bản bàn giao phòng
+              </p>
+            </div>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded-[8px] text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Nội dung chính */}
+      <div className={mode === 'embedded' ? 'flex flex-col gap-4' : 'p-6 overflow-y-auto flex-1 flex flex-col gap-4'}>
+
+        {/* Trạng thái đã submit */}
+        {submitted && createdHandover ? (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-3 py-6 text-center"
+          >
+            <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
+              <CheckCircle2 className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-base font-black text-slate-900 dark:text-white">
+                Biên bản đã được tạo
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Trạng thái: <span className="font-bold text-amber-600 dark:text-amber-400">Chờ xác nhận (Bản nháp)</span>
+              </p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                Quản lý sẽ xem xét và xác nhận biên bản bàn giao.
+              </p>
+            </div>
+            {note && (
+              <div className="w-full p-3 rounded-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-left mt-1">
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Ghi chú</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{note}</p>
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <>
+            {/* Thông tin phòng / khách */}
+            <div className="p-3 rounded-[10px] bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700 flex flex-col gap-2">
+              {roomName && (
+                <div className="flex items-center gap-2.5">
+                  <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Phòng</span>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{roomName}</p>
+                  </div>
+                </div>
+              )}
+              {tenantName && (
+                <div className="flex items-center gap-2.5">
+                  <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Khách thuê</span>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">{tenantName}</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Ngày lập biên bản</span>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    {format(new Date(), 'dd/MM/yyyy', { locale: vi })}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Type badge */}
+            <div className="flex items-center gap-2 px-3 py-2 rounded-[8px] bg-rose-50 dark:bg-rose-500/10 border border-rose-100 dark:border-rose-500/20">
+              <ClipboardList className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+              <span className="text-sm font-black text-rose-700 dark:text-rose-400">
+                {typeLabel}
+              </span>
+            </div>
+
+            {/* Ghi chú tình trạng phòng */}
+            <div>
+              <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">
+                Ghi chú tình trạng phòng
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={4}
+                disabled={readOnly}
+                placeholder="Mô tả tình trạng phòng khi bàn giao: tường, sàn, thiết bị, chìa khóa..."
+                className="w-full px-4 py-3 rounded-[10px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-rose-500 focus:border-rose-500 transition-colors resize-none disabled:opacity-60"
+              />
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="flex items-start gap-2 p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-[8px]">
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">{error}</p>
+              </div>
+            )}
+
+            {/* Info note */}
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-[8px]">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
+                Biên bản sẽ được tạo ở trạng thái <strong>Bản nháp</strong> và cần Quản lý xác nhận trước khi hoàn tất thanh lý hợp đồng.
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer actions */}
+      {!submitted && (
+        <div className={`flex justify-end gap-3 ${mode === 'modal' ? 'px-6 pb-5 pt-4 border-t border-slate-100 dark:border-slate-800' : 'pt-2'}`}>
+          {mode === 'modal' && onClose && (
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-black text-sm rounded-[8px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Hủy
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              onClick={handleSave}
+              disabled={createHandover.isPending}
+              className="flex items-center gap-2 px-6 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-[8px] transition-colors"
+            >
+              {createHandover.isPending
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Save className="w-4 h-4" />}
+              {createHandover.isPending ? 'Đang lưu...' : 'Tạo biên bản Nháp'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  if (mode === 'embedded') return body;
+
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
-      <motion.div 
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         onClick={onClose}
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
       />
-      
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-2xl bg-white rounded-5xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        className="relative w-full max-w-lg"
       >
-        {/* Header */}
-        <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg shadow-indigo-100">
-              <ClipboardList className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Record Room Inspection</h2>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Step {step} of 3 • {formData.type.replace('_', ' ')}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-200/50 rounded-xl transition-colors">
-            <X className="w-6 h-6 text-slate-400" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <AnimatePresence mode="wait">
-            {step === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Inspection Date</label>
-                    <input 
-                      type="date" 
-                      value={formData.handover_date}
-                      onChange={(e) => setFormData({ ...formData, handover_date: e.target.value })}
-                      className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-indigo-500 outline-none font-bold text-sm bg-slate-50/50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Inspection Type</label>
-                    <div className="flex p-1 bg-slate-100 rounded-2xl">
-                      <button 
-                        onClick={() => setFormData({ ...formData, type: 'check_in' })}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'check_in' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >Check-in</button>
-                      <button 
-                         onClick={() => setFormData({ ...formData, type: 'check_out' })}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${formData.type === 'check_out' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >Check-out</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">General Notes</label>
-                  <textarea 
-                    placeholder="Describe overall room condition..."
-                    rows={4}
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="w-full px-5 py-4 rounded-3xl border border-slate-200 focus:border-indigo-500 outline-none font-medium text-sm bg-slate-50/50 resize-none"
-                  />
-                </div>
-              </motion.div>
-            )}
-
-            {step === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                    <Package className="w-4 h-4 text-indigo-500" />
-                    Asset Checklist
-                  </h3>
-                  <button 
-                    onClick={() => setFormData({ 
-                      ...formData, 
-                      items: [...formData.items, { name: '', condition: 'good', notes: '' }] 
-                    })}
-                    className="text-xs font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 hover:underline"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Asset
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {formData.items.map((item, idx) => (
-                    <div key={idx} className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center gap-4 group">
-                      <div className="flex-1">
-                        <input 
-                          type="text"
-                          value={item.name}
-                          onChange={(e) => {
-                            const newItems = [...formData.items];
-                            newItems[idx].name = e.target.value;
-                            setFormData({ ...formData, items: newItems });
-                          }}
-                          placeholder="Asset name (e.g. Fridge)"
-                          className="w-full bg-transparent border-none outline-none font-bold text-sm placeholder:text-slate-300"
-                        />
-                      </div>
-                      <select 
-                        value={item.condition}
-                        onChange={(e) => {
-                          const newItems = [...formData.items];
-                          newItems[idx].condition = e.target.value as any;
-                          setFormData({ ...formData, items: newItems });
-                        }}
-                        className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-black uppercase tracking-widest text-slate-600 outline-none"
-                      >
-                        <option value="good">Good</option>
-                        <option value="fair">Fair</option>
-                        <option value="poor">Poor</option>
-                        <option value="broken">Broken</option>
-                      </select>
-                      <button 
-                        onClick={() => {
-                          const newItems = formData.items.filter((_, i) => i !== idx);
-                          setFormData({ ...formData, items: newItems });
-                        }}
-                        className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {step === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-8"
-              >
-                <div className="space-y-4">
-                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-amber-500" />
-                    Meter Snapshots
-                  </h3>
-                  <div className="grid grid-cols-1 gap-4">
-                    {formData.snapshots.map((snap, idx) => (
-                      <div key={idx} className="p-6 bg-slate-900 rounded-4xl text-white flex items-center justify-between border border-white/10 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 transition-all group-hover:bg-white/10" />
-                        <div className="flex items-center gap-4 relative">
-                          <div className={`p-3 rounded-2xl ${snap.meter_type === 'Electricity' ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                            {snap.meter_type === 'Electricity' ? <Zap className="w-6 h-6" /> : <Droplets className="w-6 h-6" />}
-                          </div>
-                          <div>
-                            <p className="text-xs font-black text-white/40 uppercase tracking-widest">{snap.meter_type}</p>
-                            <div className="flex items-baseline gap-2">
-                              <input 
-                                type="number"
-                                placeholder="000.0"
-                                value={snap.reading_value}
-                                onChange={(e) => {
-                                  const newSnaps = [...formData.snapshots];
-                                  newSnaps[idx].reading_value = e.target.value;
-                                  setFormData({ ...formData, snapshots: newSnaps });
-                                }}
-                                className="bg-transparent border-none outline-none font-black text-3xl w-24 placeholder:text-white/10"
-                              />
-                              <span className="text-xs font-black text-white/50">{snap.unit}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <button className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/10 transition-all text-white/60">
-                          <Camera className="w-5 h-5" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-3xl flex items-start gap-4">
-                  <div className="p-2 bg-indigo-600 rounded-xl text-white">
-                    <Info className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-indigo-900 uppercase tracking-widest mb-1">Confirmation Required</p>
-                    <p className="text-[11px] text-indigo-600 font-medium leading-relaxed">By saving this inspection, you are recording the definitive state of the property. This data will be used for deposit reconciliation.</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Footer */}
-        <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <div className="flex gap-2">
-            {[1,2,3].map(i => (
-              <div key={i} className={`w-8 h-1.5 rounded-full transition-all ${step === i ? 'bg-indigo-600 w-12' : 'bg-slate-200'}`} />
-            ))}
-          </div>
-          
-          <div className="flex items-center gap-3">
-            {step > 1 && (
-              <button 
-                onClick={() => setStep(step - 1)}
-                className="px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
-              >Back</button>
-            )}
-            {step < 3 ? (
-              <button 
-                onClick={() => setStep(step + 1)}
-                className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95 flex items-center gap-2"
-              >Next Step <ChevronRight className="w-3 h-3" /></button>
-            ) : (
-              <button 
-                onClick={handleSave}
-                disabled={createHandover.status === 'pending'}
-                className="px-10 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 flex items-center gap-2 disabled:opacity-50"
-              >
-                {createHandover.status === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                Save Inspection
-              </button>
-            )}
-          </div>
-        </div>
+        {body}
       </motion.div>
     </div>
   );
-}
-
-function ChevronRight({ className }: { className?: string }) {
-  return <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="9 5l7 7-7 7" /></svg>;
 }

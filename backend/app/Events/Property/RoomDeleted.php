@@ -11,7 +11,5 @@ class RoomDeleted
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Room $room)
-    {
-    }
+    public function __construct(public Room $room) {}
 }

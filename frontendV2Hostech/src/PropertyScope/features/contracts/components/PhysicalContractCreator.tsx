@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useMutation } from '@tanstack/react-query';
+import { addMonths, format, parse } from 'date-fns';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AxiosError } from 'axios';
 import {
   FileSignature, Loader2, Save, X,
@@ -13,19 +14,42 @@ import toast from 'react-hot-toast';
 
 import { contractsApi } from '../api/contracts';
 import type { CreateContractPayload } from '../types';
+import {
+  CONTRACTS_KEY,
+  MY_CONTRACTS_KEY,
+  PENDING_CONTRACTS_KEY,
+  PENDING_REQUESTS_KEY,
+  TRASH_CONTRACTS_KEY,
+} from '../hooks/useContracts';
 import { useRooms, useRoomDetail } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import apiClient from '@/shared/api/client';
+import { IdentityCardUploadPair } from './IdentityCardUploadPair';
+import { BirthDateDayMonthYear } from './BirthDateDayMonthYear';
+import {
+  isAdultAtContractStart,
+  isValidUuid,
+  requiresIdentityForMember,
+} from '../utils/contractMemberAge';
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
-const schema = z.object({
-  room_id: z.string().min(1, 'Vui lòng chọn phòng thuê'),
-  start_date: z.string().min(1, 'Vui lòng chọn ngày bắt đầu hợp đồng'),
-  end_date: z.string().optional(),
-  rent_price: z.number({ required_error: 'Vui lòng nhập giá thuê' }).min(1, 'Giá thuê phải lớn hơn 0'),
-  deposit_amount: z.number({ required_error: 'Vui lòng nhập tiền cọc' }).min(0, 'Tiền cọc không được là số âm'),
-  billing_cycle: z.number().min(1, 'Chu kỳ tối thiểu 1 tháng').max(12, 'Chu kỳ tối đa 12 tháng'),
+/** Ngày kết thúc = ngày bắt đầu + đúng N tháng (khớp Carbon addMonths). */
+function contractEndDateFromStart(startDateStr: string, cycleMonths: number): string {
+  if (!startDateStr || !Number.isFinite(cycleMonths) || cycleMonths < 1) return '';
+  const base = parse(startDateStr, 'yyyy-MM-dd', new Date());
+  if (Number.isNaN(base.getTime())) return '';
+  return format(addMonths(base, cycleMonths), 'yyyy-MM-dd');
+}
+
+const schema = z
+  .object({
+    room_id: z.string().min(1, 'Vui lòng chọn phòng thuê'),
+    start_date: z.string().min(1, 'Vui lòng chọn ngày bắt đầu hợp đồng'),
+    cycle_months: z.coerce.number().int('Số tháng phải là số nguyên').min(1, 'Tối thiểu 1 tháng').max(120, 'Tối đa 120 tháng'),
+    rent_price: z.number({ message: 'Vui lòng nhập giá thuê' }).min(1, 'Giá thuê phải lớn hơn 0'),
+    deposit_amount: z.number({ message: 'Vui lòng nhập tiền cọc' }).min(0, 'Tiền cọc không được là số âm'),
+    billing_cycle: z.number().min(1, 'Chu kỳ tối thiểu 1 tháng').max(12, 'Chu kỳ tối đa 12 tháng'),
   due_day: z.number().min(1, 'Ngày hạn đóng tiền từ mùng 1-31').max(31, 'Ngày hạn đóng tiền từ mùng 1-31'),
   cutoff_day: z.number().min(1, 'Ngày chốt số từ mùng 1-31').max(31, 'Ngày chốt số từ mùng 1-31'),
   // Tenant identity
@@ -33,9 +57,11 @@ const schema = z.object({
   tenant_full_name: z.string().min(2, 'Vui lòng nhập đầy đủ họ tên người thuê'),
   tenant_phone: z.string().min(10, 'Số điện thoại phải có ít nhất 10 số'),
   tenant_identity_number: z.string().min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
-  tenant_date_of_birth: z.string().optional(),
+  tenant_date_of_birth: z.string().min(1, 'Vui lòng chọn ngày sinh người thuê chính'),
   tenant_license_plate: z.string().optional(),
   tenant_permanent_address: z.string().optional(),
+  tenant_identity_front_media_id: z.string().optional().default(''),
+  tenant_identity_back_media_id: z.string().optional().default(''),
   clause_responsibilities: z.string().optional(),
   clause_extra: z.string().optional(),
   additional_members: z.array(z.object({
@@ -45,11 +71,73 @@ const schema = z.object({
     identity_number: z.string().min(9, 'Số CCCD/CMND phải từ 9-12 số').max(12, 'Số CCCD/CMND phải từ 9-12 số'),
     date_of_birth: z.string().optional(),
     license_plate: z.string().optional(),
+    identity_front_media_id: z.string().optional().default(''),
+    identity_back_media_id: z.string().optional().default(''),
     role: z.enum(['TENANT', 'ROOMMATE', 'GUARANTOR']).default('ROOMMATE'),
   })).optional().default([]),
-});
+  })
+  .superRefine((data, ctx) => {
+    if (data.cycle_months < data.billing_cycle) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cycle_months'],
+        message: `Thời hạn hợp đồng phải ít nhất ${data.billing_cycle} tháng (theo chu kỳ thanh toán đã chọn).`,
+      });
+    }
 
-type FormValues = z.infer<typeof schema>;
+    if (!isAdultAtContractStart(data.tenant_date_of_birth, data.start_date)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tenant_date_of_birth'],
+        message: 'Người thuê chính phải đủ 18 tuổi tại ngày bắt đầu hợp đồng.',
+      });
+    }
+
+    const tFront = (data.tenant_identity_front_media_id ?? '').trim();
+    const tBack = (data.tenant_identity_back_media_id ?? '').trim();
+    const tFrontOk = isValidUuid(tFront);
+    const tBackOk = isValidUuid(tBack);
+    if (tFrontOk !== tBackOk) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tenant_identity_front_media_id'],
+        message: 'Khi tải CCCD, vui lòng gửi cả mặt trước và mặt sau.',
+      });
+    } else if (!tFrontOk || !tBackOk) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tenant_identity_front_media_id'],
+        message: 'Vui lòng tải đủ ảnh CCCD mặt trước và mặt sau (người thuê chính).',
+      });
+    }
+
+    (data.additional_members ?? []).forEach((m, index) => {
+      const req = requiresIdentityForMember({
+        isPrimary: false,
+        dobIso: m.date_of_birth,
+        contractStartIso: data.start_date,
+      });
+      const f = (m.identity_front_media_id ?? '').trim();
+      const b = (m.identity_back_media_id ?? '').trim();
+      const fOk = isValidUuid(f);
+      const bOk = isValidUuid(b);
+      if (fOk !== bOk) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['additional_members', index, 'identity_front_media_id'],
+          message: 'Khi tải CCCD, vui lòng gửi cả mặt trước và mặt sau.',
+        });
+      } else if (req && (!fOk || !bOk)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['additional_members', index, 'identity_front_media_id'],
+          message: 'Thành viên từ đủ 18 tuổi (hoặc chưa khai báo ngày sinh) cần tải đủ ảnh CCCD.',
+        });
+      }
+    });
+  });
+
+type FormValues = z.input<typeof schema>;
 
 interface PhysicalContractCreatorProps {
   propertyId: string;
@@ -67,7 +155,7 @@ function DataField({ value, placeholder = '—' }: { value?: string | null; plac
   if (value) {
     return <span className="font-medium text-gray-900 dark:text-gray-100">{value}</span>;
   }
-  return <span className="italic text-gray-400 dark:text-gray-600 text-xs">{placeholder}</span>;
+  return <span className="text-gray-400 dark:text-gray-600 text-xs">{placeholder}</span>;
 }
 
 /** Inline input bên trong văn bản */
@@ -85,6 +173,7 @@ function InlineInput({
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
+        aria-invalid={!!error}
         className={`inline-block border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20
           text-indigo-900 dark:text-indigo-200 px-1.5 py-0.5 text-sm outline-none
           focus:border-indigo-600 focus:bg-indigo-50 dark:focus:bg-indigo-800/30 rounded-sm transition-colors
@@ -194,15 +283,6 @@ function StaticClause({ children }: { children: React.ReactNode }) {
   );
 }
 
-function BulletPoint({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-gray-400 font-bold shrink-0">•</span>
-      <span>{children}</span>
-    </div>
-  );
-}
-
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-1 text-sm leading-7 flex-wrap">
@@ -216,6 +296,10 @@ function InfoRow({ label, children }: { label: string; children: React.ReactNode
 export default function PhysicalContractCreator({
   propertyId, roomId: initialRoomId, onSuccess, onCancel
 }: PhysicalContractCreatorProps) {
+  const queryClient = useQueryClient();
+
+  // ── Scroll-to-error ────────────────────────────────────────────────────────
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // ── Data fetching ──────────────────────────────────────────────────────────
   const { data: roomsData } = useRooms({ property_id: propertyId, status: 'available' });
@@ -226,7 +310,7 @@ export default function PhysicalContractCreator({
 
   // ── Form ───────────────────────────────────────────────────────────────────
   const {
-    register, handleSubmit, watch, setValue,
+    register, handleSubmit, watch, setValue, trigger,
     control,
     formState: { errors },
   } = useForm<FormValues>({
@@ -234,6 +318,7 @@ export default function PhysicalContractCreator({
     defaultValues: {
       room_id: initialRoomId || '',
       start_date: new Date().toISOString().split('T')[0],
+      cycle_months: 12,
       billing_cycle: 1,
       due_day: (property as any)?.default_due_day || 5,
       cutoff_day: (property as any)?.default_cutoff_day || 25,
@@ -246,6 +331,8 @@ export default function PhysicalContractCreator({
       tenant_date_of_birth: '',
       tenant_license_plate: '',
       tenant_permanent_address: '',
+      tenant_identity_front_media_id: '',
+      tenant_identity_back_media_id: '',
       clause_responsibilities: '',
       clause_extra: '',
       additional_members: [],
@@ -259,31 +346,56 @@ export default function PhysicalContractCreator({
 
   // resolved user from TenantSearchInput (Path A: email matched existing account)
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  /** Số tháng tiền cọc — chỉ dùng trên UI, không gửi API; tiền cọc = rent_price × số tháng này. */
+  const [depositMonths, setDepositMonths] = useState(1);
 
   const v = watch();
+  const rentPrice = watch('rent_price');
+  const billingCycleWatched = watch('billing_cycle');
   const selectedRoom = rooms.find((r: any) => r.id === v.room_id);
 
   // Fetch full room detail to get assets + room_services
   const { data: roomDetail } = useRoomDetail(v.room_id || undefined);
+  const roomCapacity = Number(roomDetail?.capacity ?? 0);
+  const totalMembersPlanned = 1 + fields.length; // 1 người thuê chính + người ở cùng
+  const roomHasCapacityLimit = roomCapacity > 0;
+  const canAddMoreMembers = !roomHasCapacityLimit || totalMembersPlanned < roomCapacity;
 
-  // Auto-fill rent_price and deposit_amount when room changes
+  // Auto-fill rent_price when room changes; cọc mặc định 1 tháng (depositMonths)
   useEffect(() => {
     if (!roomDetail) return;
     const price = roomDetail.base_price ?? 0;
     if (price > 0) {
       setValue('rent_price', price, { shouldValidate: true });
-      const currentDeposit = v.deposit_amount;
-      if (!currentDeposit || currentDeposit === 0) {
-        setValue('deposit_amount', price, { shouldValidate: true });
-      }
+      setDepositMonths(1);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomDetail?.id]);
 
+  // Tiền cọc luôn = giá thuê/tháng × số tháng cọc (chỉ nhập số tháng trên UI)
+  useEffect(() => {
+    const rent = Number(rentPrice) || 0;
+    const months = Math.max(1, Math.min(24, Math.floor(depositMonths) || 1));
+    setValue('deposit_amount', Math.round(rent * months), { shouldValidate: true });
+  }, [rentPrice, depositMonths, setValue]);
+
+  const previewEndDateStr = useMemo(
+    () => contractEndDateFromStart(v.start_date, Number(v.cycle_months) || 0),
+    [v.start_date, v.cycle_months],
+  );
+
+  const previewEndDateLabel = useMemo(() => {
+    if (!previewEndDateStr) return '—';
+    return format(parse(previewEndDateStr, 'yyyy-MM-dd', new Date()), 'dd/MM/yyyy');
+  }, [previewEndDateStr]);
+
+  useEffect(() => {
+    void trigger('cycle_months');
+  }, [billingCycleWatched, trigger]);
+
   // ── Derived property/user info ─────────────────────────────────────────────
   const propertyName = (property as any)?.name || '';
   const propertyAddress = (property as any)?.address || '';
-  const propertyHouseRules: string = (property as any)?.house_rules || '';
   const bankAccounts: any[] = (property as any)?.bank_accounts || [];
   const primaryBank = bankAccounts[0];
 
@@ -328,6 +440,13 @@ export default function PhysicalContractCreator({
   const createContract = useMutation({
     mutationFn: (payload: CreateContractPayload) => contractsApi.createContract(payload),
     onSuccess: () => {
+      // Đồng bộ với useContractActions.invalidateContracts — trang list có staleTime 5 phút
+      // nên bắt buộc invalidate sau khi tạo (mutation này không đi qua useContractActions).
+      queryClient.invalidateQueries({ queryKey: [CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [TRASH_CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PENDING_CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
       toast.success('Hợp đồng đã được tạo thành công!');
       onSuccess?.();
     },
@@ -338,7 +457,7 @@ export default function PhysicalContractCreator({
         const fieldMap: Record<string, string> = {
           room_id: 'Phòng',
           start_date: 'Ngày bắt đầu',
-          end_date: 'Ngày kết thúc',
+          cycle_months: 'Thời hạn hợp đồng',
           rent_price: 'Giá thuê',
           deposit_amount: 'Tiền cọc',
           billing_cycle: 'Chu kỳ thanh toán',
@@ -349,6 +468,9 @@ export default function PhysicalContractCreator({
           tenant_phone: 'Số điện thoại',
           tenant_identity_number: 'Số CCCD',
           tenant_email: 'Email',
+          tenant_date_of_birth: 'Ngày sinh người thuê chính',
+          tenant_identity_front_media_id: 'Ảnh CCCD mặt trước',
+          tenant_identity_back_media_id: 'Ảnh CCCD mặt sau',
         };
 
         const firstErrorKey = Object.keys(serverErrors)[0];
@@ -363,6 +485,21 @@ export default function PhysicalContractCreator({
     },
   });
 
+  const onInvalid = useCallback(() => {
+    requestAnimationFrame(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const firstInvalid = container.querySelector<HTMLElement>('[aria-invalid="true"]');
+      if (firstInvalid) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = firstInvalid.getBoundingClientRect();
+        container.scrollBy({ top: elementRect.top - containerRect.top - 80, behavior: 'smooth' });
+      } else {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  }, []);
+
   const onSubmit = (data: FormValues) => {
     const primaryMember: any = {
       full_name: data.tenant_full_name,
@@ -374,6 +511,8 @@ export default function PhysicalContractCreator({
       role: 'TENANT',
       is_primary: true,
       joined_at: data.start_date,
+      identity_front_media_id: (data.tenant_identity_front_media_id ?? '').trim(),
+      identity_back_media_id: (data.tenant_identity_back_media_id ?? '').trim(),
     };
 
     if (resolvedUserId) {
@@ -382,17 +521,33 @@ export default function PhysicalContractCreator({
       primaryMember.email = data.tenant_email;
     }
 
-    const additionalMembers = (data.additional_members || []).map(m => ({
-      ...m,
-      is_primary: false,
-      joined_at: data.start_date,
-    }));
+    const additionalMembers = (data.additional_members || []).map((m) => {
+      const f = (m.identity_front_media_id ?? '').trim();
+      const b = (m.identity_back_media_id ?? '').trim();
+      const row: Record<string, unknown> = {
+        full_name: m.full_name,
+        phone: m.phone,
+        email: m.email || undefined,
+        identity_number: m.identity_number,
+        date_of_birth: m.date_of_birth || undefined,
+        license_plate: m.license_plate || undefined,
+        role: m.role,
+        is_primary: false,
+        joined_at: data.start_date,
+      };
+      if (isValidUuid(f) && isValidUuid(b)) {
+        row.identity_front_media_id = f;
+        row.identity_back_media_id = b;
+      }
+      return row;
+    });
 
+    const endDate = contractEndDateFromStart(data.start_date, Number(data.cycle_months));
     const payload: CreateContractPayload = {
       property_id: propertyId,
       room_id: data.room_id,
       start_date: data.start_date,
-      end_date: data.end_date,
+      end_date: endDate || undefined,
       rent_price: data.rent_price,
       deposit_amount: data.deposit_amount,
       billing_cycle: data.billing_cycle,
@@ -407,7 +562,7 @@ export default function PhysicalContractCreator({
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+    <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
 
       {/* ── ACTION BAR ── */}
       <div className="flex items-center justify-between px-5 py-3 bg-white dark:bg-gray-800
@@ -448,7 +603,7 @@ export default function PhysicalContractCreator({
       )}
 
       {/* ── CONTRACT DOCUMENT ── */}
-      <div className="flex-1 overflow-auto py-6 px-4">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto py-6 px-4">
         <div className="mx-auto max-w-3xl bg-white dark:bg-gray-800 rounded-xl shadow-lg
           border border-gray-200 dark:border-gray-700 overflow-hidden">
 
@@ -479,7 +634,7 @@ export default function PhysicalContractCreator({
               <p className="text-gray-400 text-xs">───────────────────</p>
               <p className="font-bold text-lg uppercase mt-3">HỢP ĐỒNG THUÊ NHÀ</p>
               <p className="text-xs text-gray-500 mt-1">
-                Mã hợp đồng: <span className="text-gray-400 italic">
+                Mã hợp đồng: <span className="text-gray-400 ">
                   {selectedRoom?.code || '???'}/
                   <span className="text-[10px]">Tự động khi lưu</span>
                 </span>
@@ -493,7 +648,7 @@ export default function PhysicalContractCreator({
               <p className="text-xs text-gray-500">
                 Địa chỉ: <DataField value={propertyAddress} placeholder="chưa có địa chỉ tòa nhà" />
               </p>
-              <p className="text-xs text-gray-500 mt-1 italic">Chúng tôi gồm:</p>
+              <p className="text-xs text-gray-500 mt-1 ">Chúng tôi gồm:</p>
             </div>
 
             {/* ── BÊN A ── */}
@@ -547,10 +702,18 @@ export default function PhysicalContractCreator({
                   placeholder="Họ và tên đầy đủ" className="w-56"
                   error={errors.tenant_full_name?.message} />
               </InfoRow>
-              <InfoRow label="Năm sinh">
-                <InlineInput id="tenant_date_of_birth" value={v.tenant_date_of_birth || ''}
-                  onChange={val => setValue('tenant_date_of_birth', val)}
-                  type="date" className="w-40" />
+              <InfoRow label="Ngày sinh">
+                <span className="inline-flex flex-col gap-0.5">
+                  <BirthDateDayMonthYear
+                    idPrefix="tenant_dob"
+                    variant="contract"
+                    value={v.tenant_date_of_birth || ''}
+                    onChange={(iso) => setValue('tenant_date_of_birth', iso, { shouldValidate: true })}
+                  />
+                  {errors.tenant_date_of_birth && (
+                    <span className="text-xs text-red-500">{errors.tenant_date_of_birth.message}</span>
+                  )}
+                </span>
               </InfoRow>
               <InfoRow label="Số CCCD">
                 <InlineInput id="tenant_identity_number" value={v.tenant_identity_number}
@@ -574,6 +737,21 @@ export default function PhysicalContractCreator({
                   onChange={val => setValue('tenant_license_plate', val)}
                   placeholder="59-X1 123.45 (nếu có)" className="w-44" />
               </InfoRow>
+              <div className="col-span-full mt-2 space-y-1">
+                <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Ảnh CCCD (bắt buộc — người thuê chính)</p>
+                <IdentityCardUploadPair
+                  identityRequired
+                  frontMediaUuid={v.tenant_identity_front_media_id || null}
+                  backMediaUuid={v.tenant_identity_back_media_id || null}
+                  onFrontMediaUuid={id => setValue('tenant_identity_front_media_id', id ?? '', { shouldValidate: true })}
+                  onBackMediaUuid={id => setValue('tenant_identity_back_media_id', id ?? '', { shouldValidate: true })}
+                />
+                {(errors.tenant_identity_front_media_id || errors.tenant_identity_back_media_id) && (
+                  <p className="text-[11px] text-red-500">
+                    {errors.tenant_identity_front_media_id?.message || errors.tenant_identity_back_media_id?.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* ── DANH SÁCH THÀNH VIÊN CÙNG Ở ── */}
@@ -584,25 +762,40 @@ export default function PhysicalContractCreator({
               </h3>
               <button
                 type="button"
-                onClick={() => append({
-                  full_name: '',
-                  phone: '',
-                  email: '',
-                  identity_number: '',
-                  date_of_birth: '',
-                  license_plate: '',
-                  role: 'ROOMMATE'
-                })}
+                onClick={() => {
+                  if (!canAddMoreMembers) {
+                    toast.error(`Phòng chỉ giới hạn ${roomCapacity} người. Không thể thêm thành viên mới.`);
+                    return;
+                  }
+                  append({
+                    full_name: '',
+                    phone: '',
+                    email: '',
+                    identity_number: '',
+                    date_of_birth: '',
+                    license_plate: '',
+                    identity_front_media_id: '',
+                    identity_back_media_id: '',
+                    role: 'ROOMMATE'
+                  });
+                }}
+                disabled={!canAddMoreMembers}
                 className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight
-                  bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors"
+                  bg-indigo-600 hover:bg-indigo-700 text-white rounded transition-colors
+                  disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-indigo-600"
               >
                 + Thêm thành viên
               </button>
             </div>
+            {!canAddMoreMembers && (
+              <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">
+                Phòng chỉ giới hạn tối đa {roomCapacity} người (đã đủ số lượng).
+              </p>
+            )}
 
             <div className="pl-3 ml-1 space-y-6">
               {fields.length === 0 ? (
-                <p className="text-gray-400 text-xs italic py-2">
+                <p className="text-gray-400 text-xs py-2">
                   Chưa có thành viên nào khác được thêm vào hợp đồng này.
                 </p>
               ) : (
@@ -629,14 +822,10 @@ export default function PhysicalContractCreator({
                       </InfoRow>
 
                       <InfoRow label="Vai trò">
-                        <select
-                          {...register(`additional_members.${index}.role`)}
-                          className="text-xs border border-dashed border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-2 py-0.5 outline-none focus:border-indigo-600 dark:text-indigo-200"
-                        >
-                          <option value="ROOMMATE">Người ở cùng</option>
-                          <option value="TENANT">Chủ đồng thuê</option>
-                          <option value="GUARANTOR">Người bảo lãnh</option>
-                        </select>
+                        <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-100 dark:border-indigo-800/50">
+                          Người ở cùng
+                        </span>
+                        <input type="hidden" {...register(`additional_members.${index}.role`)} value="ROOMMATE" />
                       </InfoRow>
 
                       <InfoRow label="Điện thoại">
@@ -672,11 +861,13 @@ export default function PhysicalContractCreator({
                       </InfoRow>
 
                       <InfoRow label="Ngày sinh">
-                        <input
-                          {...register(`additional_members.${index}.date_of_birth`)}
-                          type="date"
-                          className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
-                            text-sm text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-36"
+                        <BirthDateDayMonthYear
+                          idPrefix={`member_${index}_dob`}
+                          variant="contract"
+                          value={watch(`additional_members.${index}.date_of_birth`) || ''}
+                          onChange={(iso) =>
+                            setValue(`additional_members.${index}.date_of_birth`, iso, { shouldValidate: true })
+                          }
                         />
                       </InfoRow>
 
@@ -689,6 +880,33 @@ export default function PhysicalContractCreator({
                           className="w-32"
                         />
                       </InfoRow>
+                      {requiresIdentityForMember({
+                        isPrimary: false,
+                        dobIso: watch(`additional_members.${index}.date_of_birth`),
+                        contractStartIso: v.start_date,
+                      }) ? (
+                        <div className="col-span-full mt-2 space-y-1 sm:col-span-2">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            Ảnh CCCD (bắt buộc)
+                          </p>
+                          <IdentityCardUploadPair
+                            identityRequired
+                            frontMediaUuid={watch(`additional_members.${index}.identity_front_media_id`) || null}
+                            backMediaUuid={watch(`additional_members.${index}.identity_back_media_id`) || null}
+                            onFrontMediaUuid={id => setValue(`additional_members.${index}.identity_front_media_id`, id ?? '', { shouldValidate: true })}
+                            onBackMediaUuid={id => setValue(`additional_members.${index}.identity_back_media_id`, id ?? '', { shouldValidate: true })}
+                          />
+                          {(errors.additional_members?.[index] as any)?.identity_front_media_id?.message && (
+                            <p className="text-[11px] text-red-500">
+                              {(errors.additional_members?.[index] as any)?.identity_front_media_id?.message}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="col-span-full mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 sm:col-span-2">
+                          Thành viên dưới 18 tuổi tại ngày bắt đầu hợp đồng: không cần tải ảnh CCCD.
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))
@@ -696,7 +914,7 @@ export default function PhysicalContractCreator({
             </div>
 
             {/* ── INTRO ── */}
-            <p className="mt-5 text-sm italic text-gray-600 dark:text-gray-400">
+            <p className="mt-5 text-sm text-gray-600 dark:text-gray-400">
               Sau khi hai bên đi đến thống nhất ký kết hợp đồng thuê nhà với các điều kiện và điều khoản sau đây:
             </p>
 
@@ -751,11 +969,20 @@ export default function PhysicalContractCreator({
                 <input {...register('start_date')} type="date"
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
                     text-sm text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm" />
-                <span>đến</span>
-                <input {...register('end_date')} type="date"
+                <span>, kéo dài</span>
+                <input
+                  {...register('cycle_months', { valueAsNumber: true })}
+                  type="number"
+                  min={1}
+                  max={120}
+                  step={1}
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
-                    text-sm text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm" />
-                <span className="text-gray-400 text-xs italic">(để trống nếu không giới hạn)</span>
+                    text-sm text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-14 text-center"
+                />
+                <span>tháng — kết thúc ngày</span>
+                <span className="font-semibold text-indigo-800 dark:text-indigo-200 tabular-nums">{previewEndDateLabel}</span>
+                {errors.start_date && <span className="text-xs text-red-500">({errors.start_date.message})</span>}
+                {errors.cycle_months && <span className="text-xs text-red-500">({errors.cycle_months.message})</span>}
               </div>
 
               {/* Tài sản bàn giao */}
@@ -779,7 +1006,7 @@ export default function PhysicalContractCreator({
                           <td className="py-1 text-gray-500">{i + 1}</td>
                           <td className="py-1 font-medium text-gray-800 dark:text-gray-200">{asset.name}</td>
                           <td className="py-1 font-mono text-gray-500 text-xs">
-                            {asset.serial || <span className="italic text-gray-300">—</span>}
+                            {asset.serial || <span className="text-gray-300">—</span>}
                           </td>
                         </tr>
                       ))}
@@ -810,16 +1037,27 @@ export default function PhysicalContractCreator({
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-gray-500 font-semibold shrink-0">2.2.</span>
                 <span>Tiền đặt cọc:</span>
-                <input {...register('deposit_amount', { valueAsNumber: true })} type="number" min={0}
+                <span className="text-sm text-gray-600 dark:text-gray-400">bằng</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={24}
+                  step={1}
+                  value={depositMonths}
+                  onChange={(e) => {
+                    const n = Math.max(1, Math.min(24, Number.parseInt(e.target.value, 10) || 1));
+                    setDepositMonths(n);
+                  }}
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
-                    text-sm font-bold text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-32 text-right" />
-                <span>VNĐ</span>
-                {v.deposit_amount > 0 && (
-                  <span className="text-xs text-gray-500">— {formatVND(v.deposit_amount)} đồng</span>
-                )}
+                    text-sm font-bold text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-12 text-center"
+                />
+                <span>tháng tiền thuê</span>
+                <span className="text-sm font-bold text-indigo-900 dark:text-indigo-200 tabular-nums">
+                  = {formatVND(v.deposit_amount)} đồng
+                </span>
               </div>
               <StaticClause>
-                <span className="text-gray-400 text-xs italic pl-6">
+                <span className="text-gray-400 text-xs pl-6">
                   (Tiền cọc sẽ được hoàn trả sau khi thanh lý hợp đồng, trừ đi các khoản nợ còn lại. Bên B đơn phương chấm dứt hợp đồng trước thời hạn, tiền cọc sẽ không được hoàn trả.)
                 </span>
               </StaticClause>
@@ -852,7 +1090,7 @@ export default function PhysicalContractCreator({
                               ? formatVND(rs.service.price)
                               : rs.service?.current_price != null
                                 ? formatVND(rs.service.current_price)
-                                : <span className="italic text-gray-300">—</span>}
+                                : <span className="text-gray-300">—</span>}
                           </td>
                           <td className="py-1 px-2 text-gray-500 text-xs">
                             {rs.service?.unit || '—'}
@@ -865,7 +1103,7 @@ export default function PhysicalContractCreator({
               ) : (
                 <StaticClause>
                   <span className="text-gray-500 font-semibold shrink-0">2.3.</span>
-                  <span className="text-gray-400 italic text-xs">Chi phí dịch vụ theo quy định chung của tòa nhà (phòng này chưa gắn dịch vụ cụ thể).</span>
+                  <span className="text-gray-400 text-xs">Chi phí dịch vụ theo quy định chung của tòa nhà (phòng này chưa gắn dịch vụ cụ thể).</span>
                 </StaticClause>
               )}
 
@@ -905,7 +1143,7 @@ export default function PhysicalContractCreator({
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400 italic ml-6 mt-1">
+                  <p className="text-xs text-gray-400 ml-6 mt-1">
                     (Chưa thiết lập tài khoản ngân hàng cho tòa nhà — vui lòng cập nhật trong phần cài đặt tòa nhà)
                   </p>
                 )}
@@ -1030,7 +1268,7 @@ export default function PhysicalContractCreator({
             </div>
 
             {/* ── CHÚ THÍCH CUỐI ── */}
-            <p className="mt-6 text-xs text-gray-400 italic text-center">
+            <p className="mt-6 text-xs text-gray-400 text-center">
               Hợp đồng này được lập thành 02 bản, mỗi bên giữ 01 bản có giá trị pháp lý như nhau.
             </p>
 
@@ -1038,7 +1276,7 @@ export default function PhysicalContractCreator({
             <div className="mt-10 grid grid-cols-2 gap-6 text-center text-xs text-gray-500">
               <div className="space-y-2">
                 <p className="font-bold text-sm text-gray-700 dark:text-gray-300">BÊN CHO THUÊ (BÊN A)</p>
-                <p className="italic">(Ký và ghi rõ họ tên)</p>
+                <p className="">(Ký và ghi rõ họ tên)</p>
                 <div className="h-16 border-b border-gray-300 dark:border-gray-600" />
                 <p className="font-semibold text-gray-700 dark:text-gray-300">
                   {repFullName || '..................................'}
@@ -1046,7 +1284,7 @@ export default function PhysicalContractCreator({
               </div>
               <div className="space-y-2">
                 <p className="font-bold text-sm text-gray-700 dark:text-gray-300">BÊN THUÊ NHÀ (BÊN B)</p>
-                <p className="italic">(Ký và ghi rõ họ tên)</p>
+                <p className="">(Ký và ghi rõ họ tên)</p>
                 <div className="h-16 border-b border-gray-300 dark:border-gray-600" />
                 <p className="font-semibold text-gray-700 dark:text-gray-300">
                   {v.tenant_full_name || '..................................'}

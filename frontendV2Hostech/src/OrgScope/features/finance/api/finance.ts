@@ -76,6 +76,7 @@ const normalizeInvoice = (invoice: any): Invoice => {
     total_amount: Number(invoice?.total_amount ?? total),
     paid_amount: paidAmount,
     debt: Number(invoice?.debt ?? Math.max(0, total - paidAmount)),
+    pdf_url: invoice?.pdf_url ?? null,
     notes: invoice?.notes ?? invoice?.note ?? null,
     items: Array.isArray(invoice?.items) ? invoice.items.map(normalizeInvoiceItem) : [],
     tenant,

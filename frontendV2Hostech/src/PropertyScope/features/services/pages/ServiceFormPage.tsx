@@ -1,12 +1,13 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, Zap, Droplets } from 'lucide-react';
+import { Save, Plus, Trash2, Zap, Droplets } from 'lucide-react';
 import { useServiceDetail, useUpdateService, useCreateService } from '../hooks/useServices';
 import { toast } from 'react-hot-toast';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { ServiceFormData } from '../types';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 const tierSchema = z.object({
   tier_from: z.number().min(0, 'Phải lớn hơn hoặc bằng 0'),
@@ -187,13 +188,7 @@ export default function ServiceFormPage() {
       {/* HEADER */}
       <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors text-[#4B5563] dark:text-slate-300"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <PageBackButton className="rounded-full px-2 py-2" />
           <div>
             <h1 className="text-2xl font-bold text-[#111827] dark:text-white">
               {isEditMode ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới'}

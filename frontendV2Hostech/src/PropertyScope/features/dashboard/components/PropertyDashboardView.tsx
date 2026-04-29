@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/shared/hooks/useTheme';
+import { useNavigate } from 'react-router-dom';
 
 import type { PropertyDashboardData } from '../types';
 
@@ -26,6 +27,7 @@ export function PropertyDashboardView({
   onGenerateBilling 
 }: PropertyDashboardViewProps) {
   const { fontSize } = useTheme();
+  const navigate = useNavigate();
   const isLargeFont = fontSize === 'lg';
 
   if (!dashboard) return null;
@@ -85,7 +87,7 @@ export function PropertyDashboardView({
           label="Doanh thu tháng này" 
           value={stats.thisMonthRevenue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} 
           icon={TrendingUp} 
-          color="green"
+          color="emerald"
           trend={{ value: 8, isUp: true }}
           testId="stat-revenue"
         />
@@ -143,8 +145,11 @@ export function PropertyDashboardView({
                 </div>
               </div>
               
-              <button className="px-5 py-2.5 flex items-center justify-center bg-white text-blue-900 text-sm font-bold rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
-                Quản lý kho
+              <button
+                onClick={() => navigate('/org/properties')}
+                className="px-5 py-2.5 flex items-center justify-center bg-white text-blue-900 text-sm font-bold rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+              >
+                Quản lý tòa nhà
               </button>
             </div>
           </div>

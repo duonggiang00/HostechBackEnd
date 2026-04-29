@@ -207,7 +207,7 @@ export function BuildingOverview({
             </div>
             
             {selectedTemplate && (
-              <div className="mt-2 ml-6 flex items-center gap-2 text-[10px] text-slate-400 font-bold italic animate-in fade-in duration-700">
+              <div className="mt-2 ml-6 flex items-center gap-2 text-[10px] text-slate-400 font-bold animate-in fade-in duration-700">
                 <Info className="w-3 h-3 text-indigo-400" />
                 Giá thuê, diện tích & dịch vụ sẽ được tự động kế thừa vào mỗi ô phòng bạn vẽ.
               </div>

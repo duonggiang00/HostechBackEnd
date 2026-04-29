@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileText, QrCode, ClipboardCheck, ArrowLeft } from 'lucide-react';
+import { X, FileText, QrCode, ClipboardCheck } from 'lucide-react';
 import ContractWizard from '@/OrgScope/features/finance/components/ContractWizard';
 import TenantQRVerification from '@/PropertyScope/features/operations/components/TenantQRVerification';
 import CheckInOutManager from '@/PropertyScope/features/operations/components/CheckInOutManager';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 interface ManagementModalProps {
   isOpen: boolean;
@@ -69,12 +70,10 @@ export default function ManagementModal({ isOpen, onClose, roomName, title, chil
             <div className="px-8 py-6 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
                 {activeView !== 'selection' && (
-                  <button 
-                    onClick={() => setActiveView('selection')}
-                    className="p-2.5 bg-slate-50 text-slate-500 hover:text-indigo-600 rounded-xl transition-all"
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
+                  <PageBackButton
+                    onBack={() => setActiveView('selection')}
+                    className="rounded-xl bg-slate-50 px-2 py-2"
+                  />
                 )}
                 <div>
                   <h3 className="text-2xl font-black text-slate-900 tracking-tight">

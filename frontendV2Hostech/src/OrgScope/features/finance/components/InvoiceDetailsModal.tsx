@@ -37,7 +37,7 @@ export default function InvoiceDetailsModal({ invoiceId, onClose }: InvoiceDetai
               </div>
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight italic uppercase">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">
                     Hóa đơn {invoice?.code || '...'}
                   </h2>
                   {invoice && <InvoiceStatusBadge status={invoice.status} />}
@@ -97,12 +97,12 @@ export default function InvoiceDetailsModal({ invoiceId, onClose }: InvoiceDetai
                   <div className="grid grid-cols-2 gap-6">
                     <div className="p-6 bg-white border border-slate-100 rounded-3xl">
                       <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Nguồn gốc Cơ sở</h3>
-                      <p className="text-sm font-bold text-slate-900 uppercase italic">{invoice.property?.name}</p>
+                      <p className="text-sm font-bold text-slate-900 uppercase ">{invoice.property?.name}</p>
                       <p className="text-xs text-slate-500 mt-1">{invoice.property?.address}</p>
                     </div>
                     <div className="p-6 bg-white border border-slate-100 rounded-3xl">
                       <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Người thanh toán</h3>
-                      <p className="text-sm font-bold text-slate-900 uppercase italic">{invoice.tenant?.name}</p>
+                      <p className="text-sm font-bold text-slate-900 uppercase ">{invoice.tenant?.name}</p>
                       <p className="text-xs text-slate-500 mt-1">Phòng {invoice.tenant?.room}</p>
                     </div>
                   </div>
@@ -117,7 +117,7 @@ export default function InvoiceDetailsModal({ invoiceId, onClose }: InvoiceDetai
                     <div className="space-y-4">
                       <div className="flex justify-between items-center opacity-60">
                         <span className="text-xs font-bold">Thành tiền</span>
-                        <span className="text-xs font-bold">${invoice.subtotal.toLocaleString()}</span>
+                        <span className="text-xs font-bold">${(invoice.subtotal ?? invoice.total_amount).toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between items-center opacity-60">
                         <span className="text-xs font-bold">Thuế (0%)</span>
@@ -125,7 +125,7 @@ export default function InvoiceDetailsModal({ invoiceId, onClose }: InvoiceDetai
                       </div>
                       <div className="pt-4 border-t border-white/10 flex justify-between items-end">
                         <span className="text-xs font-black uppercase tracking-widest text-indigo-400">Tổng thanh toán</span>
-                        <span className="text-3xl font-black italic tracking-tighter">${invoice.total.toLocaleString()}</span>
+                        <span className="text-3xl font-black tracking-tighter">${(invoice.total ?? invoice.total_amount).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -166,7 +166,7 @@ export default function InvoiceDetailsModal({ invoiceId, onClose }: InvoiceDetai
             ) : (
               <div className="text-center py-20">
                 <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6 opacity-20" />
-                <h3 className="text-xl font-black text-slate-900 italic uppercase">Không tìm thấy Hóa đơn</h3>
+                <h3 className="text-xl font-black text-slate-900 uppercase">Không tìm thấy Hóa đơn</h3>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">Mục dữ liệu sổ cái được yêu cầu không tồn tại.</p>
               </div>
             )}

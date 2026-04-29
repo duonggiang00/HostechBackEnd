@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Org;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -12,6 +13,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam filter[email] string Lọc chính xác theo email.
  * @queryParam filter[is_active] boolean Lọc theo trạng thái hoạt động. Example: true
  * @queryParam filter[property_id] string Lọc theo ID của cơ sở (Property). Example: 9db71234-5678-90ab-cdef-1234567890ab
+ * @queryParam filter[role_group] string Nhóm vai trò: tenant | property_staff (Staff + Manager trên tòa).
  * @queryParam sort string Sắp xếp kết quả (full_name, email, created_at, prefixed with - for DESC). Example: -created_at
  * @queryParam with_trashed boolean Bao gồm các bản ghi đã xóa. Example: true
  */
@@ -28,7 +30,7 @@ class UserIndexRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -41,6 +43,7 @@ class UserIndexRequest extends FormRequest
             'filter.email' => ['nullable', 'string'],
             'filter.is_active' => ['nullable', 'boolean'],
             'filter.property_id' => ['nullable', 'string', 'uuid'],
+            'filter.role_group' => ['nullable', 'string', 'in:tenant,property_staff'],
             'sort' => ['nullable', 'string', 'in:full_name,email,created_at,-full_name,-email,-created_at'],
         ];
     }
@@ -55,6 +58,7 @@ class UserIndexRequest extends FormRequest
             'filter.role' => 'Quyền hạn',
             'filter.email' => 'Email',
             'filter.is_active' => 'Trạng thái hoạt động',
+            'filter.role_group' => 'Nhóm vai trò',
             'sort' => 'Sắp xếp',
         ];
     }

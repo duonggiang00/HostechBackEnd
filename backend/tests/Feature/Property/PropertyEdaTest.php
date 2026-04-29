@@ -7,16 +7,17 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Services\Property\RoomService;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Cache;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
     $this->roomService = app(RoomService::class);
-    
+
     $this->admin = User::factory()->admin()->create();
     $this->org = Org::factory()->create();
     $this->property = Property::factory()->create(['org_id' => $this->org->id]);
@@ -54,7 +55,7 @@ test('InitializeRoomServices listener creates default meters and history', funct
         'room_id' => $room->id,
         'type' => 'ELECTRIC',
     ]);
-    
+
     $this->assertDatabaseHas('meters', [
         'room_id' => $room->id,
         'type' => 'WATER',
@@ -79,14 +80,14 @@ test('update room status dispatches RoomUpdated event with correctly detected ch
     $room = Room::factory()->create([
         'org_id' => $this->org->id,
         'property_id' => $this->property->id,
-        'status' => 'draft'
+        'status' => 'draft',
     ]);
 
     Event::fake();
 
     $this->actingAs($this->admin);
     $this->roomService->update($room->id, [
-        'status' => 'available'
+        'status' => 'available',
     ], $this->admin);
 
     Event::assertDispatched(RoomUpdated::class, function ($event) {
@@ -104,14 +105,14 @@ test('field-aware cache busting optimizes building overview performance', functi
         'org_id' => $this->org->id,
         'property_id' => $this->property->id,
         'status' => 'draft',
-        'area' => 50
+        'area' => 50,
     ]);
 
     $this->actingAs($this->admin);
-    
+
     // Refresh cache key (factory creation might have cleared it via its own events if registered)
     Cache::put($cacheKey, 'test-data');
-    
+
     // 1. Update non-impactful field (area) -> Cache should NOT be cleared
     $this->roomService->update($room->id, ['area' => 60], $this->admin);
     expect(Cache::has($cacheKey))->toBeTrue();

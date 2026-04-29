@@ -2,10 +2,16 @@
 
 namespace Database\Factories\Contract;
 
+use App\Models\Contract\Contract;
+use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Contract\Contract>
+ * @extends Factory<Contract>
  */
 class ContractFactory extends Factory
 {
@@ -20,9 +26,9 @@ class ContractFactory extends Factory
         $endDate = (clone $startDate)->modify('+1 year');
 
         return [
-            'org_id' => \App\Models\Org\Org::factory(),
-            'property_id' => \App\Models\Property\Property::factory(),
-            'room_id' => \App\Models\Property\Room::factory(),
+            'org_id' => Org::factory(),
+            'property_id' => Property::factory(),
+            'room_id' => Room::factory(),
             'status' => $this->faker->randomElement(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']),
             'start_date' => $startDate,
             'end_date' => $this->faker->boolean(80) ? $endDate : null,
@@ -33,15 +39,15 @@ class ContractFactory extends Factory
             'deposit_amount' => function (array $attributes) {
                 return $attributes['rent_price'];
             },
-            'join_code' => \Illuminate\Support\Str::random(8),
+            'join_code' => Str::random(8),
             'join_code_expires_at' => $this->faker->dateTimeBetween('now', '+1 month'),
-            'created_by_user_id' => \App\Models\Org\User::factory(),
+            'created_by_user_id' => User::factory(),
         ];
     }
 
     public function configure()
     {
-        return $this->afterMaking(function (\App\Models\Contract\Contract $contract) {
+        return $this->afterMaking(function (Contract $contract) {
             // Ensure consistency if room is provided
             if ($contract->room) {
                 $contract->property_id = $contract->room->property_id;

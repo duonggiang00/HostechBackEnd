@@ -27,14 +27,16 @@ trait HasMediaAttachments
                 ->get();
 
             foreach ($medias as $media) {
+                $temporaryUploadId = $media->model_id;
+
                 // Di chuyển sang Model mới (Ví dụ The Room)
                 $media->model_type = get_class($this);
                 $media->model_id = $this->id;
                 $media->collection_name = $collectionName;
                 $media->save();
 
-                // Xóa TemporaryUpload rỗng để dọn dẹp (Optional)
-                TemporaryUpload::where('id', $media->model_id)->delete();
+                // Xóa TemporaryUpload sau khi đã chuyển media (model_id lúc này là id model đích)
+                TemporaryUpload::whereKey($temporaryUploadId)->delete();
             }
         });
     }

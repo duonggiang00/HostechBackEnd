@@ -1,6 +1,5 @@
 import type { RouteObject } from 'react-router-dom';
-import { Navigate, useParams } from 'react-router-dom';
-import { TemplatesPage } from './pages/TemplatesPage';
+import { useParams } from 'react-router-dom';
 import { PropertyInfoView } from './components/PropertyInfoView';
 import { RoomTemplateList } from './components/RoomTemplateList';
 

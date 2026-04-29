@@ -21,18 +21,25 @@ export function ContractPreviewModal({ isOpen, onClose, contractId, contract }: 
   const [docType, setDocType] = useState<'PDF' | 'DOCX' | null>(null);
 
   useEffect(() => {
+    if (!contractId || !isOpen) return;
+
+    let cancelled = false;
+
     const fetchFile = async () => {
-      if (!contractId || !isOpen) return;
-      
       setIsLoading(true);
       try {
-        const blob = await downloadDocument.mutateAsync(contractId);
-        setFileBlob(blob);
-        
-        const url = window.URL.createObjectURL(blob);
-        setFileUrl(url);
+        const blob = await downloadDocument.mutateAsync({
+          id: contractId,
+          revision: `${contract?.updated_at || contract?.document_path || 'contract'}-${Date.now()}`,
+        });
+        if (cancelled) return;
 
-        // Determine type based on contract prop or blob type
+        setFileBlob(blob);
+        setFileUrl((prev) => {
+          if (prev) window.URL.revokeObjectURL(prev);
+          return window.URL.createObjectURL(blob);
+        });
+
         if (contract?.document_type) {
           setDocType(contract.document_type.toUpperCase() as 'PDF' | 'DOCX');
         } else if (blob.type === 'application/pdf') {
@@ -41,26 +48,31 @@ export function ContractPreviewModal({ isOpen, onClose, contractId, contract }: 
           setDocType('DOCX');
         }
       } catch (err) {
-        console.error('Error fetching document:', err);
-        toast.error('Không thể tải tệp bản mềm hợp đồng.');
+        if (!cancelled) {
+          console.error('Error fetching document:', err);
+          toast.error('Không thể tải tệp bản mềm hợp đồng.');
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
-    if (isOpen) {
-      fetchFile();
-    }
+    void fetchFile();
 
     return () => {
-      if (fileUrl) {
-        window.URL.revokeObjectURL(fileUrl);
-        setFileUrl(null);
-        setFileBlob(null);
-        setDocType(null);
-      }
+      cancelled = true;
+      setIsLoading(false);
+      setFileUrl((prev) => {
+        if (prev) window.URL.revokeObjectURL(prev);
+        return null;
+      });
+      setFileBlob(null);
+      setDocType(null);
     };
-  }, [contractId, isOpen]);
+    // document_path / updated_at: sau khi ký, tải lại nếu modal vẫn mở hoặc mở lại cùng phiên.
+  }, [contractId, isOpen, contract?.document_path, contract?.document_type, contract?.updated_at]);
 
   useEffect(() => {
     if (isOpen && docType === 'DOCX' && fileBlob && fileUrl) {

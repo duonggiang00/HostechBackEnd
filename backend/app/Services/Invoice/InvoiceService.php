@@ -3,25 +3,32 @@
 namespace App\Services\Invoice;
 
 use App\Enums\ContractStatus;
+use App\Events\Billing\InvoiceGenerated;
+use App\Models\Contract\Contract;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
-use App\Models\Invoice\InvoiceStatusHistory;
 use App\Models\Invoice\Payment;
+use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Services\Finance\PaymentService;
+use App\Services\OrgContextResolver;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class InvoiceService
 {
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  READ OPERATIONS                                      ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬â€
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  READ OPERATIONS                                      ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
-     * Lấy tổng số tiền nợ chưa thanh toán của một hợp đồng (bao gồm các hóa đơn ISSUED, LATE, PARTIAL).
+     * LÃƒÂ¡Ã‚ÂºÃ‚Â¥y tÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ng sÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ tiÃƒÂ¡Ã‚Â»Ã‚Ân nÃƒÂ¡Ã‚Â»Ã‚Â£ chÃƒâ€ Ã‚Â°a thanh toÃƒÆ’Ã‚Â¡n cÃƒÂ¡Ã‚Â»Ã‚Â§a mÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢t hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng (bao gÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“m cÃƒÆ’Ã‚Â¡c hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ISSUED, LATE, PARTIAL).
      */
     public function getUnpaidBalance(string $contractId): float
     {
@@ -31,7 +38,7 @@ class InvoiceService
     }
 
     /**
-     * Hủy/Vô hiệu hóa toàn bộ hóa đơn chưa thanh toán của một hợp đồng (dùng khi đã gom tiền vào hóa đơn thanh lý).
+     * HÃƒÂ¡Ã‚Â»Ã‚Â§y/VÃƒÆ’Ã‚Â´ hiÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¡u hÃƒÆ’Ã‚Â³a toÃƒÆ’Ã‚Â n bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n chÃƒâ€ Ã‚Â°a thanh toÃƒÆ’Ã‚Â¡n cÃƒÂ¡Ã‚Â»Ã‚Â§a mÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢t hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng (dÃƒÆ’Ã‚Â¹ng khi Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ gom tiÃƒÂ¡Ã‚Â»Ã‚Ân vÃƒÆ’Ã‚Â o hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n thanh lÃƒÆ’Ã‚Â½).
      */
     public function voidUnpaidInvoicesByContract(string $contractId, string $note = ''): void
     {
@@ -39,12 +46,12 @@ class InvoiceService
             ->whereIn('status', ['ISSUED', 'LATE', 'PARTIAL', 'OVERDUE'])
             ->update([
                 'status' => 'CANCELLED',
-                'snapshot->void_reason' => 'Đã gộp vào hóa đơn thanh lý: ' . $note
+                'snapshot->void_reason' => 'Da gop vao hoa don thanh ly: '.$note,
             ]);
     }
 
     /**
-     * Danh sách hóa đơn (pagination + filter + sort + search).
+     * Phân trang danh sách hóa đơn (Hỗ trợ lọc, sắp xếp và tìm kiếm).
      */
     public function paginate(
         int $perPage = 15,
@@ -71,10 +78,13 @@ class InvoiceService
             ->with(['property', 'room', 'contract', 'items']);
 
         $user = request()->user();
-        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        $resolved = OrgContextResolver::resolveOrgId($user);
+        $effectiveOrgId = $orgId ?? $resolved;
+        if ($user?->hasRole('Admin')) {
+            abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+        }
+        if ($effectiveOrgId) {
+            $query->where('org_id', $effectiveOrgId);
         }
 
         if ($user && $user->hasRole('Tenant')) {
@@ -91,7 +101,7 @@ class InvoiceService
             });
         }
 
-        // Tìm kiếm theo mã phòng hoặc tên property
+        // Tìm kiếm theo mã phòng hoặc tên tòa nhà
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('room', function ($rq) use ($search) {
@@ -108,7 +118,7 @@ class InvoiceService
     }
 
     /**
-     * Danh sách hóa đơn đã xóa mềm (thùng rác).
+     * Danh sach hoa don da xoa mem (thung rac).
      */
     public function paginateTrash(
         int $perPage = 15,
@@ -135,17 +145,20 @@ class InvoiceService
             ->with(['property', 'room']);
 
         $user = request()->user();
-        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        $resolved = OrgContextResolver::resolveOrgId($user);
+        $effectiveOrgId = $orgId ?? $resolved;
+        if ($user?->hasRole('Admin')) {
+            abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+        }
+        if ($effectiveOrgId) {
+            $query->where('org_id', $effectiveOrgId);
         }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas(
                     'room',
-                    fn($rq) => $rq->where('code', 'like', "%{$search}%")
+                    fn ($rq) => $rq->where('code', 'like', "%{$search}%")
                         ->orWhere('name', 'like', "%{$search}%")
                 )
                     ->orWhereHas('property', function ($pq) use ($search) {
@@ -158,7 +171,7 @@ class InvoiceService
     }
 
     /**
-     * Danh sách hóa đơn theo Tòa nhà (Property).
+     * Danh sách hóa đơn của một tòa nhà cụ thể.
      */
     public function paginateByProperty(
         string $propertyId,
@@ -173,6 +186,7 @@ class InvoiceService
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('is_termination', fn ($query, $value) => $query->where('is_termination', (bool) $value)),
             ])
             ->allowedSorts([
                 'due_date',
@@ -186,10 +200,13 @@ class InvoiceService
             ->with(['property', 'room', 'contract', 'items']);
 
         $user = request()->user();
-        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        $resolved = OrgContextResolver::resolveOrgId($user);
+        $effectiveOrgId = $orgId ?? $resolved;
+        if ($user?->hasRole('Admin')) {
+            abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+        }
+        if ($effectiveOrgId) {
+            $query->where('org_id', $effectiveOrgId);
         }
 
         if ($user && $user->hasRole('Tenant')) {
@@ -219,7 +236,7 @@ class InvoiceService
     }
 
     /**
-     * Danh sách hóa đơn theo Tầng (Floor) trong Tòa nhà.
+     * Danh sách hóa đơn của một tầng cụ thể trong tòa nhà.
      */
     public function paginateByFloor(
         string $propertyId,
@@ -238,6 +255,7 @@ class InvoiceService
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('is_termination', fn ($query, $value) => $query->where('is_termination', (bool) $value)),
             ])
             ->allowedSorts([
                 'due_date',
@@ -251,10 +269,13 @@ class InvoiceService
             ->with(['property', 'room', 'contract', 'items']);
 
         $user = request()->user();
-        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        $resolved = OrgContextResolver::resolveOrgId($user);
+        $effectiveOrgId = $orgId ?? $resolved;
+        if ($user?->hasRole('Admin')) {
+            abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+        }
+        if ($effectiveOrgId) {
+            $query->where('org_id', $effectiveOrgId);
         }
 
         if ($search) {
@@ -270,82 +291,95 @@ class InvoiceService
     }
 
     /**
-     * Tìm 1 hóa đơn theo ID (kèm eager load).
+     * Tìm một hóa đơn theo ID (kèm quan hệ dùng trên InvoiceResource).
      */
     public function find(string $id): ?Invoice
     {
-        return Invoice::with([
-            'property',
-            'room',
-            'contract',
-            'items',
-            'createdBy',
-            'issuedBy',
-            'statusHistories.changedBy',
-            'adjustments.createdBy',
-            'adjustments.approvedBy',
-        ])->find($id);
+        return Invoice::query()
+            ->with([
+                'property',
+                'room',
+                'contract',
+                'items',
+                'statusHistories',
+                'adjustments',
+                'createdBy',
+                'issuedBy',
+            ])
+            ->find($id);
     }
 
-    /**
-     * Tìm hóa đơn đã xóa mềm.
-     */
     public function findTrashed(string $id): ?Invoice
     {
-        return Invoice::onlyTrashed()->with(['property', 'room'])->find($id);
+        return Invoice::onlyTrashed()
+            ->with(['property', 'room', 'contract', 'items'])
+            ->find($id);
     }
 
-    /**
-     * Tìm kể cả đã xóa mềm.
-     */
     public function findWithTrashed(string $id): ?Invoice
     {
-        return Invoice::withTrashed()->with(['property', 'room'])->find($id);
+        return Invoice::withTrashed()
+            ->with(['property', 'room', 'contract', 'items'])
+            ->find($id);
     }
 
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  WRITE OPERATIONS                                     ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ────────────────────────────────────────────────────────────────────────
+    //   WRITE OPERATIONS
+    // ────────────────────────────────────────────────────────────────────────
 
     /**
      * Tạo hóa đơn mới kèm danh sách items.
-     *
-     * Sử dụng DB::transaction để đảm bảo tính toàn vẹn:
-     * - Tạo Invoice
-     * - Tạo các InvoiceItem
-     * - Tính tổng total_amount từ các items
+     * Tự động chốt số đồng hồ nếu có metadata.
      */
     public function create(array $data, array $itemsData = []): Invoice
     {
         $user = request()->user();
 
-        // Auto-assign org_id if not explicitly provided or by non-admin
-        if ($user && !$user->hasRole('Admin') && $user->org_id) {
+        // Auto-assign org_id
+        if ($user && ! $user->hasRole('Admin') && $user->org_id) {
             $data['org_id'] = $user->org_id;
         } else {
-            // Admin: lấy org_id từ room nếu không truyền
-            if (!isset($data['org_id'])) {
+            if (! isset($data['org_id'])) {
                 $room = Room::find($data['room_id'] ?? null);
                 $data['org_id'] = $room?->org_id;
             }
         }
         $data['created_by_user_id'] = $user?->id;
 
-        return DB::transaction(function () use ($data, $itemsData) {
+        return DB::transaction(function () use ($data, $itemsData, $user) {
+            if (! empty($data['contract_id']) && isset($data['period_start'], $data['period_end'])) {
+                $dup = Invoice::query()
+                    ->where('contract_id', $data['contract_id'])
+                    ->whereDate('period_start', $data['period_start'])
+                    ->whereDate('period_end', $data['period_end'])
+                    ->where('is_termination', false)
+                    ->whereNotIn('status', ['CANCELLED'])
+                    ->exists();
+
+                if ($dup) {
+                    throw ValidationException::withMessages([
+                        'period' => ['Đã tồn tại hóa đơn cho hợp đồng và kỳ thanh toán này.'],
+                    ]);
+                }
+            }
+
             // 1. Tạo hóa đơn gốc
             $invoice = Invoice::create($data);
 
-            // 2. Tạo các dòng chi tiết (items)
+            // 2. Tạo các dòng chi tiết
             $totalAmount = 0;
-            foreach ($itemsData as $item) {
-                $item['org_id'] = $data['org_id'];
-                $created = $invoice->items()->create($item);
+            foreach ($itemsData as $itemData) {
+                $itemData['org_id'] = $data['org_id'];
+                $created = $invoice->items()->create($itemData);
                 $totalAmount += $created->amount;
             }
 
-            // 3. Cập nhật tổng tiền
-            if ($totalAmount > 0) {
-                $invoice->update(['total_amount' => $totalAmount]);
+            // 3. Cập nhật tổng tiền (luôn cập nhật)
+            $invoice->update(['total_amount' => $totalAmount]);
+
+            // 4. EDA: phát event để listener xử lý side-effects (notify, PDF, lock meter readings...)
+            if (($invoice->status ?? 'DRAFT') === 'ISSUED') {
+                $this->dispatchInvoiceGeneratedSafely($invoice->fresh('items'));
             }
 
             return $invoice->load('items');
@@ -353,13 +387,13 @@ class InvoiceService
     }
 
     /**
-     * Cập nhật hóa đơn.
-     * Nếu trạng thái thay đổi, tự động ghi lịch sử.
+     * CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n.
+     * NÃƒÂ¡Ã‚ÂºÃ‚Â¿u trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i thay Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢i, tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng ghi lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­.
      */
     public function update(string $id, array $data): ?Invoice
     {
         $invoice = $this->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return null;
         }
 
@@ -373,12 +407,12 @@ class InvoiceService
     }
 
     /**
-     * Xóa mềm hóa đơn.
+     * XÃƒÆ’Ã‚Â³a mÃƒÂ¡Ã‚Â»Ã‚Âm hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n.
      */
     public function delete(string $id): bool
     {
         $invoice = $this->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 
@@ -386,12 +420,12 @@ class InvoiceService
     }
 
     /**
-     * Khôi phục hóa đơn đã xóa mềm.
+     * KhÃƒÆ’Ã‚Â´i phÃƒÂ¡Ã‚Â»Ã‚Â¥c hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n Ãƒâ€žÃ¢â‚¬ËœÃƒÆ’Ã‚Â£ xÃƒÆ’Ã‚Â³a mÃƒÂ¡Ã‚Â»Ã‚Âm.
      */
     public function restore(string $id): bool
     {
         $invoice = $this->findTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 
@@ -399,25 +433,25 @@ class InvoiceService
     }
 
     /**
-     * Xóa vĩnh viễn.
+     * XÃƒÆ’Ã‚Â³a vÃƒâ€žÃ‚Â©nh viÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¦n.
      */
     public function forceDelete(string $id): bool
     {
         $invoice = $this->findWithTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             return false;
         }
 
         return $invoice->forceDelete();
     }
 
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  INVOICE ITEMS OPERATIONS                             ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬â€
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  INVOICE ITEMS OPERATIONS                             ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
-     * Thêm 1 dòng chi tiết phí vào hóa đơn.
-     * Tự động cập nhật lại total_amount.
+     * ThÃƒÆ’Ã‚Âªm 1 dÃƒÆ’Ã‚Â²ng chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t phÃƒÆ’Ã‚Â­ vÃƒÆ’Ã‚Â o hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n.
+     * TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng cÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t lÃƒÂ¡Ã‚ÂºÃ‚Â¡i total_amount.
      */
     public function storeItem(Invoice $invoice, array $itemData): InvoiceItem
     {
@@ -433,8 +467,8 @@ class InvoiceService
     }
 
     /**
-     * Xóa 1 dòng chi tiết khỏi hóa đơn.
-     * Tự động cập nhật lại total_amount.
+     * XÃƒÆ’Ã‚Â³a 1 dÃƒÆ’Ã‚Â²ng chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t khÃƒÂ¡Ã‚Â»Ã‚Âi hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n.
+     * TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng cÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t lÃƒÂ¡Ã‚ÂºÃ‚Â¡i total_amount.
      */
     public function destroyItem(InvoiceItem $item): bool
     {
@@ -449,18 +483,18 @@ class InvoiceService
         });
     }
 
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  STATUS TRANSITIONS                                   ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬â€
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  STATUS TRANSITIONS                                   ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
-     * Phát hành hóa đơn: DRAFT → ISSUED.
-     * Ghi nhận issue_date, issued_at, issued_by_user_id và lịch sử trạng thái.
+     * PhÃƒÆ’Ã‚Â¡t hÃƒÆ’Ã‚Â nh hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n: DRAFT ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ISSUED.
+     * Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n issue_date, issued_at, issued_by_user_id vÃƒÆ’Ã‚Â  lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i.
      */
     public function issueInvoice(Invoice $invoice, ?string $issuedByUserId = null, ?string $note = null): Invoice
     {
         return DB::transaction(function () use ($invoice, $issuedByUserId, $note) {
-            // Truyền ghi chú trạng thái cho Observer
+            // TruyÃƒÂ¡Ã‚Â»Ã‚Ân ghi chÃƒÆ’Ã‚Âº trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i cho Observer
             if ($note) {
                 $invoice->status_history_note = $note;
             }
@@ -473,17 +507,17 @@ class InvoiceService
             ]);
 
             $invoice->refresh();
-            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+            $this->dispatchInvoiceGeneratedSafely($invoice);
 
             return $invoice;
         });
     }
 
     /**
-     * Thanh toán hóa đơn: ISSUED/PENDING → PAID.
-     * Ghi nhận paid_amount = total_amount và lịch sử trạng thái.
+     * Thanh toÃƒÆ’Ã‚Â¡n hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n: ISSUED/PENDING ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ PAID.
+     * Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n paid_amount = total_amount vÃƒÆ’Ã‚Â  lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i.
      *
-     * Nếu là Initial Invoice (hóa đơn ký hợp đồng) → tự động kích hoạt hợp đồng.
+     * NÃƒÂ¡Ã‚ÂºÃ‚Â¿u lÃƒÆ’Ã‚Â  Initial Invoice (hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n kÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng) ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng kÃƒÆ’Ã‚Â­ch hoÃƒÂ¡Ã‚ÂºÃ‚Â¡t hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng.
      */
     public function payInvoice(Invoice $invoice, ?string $note = null): Invoice
     {
@@ -497,7 +531,7 @@ class InvoiceService
                 'paid_amount' => $invoice->total_amount,
             ]);
 
-            // Hook: Kích hoạt hợp đồng nếu là hóa đơn ban đầu
+            // Hook: KÃƒÆ’Ã‚Â­ch hoÃƒÂ¡Ã‚ÂºÃ‚Â¡t hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng nÃƒÂ¡Ã‚ÂºÃ‚Â¿u lÃƒÆ’Ã‚Â  hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ban Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚ÂºÃ‚Â§u
             $this->activateContractIfInitialInvoice($invoice);
 
             return $invoice->refresh();
@@ -505,8 +539,55 @@ class InvoiceService
     }
 
     /**
-     * Hủy hóa đơn: * → CANCELLED (trừ PAID).
-     * Ghi nhận cancelled_at và lịch sử trạng thái.
+     * Ghi nhận thanh toán một phần / toàn phần bằng tiền cọc (credit) trong luồng thanh lý EDA — không tạo Payment.
+     *
+     * @return float Số tiền credit còn lại sau khi áp dụng
+     */
+    public function applyDepositCreditTowardInvoice(Invoice $invoice, float $creditAmount, string $note = ''): float
+    {
+        if ($creditAmount <= 0) {
+            return round($creditAmount, 2);
+        }
+
+        return DB::transaction(function () use ($invoice, $creditAmount, $note) {
+            $invoice->refresh();
+            $outstanding = round(
+                max(0, (float) $invoice->total_amount - (float) $invoice->paid_amount),
+                2
+            );
+
+            if ($outstanding <= 0) {
+                return round($creditAmount, 2);
+            }
+
+            $apply = round(min($creditAmount, $outstanding), 2);
+            $newPaid = round((float) $invoice->paid_amount + $apply, 2);
+
+            if ($newPaid + 0.001 >= (float) $invoice->total_amount) {
+                if ($note) {
+                    $invoice->status_history_note = $note;
+                }
+                $invoice->update([
+                    'paid_amount' => $invoice->total_amount,
+                    'status' => 'PAID',
+                ]);
+            } else {
+                if ($note) {
+                    $invoice->status_history_note = $note;
+                }
+                $invoice->update([
+                    'paid_amount' => $newPaid,
+                    'status' => 'PARTIAL',
+                ]);
+            }
+
+            return round($creditAmount - $apply, 2);
+        });
+    }
+
+    /**
+     * HÃƒÂ¡Ã‚Â»Ã‚Â§y hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n: * ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ CANCELLED (trÃƒÂ¡Ã‚Â»Ã‚Â« PAID).
+     * Ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n cancelled_at vÃƒÆ’Ã‚Â  lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i.
      */
     public function cancelInvoice(Invoice $invoice, ?string $note = null): Invoice
     {
@@ -524,15 +605,14 @@ class InvoiceService
         });
     }
 
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  STATUS HISTORY & RECALCULATION HOOKS                 ║
-    // ╠═══════════════════════════════════════════════════════╣
-
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬â€
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  STATUS HISTORY & RECALCULATION HOOKS                 ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
-     * Tính lại total_amount từ toàn bộ items + approved adjustments.
+     * TÃƒÆ’Ã‚Â­nh lÃƒÂ¡Ã‚ÂºÃ‚Â¡i total_amount tÃƒÂ¡Ã‚Â»Ã‚Â« toÃƒÆ’Ã‚Â n bÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ items + approved adjustments.
      *
-     * Công thức:
+     * CÃƒÆ’Ã‚Â´ng thÃƒÂ¡Ã‚Â»Ã‚Â©c:
      * Final Amount = SUM(items.amount) + SUM(approved DEBIT) - SUM(approved CREDIT)
      */
     public function recalculateTotalAmount(Invoice $invoice): void
@@ -554,24 +634,24 @@ class InvoiceService
         $invoice->update(['total_amount' => max(0, $finalAmount)]);
     }
 
-    // ╔═══════════════════════════════════════════════════════╗
-    // ║  INITIAL INVOICE (Hóa đơn ký hợp đồng)              ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬â€
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  INITIAL INVOICE (HÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n kÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng)              ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
-     * Tạo hóa đơn ban đầu khi Tenant ký hợp đồng.
+     * TÃƒÂ¡Ã‚ÂºÃ‚Â¡o hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ban Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚ÂºÃ‚Â§u khi Tenant kÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng.
      *
-     * Tạo Invoice + Items trong transaction, tự động phát hành (ISSUED),
-     * ghi lịch sử trạng thái.
+     * TÃƒÂ¡Ã‚ÂºÃ‚Â¡o Invoice + Items trong transaction, tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng phÃƒÆ’Ã‚Â¡t hÃƒÆ’Ã‚Â nh (ISSUED),
+     * ghi lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i.
      */
     public function createInitialInvoice(array $invoiceData, array $itemsData): Invoice
     {
         return DB::transaction(function () use ($invoiceData, $itemsData) {
-            // 1. Tạo invoice với status DRAFT tạm thời
+            // 1. TÃƒÂ¡Ã‚ÂºÃ‚Â¡o invoice vÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºi status DRAFT tÃƒÂ¡Ã‚ÂºÃ‚Â¡m thÃƒÂ¡Ã‚Â»Ã‚Âi
             $invoiceData['status'] = 'DRAFT';
             $invoice = Invoice::create($invoiceData);
 
-            // 2. Tạo các dòng chi tiết (items)
+            // 2. TÃƒÂ¡Ã‚ÂºÃ‚Â¡o cÃƒÆ’Ã‚Â¡c dÃƒÆ’Ã‚Â²ng chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t (items)
             $totalAmount = 0;
             foreach ($itemsData as $item) {
                 $item['org_id'] = $invoiceData['org_id'];
@@ -579,10 +659,10 @@ class InvoiceService
                 $totalAmount += $created->amount;
             }
 
-            // 3. Cập nhật tổng tiền
+            // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t tÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ng tiÃƒÂ¡Ã‚Â»Ã‚Ân
             $invoice->update(['total_amount' => $totalAmount]);
 
-            // 4. Tự động phát hành (DRAFT → ISSUED)
+            // 4. TÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng phÃƒÆ’Ã‚Â¡t hÃƒÆ’Ã‚Â nh (DRAFT ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ISSUED)
             $invoice->update([
                 'status' => 'ISSUED',
                 'issue_date' => now(),
@@ -590,29 +670,29 @@ class InvoiceService
                 'issued_by_user_id' => $invoiceData['created_by_user_id'],
             ]);
 
-            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn ban đầu – tự động phát hành khi Tenant ký hợp đồng.');
+            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'HÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ban Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚ÂºÃ‚Â§u ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng phÃƒÆ’Ã‚Â¡t hÃƒÆ’Ã‚Â nh khi Tenant kÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng.');
 
             $invoice->load('items');
-            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+            $this->dispatchInvoiceGeneratedSafely($invoice);
 
             return $invoice;
         });
     }
 
     /**
-     * Tạo hóa đơn thanh lý hợp đồng.
+     * TÃƒÂ¡Ã‚ÂºÃ‚Â¡o hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n thanh lÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng.
      *
-     * Tạo Invoice + Items trong transaction, tự động phát hành (ISSUED),
-     * ghi lịch sử trạng thái.
+     * TÃƒÂ¡Ã‚ÂºÃ‚Â¡o Invoice + Items trong transaction, tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng phÃƒÆ’Ã‚Â¡t hÃƒÆ’Ã‚Â nh (ISSUED),
+     * ghi lÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch sÃƒÂ¡Ã‚Â»Ã‚Â­ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i.
      */
     public function createTerminationInvoice(array $invoiceData, array $itemsData): Invoice
     {
         return DB::transaction(function () use ($invoiceData, $itemsData) {
-            // 1. Tạo invoice với status DRAFT tạm thời
+            // 1. TÃƒÂ¡Ã‚ÂºÃ‚Â¡o invoice vÃƒÂ¡Ã‚Â»Ã¢â‚¬Âºi status DRAFT tÃƒÂ¡Ã‚ÂºÃ‚Â¡m thÃƒÂ¡Ã‚Â»Ã‚Âi
             $invoiceData['status'] = 'DRAFT';
             $invoice = Invoice::create($invoiceData);
 
-            // 2. Tạo các dòng chi tiết (items)
+            // 2. TÃƒÂ¡Ã‚ÂºÃ‚Â¡o cÃƒÆ’Ã‚Â¡c dÃƒÆ’Ã‚Â²ng chi tiÃƒÂ¡Ã‚ÂºÃ‚Â¿t (items)
             $totalAmount = 0;
             foreach ($itemsData as $item) {
                 $item['org_id'] = $invoiceData['org_id'];
@@ -620,10 +700,10 @@ class InvoiceService
                 $totalAmount += $created->amount;
             }
 
-            // 3. Cập nhật tổng tiền
+            // 3. CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t tÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¢ng tiÃƒÂ¡Ã‚Â»Ã‚Ân
             $invoice->update(['total_amount' => $totalAmount]);
 
-            // 4. Nếu bằng 0 thì chuyển luôn thành PAID
+            // 4. NÃƒÂ¡Ã‚ÂºÃ‚Â¿u bÃƒÂ¡Ã‚ÂºÃ‚Â±ng 0 thÃƒÆ’Ã‚Â¬ chuyÃƒÂ¡Ã‚Â»Ã†â€™n luÃƒÆ’Ã‚Â´n thÃƒÆ’Ã‚Â nh PAID
             $finalStatus = $totalAmount <= 0 ? 'PAID' : 'ISSUED';
 
             $invoice->update([
@@ -634,20 +714,20 @@ class InvoiceService
                 'paid_amount' => $finalStatus === 'PAID' ? $totalAmount : 0,
             ]);
 
-            $this->recordStatusHistory($invoice, 'DRAFT', $finalStatus, 'Hóa đơn thanh lý hợp đồng ghi nhận các khoản chưa thanh toán cuối cùng.');
+            $this->recordStatusHistory($invoice, 'DRAFT', $finalStatus, 'HÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n thanh lÃƒÆ’Ã‚Â½ hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng ghi nhÃƒÂ¡Ã‚ÂºÃ‚Â­n cÃƒÆ’Ã‚Â¡c khoÃƒÂ¡Ã‚ÂºÃ‚Â£n chÃƒâ€ Ã‚Â°a thanh toÃƒÆ’Ã‚Â¡n cuÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœi cÃƒÆ’Ã‚Â¹ng.');
 
             $invoice->load('items');
-            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+            $this->dispatchInvoiceGeneratedSafely($invoice);
 
             return $invoice;
         });
     }
 
     /**
-     * Hook: Kích hoạt hợp đồng khi Initial Invoice được thanh toán.
+     * Hook: KÃƒÆ’Ã‚Â­ch hoÃƒÂ¡Ã‚ÂºÃ‚Â¡t hÃƒÂ¡Ã‚Â»Ã‚Â£p Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Å“ng khi Initial Invoice Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â°ÃƒÂ¡Ã‚Â»Ã‚Â£c thanh toÃƒÆ’Ã‚Â¡n.
      *
-     * Kiểm tra `snapshot.is_initial` để xác định hóa đơn ban đầu.
-     * Chỉ kích hoạt nếu contract đang ở trạng thái PENDING_PAYMENT.
+     * KiÃƒÂ¡Ã‚Â»Ã†â€™m tra `snapshot.is_initial` Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã†â€™ xÃƒÆ’Ã‚Â¡c Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹nh hÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n ban Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚ÂºÃ‚Â§u.
+     * ChÃƒÂ¡Ã‚Â»Ã¢â‚¬Â° kÃƒÆ’Ã‚Â­ch hoÃƒÂ¡Ã‚ÂºÃ‚Â¡t nÃƒÂ¡Ã‚ÂºÃ‚Â¿u contract Ãƒâ€žÃ¢â‚¬Ëœang ÃƒÂ¡Ã‚Â»Ã…Â¸ trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i PENDING_PAYMENT.
      */
     private function activateContractIfInitialInvoice(Invoice $invoice): void
     {
@@ -655,13 +735,13 @@ class InvoiceService
 
         $isInitial = is_array($snapshot) && ($snapshot['is_initial'] ?? false) === true;
 
-        if (!$isInitial) {
+        if (! $isInitial) {
             return;
         }
 
         $contract = $invoice->contract;
 
-        if (!$contract || $contract->status !== ContractStatus::PENDING_PAYMENT) {
+        if (! $contract || $contract->status !== ContractStatus::PENDING_PAYMENT) {
             return;
         }
 
@@ -670,21 +750,21 @@ class InvoiceService
             'signed_at' => now(),
         ]);
 
-        // Cập nhật trạng thái phòng thành OCCUPIED
+        // CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i phÃƒÆ’Ã‚Â²ng thÃƒÆ’Ã‚Â nh OCCUPIED
         if ($contract->room) {
             $contract->room->update(['status' => 'occupied']);
         }
     }
-    // ║  PAYMENT OPERATIONS                                     ║
-    // ╠═══════════════════════════════════════════════════════╣
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ  PAYMENT OPERATIONS                                     ÃƒÂ¢Ã¢â‚¬Â¢Ã¢â‚¬Ëœ
+    // ÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â ÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚ÂÃƒÂ¢Ã¢â‚¬Â¢Ã‚Â£
 
     /**
      * Record a payment for an invoice.
      */
     public function recordPayment(Invoice $invoice, array $data): Payment
     {
-        /** @var \App\Services\Finance\PaymentService $paymentService */
-        $paymentService = app(\App\Services\Finance\PaymentService::class);
+        /** @var PaymentService $paymentService */
+        $paymentService = app(PaymentService::class);
 
         $paymentData = [
             'org_id' => $invoice->org_id,
@@ -696,15 +776,14 @@ class InvoiceService
             'received_at' => $data['received_at'] ?? now(),
             'note' => $data['note'] ?? null,
             'allocations' => [
-                ['invoice_id' => $invoice->id, 'amount' => $data['amount']]
-            ]
+                ['invoice_id' => $invoice->id, 'amount' => $data['amount']],
+            ],
         ];
 
-        $user = request()->user() ?: ($invoice->createdBy ?: \App\Models\Org\User::first());
+        $user = request()->user() ?: ($invoice->createdBy ?: User::first());
 
         return $paymentService->create($paymentData, $user);
     }
-
 
     /**
      * Trigger monthly billing for a property.
@@ -714,7 +793,7 @@ class InvoiceService
     {
         $count = 0;
         $contracts = $property->contracts()
-            ->where('status', \App\Enums\ContractStatus::ACTIVE->value)
+            ->where('status', ContractStatus::ACTIVE->value)
             ->get();
 
         $billingDate = $options['billing_date'] ?? now()->toDateString();
@@ -726,7 +805,7 @@ class InvoiceService
                     $count++;
                 }
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to generate invoice for contract {$contract->id}: " . $e->getMessage());
+                Log::error("Failed to generate invoice for contract {$contract->id}: ".$e->getMessage());
             }
         }
 
@@ -736,10 +815,10 @@ class InvoiceService
     /**
      * Generate an invoice for a specific contract for a given billing month.
      */
-    public function generateForContract(\App\Models\Contract\Contract $contract, string $billingDate): array
+    public function generateForContract(Contract $contract, string $billingDate): array
     {
         return DB::transaction(function () use ($contract, $billingDate) {
-            $billingDateObj = \Carbon\Carbon::parse($billingDate);
+            $billingDateObj = Carbon::parse($billingDate);
             $periodStart = $billingDateObj->copy()->startOfMonth();
             $periodEnd = $billingDateObj->copy()->endOfMonth();
 
@@ -747,7 +826,7 @@ class InvoiceService
             $existing = Invoice::where('contract_id', $contract->id)
                 ->where('period_start', $periodStart->toDateString())
                 ->where('period_end', $periodEnd->toDateString())
-                ->whereIn('status', ['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID'])
+                ->whereIn('status', ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OVERDUE'])
                 ->first();
 
             if ($existing) {
@@ -775,8 +854,8 @@ class InvoiceService
                 $rentItem = $invoice->items()->create([
                     'org_id' => $contract->org_id,
                     'type' => 'RENT',
-                    'name' => 'Tiền phòng',
-                    'description' => 'Tiền phòng tháng ' . $billingDateObj->format('m/Y'),
+                    'name' => 'TiÃƒÂ¡Ã‚Â»Ã‚Ân phÃƒÆ’Ã‚Â²ng',
+                    'description' => 'TiÃƒÂ¡Ã‚Â»Ã‚Ân phÃƒÆ’Ã‚Â²ng thÃƒÆ’Ã‚Â¡ng '.$billingDateObj->format('m/Y'),
                     'quantity' => 1,
                     'unit_price' => $contract->rent_price,
                     'amount' => $contract->rent_price,
@@ -789,8 +868,8 @@ class InvoiceService
                 $serviceItem = $invoice->items()->create([
                     'org_id' => $contract->org_id,
                     'type' => 'SERVICE',
-                    'name' => 'Phí dịch vụ cố định',
-                    'description' => 'Phí dịch vụ tháng ' . $billingDateObj->format('m/Y'),
+                    'name' => 'PhÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch vÃƒÂ¡Ã‚Â»Ã‚Â¥ cÃƒÂ¡Ã‚Â»Ã¢â‚¬Ëœ Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹nh',
+                    'description' => 'PhÃƒÆ’Ã‚Â­ dÃƒÂ¡Ã‚Â»Ã¢â‚¬Â¹ch vÃƒÂ¡Ã‚Â»Ã‚Â¥ thÃƒÆ’Ã‚Â¡ng '.$billingDateObj->format('m/Y'),
                     'quantity' => 1,
                     'unit_price' => $contract->fixed_services_fee,
                     'amount' => $contract->fixed_services_fee,
@@ -806,12 +885,41 @@ class InvoiceService
                 'issued_by_user_id' => request()->user()?->id,
             ]);
 
-            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'Hóa đơn tháng tự động tạo.');
+            $this->recordStatusHistory($invoice, 'DRAFT', 'ISSUED', 'HÃƒÆ’Ã‚Â³a Ãƒâ€žÃ¢â‚¬ËœÃƒâ€ Ã‚Â¡n thÃƒÆ’Ã‚Â¡ng tÃƒÂ¡Ã‚Â»Ã‚Â± Ãƒâ€žÃ¢â‚¬ËœÃƒÂ¡Ã‚Â»Ã¢â€žÂ¢ng tÃƒÂ¡Ã‚ÂºÃ‚Â¡o.');
 
             $invoice->load('items');
-            event(new \App\Events\Billing\InvoiceGenerated($invoice));
+            $this->dispatchInvoiceGeneratedSafely($invoice);
 
             return ['invoice' => $invoice, 'is_new' => true];
         });
+    }
+
+    /**
+     * Ghi lại lịch sử thay đổi trạng thái hóa đơn.
+     */
+    private function recordStatusHistory(Invoice $invoice, ?string $from, string $to, ?string $note = null): void
+    {
+        $invoice->statusHistories()->create([
+            'org_id' => $invoice->org_id,
+            'from_status' => $from,
+            'to_status' => $to,
+            'note' => $note ?? $invoice->status_history_note,
+            'changed_by_user_id' => request()->user()?->id ?? $invoice->created_by_user_id,
+        ]);
+    }
+
+    /**
+     * Broadcast/listener failures must not break core billing flow.
+     */
+    private function dispatchInvoiceGeneratedSafely(Invoice $invoice): void
+    {
+        try {
+            event(new InvoiceGenerated($invoice));
+        } catch (\Throwable $e) {
+            Log::warning('invoice_generated_event_dispatch_failed', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -9,7 +9,10 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\ContractIdentityMedia;
 use Tests\TestCase;
 
 class TenantSelfServiceTest extends TestCase
@@ -24,9 +27,9 @@ class TenantSelfServiceTest extends TestCase
         Role::firstOrCreate(['name' => 'Tenant', 'guard_name' => 'web']);
 
         // Register standard contract permissions that Policy checks
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Contracts', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view Contracts', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update Contracts', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'viewAny Contracts', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view Contracts', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'update Contracts', 'guard_name' => 'web']);
 
         // Ensure roles have basic module access as per RbacModuleProvider expectations
         Role::findByName('Tenant', 'web')->givePermissionTo(['viewAny Contracts', 'view Contracts']);
@@ -65,6 +68,7 @@ class TenantSelfServiceTest extends TestCase
             'contract_id' => $contract->id,
             'user_id' => $tenant->id,
             'full_name' => $tenant->full_name,
+            'role' => 'TENANT',
             'status' => 'APPROVED',
             'is_primary' => true,
         ]);
@@ -76,12 +80,18 @@ class TenantSelfServiceTest extends TestCase
 
     public function test_tenant_can_add_roommate_to_their_contract()
     {
+        Storage::fake('local');
+
         [, $tenant, , , $contract] = $this->setupActiveContract();
+
+        [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($tenant);
 
         $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/members', [
             'full_name' => 'Bạn Cùng Phòng',
             'phone' => '0901111222',
             'role' => 'ROOMMATE',
+            'identity_front_media_id' => $idFront,
+            'identity_back_media_id' => $idBack,
         ]);
 
         $response->assertStatus(201)
@@ -97,17 +107,42 @@ class TenantSelfServiceTest extends TestCase
         ]);
     }
 
+    public function test_tenant_can_add_minor_roommate_without_identity_media(): void
+    {
+        Storage::fake('local');
+
+        [, $tenant, , , $contract] = $this->setupActiveContract();
+
+        $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/members', [
+            'full_name' => 'Trẻ em ở cùng',
+            'phone' => '0901111333',
+            'role' => 'ROOMMATE',
+            'date_of_birth' => '2015-05-05',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.full_name', 'Trẻ em ở cùng')
+            ->assertJsonPath('data.status', 'PENDING')
+            ->assertJsonPath('data.role', 'ROOMMATE');
+    }
+
     public function test_non_member_tenant_cannot_add_to_others_contract()
     {
+        Storage::fake('local');
+
         [$org, , , , $contract] = $this->setupActiveContract();
 
         // Tenant khác cùng Org
         $stranger = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Stranger']);
         $stranger->assignRole('Tenant');
 
+        [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($stranger);
+
         $response = $this->actingAs($stranger)->postJson('/api/contracts/'.$contract->id.'/members', [
             'full_name' => 'Hack Attempt',
             'role' => 'ROOMMATE',
+            'identity_front_media_id' => $idFront,
+            'identity_back_media_id' => $idBack,
         ]);
 
         $response->assertStatus(403);

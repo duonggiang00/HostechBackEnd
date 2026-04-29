@@ -18,7 +18,7 @@ class GeneratedDocumentController extends Controller
     {
         $request->validate([
             'owner_type' => 'required|string',
-            'owner_id'   => 'required|uuid',
+            'owner_id' => 'required|uuid',
         ]);
 
         $documents = GeneratedDocument::with('template')
@@ -37,7 +37,7 @@ class GeneratedDocumentController extends Controller
     {
         $document = GeneratedDocument::findOrFail($id);
 
-        if (!Storage::disk('local')->exists($document->path)) {
+        if (! Storage::disk('local')->exists($document->path)) {
             return response()->json(['message' => 'Không tìm thấy file trên hệ thống.'], 404);
         }
 

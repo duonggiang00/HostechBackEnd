@@ -41,9 +41,9 @@ class GenerateInvoiceForContractJob implements ShouldQueue
 
     public function __construct(
         public Contract $contract,
-        public Carbon   $periodMonth,
-        public ?Carbon  $customPeriodStart = null,
-        public ?Carbon  $customPeriodEnd   = null
+        public Carbon $periodMonth,
+        public ?Carbon $customPeriodStart = null,
+        public ?Carbon $customPeriodEnd = null
     ) {}
 
     /**
@@ -53,7 +53,7 @@ class GenerateInvoiceForContractJob implements ShouldQueue
     {
         Log::info('[Billing] Processing contract invoice', [
             'contract_id' => $this->contract->id,
-            'period'      => $this->periodMonth->format('Y-m'),
+            'period' => $this->periodMonth->format('Y-m'),
         ]);
 
         try {
@@ -68,13 +68,13 @@ class GenerateInvoiceForContractJob implements ShouldQueue
             InvoiceGenerated::dispatch($invoice);
 
             Log::info('[Billing] Invoice created successfully', [
-                'invoice_id'  => $invoice->id,
+                'invoice_id' => $invoice->id,
                 'contract_id' => $this->contract->id,
             ]);
         } catch (\Exception $e) {
             Log::error('[Billing] Failed to generate invoice for contract', [
                 'contract_id' => $this->contract->id,
-                'error'       => $e->getMessage(),
+                'error' => $e->getMessage(),
             ]);
 
             // Re-throw so the queue marks the job as failed and retries
@@ -89,8 +89,8 @@ class GenerateInvoiceForContractJob implements ShouldQueue
     {
         Log::critical('[Billing] GenerateInvoiceForContractJob permanently failed', [
             'contract_id' => $this->contract->id,
-            'period'      => $this->periodMonth->format('Y-m'),
-            'error'       => $exception->getMessage(),
+            'period' => $this->periodMonth->format('Y-m'),
+            'error' => $exception->getMessage(),
         ]);
     }
 }

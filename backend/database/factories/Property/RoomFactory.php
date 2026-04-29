@@ -2,13 +2,8 @@
 
 namespace Database\Factories\Property;
 
-use App\Models\Meter\Meter;
-use App\Models\Meter\MeterReading;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
-use App\Models\Property\RoomPrice;
-use App\Models\Property\RoomStatusHistory;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -58,7 +53,7 @@ class RoomFactory extends Factory
             }
 
             // Update description with structured text
-            $assetList = !empty($assetsToCreate) ? implode(', ', $assetsToCreate) : 'cơ bản';
+            $assetList = ! empty($assetsToCreate) ? implode(', ', $assetsToCreate) : 'cơ bản';
             $description = "Phòng tầng {$room->floor_number}, rộng {$room->area} m2 cho {$room->capacity} người ở, có sẵn {$assetList}";
             $room->update(['description' => $description]);
 

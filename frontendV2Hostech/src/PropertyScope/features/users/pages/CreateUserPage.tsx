@@ -5,9 +5,10 @@ import { usePropertyUsers } from '../hooks/usePropertyUsers';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { toast } from 'react-hot-toast';
 import { 
-  ArrowLeft, UserPlus, Mail, Phone, Lock, 
+  UserPlus, Mail, Phone, Lock, 
   ShieldAlert, BadgeCheck, Loader2, Save 
 } from 'lucide-react';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function CreateUserPage() {
   const navigate = useNavigate();
@@ -50,7 +51,9 @@ export default function CreateUserPage() {
         properties_scope: [propertyId],
       });
       toast.success('Thêm người dùng thành công!');
-      navigate(`/properties/${propertyId}/users`);
+      navigate(
+        `/properties/${propertyId}/${formData.role === 'TENANT' ? 'tenants' : 'staff'}`,
+      );
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Có lỗi xảy ra khi thêm người dùng.');
     }
@@ -60,12 +63,7 @@ export default function CreateUserPage() {
     <div className="max-w-4xl mx-auto space-y-6 lg:space-y-8 animate-in fade-in duration-700">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button 
-          onClick={() => navigate(`/properties/${propertyId}/users`)}
-          className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[#4B5563] hover:text-[#1E3A8A] transition-all shadow-sm group"
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-        </button>
+        <PageBackButton className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm" />
         <div>
           <h1 className="text-24 font-bold text-[#111827] dark:text-white flex items-center gap-3">
             <UserPlus className="w-6 h-6 text-[#1E3A8A]" />

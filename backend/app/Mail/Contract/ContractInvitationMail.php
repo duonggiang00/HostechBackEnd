@@ -3,6 +3,7 @@
 namespace App\Mail\Contract;
 
 use App\Models\Contract\Contract;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -22,13 +23,13 @@ class ContractInvitationMail extends Mailable implements ShouldQueue
 
     public function __construct(
         public readonly Contract $contract,
-        public readonly string   $inviteToken,
-        public readonly array    $memberData,   // full_name, phone, identity_number...
+        public readonly string $inviteToken,
+        public readonly array $memberData,   // full_name, phone, identity_number...
     ) {}
 
     public function envelope(): Envelope
     {
-        $roomCode     = $this->contract->room?->code ?? '—';
+        $roomCode = $this->contract->room?->code ?? '—';
         $propertyName = $this->contract->property?->name ?? 'Tòa nhà';
 
         return new Envelope(
@@ -38,22 +39,22 @@ class ContractInvitationMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        $registerUrl = config('app.frontend_url', 'http://localhost:3000') . '/setup-account/' . $this->inviteToken;
+        $registerUrl = config('app.frontend_url', 'http://localhost:3000').'/setup-account/'.$this->inviteToken;
 
-        $roomCode     = $this->contract->room?->code ?? '—';
+        $roomCode = $this->contract->room?->code ?? '—';
         $propertyName = $this->contract->property?->name ?? '—';
-        $startDate    = $this->contract->start_date
-            ? \Carbon\Carbon::parse($this->contract->start_date)->format('d/m/Y')
+        $startDate = $this->contract->start_date
+            ? Carbon::parse($this->contract->start_date)->format('d/m/Y')
             : '—';
 
         return new Content(
             view: 'emails.contract.invitation',
             with: [
                 'recipientName' => $this->memberData['full_name'] ?? 'Quý khách',
-                'roomCode'      => $roomCode,
-                'propertyName'  => $propertyName,
-                'startDate'     => $startDate,
-                'registerUrl'   => $registerUrl,
+                'roomCode' => $roomCode,
+                'propertyName' => $propertyName,
+                'startDate' => $startDate,
+                'registerUrl' => $registerUrl,
             ],
         );
     }

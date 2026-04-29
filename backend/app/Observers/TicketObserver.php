@@ -2,11 +2,14 @@
 
 namespace App\Observers;
 
-use App\Models\Ticket\Ticket;
 use App\Events\Ticket\TicketCreated;
 use App\Events\Ticket\TicketStatusUpdated;
-use App\Notifications\Ticket\NewTicketNotification;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\User;
+use App\Models\Ticket\Ticket;
+use App\Notifications\Ticket\NewTicketNotification;
+use App\Services\Contract\ContractService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
 class TicketObserver
@@ -44,6 +47,25 @@ class TicketObserver
             if ($tenant) {
                 // Here you could create/dispatch a TicketStatusChangedNotification for the tenant
                 // $tenant->notify(new TicketStatusChangedNotification($ticket));
+            }
+
+            // Auto-approve pending ContractMember when ADD_MEMBER ticket is DONE
+            if ($ticket->category === 'ADD_MEMBER' && $ticket->status === 'DONE' && $ticket->contract_id) {
+                $pendingMembers = ContractMember::where('contract_id', $ticket->contract_id)
+                    ->where('status', 'PENDING')
+                    ->get();
+
+                if ($pendingMembers->isNotEmpty()) {
+                    $contractService = app(ContractService::class);
+                    foreach ($pendingMembers as $member) {
+                        try {
+                            $contractService->approveMember($ticket->contract_id, $member->id);
+                        } catch (\Exception $e) {
+                            // Log error silently if it fails to approve a member
+                            Log::error("Failed to auto-approve member {$member->id}: ".$e->getMessage());
+                        }
+                    }
+                }
             }
         }
     }

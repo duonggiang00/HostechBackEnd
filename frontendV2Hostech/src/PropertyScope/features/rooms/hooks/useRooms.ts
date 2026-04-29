@@ -56,6 +56,7 @@ export const useDraftRooms = (propertyId?: string) => {
     queryKey: [DRAFTS_KEY, pid],
     queryFn: () => roomsApi.getDraftRooms(pid || undefined),
     enabled: isUuid(pid),
+    staleTime: 60_000,
   });
 };
 
@@ -69,21 +70,8 @@ export const useTrashRooms = (params?: RoomQueryParams, options?: Partial<UseQue
     queryFn: ({ signal }) => roomsApi.getTrashRooms(params, signal),
     ...options,
     enabled: options?.enabled !== undefined ? options.enabled && isUuid(propertyId) : isUuid(propertyId),
+    staleTime: options?.staleTime ?? 60_000,
     placeholderData: keepPreviousData,
-  });
-};
-
-/**
- * GET /api/rooms/{id}
- */
-export const useRoom = (id?: string) => {
-  return useQuery({
-    queryKey: [ROOM_KEY, id],
-    queryFn: async () => {
-      if (!id) return null;
-      return roomsApi.getRoom(id);
-    },
-    enabled: isUuid(id),
   });
 };
 
@@ -101,6 +89,9 @@ export const useRoomDetail = (id?: string) => {
     staleTime: 5 * 60 * 1000, // 5 mins stale time for consolidated detail
   });
 };
+
+/** @deprecated Prefer {@link useRoomDetail}; alias kept so list + edit pages share one cache. */
+export const useRoom = useRoomDetail;
 
 // ─── Price History Hooks ──────────────────────────────────────────────────────
 

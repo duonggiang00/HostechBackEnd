@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\System\TemporaryUpload;
 use Illuminate\Console\Command;
 
 class CleanupTempUploads extends Command
@@ -27,7 +28,7 @@ class CleanupTempUploads extends Command
     {
         $cutoff = now()->subDay();
 
-        $uploads = \App\Models\System\TemporaryUpload::where('created_at', '<', $cutoff)->get();
+        $uploads = TemporaryUpload::where('created_at', '<', $cutoff)->get();
 
         $count = 0;
         foreach ($uploads as $upload) {

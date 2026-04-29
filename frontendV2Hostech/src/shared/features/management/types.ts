@@ -18,6 +18,16 @@ export interface UserInvitation {
   };
 }
 
+export interface ContractMemberPrefill {
+  full_name: string | null;
+  phone: string | null;
+  identity_number: string | null;
+  date_of_birth: string | null;
+  license_plate: string | null;
+  address: string | null;
+  has_identity_documents: boolean;
+}
+
 export interface InvitationValidation {
   email: string;
   role_name: string;
@@ -26,4 +36,5 @@ export interface InvitationValidation {
     name: string;
   } | null;
   requires_org_creation: boolean;
+  contract_member_prefill?: ContractMemberPrefill | null;
 }

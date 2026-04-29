@@ -11,7 +11,5 @@ class FloorDeleted
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public Floor $floor)
-    {
-    }
+    public function __construct(public Floor $floor) {}
 }

@@ -4,7 +4,6 @@ namespace Database\Factories\Meter;
 
 use App\Models\Meter\Meter;
 use App\Models\Org\Org;
-use App\Models\Property\Room;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MeterFactory extends Factory

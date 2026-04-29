@@ -1,14 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { ArrowLeft, Loader2, Plus, Check, X, Clock, Trash2, Edit2, SendHorizontal, Eye } from 'lucide-react';
 import { meteringApi } from '../api/metering';
 import type { Meter, MeterReading } from '../types';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import toast from 'react-hot-toast';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function MeterDetailPage() {
   const { meterId } = useParams<{ meterId: string }>();
-  const navigate = useNavigate();
   const { hasRole } = useAuthStore();
 
   const [meter, setMeter] = useState<Meter | null>(null);
@@ -366,9 +366,12 @@ export default function MeterDetailPage() {
   const handleRejectReading = async (readingId: string) => {
     if (!meterId) return;
 
+    const reason = window.prompt('Lý do từ chối (có thể để trống):');
+    if (reason === null) return; // user cancelled
+
     try {
-      await meteringApi.rejectReading(meterId, readingId, 'Từ chối');
-      toast.success('Từ chối chốt số thành công');
+      await meteringApi.rejectReading(meterId, readingId, reason.trim() || 'Không đạt yêu cầu');
+      toast.success('Đã từ chối chốt số');
       await _fetchReadings(meterId, readingsPage);
     } catch (error: unknown) {
       console.error('Failed to reject:', error);
@@ -601,13 +604,9 @@ export default function MeterDetailPage() {
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 transition-colors">
         <div className="max-w-7xl mx-auto px-6 py-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-[#1E3A8A] hover:text-blue-900 transition-colors mb-4 text-sm font-semibold"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Quay lại
-          </button>
+          <div className="mb-4">
+            <PageBackButton />
+          </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white transition-colors">Chi tiết đồng hồ</h1>
         </div>
       </div>
@@ -1065,8 +1064,8 @@ export default function MeterDetailPage() {
                                 </button>
                               )}
 
-                              {/* Delete - Available for all readings and users who manage */}
-                              {canManageReadings && (
+                              {/* Delete - Only for DRAFT / REJECTED (not SUBMITTED or APPROVED) */}
+                              {canManageReadings && ['DRAFT', 'REJECTED'].includes(reading.status) && (
                                 <button
                                   onClick={() => handleDeleteReading(reading.id)}
                                   className="p-2 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg transition-colors"

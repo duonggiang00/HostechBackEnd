@@ -2,9 +2,7 @@
 
 namespace Tests\Feature\Meter;
 
-use App\Events\Meter\BulkMeterReadingsApproved;
 use App\Events\Meter\MeterReadingApproved;
-use App\Listeners\Meter\PerformBatchMasterAggregation;
 use App\Listeners\Meter\PerformMasterAggregation;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
@@ -16,7 +14,6 @@ use App\Models\Service\Service;
 use App\Services\Meter\MeterReadingService;
 use App\Services\Meter\MeterService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -26,22 +23,26 @@ class MeterLogicTest extends TestCase
     use RefreshDatabase;
 
     protected Org $org;
+
     protected Property $property;
+
     protected Service $service;
+
     protected MeterService $meterService;
+
     protected MeterReadingService $readingService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->org      = Org::factory()->create();
+
+        $this->org = Org::factory()->create();
         $this->property = Property::factory()->create(['org_id' => $this->org->id]);
-        $this->service  = Service::factory()->create(['org_id' => $this->org->id]);
-        
-        $this->meterService   = app(MeterService::class);
+        $this->service = Service::factory()->create(['org_id' => $this->org->id]);
+
+        $this->meterService = app(MeterService::class);
         $this->readingService = app(MeterReadingService::class);
-        
+
         Role::firstOrCreate(['name' => 'Manager']);
         $user = User::factory()->create();
         $user->assignRole('Manager');
@@ -66,33 +67,33 @@ class MeterLogicTest extends TestCase
     public function test_meter_aggregation_from_room_to_master()
     {
         $masterMeter = Meter::factory()->create([
-            'org_id'      => $this->org->id,
+            'org_id' => $this->org->id,
             'property_id' => $this->property->id,
-            'room_id'     => null,
-            'service_id'  => $this->service->id,
-            'type'        => 'ELECTRIC',
-            'is_master'   => true,
+            'room_id' => null,
+            'service_id' => $this->service->id,
+            'type' => 'ELECTRIC',
+            'is_master' => true,
             'base_reading' => 1000,
         ]);
 
-        $room1  = Room::factory()->create(['org_id' => $this->org->id, 'property_id' => $this->property->id]);
+        $room1 = Room::factory()->create(['org_id' => $this->org->id, 'property_id' => $this->property->id]);
         $meter1 = Meter::factory()->create([
-            'org_id'      => $this->org->id, 'property_id' => $this->property->id,
-            'room_id'     => $room1->id, 'service_id' => $this->service->id,
-            'type'        => 'ELECTRIC', 'is_master' => false, 'base_reading' => 0,
+            'org_id' => $this->org->id, 'property_id' => $this->property->id,
+            'room_id' => $room1->id, 'service_id' => $this->service->id,
+            'type' => 'ELECTRIC', 'is_master' => false, 'base_reading' => 0,
         ]);
 
-        $room2  = Room::factory()->create(['org_id' => $this->org->id, 'property_id' => $this->property->id]);
+        $room2 = Room::factory()->create(['org_id' => $this->org->id, 'property_id' => $this->property->id]);
         $meter2 = Meter::factory()->create([
-            'org_id'      => $this->org->id, 'property_id' => $this->property->id,
-            'room_id'     => $room2->id, 'service_id' => $this->service->id,
-            'type'        => 'ELECTRIC', 'is_master' => false, 'base_reading' => 100,
+            'org_id' => $this->org->id, 'property_id' => $this->property->id,
+            'room_id' => $room2->id, 'service_id' => $this->service->id,
+            'type' => 'ELECTRIC', 'is_master' => false, 'base_reading' => 100,
         ]);
 
         // Approve room 1 reading (usage = 50)
         $reading1 = $this->readingService->create([
-            'org_id'        => $this->org->id, 'meter_id'     => $meter1->id,
-            'period_start'  => now()->startOfMonth(), 'period_end' => now()->endOfMonth(),
+            'org_id' => $this->org->id, 'meter_id' => $meter1->id,
+            'period_start' => now()->startOfMonth(), 'period_end' => now()->endOfMonth(),
             'reading_value' => 50,
         ]);
         $reading1 = $this->readingService->update($reading1, ['status' => 'APPROVED']);
@@ -100,22 +101,22 @@ class MeterLogicTest extends TestCase
         $this->runAggregation($reading1);
 
         $this->assertDatabaseHas('meter_readings', [
-            'meter_id'      => $masterMeter->id,
+            'meter_id' => $masterMeter->id,
             'reading_value' => 1050,  // 1000 + 50
         ]);
 
         // Approve room 2 reading (usage = 30, dial 130 - base 100)
         $reading2 = $this->readingService->create([
-            'org_id'        => $this->org->id, 'meter_id'     => $meter2->id,
-            'period_start'  => now()->startOfMonth()->toDateString(),
-            'period_end'    => now()->endOfMonth()->toDateString(),
+            'org_id' => $this->org->id, 'meter_id' => $meter2->id,
+            'period_start' => now()->startOfMonth()->toDateString(),
+            'period_end' => now()->endOfMonth()->toDateString(),
             'reading_value' => 130,
         ]);
         $reading2 = $this->readingService->update($reading2, ['status' => 'APPROVED']);
         $this->runAggregation($reading2);
 
         $this->assertDatabaseHas('meter_readings', [
-            'meter_id'      => $masterMeter->id,
+            'meter_id' => $masterMeter->id,
             'reading_value' => 1080,  // 1000 + 50 + 30
         ]);
     }
@@ -132,7 +133,7 @@ class MeterLogicTest extends TestCase
             'is_master' => true,
             'base_reading' => 1000,
         ]);
-        
+
         MeterReading::factory()->create([
             'org_id' => $this->org->id,
             'meter_id' => $oldMaster->id,
@@ -175,7 +176,7 @@ class MeterLogicTest extends TestCase
 
         // 2. Reset
         $count = $this->meterService->resetBaseReadings($this->org->id);
-        
+
         $this->assertEquals(3, $count);
         $this->assertDatabaseMissing('meters', [
             'org_id' => $this->org->id,
@@ -187,20 +188,20 @@ class MeterLogicTest extends TestCase
     public function test_delete_room_reading_syncs_master()
     {
         $masterMeter = Meter::factory()->create([
-            'org_id'      => $this->org->id, 'property_id' => $this->property->id,
-            'is_master'   => true, 'base_reading' => 1000,
-            'type'        => 'ELECTRIC', 'service_id' => $this->service->id,
+            'org_id' => $this->org->id, 'property_id' => $this->property->id,
+            'is_master' => true, 'base_reading' => 1000,
+            'type' => 'ELECTRIC', 'service_id' => $this->service->id,
         ]);
         $roomMeter = Meter::factory()->create([
-            'org_id'      => $this->org->id, 'property_id' => $this->property->id,
-            'is_master'   => false, 'base_reading' => 0,
-            'type'        => 'ELECTRIC', 'service_id' => $this->service->id,
+            'org_id' => $this->org->id, 'property_id' => $this->property->id,
+            'is_master' => false, 'base_reading' => 0,
+            'type' => 'ELECTRIC', 'service_id' => $this->service->id,
         ]);
 
         $reading = $this->readingService->create([
-            'org_id'        => $this->org->id, 'meter_id'     => $roomMeter->id,
+            'org_id' => $this->org->id, 'meter_id' => $roomMeter->id,
             'reading_value' => 100,
-            'period_start'  => now()->startOfMonth(), 'period_end' => now()->endOfMonth(),
+            'period_start' => now()->startOfMonth(), 'period_end' => now()->endOfMonth(),
         ]);
         $reading = $this->readingService->update($reading, ['status' => 'APPROVED']);
         // Run aggregation synchronously

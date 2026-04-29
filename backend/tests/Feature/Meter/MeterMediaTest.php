@@ -3,8 +3,13 @@
 namespace Tests\Feature\Meter;
 
 use App\Models\Meter\Meter;
-use App\Models\System\TemporaryUpload;
+use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\System\TemporaryUpload;
+use App\Services\TenantManager;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -19,9 +24,9 @@ class MeterMediaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
-        $org = \App\Models\Org\Org::factory()->create();
-        \App\Services\TenantManager::setOrgId($org->id);
+        $this->seed(RBACSeeder::class);
+        $org = Org::factory()->create();
+        TenantManager::setOrgId($org->id);
         $this->user = User::factory()->owner()->create(['org_id' => $org->id]);
         $this->actingAs($this->user);
     }
@@ -29,11 +34,11 @@ class MeterMediaTest extends TestCase
     public function test_can_create_meter_with_media()
     {
         Storage::fake('local');
-        
-        $property = \App\Models\Property\Property::factory()->create(['org_id' => $this->user->org_id]);
-        $room = \App\Models\Property\Room::factory()->create([
+
+        $property = Property::factory()->create(['org_id' => $this->user->org_id]);
+        $room = Room::factory()->create([
             'org_id' => $this->user->org_id,
-            'property_id' => $property->id
+            'property_id' => $property->id,
         ]);
 
         // 1. Prepare a temporary upload
@@ -50,7 +55,7 @@ class MeterMediaTest extends TestCase
             'media_ids' => [$tempUpload->id],
         ];
 
-        $response = $this->postJson("/api/meters", $data);
+        $response = $this->postJson('/api/meters', $data);
 
         $response->assertStatus(201);
         $meterId = $response->json('data.id');
@@ -59,7 +64,7 @@ class MeterMediaTest extends TestCase
         // 3. Verify media was attached
         $this->assertCount(1, $meter->getMedia('meter_attachments'));
         $this->assertEquals('meter_photo.jpg', $meter->getFirstMedia('meter_attachments')->file_name);
-        
+
         // 4. Verify Resource includes media
         $response->assertJsonPath('data.media.0.name', 'meter_photo.jpg');
     }
@@ -67,10 +72,10 @@ class MeterMediaTest extends TestCase
     public function test_can_add_media_to_existing_meter()
     {
         Storage::fake('local');
-        $property = \App\Models\Property\Property::factory()->create(['org_id' => $this->user->org_id]);
+        $property = Property::factory()->create(['org_id' => $this->user->org_id]);
         $meter = Meter::factory()->create([
             'org_id' => $this->user->org_id,
-            'property_id' => $property->id
+            'property_id' => $property->id,
         ]);
 
         $file = UploadedFile::fake()->image('update_photo.jpg');
@@ -78,7 +83,7 @@ class MeterMediaTest extends TestCase
         $tempUpload->addMedia($file)->toMediaCollection('default');
 
         $response = $this->putJson("/api/meters/{$meter->id}", [
-            'media_ids' => [$tempUpload->id]
+            'media_ids' => [$tempUpload->id],
         ]);
 
         $response->assertStatus(200);

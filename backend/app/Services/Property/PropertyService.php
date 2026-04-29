@@ -2,33 +2,36 @@
 
 namespace App\Services\Property;
 
+use App\Events\Property\PropertyCreated;
+use App\Events\Property\PropertyUpdated;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class PropertyService
 {
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
     {
-        $allowedFilters = array_merge($allowedFilters, [\Spatie\QueryBuilder\AllowedFilter::exact('org_id')]);
-        
+        $allowedFilters = array_merge($allowedFilters, [AllowedFilter::exact('org_id')]);
+
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
             ->allowedIncludes(['floors', 'rooms', 'defaultServices'])
             ->defaultSort('name')
             ->withCount([
-                'floors', 
+                'floors',
                 'rooms',
                 'rooms as occupied_rooms_count' => function ($q) {
                     $q->whereIn('status', ['occupied', 'rented']);
                 },
                 'rooms as vacant_rooms_count' => function ($q) {
                     $q->whereIn('status', ['available', 'vacant']);
-                }
+                },
             ]);
 
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $performer ?: auth()->user();
         if ($user) {
             if ($user->hasRole('Tenant')) {
@@ -78,14 +81,14 @@ class PropertyService
     public function find(string $id, bool $loadRelations = false): ?Property
     {
         $property = Property::withCount([
-            'floors', 
+            'floors',
             'rooms',
             'rooms as occupied_rooms_count' => function ($q) {
                 $q->whereIn('status', ['occupied', 'rented']);
             },
             'rooms as vacant_rooms_count' => function ($q) {
                 $q->whereIn('status', ['available', 'vacant']);
-            }
+            },
         ])->find($id);
 
         if ($property && $loadRelations) {
@@ -132,7 +135,7 @@ class PropertyService
             $property->defaultServices()->sync($data['default_services']);
         }
 
-        \App\Events\Property\PropertyCreated::dispatch($property);
+        PropertyCreated::dispatch($property);
 
         return $property;
     }
@@ -146,7 +149,7 @@ class PropertyService
             $property->defaultServices()->sync($data['default_services']);
         }
 
-        \App\Events\Property\PropertyUpdated::dispatch($property);
+        PropertyUpdated::dispatch($property);
 
         return $property;
     }

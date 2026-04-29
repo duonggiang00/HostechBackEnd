@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Api\Finance\VNPayController;
 use App\Http\Controllers\Api\System\UserInvitationController;
+use App\Http\Middleware\EnrichApiLogContext;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -22,12 +23,17 @@ Route::prefix('system')->group(function () {
     Route::post('invitations/accept/{token}', [UserInvitationController::class, 'accept']);
 });
 
+// 2FA Challenge (public — user is not yet authenticated, session-based)
+Route::prefix('auth/two-factor-challenge')->group(function () {
+    Route::post('/', [TwoFactorChallengeController::class, 'store']);
+    Route::post('request-otp', [TwoFactorChallengeController::class, 'requestOtp']);
+});
+
 // VNPay IPN Webhook (PUBLIC — không có auth, VNPay gọi server-to-server)
 Route::post('finance/vnpay/ipn', [VNPayController::class, 'handleIpn'])->name('vnpay.ipn');
 
-
 // --- Protected API Routes (Modularized) ---
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', EnrichApiLogContext::class])->group(function () {
     // Broadcasting auth route for WebSocket private channels
     Broadcast::routes();
 

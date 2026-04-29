@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
 import RoomWizard from '@/PropertyScope/features/rooms/components/RoomWizard';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import { useRoom } from '@/PropertyScope/features/rooms/hooks/useRooms';
 
 export default function RoomEditPage() {
@@ -32,12 +33,7 @@ export default function RoomEditPage() {
   return (
     <div className="space-y-8 pb-12 max-w-5xl mx-auto">
       <div className="flex items-center gap-4">
-        <button 
-          onClick={() => navigate(-1)}
-          className="p-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all shadow-sm"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        <PageBackButton className="rounded-xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-900" />
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight">Chỉnh sửa {room.name}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Cập nhật thông tin chi tiết, quy định, giá cả hoặc hình ảnh qua từng bước</p>

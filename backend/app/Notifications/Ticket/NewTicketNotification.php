@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewTicketNotification extends Notification implements ShouldQueue, ShouldBroadcast
+class NewTicketNotification extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 
@@ -25,13 +25,13 @@ class NewTicketNotification extends Notification implements ShouldQueue, ShouldB
     public function toArray(object $notifiable): array
     {
         return [
-            'type'        => 'ticket.created',
-            'ticket_id'   => $this->ticket->id,
-            'room_code'   => $this->ticket->room?->code,
-            'category'    => $this->ticket->category,
-            'priority'    => $this->ticket->priority,
-            'message'     => "Yêu cầu bảo trì mới tại phòng {$this->ticket->room?->code}: {$this->ticket->category}",
-            'action_url'  => "/tickets/{$this->ticket->id}",
+            'type' => 'ticket.created',
+            'ticket_id' => $this->ticket->id,
+            'room_code' => $this->ticket->room?->code,
+            'category' => $this->ticket->category,
+            'priority' => $this->ticket->priority,
+            'message' => "Yêu cầu bảo trì mới tại phòng {$this->ticket->room?->code}: {$this->ticket->category}",
+            'action_url' => "/tickets/{$this->ticket->id}",
         ];
     }
 

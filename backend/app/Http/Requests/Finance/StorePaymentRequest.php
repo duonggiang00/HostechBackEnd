@@ -26,38 +26,38 @@ class StorePaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'org_id'                   => ['required', 'uuid', 'exists:orgs,id'],
-            'property_id'              => ['nullable', 'uuid', 'exists:properties,id'],
+            'org_id' => ['required', 'uuid', 'exists:orgs,id'],
+            'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
 
-            'payer_user_id'            => ['nullable', 'uuid', 'exists:users,id'],
-            'method'                   => ['required', 'string', 'in:CASH,TRANSFER,WALLET,QR'],
-            'amount'                   => ['required', 'numeric', 'min:0.01'],
-            'received_at'              => ['nullable', 'date'],
-            'reference'                => ['nullable', 'string', 'max:255'],
-            'note'                     => ['nullable', 'string', 'max:1000'],
+            'payer_user_id' => ['nullable', 'uuid', 'exists:users,id'],
+            'method' => ['required', 'string', 'in:CASH,TRANSFER,WALLET,QR,VNPAY'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'received_at' => ['nullable', 'date'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'note' => ['nullable', 'string', 'max:1000'],
 
-            'allocations'              => ['required', 'array', 'min:1'],
+            'allocations' => ['required', 'array', 'min:1'],
             'allocations.*.invoice_id' => ['required', 'uuid', 'exists:invoices,id'],
-            'allocations.*.amount'     => ['required', 'numeric', 'min:0.01'],
+            'allocations.*.amount' => ['required', 'numeric', 'min:0.01'],
 
             // Dành cho VNPay
-            'bank_code'                => ['nullable', 'string', 'max:20'],
-            'meta'                     => ['nullable', 'array'],
+            'bank_code' => ['nullable', 'string', 'max:20'],
+            'meta' => ['nullable', 'array'],
         ];
     }
 
     public function attributes(): array
     {
         return [
-            'org_id'                   => 'ID tổ chức',
-            'method'                   => 'Phương thức thanh toán',
+            'org_id' => 'ID tổ chức',
+            'method' => 'Phương thức thanh toán',
 
-            'amount'                   => 'Số tiền thu',
-            'received_at'              => 'Thời gian nhận tiền',
-            'reference'                => 'Mã tham chiếu',
-            'allocations'              => 'Danh sách gạch nợ',
+            'amount' => 'Số tiền thu',
+            'received_at' => 'Thời gian nhận tiền',
+            'reference' => 'Mã tham chiếu',
+            'allocations' => 'Danh sách gạch nợ',
             'allocations.*.invoice_id' => 'ID hóa đơn',
-            'allocations.*.amount'     => 'Số tiền gạch nợ',
+            'allocations.*.amount' => 'Số tiền gạch nợ',
         ];
     }
 }

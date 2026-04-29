@@ -1,12 +1,16 @@
 <?php
 
-use App\Models\Invoice\Invoice;
+use App\Models\Contract\Contract;
 use App\Models\Finance\Payment;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\Property\Floor;
 use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Services\TenantManager;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
@@ -15,8 +19,8 @@ use function Pest\Laravel\postJson;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
-    
+    $this->seed(RBACSeeder::class);
+
     // Set mock config for VNPay so signature is predictable
     config(['vnpay.mode' => 'sandbox']);
     config(['vnpay.tmn_code' => 'TESTTMN']);
@@ -27,32 +31,32 @@ beforeEach(function () {
 test('vnpay payment flow: create url -> ipn updates status -> invoice paid', function () {
     // 1. Chuẩn bị dữ liệu
     $org = Org::factory()->create();
-    \App\Services\TenantManager::setOrgId($org->id);
+    TenantManager::setOrgId($org->id);
 
     $owner = User::factory()->create(['org_id' => $org->id]);
     $owner->assignRole('Owner');
 
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $floor    = \App\Models\Property\Floor::factory()
+    $floor = Floor::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-    $room     = \App\Models\Property\Room::factory()
+    $room = Room::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
-    $contract = \App\Models\Contract\Contract::factory()
+    $contract = Contract::factory()
         ->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'room_id'     => $room->id,
+            'room_id' => $room->id,
         ]);
-    
+
     // Tạo 1 hóa đơn cần thanh toán
     $invoice = Invoice::factory()->create([
-        'org_id'       => $org->id,
-        'property_id'  => $property->id,
-        'room_id'      => $room->id,
-        'contract_id'  => $contract->id,
-        'status'       => 'ISSUED',
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'contract_id' => $contract->id,
+        'status' => 'ISSUED',
         'total_amount' => 5000000,
-        'paid_amount'  => 0,
+        'paid_amount' => 0,
     ]);
 
     actingAs($owner);
@@ -64,46 +68,46 @@ test('vnpay payment flow: create url -> ipn updates status -> invoice paid', fun
     // STEP 1: Khởi tạo thanh toán VNPay (Frontend gọi báo tạo URL)
     // =========================================================================
     $response = postJson('/api/finance/vnpay/create', [
-        'org_id'        => $org->id,
-        'property_id'   => $property->id,
+        'org_id' => $org->id,
+        'property_id' => $property->id,
         'payer_user_id' => $owner->id,
-        'method'        => 'QR',
-        'amount'        => 5000000,
-        'note'          => 'Thanh toan test VNPAY',
-        'allocations'   => [
+        'method' => 'QR',
+        'amount' => 5000000,
+        'note' => 'Thanh toan test VNPAY',
+        'allocations' => [
             [
                 'invoice_id' => $invoice->id,
-                'amount'     => 5000000,
-            ]
-        ]
+                'amount' => 5000000,
+            ],
+        ],
     ]);
 
     $response->assertStatus(201);
     $response->assertJsonStructure(['payment_url', 'data' => ['id', 'status']]);
-    
+
     $paymentId = $response->json('data.id');
     $paymentUrl = $response->json('payment_url');
-    
+
     expect($response->json('data.status'))->toBe('PENDING'); // Chờ webhook
     expect($paymentUrl)->toContain('TESTTMN'); // URL có TmnCode
-    
+
     // =========================================================================
     // STEP 2: Giả lập IPN Webhook gửi từ VNPay server
     // =========================================================================
     $params = [
-        'vnp_Version'            => '2.1.0',
-        'vnp_Command'            => 'pay',
-        'vnp_TmnCode'            => 'TESTTMN',
-        'vnp_Amount'             => 5000000 * 100, // VNPay amount = tiền Vnd * 100
-        'vnp_BankCode'           => 'NCB',
-        'vnp_BankTranNo'         => 'VNP12345',
-        'vnp_CardType'           => 'ATM',
-        'vnp_PayDate'            => now()->format('YmdHis'),
-        'vnp_OrderInfo'          => 'Thanh toan hoa don test',
-        'vnp_TransactionNo'      => 'VNP9999999',
-        'vnp_ResponseCode'       => '00', // 00 là thành công
-        'vnp_TransactionStatus'  => '00',
-        'vnp_TxnRef'             => $paymentId,
+        'vnp_Version' => '2.1.0',
+        'vnp_Command' => 'pay',
+        'vnp_TmnCode' => 'TESTTMN',
+        'vnp_Amount' => 5000000 * 100, // VNPay amount = tiền Vnd * 100
+        'vnp_BankCode' => 'NCB',
+        'vnp_BankTranNo' => 'VNP12345',
+        'vnp_CardType' => 'ATM',
+        'vnp_PayDate' => now()->format('YmdHis'),
+        'vnp_OrderInfo' => 'Thanh toan hoa don test',
+        'vnp_TransactionNo' => 'VNP9999999',
+        'vnp_ResponseCode' => '00', // 00 là thành công
+        'vnp_TransactionStatus' => '00',
+        'vnp_TxnRef' => $paymentId,
     ];
 
     // Tạo chữ ký (như server VNPay tạo và trả về)
@@ -115,7 +119,7 @@ test('vnpay payment flow: create url -> ipn updates status -> invoice paid', fun
     // Gửi IPN request (Webhook là public endpoint)
     // Lưu ý: call không có token
     $webhookRes = $this->postJson('/api/finance/vnpay/ipn', $params);
-    
+
     $webhookRes->assertStatus(200);
     $webhookRes->assertJson(['RspCode' => '00', 'Message' => 'Confirm Success']);
 
@@ -123,15 +127,16 @@ test('vnpay payment flow: create url -> ipn updates status -> invoice paid', fun
     // STEP 3: Kiểm tra database sau khi gạch nợ thành công
     // =========================================================================
     $payment = Payment::find($paymentId);
-    
+
     expect($payment->status)->toBe('APPROVED');
+    expect($payment->method)->toBe('VNPAY');
     expect($payment->provider_ref)->toBe('VNP9999999');
     expect($payment->provider_status)->toBe('SUCCESS');
-    
+
     $invoice->refresh();
-    
+
     // Hóa đơn đã được gạch hết nợ và chuyển trạng thái
-    expect((float)$invoice->paid_amount)->toBe(5000000.0);
+    expect((float) $invoice->paid_amount)->toBe(5000000.0);
     expect($invoice->status)->toBe('PAID');
 
     // =========================================================================
@@ -139,56 +144,56 @@ test('vnpay payment flow: create url -> ipn updates status -> invoice paid', fun
     // =========================================================================
     actingAs($owner);
     $verifyRes = getJson("/api/finance/vnpay/verify?txn_ref={$paymentId}");
-    
+
     $verifyRes->assertStatus(200);
     $verifyRes->assertJson([
         'success' => true,
-        'provider_status' => 'SUCCESS'
+        'provider_status' => 'SUCCESS',
     ]);
 });
 
 test('vnpay sandbox local flow: verify endpoint can finalize payment from return params when ipn is unavailable', function () {
     $org = Org::factory()->create();
-    \App\Services\TenantManager::setOrgId($org->id);
+    TenantManager::setOrgId($org->id);
 
     $owner = User::factory()->create(['org_id' => $org->id]);
     $owner->assignRole('Owner');
 
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $floor    = \App\Models\Property\Floor::factory()
+    $floor = Floor::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-    $room     = \App\Models\Property\Room::factory()
+    $room = Room::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
-    $contract = \App\Models\Contract\Contract::factory()
+    $contract = Contract::factory()
         ->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'room_id'     => $room->id,
+            'room_id' => $room->id,
         ]);
 
     $invoice = Invoice::factory()->create([
-        'org_id'       => $org->id,
-        'property_id'  => $property->id,
-        'room_id'      => $room->id,
-        'contract_id'  => $contract->id,
-        'status'       => 'ISSUED',
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'contract_id' => $contract->id,
+        'status' => 'ISSUED',
         'total_amount' => 3250000,
-        'paid_amount'  => 0,
+        'paid_amount' => 0,
     ]);
 
     actingAs($owner);
 
     $createRes = postJson('/api/finance/vnpay/create', [
-        'org_id'        => $org->id,
-        'property_id'   => $property->id,
+        'org_id' => $org->id,
+        'property_id' => $property->id,
         'payer_user_id' => $owner->id,
-        'method'        => 'QR',
-        'amount'        => 3250000,
-        'note'          => 'Thanh toan sandbox local',
-        'allocations'   => [
+        'method' => 'QR',
+        'amount' => 3250000,
+        'note' => 'Thanh toan sandbox local',
+        'allocations' => [
             [
                 'invoice_id' => $invoice->id,
-                'amount'     => 3250000,
+                'amount' => 3250000,
             ],
         ],
     ]);
@@ -197,26 +202,26 @@ test('vnpay sandbox local flow: verify endpoint can finalize payment from return
     $paymentId = $createRes->json('data.id');
 
     $params = [
-        'vnp_Version'           => '2.1.0',
-        'vnp_Command'           => 'pay',
-        'vnp_TmnCode'           => 'TESTTMN',
-        'vnp_Amount'            => 3250000 * 100,
-        'vnp_BankCode'          => 'NCB',
-        'vnp_BankTranNo'        => 'RETURN12345',
-        'vnp_CardType'          => 'ATM',
-        'vnp_PayDate'           => now()->format('YmdHis'),
-        'vnp_OrderInfo'         => 'Sandbox local return',
-        'vnp_TransactionNo'     => 'RETURN9999999',
-        'vnp_ResponseCode'      => '00',
+        'vnp_Version' => '2.1.0',
+        'vnp_Command' => 'pay',
+        'vnp_TmnCode' => 'TESTTMN',
+        'vnp_Amount' => 3250000 * 100,
+        'vnp_BankCode' => 'NCB',
+        'vnp_BankTranNo' => 'RETURN12345',
+        'vnp_CardType' => 'ATM',
+        'vnp_PayDate' => now()->format('YmdHis'),
+        'vnp_OrderInfo' => 'Sandbox local return',
+        'vnp_TransactionNo' => 'RETURN9999999',
+        'vnp_ResponseCode' => '00',
         'vnp_TransactionStatus' => '00',
-        'vnp_TxnRef'            => $paymentId,
+        'vnp_TxnRef' => $paymentId,
     ];
 
     ksort($params);
     $queryString = http_build_query($params);
     $params['vnp_SecureHash'] = strtoupper(hash_hmac('sha512', $queryString, config('vnpay.hash_secret')));
 
-    $verifyRes = getJson('/api/finance/vnpay/verify?' . http_build_query($params));
+    $verifyRes = getJson('/api/finance/vnpay/verify?'.http_build_query($params));
 
     $verifyRes->assertStatus(200);
     $verifyRes->assertJson([
@@ -240,46 +245,46 @@ test('vnpay create rejects placeholder sandbox config before redirecting user to
     config(['vnpay.hash_secret' => '']);
 
     $org = Org::factory()->create();
-    \App\Services\TenantManager::setOrgId($org->id);
+    TenantManager::setOrgId($org->id);
 
     $owner = User::factory()->create(['org_id' => $org->id]);
     $owner->assignRole('Owner');
 
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $floor    = \App\Models\Property\Floor::factory()
+    $floor = Floor::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-    $room     = \App\Models\Property\Room::factory()
+    $room = Room::factory()
         ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
-    $contract = \App\Models\Contract\Contract::factory()
+    $contract = Contract::factory()
         ->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'room_id'     => $room->id,
+            'room_id' => $room->id,
         ]);
 
     $invoice = Invoice::factory()->create([
-        'org_id'       => $org->id,
-        'property_id'  => $property->id,
-        'room_id'      => $room->id,
-        'contract_id'  => $contract->id,
-        'status'       => 'ISSUED',
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'contract_id' => $contract->id,
+        'status' => 'ISSUED',
         'total_amount' => 1000000,
-        'paid_amount'  => 0,
+        'paid_amount' => 0,
     ]);
 
     actingAs($owner);
 
     $response = postJson('/api/finance/vnpay/create', [
-        'org_id'        => $org->id,
-        'property_id'   => $property->id,
+        'org_id' => $org->id,
+        'property_id' => $property->id,
         'payer_user_id' => $owner->id,
-        'method'        => 'QR',
-        'amount'        => 1000000,
-        'note'          => 'Thiếu cấu hình sandbox',
-        'allocations'   => [
+        'method' => 'QR',
+        'amount' => 1000000,
+        'note' => 'Thiếu cấu hình sandbox',
+        'allocations' => [
             [
                 'invoice_id' => $invoice->id,
-                'amount'     => 1000000,
+                'amount' => 1000000,
             ],
         ],
     ]);

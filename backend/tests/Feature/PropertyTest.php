@@ -7,6 +7,8 @@ uses(RefreshDatabase::class);
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
+use Database\Seeders\RBACSeeder;
+use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\deleteJson;
@@ -15,7 +17,7 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('admin can crud property', function () {
@@ -55,7 +57,7 @@ test('admin can crud property', function () {
 test('owner can crud property within org', function () {
     $org = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org->id]);
-    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
 
     actingAs($owner);
@@ -81,7 +83,7 @@ test('owner can crud property within org', function () {
 test('owner cannot access other org property', function () {
     $org1 = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org1->id]);
-    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
 
     $org2 = Org::factory()->create();

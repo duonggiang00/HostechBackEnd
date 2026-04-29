@@ -8,7 +8,6 @@ export { twoFactorApi } from './api/twoFactor';
 // Hooks
 export { useProfile, useUpdateProfile, useChangePassword, useUploadAvatar } from './hooks/useProfile';
 export {
-  useMfaStatus,
   useMfaSetup,
   useInitializeMfa,
   useEnableMfa,

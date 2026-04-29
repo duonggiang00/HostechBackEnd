@@ -32,7 +32,7 @@ class ExpireContracts extends Command
         }
 
         $this->info('Đang kiểm tra các hợp đồng hết hạn và vi phạm dư nợ...');
-        
+
         $expiredCount = $this->contractService->markExpiredContracts();
         $breachCount = $this->contractService->processDebtBreachTerminations();
 

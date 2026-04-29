@@ -23,7 +23,7 @@ class VNPayController extends Controller
 {
     public function __construct(
         protected PaymentService $paymentService,
-        protected VNPayService   $vnpayService,
+        protected VNPayService $vnpayService,
     ) {}
 
     // ╔═══════════════════════════════════════════════════════╗
@@ -78,20 +78,20 @@ class VNPayController extends Controller
         $payment = $this->paymentService->createPending($data, $user);
 
         // Build VNPay URL
-        $bankCode   = $request->input('bank_code', '');
-        $ipAddr     = $request->ip() ?? '127.0.0.1';
+        $bankCode = $request->input('bank_code', '');
+        $ipAddr = $request->ip() ?? '127.0.0.1';
         $paymentUrl = $this->vnpayService->buildPaymentUrl($payment, $ipAddr, $bankCode);
 
         Log::info('[VNPay] Created pending payment', [
             'payment_id' => $payment->id,
-            'amount'     => $payment->amount,
-            'user_id'    => $user->id,
+            'amount' => $payment->amount,
+            'user_id' => $user->id,
         ]);
 
         return response()->json([
-            'message'     => 'Giao dịch đã được khởi tạo. Vui lòng chuyển hướng đến VNPay để thanh toán.',
+            'message' => 'Giao dịch đã được khởi tạo. Vui lòng chuyển hướng đến VNPay để thanh toán.',
             'payment_url' => $paymentUrl,
-            'data'        => new PaymentResource($payment),
+            'data' => new PaymentResource($payment),
         ], 201);
     }
 
@@ -114,12 +114,13 @@ class VNPayController extends Controller
      */
     public function handleReturn(Request $request): JsonResponse
     {
-        $params       = $request->query();
+        $params = $request->query();
         $receivedHash = $request->query('vnp_SecureHash', '');
 
         // Verify chữ ký
         if (! $this->vnpayService->verifySignature($params, $receivedHash)) {
             Log::warning('[VNPay] Return URL: invalid signature', ['params' => $params]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Chữ ký không hợp lệ.',
@@ -138,12 +139,12 @@ class VNPayController extends Controller
         }
 
         return response()->json([
-            'success'        => $data['success'],
-            'response_code'  => $data['response_code'],
-            'message'        => $this->vnpayService->getResponseMessage($data['response_code']),
+            'success' => $data['success'],
+            'response_code' => $data['response_code'],
+            'message' => $this->vnpayService->getResponseMessage($data['response_code']),
             'transaction_no' => $data['transaction_no'],
-            'amount'         => $data['amount'],
-            'data'           => new PaymentResource($payment->load(['property', 'allocations.invoice'])),
+            'amount' => $data['amount'],
+            'data' => new PaymentResource($payment->load(['property', 'allocations.invoice'])),
         ]);
     }
 
@@ -169,7 +170,7 @@ class VNPayController extends Controller
      */
     public function handleIpn(Request $request): JsonResponse
     {
-        $params       = $request->all();
+        $params = $request->all();
         $receivedHash = $params['vnp_SecureHash'] ?? '';
 
         Log::info('[VNPay] IPN received', ['params' => $params]);
@@ -177,6 +178,7 @@ class VNPayController extends Controller
         // ── 1. Verify checksum ──────────────────────────────────
         if (! $this->vnpayService->verifySignature($params, $receivedHash)) {
             Log::error('[VNPay] IPN: invalid checksum', ['params' => $params]);
+
             return response()->json(['RspCode' => '97', 'Message' => 'Invalid Checksum']);
         }
 
@@ -188,34 +190,38 @@ class VNPayController extends Controller
 
         if (! $payment) {
             Log::error('[VNPay] IPN: payment not found', ['txn_ref' => $data['txn_ref']]);
+
             return response()->json(['RspCode' => '01', 'Message' => 'Order not found']);
         }
 
         // ── 3. Idempotency: đã xử lý IPN rồi thì bỏ qua ───────
         if ($payment->provider_ref !== null) {
             Log::info('[VNPay] IPN: already processed', ['payment_id' => $payment->id]);
+
             return response()->json(['RspCode' => '02', 'Message' => 'Order already confirmed']);
         }
 
         // ── 4. Verify số tiền khớp ──────────────────────────────
         if (abs($data['amount'] - (float) $payment->amount) > 1) {
             Log::error('[VNPay] IPN: amount mismatch', [
-                'payment_id'      => $payment->id,
+                'payment_id' => $payment->id,
                 'expected_amount' => $payment->amount,
-                'vnpay_amount'    => $data['amount'],
+                'vnpay_amount' => $data['amount'],
             ]);
+
             return response()->json(['RspCode' => '04', 'Message' => 'Invalid amount']);
         }
 
         // ── 5. Cập nhật thông tin VNPay vào Payment ─────────────
         $payment->update([
-            'provider_ref'    => $data['transaction_no'],
+            'method' => $data['success'] ? 'VNPAY' : $payment->method,
+            'provider_ref' => $data['transaction_no'],
             'provider_status' => $data['success'] ? 'SUCCESS' : 'FAILED',
             'webhook_payload' => $data['raw'],
-            'meta'            => array_merge($payment->meta ?? [], [
-                'vnpay_bank_code'          => $data['bank_code'],
+            'meta' => array_merge($payment->meta ?? [], [
+                'vnpay_bank_code' => $data['bank_code'],
                 'vnpay_transaction_status' => $data['transaction_status'],
-                'vnpay_pay_date'           => $data['pay_date'],
+                'vnpay_pay_date' => $data['pay_date'],
             ]),
         ]);
 
@@ -237,9 +243,9 @@ class VNPayController extends Controller
             }
 
             Log::warning('[VNPay] IPN: payment failed', [
-                'payment_id'    => $payment->id,
+                'payment_id' => $payment->id,
                 'response_code' => $data['response_code'],
-                'message'       => $this->vnpayService->getResponseMessage($data['response_code']),
+                'message' => $this->vnpayService->getResponseMessage($data['response_code']),
             ]);
         }
 
@@ -275,17 +281,18 @@ class VNPayController extends Controller
         $receivedHash = $request->query('vnp_SecureHash', '');
         $hasSignedCallback = isset($params['vnp_TxnRef'], $params['vnp_SecureHash']);
 
-        \Illuminate\Support\Facades\Log::info('[VNPay] verifyReturn started', ['txn_ref' => $txnRef, 'hasSignedCallback' => $hasSignedCallback, 'shouldTrust' => $this->vnpayService->shouldTrustReturnAsIpn()]);
+        Log::info('[VNPay] verifyReturn started', ['txn_ref' => $txnRef, 'hasSignedCallback' => $hasSignedCallback, 'shouldTrust' => $this->vnpayService->shouldTrustReturnAsIpn()]);
 
         if ($hasSignedCallback && $payment->provider_ref === null && $this->vnpayService->shouldTrustReturnAsIpn()) {
             if (! $this->vnpayService->verifySignature($params, $receivedHash)) {
-                \Illuminate\Support\Facades\Log::warning('[VNPay] verifyReturn Invalid signature', ['params' => $params]);
+                Log::warning('[VNPay] verifyReturn Invalid signature', ['params' => $params]);
+
                 return response()->json(['message' => 'Chữ ký không hợp lệ.'], 400);
             }
 
             $data = $this->vnpayService->parseCallbackData($params);
-            
-            \Illuminate\Support\Facades\Log::info('[VNPay] verifyReturn signature valid. Processing...', ['data' => $data]);
+
+            Log::info('[VNPay] verifyReturn signature valid. Processing...', ['data' => $data]);
             if ($data['txn_ref'] !== $payment->id) {
                 return response()->json(['message' => 'Mã giao dịch VNPay không khớp với payment hiện tại.'], 422);
             }
@@ -295,13 +302,14 @@ class VNPayController extends Controller
             }
 
             $payment->update([
-                'provider_ref'    => $data['transaction_no'],
+                'method' => $data['success'] ? 'VNPAY' : $payment->method,
+                'provider_ref' => $data['transaction_no'],
                 'provider_status' => $data['success'] ? 'SUCCESS' : 'FAILED',
                 'webhook_payload' => $data['raw'],
-                'meta'            => array_merge($payment->meta ?? [], [
-                    'vnpay_bank_code'          => $data['bank_code'],
+                'meta' => array_merge($payment->meta ?? [], [
+                    'vnpay_bank_code' => $data['bank_code'],
                     'vnpay_transaction_status' => $data['transaction_status'],
-                    'vnpay_pay_date'           => $data['pay_date'],
+                    'vnpay_pay_date' => $data['pay_date'],
                 ]),
             ]);
 
@@ -317,13 +325,13 @@ class VNPayController extends Controller
         }
 
         return response()->json([
-            'payment_id'      => $payment->id,
-            'status'          => $payment->status,
+            'payment_id' => $payment->id,
+            'status' => $payment->status,
             'provider_status' => $payment->provider_status,
-            'provider_ref'    => $payment->provider_ref,
-            'amount'          => (float) $payment->amount,
-            'success'         => $payment->status === 'APPROVED' && $payment->provider_status === 'SUCCESS',
-            'data'            => new PaymentResource($payment),
+            'provider_ref' => $payment->provider_ref,
+            'amount' => (float) $payment->amount,
+            'success' => $payment->status === 'APPROVED' && $payment->provider_status === 'SUCCESS',
+            'data' => new PaymentResource($payment),
         ]);
     }
 }

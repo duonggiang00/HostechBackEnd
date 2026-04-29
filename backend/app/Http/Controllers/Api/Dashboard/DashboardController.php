@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Api\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Services\Dashboard\DashboardService;
+use App\Models\Org\User;
 use App\Models\Property\Property;
+use App\Services\Dashboard\DashboardService;
 use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +32,7 @@ class DashboardController extends Controller
      * @responseField data.filter object Khoảng thời gian áp dụng cho thống kê.
      * @responseField data.filter.from string Ngày bắt đầu (Y-m-d).
      * @responseField data.filter.to string Ngày kết thúc (Y-m-d).
+     *
      * @response 403 scenario="Không có quyền" {"message": "Bạn không có quyền truy cập dashboard."}
      * @response 422 scenario="Validation thất bại" {"message": "The to field must be a date after or equal to from.", "errors": {"to": ["The to field must be a date after or equal to from."]}}
      */
@@ -38,7 +40,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $request->user();
         [$from, $to] = $this->resolveRange($request);
 
@@ -99,6 +101,7 @@ class DashboardController extends Controller
      * @responseField data.properties.occupied_rooms integer Số phòng đã thuê.
      * @responseField data.properties.available_rooms integer Số phòng trống.
      * @responseField data.properties.occupancy_rate number Tỷ lệ lấp đầy (%).
+     *
      * @response 403 scenario="Không có quyền" {"message": "Chỉ Admin mới có quyền truy cập."}
      * @response 422 scenario="Validation thất bại" {"message": "The from field must match the format Y-m-d.", "errors": {"from": ["The from field must match the format Y-m-d."]}}
      */
@@ -106,7 +109,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         if (! $user->hasRole('Admin')) {
@@ -145,6 +148,7 @@ class DashboardController extends Controller
      * @responseField data.contracts.total_active integer Tổng hợp đồng ACTIVE.
      * @responseField data.contracts.expiring_in_30_days integer Hợp đồng sắp hết hạn 30 ngày.
      * @responseField data.contracts.new_in_range integer Hợp đồng ký mới trong khoảng lọc.
+     *
      * @response 403 scenario="Không có quyền" {"message": "Chỉ Owner mới có quyền truy cập."}
      * @response 422 scenario="Validation thất bại" {"message": "The to field must be a date after or equal to from.", "errors": {"to": ["The to field must be a date after or equal to from."]}}
      */
@@ -152,7 +156,7 @@ class DashboardController extends Controller
     {
         $request->validate($this->dateRules());
 
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         if (! $user->hasRole(['Admin', 'Owner'])) {
@@ -192,6 +196,7 @@ class DashboardController extends Controller
      * @responseField data.tickets.done integer DONE.
      * @responseField data.tickets.cancelled integer CANCELLED.
      * @responseField data.tickets.total integer Tổng ticket.
+     *
      * @response 403 scenario="Không có quyền" {"message": "Bạn không có quyền truy cập."}
      * @response 422 scenario="Validation thất bại" {"message": "The from field must match the format Y-m-d.", "errors": {"from": ["The from field must match the format Y-m-d."]}}
      */
@@ -201,7 +206,7 @@ class DashboardController extends Controller
             'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
         ]));
 
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         if (! $user->hasRole(['Admin', 'Owner', 'Manager', 'Staff'])) {
@@ -213,7 +218,7 @@ class DashboardController extends Controller
 
         // Case 1: Specific property requested
         if ($propertyId) {
-            $property = \App\Models\Property\Property::withoutGlobalScopes()->findOrFail($propertyId);
+            $property = Property::withoutGlobalScopes()->findOrFail($propertyId);
 
             // Authorization: Admin/Owner or assigned Manager/Staff
             if (! $user->hasRole(['Admin', 'Owner'])) {

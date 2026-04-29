@@ -3,12 +3,15 @@
 namespace App\Models\Org;
 
 use App\Models\Concerns\MultiTenant;
+use App\Models\Contract\ContractMember;
+use App\Models\Property\Property;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\MediaLibrary\HasMedia;
@@ -44,6 +47,7 @@ class User extends Authenticatable implements HasMedia
         'license_plate',
         'mfa_enabled',
         'mfa_method',
+        'mfa_methods',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
@@ -60,6 +64,7 @@ class User extends Authenticatable implements HasMedia
             'phone_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'mfa_enabled' => 'boolean',
+            'mfa_methods' => 'array',
             'is_active' => 'boolean',
             'meta' => 'array',
         ];
@@ -93,7 +98,7 @@ class User extends Authenticatable implements HasMedia
      */
     public function setPasswordAttribute(string $value): void
     {
-        $this->attributes['password_hash'] = \Illuminate\Support\Facades\Hash::make($value);
+        $this->attributes['password_hash'] = Hash::make($value);
     }
 
     /**
@@ -101,7 +106,7 @@ class User extends Authenticatable implements HasMedia
      */
     public function properties()
     {
-        return $this->belongsToMany(\App\Models\Property\Property::class, 'property_user')
+        return $this->belongsToMany(Property::class, 'property_user')
             ->withTimestamps();
     }
 
@@ -110,6 +115,6 @@ class User extends Authenticatable implements HasMedia
      */
     public function contractMembers()
     {
-        return $this->hasMany(\App\Models\Contract\ContractMember::class, 'user_id');
+        return $this->hasMany(ContractMember::class, 'user_id');
     }
 }

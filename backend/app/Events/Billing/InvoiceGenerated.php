@@ -23,8 +23,8 @@ class InvoiceGenerated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('property.' . $this->invoice->property_id),
-            new PrivateChannel('org.' . $this->invoice->org_id),
+            new PrivateChannel('property.'.$this->invoice->property_id),
+            new PrivateChannel('org.'.$this->invoice->org_id),
         ];
     }
 
@@ -42,13 +42,13 @@ class InvoiceGenerated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id'           => $this->invoice->id,
-            'contract_id'  => $this->invoice->contract_id,
-            'room_id'      => $this->invoice->room_id,
+            'id' => $this->invoice->id,
+            'contract_id' => $this->invoice->contract_id,
+            'room_id' => $this->invoice->room_id,
             'period_start' => $this->invoice->period_start,
-            'period_end'   => $this->invoice->period_end,
+            'period_end' => $this->invoice->period_end,
             'total_amount' => $this->invoice->total_amount,
-            'status'       => $this->invoice->status,
+            'status' => $this->invoice->status,
         ];
     }
 }

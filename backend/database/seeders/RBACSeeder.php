@@ -4,14 +4,16 @@ namespace Database\Seeders;
 
 use App\Services\RbacService;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RBACSeeder extends Seeder
 {
     public function run(RbacService $rbacService): void
     {
         // Reset cached roles and permissions
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         $this->command->info("\n📋 Bắt đầu khởi tạo RBAC...");
 
@@ -33,8 +35,8 @@ class RBACSeeder extends Seeder
 
         // 3. SPECIAL: Grant FULL permissions to Staff, Manager, Owner roles as requested
         $this->command->info("\n🛡️ Granting FULL permissions to Owner, Manager, Staff roles...");
-        $allPermissions = \Spatie\Permission\Models\Permission::all();
-        
+        $allPermissions = Permission::all();
+
         foreach (['Owner', 'Manager', 'Staff'] as $roleName) {
             $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
             $role->syncPermissions($allPermissions);

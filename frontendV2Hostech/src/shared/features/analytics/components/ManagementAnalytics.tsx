@@ -20,7 +20,7 @@ export default function ManagementAnalytics() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest italic">Synthesizing Operational Data...</p>
+        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest ">Synthesizing Operational Data...</p>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export default function ManagementAnalytics() {
             </div>
 
             <div className="flex items-end justify-between">
-              <h4 className="text-4xl font-black text-white tracking-tighter italic uppercase truncate max-w-[70%]">{kpi.value}</h4>
+              <h4 className="text-4xl font-black text-white tracking-tighter uppercase truncate max-w-[70%]">{kpi.value}</h4>
               <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-${kpi.color}-500/10 text-${kpi.color}-400 border border-${kpi.color}-500/20`}>
                 {kpi.trend.startsWith('+') ? <TrendingUp className="w-3 h-3" /> : (kpi.trend.startsWith('-') ? <TrendingDown className="w-3 h-3" /> : <BarChart3 className="w-3 h-3" />)}
                 {kpi.trend}
@@ -100,7 +100,7 @@ export default function ManagementAnalytics() {
         <div className="p-8 rounded-6xl bg-white/5 border border-white/10 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-10">
             <div>
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Occupancy Trends</h3>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Occupancy Trends</h3>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Growth over the last 6 months</p>
             </div>
             <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all">
@@ -123,7 +123,7 @@ export default function ManagementAnalytics() {
                     {height}%
                   </div>
                 </div>
-                <span className="text-xs font-black text-slate-600 uppercase tracking-widest italic">{['OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'][idx]}</span>
+                <span className="text-xs font-black text-slate-600 uppercase tracking-widest ">{['OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'][idx]}</span>
               </div>
             ))}
           </div>
@@ -133,7 +133,7 @@ export default function ManagementAnalytics() {
         <div className="p-8 rounded-6xl bg-white/5 border border-white/10 backdrop-blur-xl">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Task Efficiency</h3>
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">Task Efficiency</h3>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Maintenance resolution metrics</p>
             </div>
           </div>
@@ -148,11 +148,11 @@ export default function ManagementAnalytics() {
               <div key={item.label} className="group cursor-default">
                 <div className="flex justify-between items-end mb-3">
                   <div>
-                    <span className="text-xs font-black text-white uppercase italic tracking-wider block">{item.label}</span>
+                    <span className="text-xs font-black text-white uppercase tracking-wider block">{item.label}</span>
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{item.count} Tasks completed</span>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-black text-${item.color}-400 italic uppercase tracking-wider block`}>{item.avg} Avg</span>
+                    <span className={`text-xs font-black text-${item.color}-400 uppercase tracking-wider block`}>{item.avg} Avg</span>
                     <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">MTTR Report</span>
                   </div>
                 </div>
@@ -177,11 +177,11 @@ export default function ManagementAnalytics() {
             <BarChart3 className="w-8 h-8" />
           </div>
           <div>
-            <h4 className="text-lg font-black text-white italic uppercase tracking-tight">Portfolio Optimization</h4>
+            <h4 className="text-lg font-black text-white uppercase tracking-tight">Portfolio Optimization</h4>
             <p className="text-sm text-indigo-200/50 font-medium">Based on current trends, occupancy will hit 98% by May. Consider adjusting rates for new contracts.</p>
           </div>
         </div>
-        <button className="flex items-center gap-2 px-8 py-5 rounded-4xl bg-white text-slate-950 font-black italic uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all">
+        <button className="flex items-center gap-2 px-8 py-5 rounded-4xl bg-white text-slate-950 font-black uppercase tracking-wider hover:scale-[1.02] active:scale-[0.98] transition-all">
           View Detailed PDF
           <ArrowUpRight className="w-5 h-5" />
         </button>

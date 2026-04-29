@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Api\System;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\System\StoreUserInvitationRequest;
 use App\Http\Resources\System\UserInvitationResource;
+use App\Models\Contract\ContractMember;
+use App\Models\Org\User;
 use App\Models\System\UserInvitation;
 use App\Services\System\UserInvitationService;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -35,11 +38,21 @@ class UserInvitationController extends Controller
 
         $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
 
+        $validated = $request->validate([
+            'role_group' => ['nullable', 'string', 'in:tenant,property_staff'],
+        ]);
+
         $query = UserInvitation::with(['org:id,name', 'inviter:id,full_name,email'])
             ->orderBy('created_at', 'desc');
 
+        if (($validated['role_group'] ?? null) === 'tenant') {
+            $query->where('role_name', 'Tenant');
+        } elseif (($validated['role_group'] ?? null) === 'property_staff') {
+            $query->whereIn('role_name', ['Staff', 'Manager']);
+        }
+
         // Scope: Admin sees all, others see only their org
-        /** @var \App\Models\Org\User $user */
+        /** @var User $user */
         $user = $request->user();
         if (! $user->hasRole('Admin')) {
             $query->where('org_id', $user->org_id);
@@ -78,6 +91,32 @@ class UserInvitationController extends Controller
                 $invitation->load('org:id,name');
             }
 
+            $prefill = null;
+            if ($invitation->role_name === 'Tenant' && $invitation->org_id) {
+                $member = ContractMember::where('email', $invitation->email)
+                    ->where('org_id', $invitation->org_id)
+                    ->where('status', 'PENDING_INVITE')
+                    ->whereNull('user_id')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at')
+                    ->first();
+
+                if ($member) {
+                    $prefill = [
+                        'full_name' => $member->full_name,
+                        'phone' => $member->phone,
+                        'identity_number' => $member->identity_number,
+                        'date_of_birth' => $member->date_of_birth
+                            ? Carbon::parse($member->date_of_birth)->toDateString()
+                            : null,
+                        'license_plate' => $member->license_plate,
+                        'address' => $member->permanent_address,
+                        'has_identity_documents' => $member->getMedia('identity_front')->isNotEmpty()
+                            && $member->getMedia('identity_back')->isNotEmpty(),
+                    ];
+                }
+            }
+
             return response()->json([
                 'message' => 'Token is valid',
                 'data' => [
@@ -85,6 +124,7 @@ class UserInvitationController extends Controller
                     'role_name' => $invitation->role_name,
                     'org' => $invitation->org,
                     'requires_org_creation' => is_null($invitation->org_id) && $invitation->role_name === 'Owner',
+                    'contract_member_prefill' => $prefill,
                 ],
             ]);
         } catch (Exception $e) {

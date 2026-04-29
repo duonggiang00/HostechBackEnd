@@ -12,6 +12,11 @@ export interface UserProperty {
 
 export interface AuthResponse {
   two_factor?: boolean;
+  /** Short-lived challenge token (UUID) for the 2FA challenge endpoints. Present when two_factor=true. */
+  challenge_token?: string;
+  /** List of methods the user has enabled (totp, email). Present when two_factor=true. */
+  available_methods?: ('totp' | 'email')[];
+  /** Legacy single-method field kept for backward compat */
   method?: string;
   token?: string;
   user?: {
@@ -25,7 +30,8 @@ export interface AuthResponse {
     roles: string[];
     /** org_id returned at login (null for Admin) */
     org_id: string | null;
-    permissions?: string[];
+    /** Spatie permission names — same as GET /api/profile */
+    permissions: string[];
     avatar_url?: string;
   };
 }
@@ -44,7 +50,9 @@ export interface AuthUser {
   permissions?: string[];
   avatar_url?: string;
   is_active?: boolean;
-  created_at: string;
+  /** True after GET /api/profile or /auth/me merged RBAC fields */
+  profile_loaded?: boolean;
+  created_at?: string;
 }
 
 export type User = AuthUser;
@@ -67,4 +75,4 @@ export interface AuthState {
   hasRole: (role: string | string[]) => boolean;
 }
 
-export type LoginStep = 'LOGIN' | 'OTP';
+export type LoginStep = 'LOGIN' | 'METHOD_PICK' | 'OTP_TOTP' | 'OTP_EMAIL' | 'OTP';

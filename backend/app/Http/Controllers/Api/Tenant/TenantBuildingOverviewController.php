@@ -6,8 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Property\BuildingOverviewResource;
 use App\Models\Contract\Contract;
 use App\Services\Property\BuildingOverviewService;
-use Illuminate\Http\Request;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\Request;
 
 /**
  * Mặt bằng tòa nhà cư dân (Tenant Building Overview)
@@ -30,16 +30,18 @@ class TenantBuildingOverviewController extends Controller
         $user = $request->user();
 
         // 1. Tìm hợp đồng ACTIVE hoặc PENDING_TERMINATION của cư dân
-        $contract = Contract::whereHas('members', function ($q) use ($user) {
+        $contract = Contract::query()
+            ->whereHas('members', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             })
             ->whereIn('status', ['ACTIVE', 'PENDING_TERMINATION'])
             ->with('property')
+            ->orderByDesc('start_date')
             ->first();
 
-        if (!$contract || !$contract->property) {
+        if (! $contract || ! $contract->property) {
             return response()->json([
-                'message' => 'Bạn hiện không có hợp đồng thuê nhà nào đang hoạt động để xem sơ đồ tòa nhà.'
+                'message' => 'Bạn hiện không có hợp đồng thuê nhà nào đang hoạt động để xem sơ đồ tòa nhà.',
             ], 404);
         }
 
@@ -48,8 +50,8 @@ class TenantBuildingOverviewController extends Controller
 
         // Security: Remove sensitive information for tenants (base_price of all rooms)
         if (isset($layout['property']->floors)) {
-            $layout['property']->floors->each(function($floor) {
-                $floor->rooms->each(function($room) {
+            $layout['property']->floors->each(function ($floor) {
+                $floor->rooms->each(function ($room) {
                     $room->base_price = 0;
                 });
             });

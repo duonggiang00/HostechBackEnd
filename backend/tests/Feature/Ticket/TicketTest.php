@@ -12,6 +12,7 @@ use App\Models\Property\Room;
 use App\Models\Ticket\Ticket;
 use App\Models\Ticket\TicketCost;
 use App\Models\Ticket\TicketEvent;
+use Database\Seeders\RBACSeeder;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
@@ -66,7 +67,7 @@ function makeTicket(array $ctx, array $overrides = []): Ticket
 // ─────────────────────────────────────────────
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 // ═══════════════════════════════════════════════════════

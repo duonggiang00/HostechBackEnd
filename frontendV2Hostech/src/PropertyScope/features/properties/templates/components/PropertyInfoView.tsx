@@ -4,7 +4,6 @@ import {
   MapPin, 
   Ruler, 
   Combine, 
-  Coins, 
   ShieldCheck, 
   Calendar,
   Save,
@@ -18,7 +17,6 @@ import {
   Gauge,
   Wallet,
   Key,
-  ChevronLeft,
   Plus,
   Trash2
 } from 'lucide-react';
@@ -26,10 +24,57 @@ import { usePropertyDetail, usePropertyActions } from '@/OrgScope/features/prope
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Skeleton } from '@/shared/components/ui/skeleton';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 interface PropertyInfoViewProps {
   propertyId: string;
 }
+
+const BILLING_CYCLE_DISPLAY_LABELS: Record<string, string> = {
+  'monthly': 'Hàng tháng',
+  'quarterly': 'Theo quý',
+  'yearly': 'Hàng năm',
+  'flexible': 'Linh hoạt'
+};
+
+const validationMessageMap: Record<string, string> = {
+  'name': 'Tên tòa nhà',
+  'code': 'Mã tòa nhà',
+  'address': 'Địa chỉ',
+  'area': 'Tổng diện tích',
+  'shared_area': 'Diện tích chung',
+  'default_due_day': 'Ngày hạn thanh toán',
+  'default_cutoff_day': 'Ngày chốt số',
+  'default_deposit_months': 'Số tháng tiền cọc',
+  'bank_accounts': 'Danh sách tài khoản ngân hàng'
+};
+const InfoSection = ({ title, children, fullWidth }: any) => (
+  <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm ${fullWidth ? 'col-span-full' : ''}`}>
+    <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-50 dark:border-gray-800/60 pb-3">{title}</h3>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {children}
+    </div>
+  </div>
+);
+
+const InfoItem = ({ icon: Icon, label, value, colorClass = "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400" }: any) => (
+  <div className="flex gap-4 group">
+    <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm ${colorClass}`}>
+      <Icon className="w-5 h-5" />
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+      <p className="font-bold text-gray-900 dark:text-white truncate">{value || '---'}</p>
+    </div>
+  </div>
+);
+
+const SectionHeader = ({ title, description }: { title: string, description: string }) => (
+  <div className="mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+    <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{title}</h3>
+    <p className="text-xs text-gray-500 font-medium mt-1">{description}</p>
+  </div>
+);
 
 export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
   const { data: property, isLoading, isError } = usePropertyDetail(propertyId);
@@ -38,6 +83,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (property) {
@@ -63,7 +109,11 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
         default_deposit_months: property.default_deposit_months || 0,
         default_due_day: property.default_due_day || 5,
         default_cutoff_day: property.default_cutoff_day || 1,
-        bank_accounts: initialAccounts,
+        bank_accounts: initialAccounts.map((acc: any) => ({
+          bank_name: acc.bank_name || acc.bank || '',
+          account_number: acc.account_number || acc.account || '',
+          account_name: acc.account_name || acc.account_holder || acc.holder || acc.name || ''
+        })),
       });
     }
   }, [property]);
@@ -93,12 +143,46 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
     if (!formData || isSaving) return;
     
     setIsSaving(true);
+    setSaveError(null);
     try {
+      // Clean data before sending
+      const cleanData = { ...formData };
+      delete cleanData.default_rent_price_per_m2; // Not in backend request
+      
       await updateProperty.mutateAsync({
         id: propertyId,
-        data: formData
+        data: cleanData
       });
       setIsEditing(false);
+    } catch (err: any) {
+      console.error('Update Property Error:', err);
+      if (err.response?.status === 422) {
+        const errors = err.response.data.errors;
+        const firstKey = Object.keys(errors)[0];
+        const fieldName = validationMessageMap[firstKey] || firstKey;
+        const messages = errors[firstKey];
+        const rawMessage = Array.isArray(messages) ? messages[0] : messages;
+        
+        let translatedMsg = rawMessage;
+        
+        // Translation logic for common Laravel validation errors
+        if (rawMessage.includes('already been taken')) translatedMsg = 'đã tồn tại trong hệ thống';
+        else if (rawMessage.includes('must be a number')) translatedMsg = 'phải là định dạng số';
+        else if (rawMessage.includes('must be an integer')) translatedMsg = 'phải là số nguyên';
+        else if (rawMessage.includes('required')) translatedMsg = 'không được để trống';
+        else if (rawMessage.includes('must be at least')) {
+          const min = rawMessage.match(/\d+/)?.[0];
+          translatedMsg = `phải có ít nhất ${min} ký tự`;
+        }
+        else if (rawMessage.includes('may not be greater than')) {
+          const max = rawMessage.match(/\d+/)?.[0];
+          translatedMsg = `không được vượt quá ${max}`;
+        }
+
+        setSaveError(`Lỗi ở trường "${fieldName}": ${translatedMsg}`);
+      } else {
+        setSaveError(err.response?.data?.message || 'Đã xảy ra lỗi khi lưu thông tin. Vui lòng thử lại.');
+      }
     } finally {
       setIsSaving(false);
     }
@@ -106,9 +190,13 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
+    const integerFields = ['default_due_day', 'default_cutoff_day', 'default_deposit_months'];
+    
     setFormData((prev: any) => ({
       ...prev,
-      [name]: type === 'number' ? Number(value) : value
+      [name]: type === 'number' 
+        ? (integerFields.includes(name) ? parseInt(value) || 0 : parseFloat(value) || 0) 
+        : value
     }));
   };
 
@@ -117,7 +205,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
       ...prev,
       bank_accounts: [
         ...(prev.bank_accounts || []),
-        { bank_name: '', account_number: '', account_holder: '' }
+        { bank_name: '', account_number: '', account_name: '' }
       ]
     }));
   };
@@ -125,7 +213,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
   const handleRemoveAccount = (index: number) => {
     setFormData((prev: any) => ({
       ...prev,
-      bank_accounts: prev.bank_accounts.filter((_: any, i: number) => i !== index)
+      bank_accounts: (prev.bank_accounts || []).filter((_: any, i: number) => i !== index)
     }));
   };
 
@@ -135,41 +223,6 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
       newAccounts[index] = { ...newAccounts[index], [field]: value };
       return { ...prev, bank_accounts: newAccounts };
     });
-  };
-
-  // UI Components inside for better modularity
-  const InfoSection = ({ title, children, fullWidth = false }: { title: string; children: React.ReactNode; fullWidth?: boolean }) => (
-    <div className={`bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm ${fullWidth ? 'col-span-full' : ''}`}>
-      <h3 className="text-sm font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-6 border-b border-gray-50 dark:border-gray-800/60 pb-3">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {children}
-      </div>
-    </div>
-  );
-
-  const InfoItem = ({ icon: Icon, label, value, colorClass = "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400" }: any) => (
-    <div className="flex gap-4 group">
-      <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm ${colorClass}`}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-        <p className="font-bold text-gray-900 dark:text-white truncate">{value || '---'}</p>
-      </div>
-    </div>
-  );
-
-  const SectionHeader = ({ title, description }: { title: string, description: string }) => (
-    <div className="mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
-      <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{title}</h3>
-      <p className="text-xs text-gray-500 font-medium mt-1">{description}</p>
-    </div>
-  );
-
-  const billingCycleLabels: Record<string, string> = {
-    monthly: "Hàng tháng",
-    quarterly: "Hàng quý",
-    yearly: "Hàng năm",
   };
 
   // View Mode
@@ -214,7 +267,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
             <InfoItem 
               icon={Calendar} 
               label="Kỳ hạn thanh toán" 
-              value={billingCycleLabels[property.default_billing_cycle] || property.default_billing_cycle}
+              value={BILLING_CYCLE_DISPLAY_LABELS[property.default_billing_cycle] || property.default_billing_cycle}
               colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400"
             />
             <InfoItem 
@@ -298,7 +351,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
                 </div>
                 <h4 className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Ghi chú vận hành</h4>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-medium italic relative z-10">{property.note}</p>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-medium relative z-10">{property.note}</p>
             </div>
           )}
         </div>
@@ -306,20 +359,22 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
     );
   }
 
-  // Edit Mode (Based on BuildingConfig)
+  // Edit Mode
   return (
     <div className="space-y-6 max-w-6xl pb-20 animate-in slide-in-from-right-4 duration-300">
+      {saveError && (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3 text-red-600 dark:text-red-400 animate-in fade-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 shrink-0" />
+          <p className="text-sm font-bold tracking-tight">{saveError}</p>
+        </div>
+      )}
       {/* Action Header */}
       <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setIsEditing(false)}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl"
-          >
-            <ChevronLeft className="w-5 h-5 text-gray-500" />
-          </Button>
+          <PageBackButton
+            onBack={() => setIsEditing(false)}
+            className="rounded-xl text-gray-700 dark:text-gray-200"
+          />
           <div className="w-12 h-12 bg-blue-900 rounded-xl flex items-center justify-center shadow-lg">
             <Building2 className="w-6 h-6 text-white" />
           </div>
@@ -446,21 +501,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Coins className="w-3.5 h-3.5 text-blue-900 dark:text-blue-400" /> Đơn giá / m²
-              </label>
-              <div className="relative">
-                <Input 
-                  type="number"
-                  name="default_rent_price_per_m2" 
-                  value={formData?.default_rent_price_per_m2} 
-                  onChange={handleChange}
-                  className="rounded-xl border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800 focus:ring-blue-900 h-12 font-black text-blue-900 dark:text-blue-400 pr-10"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400">đ</span>
-              </div>
-            </div>
+
 
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -489,7 +530,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
                   onChange={handleChange}
                   className="rounded-xl border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-800/30 focus:ring-blue-900 h-12 font-bold pr-12"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Hàng tháng</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 uppercase tracking-widest ">Hàng tháng</span>
               </div>
             </div>
 
@@ -507,7 +548,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
                   onChange={handleChange}
                   className="rounded-xl border-gray-200 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-800/30 focus:ring-blue-900 h-12 font-bold pr-12"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Cuối kỳ</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-400 uppercase tracking-widest ">Cuối kỳ</span>
               </div>
             </div>
           </div>
@@ -533,7 +574,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {formData?.bank_accounts?.map((account: any, index: number) => (
+            {(formData?.bank_accounts || []).map((account: any, index: number) => (
               <div key={index} className="relative p-6 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
                 <Button 
                   type="button"
@@ -568,8 +609,8 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1">Chủ tài khoản</label>
                     <Input 
-                      value={account.account_holder || account.holder || account.name || ''} 
-                      onChange={(e) => handleAccountChange(index, 'account_holder', e.target.value)}
+                      value={account.account_name || account.account_holder || account.holder || account.name || ''} 
+                      onChange={(e) => handleAccountChange(index, 'account_name', e.target.value)}
                       placeholder="NGUYEN VAN A"
                       className="rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800/50 h-11 font-bold uppercase"
                     />
@@ -594,9 +635,8 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
               </div>
             )}
           </div>
-
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }

@@ -39,12 +39,12 @@ class RoomUpdateRequest extends FormRequest
             'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
             'floor_id' => ['nullable', 'uuid', 'exists:floors,id'],
             'code' => [
-                'sometimes', 
-                'string', 
+                'sometimes',
+                'string',
                 'max:50',
                 Rule::unique('rooms')
                     ->where('property_id', $this->property_id ?? $this->route('room'))
-                    ->ignore($this->route('room'))
+                    ->ignore($this->route('room')),
             ],
             'name' => ['sometimes', 'string', 'max:255'],
             'type' => ['nullable', 'string', 'in:standard,studio,apartment,house,dormitory,other,duplex,penthouse', 'max:50'],
@@ -54,7 +54,6 @@ class RoomUpdateRequest extends FormRequest
             'base_price' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:available,occupied,maintenance,reserved,draft', 'max:20'],
             'description' => ['nullable', 'string'],
-
 
             'service_ids' => ['nullable', 'array'],
             'service_ids.*' => ['uuid', 'exists:services,id'],

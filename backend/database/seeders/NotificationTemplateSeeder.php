@@ -12,8 +12,9 @@ class NotificationTemplateSeeder extends Seeder
     {
         $org = Org::first();
 
-        if (!$org) {
+        if (! $org) {
             $this->command->warn('No Org found — skipping NotificationTemplateSeeder.');
+
             return;
         }
 
@@ -52,6 +53,6 @@ class NotificationTemplateSeeder extends Seeder
             );
         }
 
-        $this->command->info('✅ Seeded ' . count($templates) . ' default notification templates.');
+        $this->command->info('✅ Seeded '.count($templates).' default notification templates.');
     }
 }

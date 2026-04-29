@@ -82,7 +82,13 @@ export default function PropertySelectionPage() {
               {...prop}
               roomCount={prop.rooms_count || prop.room_count || 0}
               staffCount={prop.staff_count || 0}
-              onClick={() => navigate(`/properties/${prop.id}/dashboard`)}
+              onClick={() =>
+                navigate(
+                  user?.role === 'Staff'
+                    ? `/properties/${prop.id}/staff-home`
+                    : `/properties/${prop.id}/dashboard`,
+                )
+              }
             />
           </motion.div>
         ))}

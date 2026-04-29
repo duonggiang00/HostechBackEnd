@@ -4,6 +4,7 @@ namespace App\Services\Property;
 
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -12,7 +13,7 @@ class RoomAssetService
     /**
      * Get paginated list of assets for a specific room.
      *
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getAssetsByRoom(string $roomId, int $perPage = 15)
     {

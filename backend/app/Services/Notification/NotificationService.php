@@ -10,8 +10,10 @@ use App\Notifications\Meter\MeterReadingApproved;
 use App\Notifications\Meter\MeterReadingRejected;
 use App\Notifications\Meter\MeterReadingSubmitted;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 class NotificationService
 {
@@ -29,9 +31,9 @@ class NotificationService
 
         match ($newStatus) {
             'SUBMITTED' => $this->handleSubmitted($reading),
-            'APPROVED'  => $this->handleApproved($reading),
-            'REJECTED'  => $this->handleRejected($reading, $reason),
-            default     => null,
+            'APPROVED' => $this->handleApproved($reading),
+            'REJECTED' => $this->handleRejected($reading, $reason),
+            default => null,
         };
     }
 
@@ -103,11 +105,11 @@ class NotificationService
     /**
      * Get Manager(s) who manage the property where this meter belongs.
      */
-    protected function getPropertyManagers(MeterReading $reading): \Illuminate\Support\Collection
+    protected function getPropertyManagers(MeterReading $reading): Collection
     {
         $property = $reading->meter->property;
 
-        if (!$property) {
+        if (! $property) {
             return collect();
         }
 
@@ -119,11 +121,11 @@ class NotificationService
     /**
      * Get active tenants of the room where this meter belongs.
      */
-    protected function getRoomTenants(MeterReading $reading): \Illuminate\Support\Collection
+    protected function getRoomTenants(MeterReading $reading): Collection
     {
         $room = $reading->meter->room;
 
-        if (!$room) {
+        if (! $room) {
             return collect();
         }
 
@@ -150,7 +152,7 @@ class NotificationService
     {
         $orgId = $orgId ?? auth()->user()?->org_id;
 
-        if (!$orgId) {
+        if (! $orgId) {
             return null;
         }
 
@@ -166,7 +168,7 @@ class NotificationService
         }
 
         // 2. Fallback to org-level template
-        if (!$template) {
+        if (! $template) {
             $template = NotificationTemplate::active()
                 ->byCode($code)
                 ->byChannel($channel)
@@ -175,7 +177,7 @@ class NotificationService
                 ->first();
         }
 
-        if (!$template) {
+        if (! $template) {
             return null;
         }
 
@@ -186,7 +188,7 @@ class NotificationService
      * Log notification sends to notification_logs table.
      */
     public function logNotifications(
-        \Illuminate\Support\Collection $recipients,
+        Collection $recipients,
         string $code,
         string $channel,
         array $payload,
@@ -194,12 +196,12 @@ class NotificationService
     ): void {
         $orgId = auth()->user()?->org_id;
 
-        if (!$orgId) {
+        if (! $orgId) {
             return;
         }
 
         $logs = $recipients->map(fn (User $user) => [
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
+            'id' => Str::uuid()->toString(),
             'org_id' => $orgId,
             'rule_id' => $ruleId,
             'user_id' => $user->id,
@@ -248,7 +250,7 @@ class NotificationService
     {
         $notification = $user->notifications()->where('id', $notificationId)->first();
 
-        if (!$notification) {
+        if (! $notification) {
             return false;
         }
 

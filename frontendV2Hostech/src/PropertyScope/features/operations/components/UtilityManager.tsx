@@ -50,19 +50,19 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-1">
                 <p className="text-xs font-black uppercase tracking-widest opacity-70">
-                  {meter.type === 'ELECTRIC' ? 'Electric' : 'Water'} Meter
+                  Đồng hồ {meter.type === 'ELECTRIC' ? 'Điện' : 'Nước'}
                 </p>
                 <div className="px-1.5 py-0.5 bg-white/20 rounded-md text-[8px] font-black uppercase tracking-tighter">
                   {meter.code}
                 </div>
               </div>
               <div className="flex items-baseline gap-1">
-                <h3 className="text-3xl font-black">{meter.last_reading || '0'}</h3>
+                <h3 className="text-3xl font-black">{meter.latest_reading ?? '0'}</h3>
                 <span className="text-sm font-bold opacity-60">{meter.type === 'ELECTRIC' ? 'kWh' : 'm³'}</span>
               </div>
               <div className="mt-4 flex items-center gap-1.5 text-[11px] font-black uppercase bg-white/10 w-fit px-2 py-1 rounded-lg">
                 <TrendingUp className="w-3 h-3" />
-                Latest: {meter.last_read_at || 'N/A'}
+                Mới nhất: {meter.last_read_at || 'Chưa có'}
               </div>
             </div>
           </div>
@@ -70,13 +70,13 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
       </div>
 
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Recent Readings</h4>
+        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Lịch sử chốt số</h4>
         <button 
           onClick={() => setIsCapturing(true)}
           className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-xs hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-lg shadow-slate-200 dark:shadow-none active:scale-95"
         >
           <Camera className="w-3.5 h-3.5" />
-          New Reading
+          Chốt số mới
         </button>
       </div>
 
@@ -95,10 +95,10 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-lg border ${
                     reading.status === 'APPROVED' ? 'text-emerald-500 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-100 dark:border-emerald-500/20' : 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-100 dark:border-amber-500/20'
                   }`}>
-                    {reading.status}
+                    {reading.status === 'APPROVED' ? 'ĐÃ DUYỆT' : 'CHỜ DUYỆT'}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">{reading.reading_date} • {reading.consumption || '0'} unit increase</p>
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">{reading.reading_date} • Tăng {reading.consumption || '0'} số</p>
               </div>
 
               <button 
@@ -135,8 +135,8 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
                       <Camera className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-black text-slate-900 dark:text-white leading-none mb-1">OCR Meter Reading</h3>
-                      <p className="text-xs text-slate-500 font-medium">Automatic extraction from photo</p>
+                      <h3 className="text-xl font-black text-slate-900 dark:text-white leading-none mb-1">Chốt số bằng camera (OCR)</h3>
+                      <p className="text-xs text-slate-500 font-medium">Tự động trích xuất dữ liệu từ ảnh</p>
                     </div>
                   </div>
                   <button onClick={() => setIsCapturing(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700">
@@ -149,37 +149,37 @@ export default function UtilityManager({ propertyId, roomId, data }: UtilityMana
                     {/* Simulated Camera Viewfinder */}
                     <div className="absolute inset-4 border-2 border-indigo-500/30 rounded-2xl" />
                     <Camera className="w-10 h-10 opacity-20" />
-                    <p className="text-xs font-black uppercase tracking-widest">Awaiting Capture</p>
+                    <p className="text-xs font-black uppercase tracking-widest">Đang chờ chụp ảnh</p>
                   </div>
                   
                   <div className="flex flex-col gap-4">
                     <div className="flex-1 p-5 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-center items-center text-center">
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Detected Value</p>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Giá trị nhận diện</p>
                       <div className="relative group">
                         <h4 className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tighter">—</h4>
                         <div className="absolute -top-1 -right-4 animate-pulse">
                           <RefreshCcw className="w-4 h-4 text-indigo-300 dark:text-indigo-500" />
                         </div>
                       </div>
-                      <p className="text-xs text-slate-400 mt-2 font-bold uppercase">Confidence: 0%</p>
+                      <p className="text-xs text-slate-400 mt-2 font-bold uppercase">Độ tin cậy: 0%</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-4 p-5 bg-amber-50 dark:bg-amber-500/10 rounded-3xl border border-amber-100 dark:border-amber-500/20 mb-8">
                   <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
-                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed italic">
-                    "Please ensure the digits are clearly visible and centered within the blue frame for highest accuracy."
+                  <p className="text-xs font-medium text-amber-700 dark:text-amber-400 leading-relaxed ">
+                    "Vui lòng đảm bảo các chữ số hiển thị rõ ràng và nằm giữa khung xanh để đạt độ chính xác cao nhất."
                   </p>
                 </div>
 
                 <div className="flex gap-4">
                   <button className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-2xl font-black text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
-                    Discard
+                    Hủy bỏ
                   </button>
                   <button className="flex-2 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 dark:shadow-none active:scale-95 flex items-center justify-center gap-2">
                     <Check className="w-5 h-5" />
-                    Confirm & Save
+                    Xác nhận & Lưu
                   </button>
                 </div>
               </div>

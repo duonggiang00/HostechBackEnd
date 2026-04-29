@@ -29,12 +29,12 @@ class RoomFloorPlanNode extends Model
     protected function casts(): array
     {
         return [
-            'x'        => 'decimal:2',
-            'y'        => 'decimal:2',
-            'width'    => 'decimal:2',
-            'height'   => 'decimal:2',
+            'x' => 'decimal:2',
+            'y' => 'decimal:2',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
             'rotation' => 'decimal:2',
-            'meta'     => 'array',
+            'meta' => 'array',
         ];
     }
 

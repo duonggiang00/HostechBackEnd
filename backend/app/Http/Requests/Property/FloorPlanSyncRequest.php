@@ -24,14 +24,14 @@ class FloorPlanSyncRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nodes'            => ['present', 'array'],
-            'nodes.*.room_id'  => ['required', 'uuid', 'exists:rooms,id'],
-            'nodes.*.x'        => ['required', 'numeric'],
-            'nodes.*.y'        => ['required', 'numeric'],
-            'nodes.*.width'    => ['required', 'numeric', 'min:0'],
-            'nodes.*.height'   => ['required', 'numeric', 'min:0'],
+            'nodes' => ['present', 'array'],
+            'nodes.*.room_id' => ['required', 'uuid', 'exists:rooms,id'],
+            'nodes.*.x' => ['required', 'numeric'],
+            'nodes.*.y' => ['required', 'numeric'],
+            'nodes.*.width' => ['required', 'numeric', 'min:0'],
+            'nodes.*.height' => ['required', 'numeric', 'min:0'],
             'nodes.*.rotation' => ['nullable', 'numeric'],
-            'nodes.*.label'    => ['nullable', 'string', 'max:50'],
+            'nodes.*.label' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

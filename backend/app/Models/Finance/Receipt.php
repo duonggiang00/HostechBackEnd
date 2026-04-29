@@ -19,9 +19,14 @@ class Receipt extends Model
     /** Biên lai là immutable */
     const UPDATED_AT = null;
 
+    public const KIND_PROOF = 'PROOF';
+
+    public const KIND_OFFICIAL = 'OFFICIAL';
+
     protected $fillable = [
         'org_id',
         'payment_id',
+        'kind',
         'path',
         'sha256',
     ];

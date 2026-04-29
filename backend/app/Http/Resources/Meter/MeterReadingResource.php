@@ -51,15 +51,16 @@ class MeterReadingResource extends JsonResource
             'proofs' => (function () {
                 $proofs = $this->getMedia('reading_proofs');
                 \Log::debug("📸 Resource getMedia() for reading {$this->id} returned {$proofs->count()} proofs");
+
                 return $proofs->map(function ($media) {
                     return [
-                        'id'        => $media->id,
-                        'url'       => $media->getUrl(),
+                        'id' => $media->id,
+                        'url' => $media->getUrl(),
                         'thumb_url' => $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl(),
-                        'name'      => $media->name,
+                        'name' => $media->name,
                         'file_name' => $media->file_name,
                         'mime_type' => $media->mime_type,
-                        'size'      => $media->size,
+                        'size' => $media->size,
                     ];
                 })->values();
             })(),

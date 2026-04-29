@@ -9,6 +9,7 @@ use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Str;
 
 class TicketCreated implements ShouldBroadcast
 {
@@ -21,13 +22,13 @@ class TicketCreated implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
         // Broadcast to the whole organization so managers/admins see it
         return [
-            new PrivateChannel('org.' . $this->ticket->org_id),
+            new PrivateChannel('org.'.$this->ticket->org_id),
         ];
     }
 
@@ -47,15 +48,15 @@ class TicketCreated implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'id'                 => $this->ticket->id,
-            'property_id'        => $this->ticket->property_id,
-            'room_code'          => $this->ticket->room?->code,
-            'category'           => $this->ticket->category,
-            'priority'           => $this->ticket->priority,
-            'status'             => $this->ticket->status,
-            'description'        => \Illuminate\Support\Str::limit($this->ticket->description, 100),
+            'id' => $this->ticket->id,
+            'property_id' => $this->ticket->property_id,
+            'room_code' => $this->ticket->room?->code,
+            'category' => $this->ticket->category,
+            'priority' => $this->ticket->priority,
+            'status' => $this->ticket->status,
+            'description' => Str::limit($this->ticket->description, 100),
             'created_by_user_id' => $this->ticket->created_by_user_id,
-            'created_at'         => $this->ticket->created_at->toIso8601String(),
+            'created_at' => $this->ticket->created_at->toIso8601String(),
         ];
     }
 }

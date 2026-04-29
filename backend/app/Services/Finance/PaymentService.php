@@ -2,13 +2,12 @@
 
 namespace App\Services\Finance;
 
-use App\Events\Finance\PaymentApproved;
-use App\Events\Finance\PaymentVoided;
 use App\Models\Finance\Payment;
 use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
 use App\Services\Invoice\InvoiceService;
+use App\Services\OrgContextResolver;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -18,8 +17,7 @@ class PaymentService
 {
     public function __construct(
         protected InvoiceService $invoiceService
-    ) {
-    }
+    ) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  READ OPERATIONS                                      ║
@@ -53,10 +51,13 @@ class PaymentService
             ->with(['property', 'payer', 'receivedBy', 'allocations.invoice']);
 
         $user = request()->user();
-        $orgId = $orgId ?? ($user?->hasRole('Admin') ? request()->input('org_id') : $user?->org_id);
-
-        if ($orgId) {
-            $query->where('org_id', $orgId);
+        $resolved = OrgContextResolver::resolveOrgId($user);
+        $effectiveOrgId = $orgId ?? $resolved;
+        if ($user?->hasRole('Admin')) {
+            abort_if(! $effectiveOrgId, 422, 'Không xác định được tổ chức (org). Hãy mở trong phạm vi tòa/organization hoặc gửi header X-Org-Id.');
+        }
+        if ($effectiveOrgId) {
+            $query->where('org_id', $effectiveOrgId);
         }
 
         // Manager/Staff: chỉ thấy payments thuộc property được giao
@@ -124,19 +125,19 @@ class PaymentService
         return DB::transaction(function () use ($data, $allocations, $user) {
             // 1. Tạo Payment
             $payment = Payment::create([
-                'org_id'              => $data['org_id'],
-                'property_id'         => $data['property_id'] ?? null,
-                'payer_user_id'       => $data['payer_user_id'] ?? null,
+                'org_id' => $data['org_id'],
+                'property_id' => $data['property_id'] ?? null,
+                'payer_user_id' => $data['payer_user_id'] ?? null,
                 'received_by_user_id' => $user->id,
-                'method'              => $data['method'],
-                'amount'              => $data['amount'],
-                'reference'           => $data['reference'] ?? null,
-                'received_at'         => $data['received_at'] ?? now(),
-                'status'              => 'APPROVED',
+                'method' => $data['method'],
+                'amount' => $data['amount'],
+                'reference' => $data['reference'] ?? null,
+                'received_at' => $data['received_at'] ?? now(),
+                'status' => 'APPROVED',
                 'approved_by_user_id' => $user->id,
-                'approved_at'         => now(),
-                'note'                => $data['note'] ?? null,
-                'meta'                => $data['meta'] ?? null,
+                'approved_at' => now(),
+                'note' => $data['note'] ?? null,
+                'meta' => $data['meta'] ?? null,
             ]);
 
             // 2. Tạo PaymentAllocation và gạch nợ từng Invoice
@@ -150,10 +151,10 @@ class PaymentService
 
                 // Tạo allocation
                 PaymentAllocation::create([
-                    'org_id'     => $data['org_id'],
+                    'org_id' => $data['org_id'],
                     'payment_id' => $payment->id,
                     'invoice_id' => $invoice->id,
-                    'amount'     => $alloc['amount'],
+                    'amount' => $alloc['amount'],
                 ]);
 
                 // Gạch nợ: Cộng vào paid_amount
@@ -193,17 +194,17 @@ class PaymentService
         return DB::transaction(function () use ($data, $allocations, $user) {
             // 1. Tạo Payment với status PENDING
             $payment = Payment::create([
-                'org_id'              => $data['org_id'],
-                'property_id'         => $data['property_id'] ?? null,
-                'payer_user_id'       => $data['payer_user_id'] ?? null,
+                'org_id' => $data['org_id'],
+                'property_id' => $data['property_id'] ?? null,
+                'payer_user_id' => $data['payer_user_id'] ?? null,
                 'received_by_user_id' => $user->id,
-                'method'              => $data['method'],
-                'amount'              => $data['amount'],
-                'reference'           => $data['reference'] ?? null,
-                'received_at'         => null,   // Sẽ cập nhật khi IPN về
-                'status'              => 'PENDING',
-                'note'                => $data['note'] ?? null,
-                'meta'                => $data['meta'] ?? null,
+                'method' => $data['method'],
+                'amount' => $data['amount'],
+                'reference' => $data['reference'] ?? null,
+                'received_at' => null,   // Sẽ cập nhật khi IPN về
+                'status' => 'PENDING',
+                'note' => $data['note'] ?? null,
+                'meta' => $data['meta'] ?? null,
             ]);
 
             // 2. Lưu allocations (chưa gạch nợ — chỉ là placeholder)
@@ -215,10 +216,10 @@ class PaymentService
                 }
 
                 PaymentAllocation::create([
-                    'org_id'     => $data['org_id'],
+                    'org_id' => $data['org_id'],
                     'payment_id' => $payment->id,
                     'invoice_id' => $invoice->id,
-                    'amount'     => $alloc['amount'],
+                    'amount' => $alloc['amount'],
                 ]);
             }
 
@@ -234,8 +235,8 @@ class PaymentService
      * 2. Gạch nợ từng hóa đơn theo allocations đã lưu sẵn
      * 3. Ghi bút toán sổ cái
      *
-     * @param  Payment   $payment  Payment đang PENDING
-     * @param  User|null $approver User duyệt (thường là receivedBy)
+     * @param  Payment  $payment  Payment đang PENDING
+     * @param  User|null  $approver  User duyệt (thường là receivedBy)
      */
     public function approvePending(Payment $payment, ?User $approver = null): Payment
     {
@@ -247,10 +248,10 @@ class PaymentService
             // 1. Approve Payment
             $payment->status_history_note = 'Thanh toán trực tuyến được xác thực thành công';
             $payment->update([
-                'status'              => 'APPROVED',
-                'received_at'         => now(),
+                'status' => 'APPROVED',
+                'received_at' => now(),
                 'approved_by_user_id' => $approver?->id,
-                'approved_at'         => now(),
+                'approved_at' => now(),
             ]);
 
             // 2. Gạch nợ từng hóa đơn

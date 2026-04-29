@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import {
-  ArrowLeft,
   Info,
   Image as ImageIcon,
   FileText,
@@ -26,9 +25,10 @@ import {
   Clock,
 } from 'lucide-react';
 import { useRoomDetail, useRoomActions } from '../hooks/useRooms';
-import { QuickInvoiceModal } from '../components/QuickInvoiceModal';
+import { isRoomReadyForQuickInvoiceSubmit } from '@/PropertyScope/features/billing/utils/roomMeterReadiness';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
-import RoomUtilityTab from '../components/RoomUtilityTab';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+
 import RoomImageGallery from '../components/RoomImageGallery';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import { formatCurrency } from '@/lib/utils';
@@ -38,7 +38,7 @@ import { UserPlus } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type TabId = 'info' | 'tenants' | 'lease' | 'billing' | 'utilities' | 'images';
+type TabId = 'info' | 'tenants' | 'lease' | 'billing' | 'images';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   occupied:    { label: 'Đang cho thuê', className: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30' },
@@ -77,7 +77,6 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'images',    label: 'Hình ảnh',   icon: ImageIcon },
   { id: 'tenants',   label: 'Người thuê', icon: Users },
   { id: 'lease',     label: 'Hợp đồng',  icon: FileText },
-  { id: 'utilities', label: 'Đồng hồ',   icon: Gauge },
   { id: 'billing',   label: 'Hóa đơn',   icon: Receipt },
 ];
 
@@ -95,10 +94,26 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
   const { deleteRoom, restoreRoom } = useRoomActions();
 
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
-  const [isQuickInvoiceOpen, setIsQuickInvoiceOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
 
-  const handleBack = () => {
+  const handleNavigateBack = () => {
+    if (isTenantPortal) navigate('/app/dashboard');
+    else navigate(-1);
+  };
+
+  const handleNavigateQuickInvoice = () => {
+    if (!room || !propertyId || !roomId) return;
+    if (!isRoomReadyForQuickInvoiceSubmit(room)) {
+      toast.error('Chưa đủ điều kiện đồng hồ (duyệt chỉ số và có tiêu thụ kỳ). Vui lòng chốt số trước khi lập hóa đơn nhanh.');
+      navigate(`/properties/${propertyId}/meters/room/${roomId}`);
+      return;
+    }
+    navigate(`/properties/${propertyId}/billing/quick-invoice/${roomId}`, {
+      state: { from: 'room-detail', roomId },
+    });
+  };
+
+  const handleAfterRoomDeleted = () => {
     if (isTenantPortal) {
       navigate('/app/dashboard');
       return;
@@ -116,7 +131,7 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
       return;
     }
     if (confirm(`Bạn có chắc chắn muốn xóa ${room?.name}?`)) {
-      deleteRoom.mutate(room!.id, { onSuccess: handleBack });
+      deleteRoom.mutate(room!.id, { onSuccess: handleAfterRoomDeleted });
     }
   };
 
@@ -137,12 +152,15 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
         <p className="text-rose-500 dark:text-rose-400/70 text-sm mb-4">
           {(error as any)?.message || 'Phòng không tồn tại hoặc bạn không có quyền truy cập.'}
         </p>
-        <button
-          onClick={handleBack}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors"
-        >
-          {isTenantPortal ? 'Quay lại trang chủ' : 'Quay lại danh sách'}
-        </button>
+        {isTenantPortal ? (
+          <PageBackButton
+            onBack={() => navigate('/app/dashboard')}
+            label="Quay lại trang chủ"
+            className="rounded-xl border-0 bg-indigo-600 px-6 py-2 text-white hover:bg-indigo-700 [&_svg]:text-white/90"
+          />
+        ) : (
+          <PageBackButton className="rounded-xl px-6 py-2" />
+        )}
       </div>
     );
   }
@@ -168,21 +186,23 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
             <div className="flex items-center gap-4 min-w-0">
               {!isTenantPortal && (
                 <>
-                  <button
-                    onClick={handleBack}
-                    className="shrink-0 flex items-center gap-2 text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors text-sm font-medium"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span className="hidden sm:inline">Quay lại</span>
-                  </button>
+                  <PageBackButton
+                    onBack={handleNavigateBack}
+                    className="shrink-0 text-sm"
+                  />
 
                   <div className="h-5 w-px bg-gray-200 dark:bg-slate-700 shrink-0" />
                 </>
               )}
 
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h1 className="text-xl font-bold text-gray-900 dark:text-white truncate">{room.name}</h1>
+                  {room.contracts?.some((c) => String(c.status).toLowerCase() === 'pending_termination') && (
+                    <span className="px-2 py-0.5 bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 text-xs font-semibold rounded-md border border-teal-200 dark:border-teal-500/30 shrink-0">
+                      Sắp trả phòng
+                    </span>
+                  )}
                   {room.deleted_at && (
                     <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold rounded-md border border-rose-200 dark:border-rose-500/30">
                       Đã xóa
@@ -205,7 +225,7 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
               </span>
 
               {!isTenantPortal && (
-                <PermissionGate role={['Owner', 'Manager']}>
+                <PermissionGate role={['Owner', 'Manager', 'Staff']}>
                   <div className="flex items-center gap-2">
                     {room.deleted_at ? (
                       <button
@@ -225,21 +245,32 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
                           <FileEdit className="w-4 h-4" />
                           Chỉnh sửa
                         </button>
-                        <button
-                          onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
-                          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
-                        >
-                          <Zap className="w-4 h-4" />
-                          Tạo hợp đồng
-                        </button>
-                        {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
+                        {room.status !== 'occupied' && (
                           <button
-                            onClick={() => setIsQuickInvoiceOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                            onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
                           >
-                            <Receipt className="w-4 h-4" />
-                            Chốt hóa đơn
+                            <Zap className="w-4 h-4" />
+                            Tạo hợp đồng
                           </button>
+                        )}
+                        {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
+                          <>
+                            <button
+                              onClick={() => navigate(`/properties/${propertyId}/meters/room/${roomId}`)}
+                              className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors shadow-sm"
+                            >
+                              <Gauge className="w-4 h-4" />
+                              Chốt số đồng hồ
+                            </button>
+                            <button
+                              onClick={handleNavigateQuickInvoice}
+                              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                            >
+                              <Receipt className="w-4 h-4" />
+                              Chốt hóa đơn
+                            </button>
+                          </>
                         )}
                         <button
                           onClick={handleDelete}
@@ -611,20 +642,13 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
           </div>
         )}
 
-        {/* ── Đồng hồ ──────────────────────────────────────────────────── */}
-        {activeTab === 'utilities' && (
-          <RoomUtilityTab
-            propertyId={isTenantPortal ? room.property_id : propertyId!}
-            roomId={room.id}
-            meters={room.meters}
-            isReadOnly={isTenantPortal}
-          />
-        )}
+
 
         {/* ── Hóa đơn ──────────────────────────────────────────────────── */}
         {activeTab === 'billing' && (
           <InvoiceManager
             roomId={room.id}
+            propertyId={propertyId}
             data={room.invoices}
             isReadOnly={isTenantPortal}
           />
@@ -635,12 +659,6 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
 
       {!isTenantPortal && (
         <>
-          <QuickInvoiceModal
-            isOpen={isQuickInvoiceOpen}
-            onClose={() => setIsQuickInvoiceOpen(false)}
-            room={room}
-          />
-
           <AddMemberModal
             isOpen={isAddMemberOpen}
             onClose={() => setIsAddMemberOpen(false)}

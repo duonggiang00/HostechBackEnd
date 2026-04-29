@@ -82,7 +82,7 @@ export default function RoomLifecycleTimeline({
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-4">
-                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-3 italic">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed mb-3 ">
                     "{event.notes || 'Không có ghi chú'}"
                   </p>
                   <div className="flex items-center justify-between pt-3 border-t border-slate-200/50 dark:border-slate-700/50">

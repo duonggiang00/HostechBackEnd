@@ -31,10 +31,16 @@ export const useAuthStore = create<AuthState>()(
       hasRole: (role) => {
         const user = get().user;
         if (!user) return false;
-        
-        const roles = Array.isArray(role) ? role : [role];
-        if (!user.role) return false;
-        return roles.includes(user.role);
+
+        const rolesToMatch = Array.isArray(role) ? role : [role];
+        const userRoles =
+          user.roles && user.roles.length > 0
+            ? user.roles
+            : user.role
+              ? [user.role]
+              : [];
+
+        return rolesToMatch.some((r) => userRoles.includes(r));
       },
     }),
     {

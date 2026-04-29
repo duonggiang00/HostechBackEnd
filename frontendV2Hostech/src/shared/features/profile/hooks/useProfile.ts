@@ -1,18 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { profileApi } from '../api/profile';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import type { ProfileUpdatePayload, PasswordChangePayload } from '../types';
+import type { AuthUser } from '@/shared/features/auth/types';
 
-const PROFILE_KEY = ['profile'] as const;
+/** Shared React Query key for GET /api/profile (session bootstrap + profile page). */
+export const PROFILE_QUERY_KEY = ['profile'] as const;
 
-/** Fetch current user profile */
+/** Fetch current user profile and sync RBAC fields into the auth store. */
 export const useProfile = () => {
-  return useQuery({
-    queryKey: PROFILE_KEY,
+  const updateUser = useAuthStore((s) => s.updateUser);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
+  const query = useQuery({
+    queryKey: PROFILE_QUERY_KEY,
     queryFn: profileApi.getProfile,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: isAuthenticated,
   });
+
+  useEffect(() => {
+    const data = query.data;
+    if (!data) {
+      return;
+    }
+    updateUser({
+      permissions: data.permissions,
+      roles: data.roles,
+      role: data.role as AuthUser['role'],
+      org_id: data.org_id ?? null,
+      properties: data.properties ?? [],
+      profile_loaded: true,
+    });
+  }, [query.data, updateUser]);
+
+  return query;
 };
 
 /** Update profile information */
@@ -23,7 +47,7 @@ export const useUpdateProfile = () => {
   return useMutation({
     mutationFn: (data: ProfileUpdatePayload) => profileApi.updateProfile(data),
     onSuccess: (updatedUser) => {
-      queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+      queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
       // Sync partial data back to auth store
       updateUser({
         full_name: updatedUser.full_name,
@@ -60,7 +84,7 @@ export const useUploadAvatar = () => {
   return useMutation({
     mutationFn: (file: File) => profileApi.uploadAvatar(file),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: PROFILE_KEY });
+      queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
       updateUser({ avatar_url: res.avatar_url });
       toast.success('Cập nhật ảnh đại diện thành công.');
     },

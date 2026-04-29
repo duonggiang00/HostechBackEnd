@@ -2,12 +2,16 @@
 
 namespace App\Services\Auth;
 
+use App\Mail\Auth\OTPMail;
 use App\Models\Org\User;
 use App\Models\System\VerificationCode;
-use App\Mail\Auth\OTPMail;
+use BaconQrCode\Renderer\Color\Rgb;
+use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
+use BaconQrCode\Renderer\RendererStyle\Fill;
+use BaconQrCode\Renderer\RendererStyle\RendererStyle;
+use BaconQrCode\Writer;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
 use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 
 class MfaService
@@ -34,15 +38,17 @@ class MfaService
     }
 
     /**
-     * Verify the given code for the user based on their MFA method.
+     * Verify the given code for the user based on the explicitly provided method.
+     * When $method is null, falls back to user->mfa_method for backward compatibility.
      */
-    public function verifyCode(User $user, string $code, ?string $secret = null): bool
+    public function verifyCode(User $user, string $code, ?string $method = null, ?string $secret = null): bool
     {
-        if ($user->mfa_method === 'email') {
+        $resolvedMethod = $method ?? $user->mfa_method ?? 'totp';
+
+        if ($resolvedMethod === 'email') {
             return $this->verifyEmailOtp($user->email, $code);
         }
 
-        // Default to TOTP
         return $this->verifyTotp($user, $code, $secret);
     }
 
@@ -52,12 +58,7 @@ class MfaService
     public function verifyTotp(User $user, string $code, ?string $secret = null): bool
     {
         $otpSecret = $secret ?: decrypt($user->two_factor_secret);
-        
-        // Use the underlying Fortify logic. 
-        // If the provider is our custom one, we call verify there which handles it.
-        // We removed the recursion by making TwoFactorAuthenticationProvider::verify 
-        // call parent::verify for TOTP.
-        
+
         return $this->provider->verify($otpSecret, $code);
     }
 
@@ -76,6 +77,7 @@ class MfaService
 
         if ($verification) {
             $verification->update(['used_at' => now()]);
+
             return true;
         }
 
@@ -87,18 +89,105 @@ class MfaService
      */
     public function generateSecret(): string
     {
-        return $this->provider->generateSecret();
+        return $this->provider->generateSecretKey();
     }
 
     /**
      * Get QR Code SVG for TOTP setup.
+     * Uses BaconQrCode (already installed via Fortify) to render the otpauth URL as SVG.
      */
     public function getTwoFactorQrCodeSvg(User $user, string $secret): string
     {
-        return $this->provider->qrCodeSvg(
+        $url = $this->provider->qrCodeUrl(
             config('app.name'),
             $user->email,
             $secret
         );
+
+        $svg = (new Writer(
+            new ImageRenderer(
+                new RendererStyle(192, 0, null, null, Fill::uniformColor(
+                    new Rgb(255, 255, 255),
+                    new Rgb(45, 55, 72)
+                )),
+                new SvgImageBackEnd
+            )
+        ))->writeString($url);
+
+        return trim(substr($svg, strpos($svg, "\n") + 1));
+    }
+
+    /**
+     * Return the list of currently enabled methods for a user, derived from mfa_methods.
+     * Falls back to legacy mfa_method if mfa_methods is not populated yet.
+     */
+    public function enabledMethods(User $user): array
+    {
+        $methods = $user->mfa_methods;
+
+        if (is_array($methods) && count($methods) > 0) {
+            return $methods;
+        }
+
+        // Legacy fallback
+        if ($user->mfa_enabled && $user->mfa_method) {
+            return [$user->mfa_method];
+        }
+
+        return [];
+    }
+
+    /**
+     * Add a method to the user's enabled methods.
+     */
+    public function addMethod(User $user, string $method): void
+    {
+        $methods = $this->enabledMethods($user);
+
+        if (! in_array($method, $methods)) {
+            $methods[] = $method;
+        }
+
+        $user->update([
+            'mfa_methods' => $methods,
+            'mfa_enabled' => true,
+            'mfa_method' => $methods[0], // Keep legacy field as first/primary method
+        ]);
+    }
+
+    /**
+     * Remove a method from the user's enabled methods. Disables 2FA entirely if list becomes empty.
+     */
+    public function removeMethod(User $user, string $method): void
+    {
+        $methods = array_values(array_filter(
+            $this->enabledMethods($user),
+            fn ($m) => $m !== $method
+        ));
+
+        $updateData = ['mfa_methods' => $methods];
+
+        if (empty($methods)) {
+            $updateData['mfa_enabled'] = false;
+            $updateData['mfa_method'] = null;
+        } else {
+            $updateData['mfa_method'] = $methods[0];
+        }
+
+        if ($method === 'totp') {
+            $updateData['two_factor_secret'] = null;
+            $updateData['two_factor_confirmed_at'] = null;
+            $updateData['two_factor_recovery_codes'] = null;
+        }
+
+        $user->update($updateData);
+    }
+
+    /**
+     * Check whether a given method is active for the user.
+     */
+    public function hasMethod(User $user, string $method): bool
+    {
+        return in_array($method, $this->enabledMethods($user));
     }
 }

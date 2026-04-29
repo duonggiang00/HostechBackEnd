@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Ticket;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Ticket\TicketCostStoreRequest;
 use App\Http\Requests\Ticket\TicketEventStoreRequest;
+use App\Http\Requests\Ticket\TicketIndexRequest;
 use App\Http\Requests\Ticket\TicketStatusRequest;
 use App\Http\Requests\Ticket\TicketStoreRequest;
 use App\Http\Requests\Ticket\TicketUpdateRequest;
@@ -70,7 +71,7 @@ class TicketController extends Controller
      * @responseField meta object Thông tin pagination.
      * @responseField links object Các link pagination.
      */
-    public function index(\App\Http\Requests\Ticket\TicketIndexRequest $request): AnonymousResourceCollection
+    public function index(TicketIndexRequest $request): AnonymousResourceCollection
     {
         $this->authorize('viewAny', Ticket::class);
 
@@ -180,7 +181,8 @@ class TicketController extends Controller
      * Cập nhật thông tin ticket
      *
      * Cập nhật mức độ ưu tiên, loại sự cố, người xử lý, hạn chót xử lý.
-     * Dành cho **Owner / Manager**. Staff và Tenant không có quyền.
+     * **Owner / Manager / Staff** (theo `TicketPolicy::update`: quyền `update Ticket` + phạm vi property).
+     * Tenant không dùng endpoint này (xem policy).
      *
      * @urlParam id string required UUID phiếu sự cố. Example: 9d8e7f6a-5b4c-3d2e-1f0a-9b8c7d6e5f4a
      *

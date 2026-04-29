@@ -27,7 +27,7 @@ class AdjustmentNoteService
             ->where('meter_reading_id', $meterReadingId)
             ->allowedSorts(['created_at', 'status'])
             ->defaultSort('-created_at')
-            ->allowedIncludes(['requestedBy', 'approvedBy', 'rejectedBy'])
+            ->allowedIncludes(['requestedBy', 'approvedBy', 'rejectedBy', 'media'])
             ->with('media')
             ->get();
     }

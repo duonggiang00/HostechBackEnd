@@ -6,11 +6,13 @@ uses(RefreshDatabase::class);
 
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use Database\Seeders\RBACSeeder;
+use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('system admin can view any org', function () {
@@ -62,7 +64,7 @@ test('system admin can restore org', function () {
 test('owner can view own org', function () {
     $org = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org->id]);
-    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
 
     actingAs($owner)
@@ -73,7 +75,7 @@ test('owner can view own org', function () {
 test('owner cannot view other org', function () {
     $org1 = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org1->id]);
-    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Owner']);
+    $role = Role::firstOrCreate(['name' => 'Owner']);
     $owner->assignRole($role);
 
     $org2 = Org::factory()->create();

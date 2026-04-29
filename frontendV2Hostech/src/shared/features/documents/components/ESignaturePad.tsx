@@ -116,7 +116,7 @@ export default function ESignaturePad({ onSave, onClear }: ESignaturePadProps) {
         
         {isEmpty && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-20 group-hover:opacity-10 transition-opacity">
-            <span className="text-slate-400 font-bold uppercase tracking-tighter text-4xl italic">Sign Here</span>
+            <span className="text-slate-400 font-bold uppercase tracking-tighter text-4xl ">Sign Here</span>
             <span className="text-slate-400 text-xs font-medium">Use mouse or finger to draw signature</span>
           </div>
         )}

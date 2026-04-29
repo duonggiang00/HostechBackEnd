@@ -2,6 +2,7 @@ import { useMyContracts } from '@/PropertyScope/features/contracts/hooks/useCont
 import { Loader2, Home, AlertCircle } from 'lucide-react';
 import RoomDetailPage from '@/PropertyScope/features/rooms/pages/RoomDetailPage';
 import { Link } from 'react-router-dom';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function MyRoomPage() {
   const { data: contracts, isLoading, error } = useMyContracts();
@@ -56,12 +57,11 @@ export default function MyRoomPage() {
           >
             Kiểm tra hợp đồng chờ ký
           </Link>
-          <Link
+          <PageBackButton
             to="/app/dashboard"
-            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black text-slate-700 transition-all hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
-          >
-            Quay lại trang chủ
-          </Link>
+            label="Quay lại trang chủ"
+            className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-black hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+          />
         </div>
       </div>
     );

@@ -3,24 +3,24 @@
 namespace App\Services\Invoice;
 
 use App\Enums\InvoiceItemType;
-use App\Events\Billing\BillingBatchCompleted;
-use App\Events\Billing\BillingBatchStarted;
-use App\Jobs\Billing\GenerateInvoiceForContractJob;
 use App\Models\Contract\Contract;
+use App\Models\Invoice\Invoice;
+use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
+use App\Models\Service\Service;
 use App\Services\Service\ServiceService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class RecurringBillingService
 {
     public function __construct(
         protected InvoiceService $invoiceService,
         protected ServiceService $serviceService
-    ) {
-    }
+    ) {}
 
     /**
      * Generate monthly invoices for all active contracts in an organization.
@@ -34,6 +34,7 @@ class RecurringBillingService
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', $periodMonth->copy()->startOfMonth());
             })
+            ->with('room:id,name,code,property_id')
             ->get();
 
         $results = [
@@ -48,9 +49,13 @@ class RecurringBillingService
             try {
                 $this->generateInvoiceForContract($contract, $periodMonth);
                 $results['success']++;
-            } catch (\Exception $e) {
+            } catch (ValidationException $e) {
                 $results['failed']++;
-                $results['errors'][] = "Contract {$contract->id}: " . $e->getMessage();
+                $results['errors'][] = $this->formatBillingValidationErrors($e);
+            } catch (\Throwable $e) {
+                $results['failed']++;
+                $contract->loadMissing('room');
+                $results['errors'][] = $this->contractRoomLabel($contract).': '.$e->getMessage();
             }
         }
 
@@ -60,8 +65,8 @@ class RecurringBillingService
     /**
      * Generate monthly invoices for all active contracts in a specific property.
      *
-     * EDA mode: dispatches one GenerateInvoiceForContractJob per contract onto
-     * the 'billing' queue, enabling async parallel processing without timeout risk.
+     * Runs synchronously (same contract loop as organization-level billing) so the API
+     * can return per-contract success/failure and validation errors immediately.
      */
     public function generateMonthlyInvoicesForProperty(string $propertyId, Carbon $periodMonth): array
     {
@@ -72,36 +77,68 @@ class RecurringBillingService
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', $periodMonth->copy()->startOfMonth());
             })
+            ->with('room:id,name,code,property_id')
             ->get();
 
-        $total = $contracts->count();
+        $results = [
+            'total' => $contracts->count(),
+            'success' => 0,
+            'failed' => 0,
+            'errors' => [],
+        ];
 
-        // ── EDA: Announce batch start for monitoring ───────────────────────────
-        BillingBatchStarted::dispatch(
-            $propertyId,
-            $periodMonth,
-            $total,
-            auth()->id()
-        );
-
-        // ── Dispatch one Job per contract (async, on 'billing' queue) ──────────
         foreach ($contracts as $contract) {
-            GenerateInvoiceForContractJob::dispatch($contract, $periodMonth)
-                ->onQueue('billing');
+            /** @var Contract $contract */
+            try {
+                $this->generateInvoiceForContract($contract, $periodMonth);
+                $results['success']++;
+            } catch (ValidationException $e) {
+                $results['failed']++;
+                $results['errors'][] = $this->formatBillingValidationErrors($e);
+            } catch (\Throwable $e) {
+                $results['failed']++;
+                $contract->loadMissing('room');
+                $results['errors'][] = $this->contractRoomLabel($contract).': '.$e->getMessage();
+            }
         }
 
-        Log::info('[Billing] Batch dispatched to queue', [
+        Log::info('[Billing] Property batch billing completed', [
             'property_id' => $propertyId,
-            'period'      => $periodMonth->format('Y-m'),
-            'total'       => $total,
+            'period' => $periodMonth->format('Y-m'),
+            'total' => $results['total'],
+            'success' => $results['success'],
+            'failed' => $results['failed'],
         ]);
 
-        // Return immediately — individual results handled async by the Job.
-        return [
-            'total'   => $total,
-            'status'  => 'queued',
-            'message' => "{$total} hóa đơn đã được đưa vào hàng đợi xử lý.",
-        ];
+        return $results;
+    }
+
+    protected function formatBillingValidationErrors(ValidationException $e): string
+    {
+        $messages = collect($e->errors())->flatten()->filter()->values();
+
+        return $messages->isNotEmpty() ? $messages->implode(' ') : $e->getMessage();
+    }
+
+    /**
+     * Nhãn phòng cho thông báo chốt tháng (không dùng UUID hợp đồng trong UI).
+     */
+    protected function contractRoomLabel(Contract $contract): string
+    {
+        $contract->loadMissing('room');
+        $room = $contract->room;
+        if (! $room) {
+            return 'Một phòng (chưa gắn phòng trên hợp đồng)';
+        }
+
+        $name = trim((string) ($room->name ?? ''));
+        $code = trim((string) ($room->code ?? ''));
+
+        if ($name !== '' && $code !== '' && strcasecmp($name, $code) !== 0) {
+            return "Phòng {$name} ({$code})";
+        }
+
+        return $name !== '' ? "Phòng {$name}" : ($code !== '' ? "Phòng {$code}" : 'Một phòng');
     }
 
     /**
@@ -114,21 +151,33 @@ class RecurringBillingService
             $periodStart = $customPeriodStart ?? $periodMonth->copy()->startOfMonth();
             $periodEnd = $customPeriodEnd ?? $periodMonth->copy()->endOfMonth();
 
-            // ── Duplicate check: tránh tạo 2 hóa đơn cho cùng kỳ ──────────────
-            $existing = \App\Models\Invoice\Invoice::where('contract_id', $contract->id)
-                ->where('period_start', $periodStart->toDateString())
+            // ── Duplicate check: khớp unique DB (contract_id + period_start + period_end) ──
+            $existing = Invoice::where('contract_id', $contract->id)
+                ->whereDate('period_start', $periodStart->toDateString())
+                ->whereDate('period_end', $periodEnd->toDateString())
+                ->where('is_termination', false)          // hóa đơn thanh lý không được tính là trùng lặp
                 ->whereNotIn('status', ['CANCELLED'])
                 ->first();
 
             if ($existing) {
+                $contract->loadMissing('room');
+                $who = $this->contractRoomLabel($contract);
+                $statusLabel = match ($existing->status) {
+                    'ISSUED' => 'đã phát hành',
+                    'PARTIAL' => 'đã thanh toán một phần',
+                    'PAID' => 'đã thanh toán',
+                    'DRAFT' => 'đang ở bản nháp',
+                    'OVERDUE' => 'đã phát hành (quá hạn)',
+                    default => strtolower((string) $existing->status),
+                };
                 throw new \Exception(
-                    "Hóa đơn trùng lặp cho chu kỳ {$periodStart->format('d/m/Y')} - {$periodEnd->format('d/m/Y')} (ID: {$existing->id}, trạng thái: {$existing->status})."
+                    "{$who} — Kỳ {$periodStart->format('d/m/Y')}–{$periodEnd->format('d/m/Y')}: đã có hóa đơn ({$statusLabel}), không tạo thêm để tránh trùng."
                 );
             }
             // ───────────────────────────────────────────────────────────────────
 
             $items = [];
-
+            $usedReadingIds = [];
 
             // 1. Basic Rent via Token Logic
             if ($contract->rent_token_balance > 0) {
@@ -139,8 +188,8 @@ class RecurringBillingService
                 $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
 
                 $desc = $cycleMonths === 1
-                    ? 'Tiền phòng chu kỳ ' . $periodStart->format('d/m') . ' - ' . $periodEnd->format('d/m/Y')
-                    : 'Tiền phòng chu kỳ ' . $cycleMonths . ' tháng';
+                    ? 'Tiền phòng chu kỳ '.$periodStart->format('d/m').' - '.$periodEnd->format('d/m/Y')
+                    : 'Tiền phòng chu kỳ '.$cycleMonths.' tháng';
 
                 $items[] = [
                     'type' => InvoiceItemType::RENT->value,
@@ -176,24 +225,49 @@ class RecurringBillingService
                 ->where('is_active', true)
                 ->get();
 
+            $missingMeterTypes = [];
+
             foreach ($meters as $meter) {
                 /** @var Meter $meter */
                 $usageData = $this->calculateMeterUsage($meter, $periodStart, $periodEnd, $contract->room_id, $contract->org_id);
-                if ($usageData) {
-                    $items[] = [
-                        'type' => InvoiceItemType::SERVICE->value,
-                        'description' => "Tiền {$usageData['service_name']} ({$usageData['usage']} {$meter->type})",
-                        'quantity' => $usageData['usage'],
-                        'unit_price' => $usageData['average_price'],
-                        'amount' => $usageData['total_amount'],
-                        'meta' => [
-                            'meter_id' => $meter->id,
-                            'prev_reading' => $usageData['prev_reading'],
-                            'curr_reading' => $usageData['curr_reading'],
-                            'tiers' => $usageData['tiers_breakdown'],
-                        ],
-                    ];
+
+                if (! $usageData) {
+                    $missingMeterTypes[] = $meter->type;
+
+                    continue;
                 }
+
+                $usedReadingIds[] = $usageData['reading_id'];
+                $items[] = [
+                    'type' => InvoiceItemType::SERVICE->value,
+                    'description' => "Tiền {$usageData['service_name']} ({$usageData['usage']} {$meter->type})",
+                    'quantity' => $usageData['usage'],
+                    'unit_price' => $usageData['average_price'],
+                    'amount' => $usageData['total_amount'],
+                    'meta' => [
+                        'meter_id' => $meter->id,
+                        'prev_reading' => $usageData['prev_reading'],
+                        'curr_reading' => $usageData['curr_reading'],
+                        'tiers' => $usageData['tiers_breakdown'],
+                    ],
+                ];
+            }
+
+            // ── Strict Validation: Nếu có bất kỳ đồng hồ nào active mà chưa chốt số → Chặn phát hành ──
+            if (! empty($missingMeterTypes)) {
+                $meterNames = [
+                    'ELECTRIC' => 'Điện',
+                    'WATER' => 'Nước',
+                    'GAS' => 'Ga',
+                ];
+                $labels = array_map(fn ($type) => $meterNames[$type] ?? $type, $missingMeterTypes);
+
+                $contract->loadMissing('room');
+                $who = $this->contractRoomLabel($contract);
+                $joined = implode(' và ', $labels);
+                throw ValidationException::withMessages([
+                    'meters' => "{$who} — Kỳ {$periodStart->format('d/m/Y')}–{$periodEnd->format('d/m/Y')}: chưa có chỉ số {$joined} đã duyệt. Vui lòng chốt số đồng hồ rồi chạy lại chốt tháng.",
+                ]);
             }
 
             // 4. Create Invoice using the InvoiceService
@@ -211,7 +285,10 @@ class RecurringBillingService
                 itemsData: $items
             );
 
-            // 5. Automatic Credit Offset handling (Dùng Ví Dư nợ)
+            // 5. Readings are automatically locked by InvoiceService::create()
+            // when it detects 'meter_id' and 'curr_reading' in items metadata.
+
+            // 6. Automatic Credit Offset handling (Dùng Ví Dư nợ)
             $meta = $contract->meta ?? [];
             if (isset($meta['credit_balance']) && $meta['credit_balance'] > 0) {
                 // Xác định số tiền có thể cấn trừ tối đa
@@ -222,7 +299,7 @@ class RecurringBillingService
                     $appliedCredit = min($availableCredit, $currentTotal);
 
                     // Sinh phiếu giảm trừ
-                    \App\Models\Invoice\InvoiceAdjustment::create([
+                    InvoiceAdjustment::create([
                         'org_id' => $invoice->org_id,
                         'invoice_id' => $invoice->id,
                         'type' => 'CREDIT',
@@ -255,7 +332,7 @@ class RecurringBillingService
      * Calculate usage and cost for a meter during a period.
      * Dynamic Linking: Tra cứu dịch vụ qua room_services + type.
      */
-    protected function calculateMeterUsage(Meter $meter, Carbon $periodStart, Carbon $periodEnd, ?string $roomId = null, ?string $orgId = null)
+    public function calculateMeterUsage(Meter $meter, Carbon $periodStart, Carbon $periodEnd, ?string $roomId = null, ?string $orgId = null)
     {
         // Find the reading for this period
         $currentReading = MeterReading::where('meter_id', $meter->id)
@@ -264,7 +341,7 @@ class RecurringBillingService
             ->orderBy('period_end', 'desc')
             ->first();
 
-        if (!$currentReading) {
+        if (! $currentReading) {
             return null;
         }
 
@@ -310,7 +387,7 @@ class RecurringBillingService
                     $tierCost = $amountInTier * $tier->price;
                     $totalAmount += $tierCost;
                     $tiersBreakdown[] = [
-                        'tier' => "{$tier->tier_from}" . ($tier->tier_to ? " - {$tier->tier_to}" : '+'),
+                        'tier' => "{$tier->tier_from}".($tier->tier_to ? " - {$tier->tier_to}" : '+'),
                         'usage' => $amountInTier,
                         'price' => (float) $tier->price,
                         'amount' => $tierCost,
@@ -326,6 +403,7 @@ class RecurringBillingService
         }
 
         return [
+            'reading_id' => $currentReading->id,
             'usage' => $usage,
             'prev_reading' => $prevValue,
             'curr_reading' => $currValue,
@@ -343,7 +421,7 @@ class RecurringBillingService
 
         if ($targetRoomId) {
             // Phòng: Tìm dịch vụ trong room_services có type trùng với meter.type
-            return \App\Models\Service\Service::where('type', $meter->type)
+            return Service::where('type', $meter->type)
                 ->where('org_id', $targetOrgId)
                 ->whereHas('roomServices', function ($q) use ($targetRoomId) {
                     $q->where('room_id', $targetRoomId);

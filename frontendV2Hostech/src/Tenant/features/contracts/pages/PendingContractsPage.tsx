@@ -1,11 +1,39 @@
+import { useEffect } from 'react';
 import { format } from 'date-fns';
+
 import { AlertCircle, ArrowRight, Calendar, CheckCircle, FileSignature, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useMyContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useMyContracts, MY_CONTRACTS_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { echo } from '@/shared/utils/echo';
+import { toast } from 'react-hot-toast';
+
 
 export default function PendingContractsPage() {
   const { data: contracts, isLoading, isError } = useMyContracts();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (!user?.id || !echo) return;
+
+    const channel = echo.private(`App.Models.Org.User.${user.id}`);
+    
+    channel.listen('.contract.pending_payment', (data: any) => {
+      console.log('[Socket] Contract list update (pending_payment):', data);
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+      toast.success('Danh sách hợp đồng vừa có cập nhật mới!', {
+        duration: 4000,
+        icon: '🔔',
+      });
+    });
+
+    return () => {
+      channel.stopListening('.contract.pending_payment');
+    };
+  }, [user?.id, queryClient]);
 
   if (isLoading) {
     return (

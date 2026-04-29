@@ -2,7 +2,7 @@
 
 namespace App\Listeners\Finance;
 
-use App\Events\Finance\PaymentApproved;
+use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Services\Finance\ReceiptService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Automates PDF collection/generation when a payment is approved.
- * 
+ *
  * This runs in the background to ensure the main transaction is not blocked
  * by PDF rendering overhead.
  */
@@ -27,7 +27,7 @@ class GeneratePaymentReceipt implements ShouldQueue
         protected ReceiptService $receiptService
     ) {}
 
-    public function handle(PaymentApproved $event): void
+    public function handle(PaymentSuccessfullyVerified $event): void
     {
         $payment = $event->payment;
 

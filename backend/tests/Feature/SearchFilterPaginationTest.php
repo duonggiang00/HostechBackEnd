@@ -7,6 +7,7 @@ use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +18,7 @@ class SearchFilterPaginationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
     }
 
     public function test_org_pagination_and_search()

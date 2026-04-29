@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -6,29 +6,70 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useContractActions } from '../hooks/useContracts';
 import { Loader2, UserPlus, FileEdit, Phone, Mail, User, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { IdentityCardUploadPair } from './IdentityCardUploadPair';
+import { BirthDateDayMonthYear } from './BirthDateDayMonthYear';
+import { isValidUuid, requiresIdentityForMember } from '../utils/contractMemberAge';
 
-const addMemberSchema = z.object({
-  full_name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
-  phone: z.string().min(10, 'Số điện thoại không hợp lệ').optional().or(z.literal('')),
-  email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
-  identity_number: z.string().optional(),
-  date_of_birth: z.string().optional(),
-  license_plate: z.string().optional(),
-  role: z.enum(['ROOMMATE', 'STAFF', 'TENANT']).default('ROOMMATE'),
-  status: z.enum(['PENDING', 'APPROVED']).default('APPROVED'),
-});
+function buildAddMemberSchema(contractStartIso: string) {
+  return z
+    .object({
+      full_name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
+      phone: z.string().min(10, 'Số điện thoại không hợp lệ').optional().or(z.literal('')),
+      email: z.string().email('Email không hợp lệ').optional().or(z.literal('')),
+      identity_number: z.string().optional(),
+      date_of_birth: z.string().optional(),
+      license_plate: z.string().optional(),
+      identity_front_media_id: z.string().optional().default(''),
+      identity_back_media_id: z.string().optional().default(''),
+      role: z.enum(['ROOMMATE', 'TENANT', 'GUARANTOR']),
+      status: z.enum(['PENDING', 'APPROVED']),
+    })
+    .superRefine((data, ctx) => {
+      const req = requiresIdentityForMember({
+        isPrimary: false,
+        dobIso: data.date_of_birth,
+        contractStartIso: contractStartIso,
+      });
+      const f = (data.identity_front_media_id ?? '').trim();
+      const b = (data.identity_back_media_id ?? '').trim();
+      const fOk = isValidUuid(f);
+      const bOk = isValidUuid(b);
+      if (fOk !== bOk) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['identity_front_media_id'],
+          message: 'Khi tải CCCD, vui lòng gửi cả mặt trước và mặt sau.',
+        });
+      } else if (req && (!fOk || !bOk)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['identity_front_media_id'],
+          message: 'Thành viên từ đủ 18 tuổi (hoặc chưa khai báo ngày sinh) cần tải đủ ảnh CCCD.',
+        });
+      }
+    });
+}
 
-type AddMemberForm = z.infer<typeof addMemberSchema>;
+type AddMemberForm = z.input<ReturnType<typeof buildAddMemberSchema>>;
 
 interface AddMemberModalProps {
   isOpen: boolean;
   onClose: () => void;
   contractId: string;
+  /** Ngày bắt đầu hợp đồng yyyy-MM-dd — dùng tính tuổi / bắt buộc CCCD */
+  contractStartDate?: string | null;
 }
 
-export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalProps) {
+export function AddMemberModal({ isOpen, onClose, contractId, contractStartDate }: AddMemberModalProps) {
   const { addContractMember } = useContractActions();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const startIso = useMemo(
+    () => (contractStartDate && contractStartDate.length >= 10 ? contractStartDate.slice(0, 10) : new Date().toISOString().slice(0, 10)),
+    [contractStartDate],
+  );
+
+  const schema = useMemo(() => buildAddMemberSchema(startIso), [startIso]);
 
   const {
     register,
@@ -37,8 +78,8 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
     setValue,
     watch,
     formState: { errors },
-  } = useForm({
-    resolver: zodResolver(addMemberSchema),
+  } = useForm<AddMemberForm>({
+    resolver: zodResolver(schema),
     defaultValues: {
       role: 'ROOMMATE',
       status: 'APPROVED',
@@ -48,7 +89,16 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
       identity_number: '',
       date_of_birth: '',
       license_plate: '',
+      identity_front_media_id: '',
+      identity_back_media_id: '',
     },
+  });
+
+  const v = watch();
+  const identityRequired = requiresIdentityForMember({
+    isPrimary: false,
+    dobIso: v.date_of_birth,
+    contractStartIso: startIso,
   });
 
   const handleClose = () => {
@@ -64,17 +114,26 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
 
     setIsSubmitting(true);
     try {
+      const f = (data.identity_front_media_id ?? '').trim();
+      const b = (data.identity_back_media_id ?? '').trim();
+      const row: Record<string, unknown> = {
+        full_name: data.full_name,
+        role: data.role,
+        status: data.status,
+        phone: data.phone || undefined,
+        email: data.email || undefined,
+        identity_number: data.identity_number || undefined,
+        date_of_birth: data.date_of_birth || undefined,
+        license_plate: data.license_plate || undefined,
+      };
+      if (isValidUuid(f) && isValidUuid(b)) {
+        row.identity_front_media_id = f;
+        row.identity_back_media_id = b;
+      }
+
       await addContractMember.mutateAsync({
         id: contractId,
-        data: {
-          ...data,
-          // Convert empty strings to undefined
-          phone: data.phone || undefined,
-          email: data.email || undefined,
-          identity_number: data.identity_number || undefined,
-          date_of_birth: data.date_of_birth || undefined,
-          license_plate: data.license_plate || undefined,
-        },
+        data: row,
       });
       toast.success('Đã thêm người ở cùng thành công!');
       handleClose();
@@ -102,14 +161,13 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="relative w-full max-w-xl bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col"
           >
-            {/* Header */}
             <div className="bg-indigo-600 p-6 text-white relative overflow-hidden shrink-0">
               <div className="absolute top-0 right-0 p-8 opacity-10">
                 <UserPlus className="w-32 h-32" />
               </div>
               <div className="relative z-10 flex items-start justify-between">
                 <div>
-                  <h2 className="text-2xl font-black italic tracking-tight text-white mb-1">Thêm Cư Dân Mới</h2>
+                  <h2 className="text-2xl font-black tracking-tight text-white mb-1">Thêm Cư Dân Mới</h2>
                   <p className="text-indigo-100/80 font-medium text-sm">
                     Tạo mới và gán người này vào hợp đồng hiện tại.
                   </p>
@@ -123,7 +181,6 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
               </div>
             </div>
 
-            {/* Body */}
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6 overflow-y-auto max-h-[70vh]">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -192,11 +249,14 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
                       Ngày sinh
                     </label>
-                    <input
-                      {...register('date_of_birth')}
-                      type="date"
-                      className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
+                    <BirthDateDayMonthYear
+                      idPrefix="add_member_dob"
+                      variant="rounded"
+                      value={watch('date_of_birth') || ''}
+                      onChange={(iso) => setValue('date_of_birth', iso, { shouldValidate: true })}
+                      disabled={isSubmitting}
                     />
+                    {errors.date_of_birth && <p className="text-sm text-red-500 mt-1">{errors.date_of_birth.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -210,6 +270,31 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                   </div>
                 </div>
 
+                {identityRequired ? (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      Ảnh CCCD (bắt buộc)
+                    </label>
+                    <IdentityCardUploadPair
+                      identityRequired
+                      frontMediaUuid={watch('identity_front_media_id') || null}
+                      backMediaUuid={watch('identity_back_media_id') || null}
+                      onFrontMediaUuid={(id) => setValue('identity_front_media_id', id ?? '', { shouldValidate: true })}
+                      onBackMediaUuid={(id) => setValue('identity_back_media_id', id ?? '', { shouldValidate: true })}
+                      disabled={isSubmitting}
+                    />
+                    {(errors.identity_front_media_id || errors.identity_back_media_id) && (
+                      <p className="text-sm text-red-500">
+                        {errors.identity_front_media_id?.message || errors.identity_back_media_id?.message}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    Thành viên dưới 18 tuổi tại ngày bắt đầu hợp đồng: không cần tải ảnh CCCD.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="block text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -217,11 +302,12 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                     </label>
                     <select
                       value={watch('role')}
-                      onChange={(e) => setValue('role', e.target.value as any)}
+                      onChange={(e) => setValue('role', e.target.value as AddMemberForm['role'])}
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
                     >
                       <option value="ROOMMATE">Người ở cùng</option>
                       <option value="TENANT">Chủ đồng thuê</option>
+                      <option value="GUARANTOR">Người bảo lãnh</option>
                     </select>
                   </div>
                   <div className="space-y-2">
@@ -230,7 +316,7 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                     </label>
                     <select
                       value={watch('status')}
-                      onChange={(e) => setValue('status', e.target.value as any)}
+                      onChange={(e) => setValue('status', e.target.value as AddMemberForm['status'])}
                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
                     >
                       <option value="APPROVED">Kích hoạt ngay</option>
@@ -240,7 +326,6 @@ export function AddMemberModal({ isOpen, onClose, contractId }: AddMemberModalPr
                 </div>
               </div>
 
-              {/* Actions */}
               <div className="flex justify-end gap-3 pt-6 shrink-0 mt-4 border-t border-slate-100 dark:border-slate-700">
                 <button
                   type="button"

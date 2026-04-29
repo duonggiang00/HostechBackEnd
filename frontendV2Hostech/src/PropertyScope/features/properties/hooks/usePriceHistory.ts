@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/shared/api/client';
-import type { PricePeriod } from '../types';
+import type { PricePeriod } from '@/PropertyScope/features/rooms/types';
 
 export function usePriceHistory(roomId: string) {
   const queryClient = useQueryClient();

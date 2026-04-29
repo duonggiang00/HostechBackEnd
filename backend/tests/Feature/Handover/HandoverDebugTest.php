@@ -8,6 +8,7 @@ use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class HandoverDebugTest extends TestCase
             Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
 
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
     }
 
     public function test_debug_store_response()

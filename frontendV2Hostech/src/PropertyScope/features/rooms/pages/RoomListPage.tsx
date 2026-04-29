@@ -13,8 +13,7 @@ import {
   LayoutGrid,
   History,
   ArrowDownUp,
-  Zap,
-  X
+  Zap
 } from 'lucide-react';
 import { useRooms, useRoomActions, useTrashRooms } from '../hooks/useRooms';
 import { ActionButton } from '@/shared/components/ui/ActionButton';

@@ -27,7 +27,7 @@ class NotifyTenantInvoiceIssued implements ShouldQueue
      */
     public function handle(InvoiceGenerated $event): void
     {
-        $invoice  = $event->invoice;
+        $invoice = $event->invoice;
         $contract = $invoice->contract;
 
         if (! $contract) {
@@ -43,18 +43,19 @@ class NotifyTenantInvoiceIssued implements ShouldQueue
 
         if ($tenantUsers->isEmpty()) {
             Log::info('[Notification] No tenant users found for invoice', [
-                'invoice_id'  => $invoice->id,
+                'invoice_id' => $invoice->id,
                 'contract_id' => $contract->id,
             ]);
+
             return;
         }
 
         foreach ($tenantUsers as $user) {
             Log::info('[Notification] [TODO] Send invoice notification to tenant', [
                 'invoice_id' => $invoice->id,
-                'user_id'    => $user->id,
-                'email'      => $user->email,
-                'amount'     => $invoice->total_amount,
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'amount' => $invoice->total_amount,
             ]);
 
             // TODO: Integrate with mail/push/Zalo notification driver

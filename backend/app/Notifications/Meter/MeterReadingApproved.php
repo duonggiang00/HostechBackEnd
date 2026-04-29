@@ -62,5 +62,4 @@ class MeterReadingApproved extends Notification implements ShouldQueue
     {
         return new BroadcastMessage($this->toArray($notifiable));
     }
-
 }

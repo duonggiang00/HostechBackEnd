@@ -5,8 +5,6 @@ namespace App\Observers;
 use App\Models\Meter\Meter;
 use App\Models\Property\Room;
 use App\Models\Property\RoomFloorPlanNode;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class RoomObserver
 {

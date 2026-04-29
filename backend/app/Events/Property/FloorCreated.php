@@ -14,7 +14,5 @@ class FloorCreated
     /**
      * Create a new event instance.
      */
-    public function __construct(public Floor $floor)
-    {
-    }
+    public function __construct(public Floor $floor) {}
 }

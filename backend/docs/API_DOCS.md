@@ -48,3 +48,11 @@ Mọi thay đổi hoặc bổ sung API phải tuân thủ nghiêm ngặt:
 
 > [!IMPORTANT]
 > Agent KHÔNG ĐƯỢC tự ý tạo ra các endpoint ảo. Mọi endpoint phải được định nghĩa trong route và có Resource cụ thể.
+
+## 5. OpenAPI (Dedoc Scramble) & FE types
+
+- **Interactive docs (local):** mở `/docs/api` trên backend (ví dụ `http://localhost:8000/docs/api`) sau khi chạy `php artisan serve`. Truy cập thường yêu cầu đăng nhập `Admin` (xem `Gate::define('viewApiDocs', ...)` trong `AppServiceProvider`).
+- **Export JSON (CI hoặc máy dev):** từ thư mục `backend/`:
+  - `php artisan scramble:export` — ghi file OpenAPI mặc định của Scramble (thường dùng cho snapshot hoặc pipeline).
+  - `php artisan scramble:export --path=api.json` — ghi rõ đường dẫn (repo đang có `backend/api.json` phục vụ tooling).
+- **TypeScript (SPA):** trong `frontendV2Hostech/`, script `npm run type-sync` chạy `openapi-typescript` lên `../backend/api.json`. Script tùy chọn `npm run type-sync:partial` sinh `src/shared/types/api.generated.partial.ts` để bắt đầu map dần `authApi` / `financeApi` mà không bắt buộc migrate toàn bộ schema.

@@ -23,9 +23,7 @@ class ReceiptService
 
     /**
      * Generate a PDF receipt for a given payment.
-     * 
-     * @param Payment $payment
-     * @return Receipt
+     *
      * @throws \Exception
      */
     public function generateForPayment(Payment $payment): Receipt
@@ -34,7 +32,7 @@ class ReceiptService
         $data = [
             'payment' => $payment->load(['property', 'allocations.invoice', 'payer', 'receivedBy']),
             'generated_at' => now(),
-            'reference' => 'RCP-' . strtoupper(Str::random(8)),
+            'reference' => 'RCP-'.strtoupper(Str::random(8)),
         ];
 
         // 2. Render PDF using dompdf
@@ -45,14 +43,17 @@ class ReceiptService
         $content = $pdf->output();
 
         // 3. Save file to storage
-        $filename = 'receipt_' . $payment->id . '_' . time() . '.pdf';
-        $path = $this->directory . '/' . $filename;
+        $filename = 'receipt_'.$payment->id.'_'.time().'.pdf';
+        $path = $this->directory.'/'.$filename;
 
         Storage::disk($this->disk)->put($path, $content);
 
-        // 4. Create Receipt record (Idempotent check)
+        // 4. Official PDF receipt (do not overwrite tenant PROOF upload row)
         $receipt = Receipt::updateOrCreate(
-            ['payment_id' => $payment->id],
+            [
+                'payment_id' => $payment->id,
+                'kind' => Receipt::KIND_OFFICIAL,
+            ],
             [
                 'org_id' => $payment->org_id,
                 'path' => $path,

@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
+import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { BuildingOverview } from '../components/BuildingOverview';
 import { useBuildingOverview, useSyncBuildingOverview } from '../hooks/useBuildingOverview';
 import { Building2, Pencil, Save, X, RefreshCw } from 'lucide-react';
@@ -14,9 +16,11 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [isEditMode, setIsEditMode] = useState(false);
+  const { user } = useAuth();
 
   // ─── Data fetching ────────────────────────────────────────────────────
   const { data: overview, isLoading, error, refetch } = useBuildingOverview(propertyId);
+  const { data: propertyDetail } = usePropertyDetail(propertyId);
   const syncMutation = useSyncBuildingOverview(propertyId);
 
   // ─── Local edit state ─────────────────────────────────────────────────
@@ -122,7 +126,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
             </div>
 
             <div className="flex items-center gap-3">
-              {!isEditMode ? (
+              {user?.role !== 'Staff' && !isEditMode ? (
                 <button
                   onClick={handleEnterEdit}
                   disabled={isLoading}
@@ -131,7 +135,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
                   <Pencil className="w-4 h-4" />
                   Chỉnh sửa mặt bằng
                 </button>
-              ) : (
+              ) : isEditMode ? (
                 <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
                   <button
                     onClick={handleCancel}
@@ -153,7 +157,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
                     {syncMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -175,6 +179,8 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
             isEditMode={isEditMode}
             isLoading={isLoading}
             onFloorsChange={setLocalFloors}
+            propertyArea={propertyDetail?.area ?? undefined}
+            propertySharedArea={propertyDetail?.shared_area ?? undefined}
             onRoomSelect={(room) => {
               if (!isEditMode && room) {
                 navigate(`/properties/${propertyId}/rooms/${room.id}`, { state: { from: 'building-view' } });

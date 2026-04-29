@@ -56,7 +56,7 @@ class NotificationController extends Controller
     {
         $result = $this->notificationService->markAsRead($id, $request->user());
 
-        if (!$result) {
+        if (! $result) {
             return response()->json([
                 'success' => false,
                 'message' => 'Không tìm thấy thông báo.',

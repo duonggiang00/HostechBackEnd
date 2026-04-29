@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\System\UploadRequest;
 use App\Services\System\MediaService;
 use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Http\JsonResponse;
 
 /**
  * Quản lý File (Media)
@@ -18,7 +19,7 @@ class MediaController extends Controller
     /**
      * Upload file (Temporary)
      */
-    public function store(UploadRequest $request): \Illuminate\Http\JsonResponse
+    public function store(UploadRequest $request): JsonResponse
     {
         $result = $this->service->uploadTemporary(
             $request->file('file'),

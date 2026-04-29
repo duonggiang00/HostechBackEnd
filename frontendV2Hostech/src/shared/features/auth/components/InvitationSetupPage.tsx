@@ -6,7 +6,7 @@ import { organizationsApi } from '@/shared/features/management/api/organizations
 import {
   Loader2, ShieldCheck, Mail, Phone, User, Lock, Building2,
   ArrowRight, CheckCircle2, XCircle, Eye, EyeOff, LogIn,
-  CreditCard, Calendar, MapPin, Car, Info
+  CreditCard, Calendar, MapPin, Car, Info, FileCheck
 } from 'lucide-react';
 
 export default function InvitationSetupPage() {
@@ -48,6 +48,21 @@ export default function InvitationSetupPage() {
     organizationsApi.validateToken(token)
       .then((data) => {
         setInvitationData(data);
+
+        // Pre-fill form with snapshot from contract_members (Path B invite)
+        const p = data.contract_member_prefill;
+        if (p) {
+          setFormData(prev => ({
+            ...prev,
+            full_name: p.full_name || prev.full_name,
+            phone: p.phone || prev.phone,
+            identity_number: p.identity_number || prev.identity_number,
+            date_of_birth: p.date_of_birth || prev.date_of_birth,
+            license_plate: p.license_plate || prev.license_plate,
+            address: p.address || prev.address,
+          }));
+        }
+
         setIsLoading(false);
       })
       .catch((err) => {
@@ -229,6 +244,22 @@ export default function InvitationSetupPage() {
               </div>
             </div>
           </div>
+
+          {/* Prefill notice — shown when data was pre-loaded from the contract */}
+          {invitationData?.contract_member_prefill && (
+            <div className="flex items-start gap-3.5 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-6">
+              <FileCheck className="h-5 w-5 text-indigo-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-indigo-300 text-sm font-semibold">Thông tin đã được điền từ hợp đồng</p>
+                <p className="text-indigo-400/80 text-xs leading-relaxed">
+                  Các thông tin cá nhân dưới đây được lấy từ hồ sơ hợp đồng của bạn. Vui lòng kiểm tra và chỉnh sửa nếu cần trước khi hoàn tất.
+                  {invitationData.contract_member_prefill.has_identity_documents && (
+                    <span className="block mt-1">Ảnh CCCD hai mặt đã có trên hồ sơ hợp đồng.</span>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Error alert */}
           {error && (

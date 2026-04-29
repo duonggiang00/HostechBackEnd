@@ -27,8 +27,20 @@ export default function PropertyDetailPage() {
     if (window.confirm(`Xác nhận tạo hóa đơn gốc tự động cho tháng ${currentMonth}?`)) {
       setIsGenerating(true);
       try {
-        await generateMonthlyMutation.mutateAsync({ propertyId, month: currentMonth });
-        toast.success(`Đã tạo hóa đơn định kỳ cho tháng ${currentMonth} thành công!`);
+        const res = await generateMonthlyMutation.mutateAsync({ propertyId, month: currentMonth });
+        const failed = Number((res as any)?.failed ?? 0);
+        const ok = Number((res as any)?.count ?? (res as any)?.success ?? 0);
+        if (failed > 0) {
+          toast(
+            `Chốt tháng ${currentMonth}: đã tạo ${ok} hóa đơn. ${failed} phòng chưa tạo mới (thường do đã có hóa đơn cùng kỳ hoặc chưa chốt số điện/nước).`,
+            { duration: 7000, style: { maxWidth: 440 } },
+          );
+        } else {
+          toast.success(
+            (res as any)?.message ||
+              `Đã tạo hóa đơn định kỳ cho tháng ${currentMonth} thành công!`,
+          );
+        }
         refetchDashboard();
       } catch (error: any) {
         toast.error(error.message || 'Lỗi khi tạo hóa đơn');

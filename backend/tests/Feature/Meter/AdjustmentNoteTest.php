@@ -7,6 +7,9 @@ use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
+use App\Models\System\TemporaryUpload;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -38,8 +41,8 @@ class AdjustmentNoteTest extends TestCase
         $this->user = User::factory()->create();
         $this->org = Org::factory()->create();
 
-        $this->property = \App\Models\Property\Property::factory()->create(['org_id' => $this->org->id]);
-        $this->room = \App\Models\Property\Room::factory()->create([
+        $this->property = Property::factory()->create(['org_id' => $this->org->id]);
+        $this->room = Room::factory()->create([
             'org_id' => $this->org->id,
             'property_id' => $this->property->id,
         ]);
@@ -91,7 +94,7 @@ class AdjustmentNoteTest extends TestCase
             Storage::fake('local');
             $file = UploadedFile::fake()->image('proof.jpg');
 
-            $tempUpload = \App\Models\System\TemporaryUpload::factory()->create();
+            $tempUpload = TemporaryUpload::factory()->create();
 
             $response = $this->actingAs($this->user)->postJson(
                 "/api/meter-readings/{$this->lockedReading->id}/adjustments",
@@ -119,7 +122,7 @@ class AdjustmentNoteTest extends TestCase
         Storage::fake('local');
         $file = UploadedFile::fake()->image('proof.jpg');
 
-        $tempUpload = \App\Models\System\TemporaryUpload::factory()->create();
+        $tempUpload = TemporaryUpload::factory()->create();
 
         $response = $this->actingAs($this->user)->postJson(
             "/api/meter-readings/{$this->unlockedReading->id}/adjustments",

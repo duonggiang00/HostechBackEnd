@@ -5,8 +5,8 @@ namespace App\Listeners\Property;
 use App\Events\Property\RoomCreated;
 use App\Events\Property\RoomUpdated;
 use App\Models\Meter\Meter;
-use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomFloorPlanNode;
+use App\Models\Property\RoomPrice;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
@@ -33,7 +33,7 @@ class InitializeRoomServices implements ShouldQueue
             }
         } catch (\Exception $e) {
             // In EDA, we don't want initialization failures to crash the event pipe
-            Log::error("InitializeRoomServices failed for Room {$room->id}: " . $e->getMessage());
+            Log::error("InitializeRoomServices failed for Room {$room->id}: ".$e->getMessage());
         }
     }
 
@@ -96,7 +96,7 @@ class InitializeRoomServices implements ShouldQueue
         if (isset($changes['status'])) {
             $fromStatus = $room->getOriginal('status');
             $toStatus = $changes['status'];
-            
+
             if ($fromStatus !== $toStatus) {
                 $room->statusHistories()->create([
                     'org_id' => $room->org_id,
@@ -106,7 +106,7 @@ class InitializeRoomServices implements ShouldQueue
                     'changed_by_user_id' => $performerId,
                 ]);
             }
-            
+
             // If moved from draft to available, ensure resources exist
             if ($toStatus === 'available') {
                 $this->ensureDefaultMeters($room);
@@ -116,7 +116,7 @@ class InitializeRoomServices implements ShouldQueue
 
         // 2. Price Change History
         if (isset($changes['base_price']) && $changes['base_price'] > 0) {
-             RoomPrice::create([
+            RoomPrice::create([
                 'org_id' => $room->org_id,
                 'room_id' => $room->id,
                 'effective_from' => now()->toDateString(),
@@ -134,8 +134,8 @@ class InitializeRoomServices implements ShouldQueue
         $types = ['ELECTRIC', 'WATER'];
         foreach ($types as $type) {
             $suffix = ($type === 'ELECTRIC') ? 'E' : 'W';
-            $propertySuffix = $room->property_id ? '-' . substr($room->property_id, 0, 4) : '';
-            
+            $propertySuffix = $room->property_id ? '-'.substr($room->property_id, 0, 4) : '';
+
             Meter::updateOrCreate(
                 ['room_id' => $room->id, 'type' => $type],
                 [
@@ -154,7 +154,7 @@ class InitializeRoomServices implements ShouldQueue
      */
     protected function ensureFloorPlanNode($room): void
     {
-        if (!$room->floor_id) {
+        if (! $room->floor_id) {
             return;
         }
 
@@ -168,13 +168,13 @@ class InitializeRoomServices implements ShouldQueue
 
         try {
             RoomFloorPlanNode::create([
-                'org_id'   => $room->org_id,
+                'org_id' => $room->org_id,
                 'floor_id' => $room->floor_id,
-                'room_id'  => $room->id,
-                'x'        => $nextColumn,
-                'y'        => 0,
-                'width'    => 1,
-                'height'   => 1,
+                'room_id' => $room->id,
+                'x' => $nextColumn,
+                'y' => 0,
+                'width' => 1,
+                'height' => 1,
             ]);
         } catch (\Exception $e) {
             // Already exists or unique collision, safe to ignore in auto-init

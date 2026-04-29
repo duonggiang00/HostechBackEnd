@@ -1,54 +1,37 @@
-import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
-import { Plus, Search, Filter, FileText, ClipboardList, TrendingUp, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, FileText, ClipboardList } from 'lucide-react';
 import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
 import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
 import { GenerateMonthlyModal } from '../components/GenerateMonthlyModal';
-import { InvoiceDetailPanel } from '../components/InvoiceDetailPanel';
 import { BillingPeriodChecklist } from '../components/BillingPeriodChecklist';
 import { BulkApproveReadingsModal } from '../../metering/components/BulkApproveReadingsModal';
 import type { InvoiceStatus } from '../types';
-import { AnimatePresence } from 'framer-motion';
 
 
-export function PropertyInvoicesPage() {
+export default function PropertyInvoicesPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('');
   const [page, setPage] = useState(1);
   
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [terminationOnly, setTerminationOnly] = useState(false);
 
   const { data, isLoading } = usePropertyInvoices(propertyId!, {
     search: search || undefined,
     status: statusFilter || undefined,
+    is_termination: terminationOnly || undefined,
     page,
     per_page: 15,
   });
 
-  const { data: allInvoicesData, isLoading: statsLoading } = usePropertyInvoices(propertyId!, {
-    per_page: 100,   // max backend cho phép là 100
-
-    page: 1,
-  });
-
-  const summary = useMemo(() => {
-    const all = allInvoicesData?.data ?? [];
-    const totalRevenue = all.reduce((s, inv) => s + (inv.total_amount ?? 0), 0);
-    const totalPaid    = all.reduce((s, inv) => s + (inv.paid_amount  ?? 0), 0);
-    const totalDebt    = all.reduce((s, inv) => s + (inv.debt         ?? 0), 0);
-    return { totalRevenue, totalPaid, totalDebt, count: all.length };
-  }, [allInvoicesData]);
-
-  const fmtVND = (n: number) =>
-    n.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' });
-
   const invoices = data?.data ?? [];
   const meta = data?.meta;
 
-  const handleRowClick = (id: string) => setSelectedInvoiceId(id);
+  const handleRowClick = (id: string) => navigate(`/properties/${propertyId}/billing/invoices/${id}`);
 
   return (
     <div className="flex-1 bg-slate-50 dark:bg-slate-900 w-full flex flex-col min-h-0 relative">
@@ -65,8 +48,15 @@ export function PropertyInvoicesPage() {
           
           <div className="flex items-center gap-3">
             <button
+              onClick={() => navigate(`/properties/${propertyId}/billing/quick-invoice`)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-400 rounded-[8px] font-black text-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all shadow-sm group"
+            >
+              <FileText className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+              Hóa đơn lẻ
+            </button>
+            <button
               onClick={() => setIsBulkApproveOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
             >
               <ClipboardList className="w-4 h-4 text-[#1E3A8A]" />
               Duyệt chốt số
@@ -87,49 +77,6 @@ export function PropertyInvoicesPage() {
           onOpenBulkApprove={() => setIsBulkApproveOpen(true)}
           onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
         />
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 dark:bg-blue-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-blue-100 transition-all duration-500"></div>
-            <div className="flex items-start justify-between relative z-10">
-              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tổng doanh thu kỳ này</p>
-              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : <TrendingUp className="w-4 h-4 text-[#1E3A8A]" />}
-            </div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-2 relative z-10">
-              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalRevenue)}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 relative z-10">{summary.count} hóa đơn</p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-emerald-100 transition-all duration-500"></div>
-            <div className="flex items-start justify-between relative z-10">
-              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Đã thu</p>
-              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
-            </div>
-            <h3 className="text-2xl font-black text-[#10B981] mt-2 relative z-10">
-              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalPaid)}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 relative z-10">
-              {statsLoading ? '' : `${summary.totalRevenue > 0 ? Math.round(summary.totalPaid / summary.totalRevenue * 100) : 0}% tổng doanh thu`}
-            </p>
-          </div>
-
-          <div className="p-6 bg-white dark:bg-slate-800 rounded-[12px] border border-slate-100 dark:border-slate-700 shadow-sm relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/10 rounded-full translate-x-12 -translate-y-12 blur-3xl group-hover:bg-rose-100 transition-all duration-500"></div>
-            <div className="flex items-start justify-between relative z-10">
-              <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Dư nợ / Chưa thanh toán</p>
-              {statsLoading ? <Loader2 className="w-4 h-4 animate-spin text-slate-300" /> : null}
-            </div>
-            <h3 className="text-2xl font-black text-[#EF4444] mt-2 relative z-10">
-              {statsLoading ? <span className="text-slate-300 dark:text-slate-600">---</span> : fmtVND(summary.totalDebt)}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 relative z-10">
-              {statsLoading ? '' : summary.totalDebt > 0 ? `${allInvoicesData?.data.filter(i => i.debt > 0).length} hóa đơn còn nợ` : 'Không có dư nợ'}
-            </p>
-          </div>
-        </div>
 
         {/* Toolbar */}
         <div className="flex flex-col sm:flex-row gap-3">
@@ -154,9 +101,21 @@ export function PropertyInvoicesPage() {
                <option value="DRAFT">Nháp</option>
                <option value="ISSUED">Đã phát hành</option>
                <option value="PAID">Đã thanh toán</option>
+               <option value="PARTIAL">Thanh toán 1 phần</option>
                <option value="OVERDUE">Quá hạn</option>
+               <option value="CANCELLED">Đã hủy</option>
             </select>
           </div>
+          <button
+            onClick={() => setTerminationOnly(v => !v)}
+            className={`flex items-center gap-2 px-4 py-3 rounded-[8px] border text-sm font-black transition-all ${
+              terminationOnly
+                ? 'bg-purple-600 border-purple-600 text-white'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-purple-400'
+            }`}
+          >
+            Thanh lý
+          </button>
         </div>
 
         {/* Table */}
@@ -223,6 +182,11 @@ export function PropertyInvoicesPage() {
                          </td>
                          <td className="py-4 px-6">
                             <InvoiceStatusBadge status={inv.status} />
+                            {inv.is_termination && (
+                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400">
+                                Thanh lý
+                              </span>
+                            )}
                          </td>
                       </tr>
                    ))}
@@ -273,14 +237,6 @@ export function PropertyInvoicesPage() {
         />
       )}
 
-      <AnimatePresence>
-        {selectedInvoiceId && (
-          <InvoiceDetailPanel 
-            invoiceId={selectedInvoiceId} 
-            onClose={() => setSelectedInvoiceId(null)} 
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

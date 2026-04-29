@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { roomTemplatesApi } from '../../api/roomTemplatesApi';
 import { RoomTemplateCard } from './RoomTemplateCard';
 import { RoomTemplateDialog } from './RoomTemplateDialog';
-import type { RoomTemplate } from '../../types';
+import type { GlobalRoomTemplate } from '../../types';
 import { toast } from 'react-hot-toast';
 
 interface RoomTemplateListProps {
@@ -15,7 +15,7 @@ interface RoomTemplateListProps {
 export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<RoomTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<GlobalRoomTemplate | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: templates = [], isLoading } = useQuery({
@@ -58,7 +58,7 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
     }
   });
 
-  const handleOpenDialog = (template?: RoomTemplate) => {
+  const handleOpenDialog = (template?: GlobalRoomTemplate) => {
     setEditingTemplate(template || null);
     setIsDialogOpen(true);
   };
@@ -91,7 +91,7 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
           </div>
           <div>
             <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Danh sách mẫu phòng</h3>
-            <p className="text-sm font-bold text-slate-400 mt-1 italic">Thiết lập cấu hình mẫu để tạo phòng nhanh chóng</p>
+            <p className="text-sm font-bold text-slate-400 mt-1 ">Thiết lập cấu hình mẫu để tạo phòng nhanh chóng</p>
           </div>
         </div>
 

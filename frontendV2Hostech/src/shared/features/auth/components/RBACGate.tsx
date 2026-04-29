@@ -1,8 +1,9 @@
 import { type ReactNode } from 'react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import type { PermissionLiteral } from '@/shared/features/auth/permissions';
 
 interface RBACGateProps {
-  permission: string;
+  permission: PermissionLiteral | string;
   fallback?: ReactNode;
   showDisabled?: boolean;
   disabledTooltip?: string;
@@ -23,7 +24,13 @@ export default function RBACGate({
   disabledTooltip = "You don't have permission for this action",
   children 
 }: RBACGateProps) {
-  const { hasPermission } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  if (user && user.profile_loaded !== true) {
+    return <>{fallback}</>;
+  }
+
   const allowed = hasPermission(permission);
 
   if (allowed) return <>{children}</>;

@@ -39,6 +39,13 @@ const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
     dot: 'bg-orange-400 dark:bg-orange-500',
     border: 'border-orange-200 dark:border-orange-500/20',
   },
+  PENDING_TERMINATION: {
+    label: 'Chờ thanh lý',
+    bg: 'bg-amber-50 dark:bg-amber-500/10',
+    text: 'text-amber-800 dark:text-amber-300',
+    dot: 'bg-amber-500 dark:bg-amber-400',
+    border: 'border-amber-200 dark:border-amber-500/20',
+  },
   ACTIVE: {
     label: 'Hiệu lực',
     bg: 'bg-emerald-50 dark:bg-emerald-500/10',
@@ -52,6 +59,13 @@ const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
     text: 'text-red-600 dark:text-red-400',
     dot: 'bg-red-400 dark:bg-red-500',
     border: 'border-red-200 dark:border-red-500/20',
+  },
+  EXPIRED: {
+    label: 'Hết hạn',
+    bg: 'bg-slate-50 dark:bg-slate-500/10',
+    text: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-400 dark:bg-slate-500',
+    border: 'border-slate-200 dark:border-slate-500/20',
   },
   TERMINATED: {
     label: 'Đã thanh lý',
@@ -278,7 +292,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                     {baseRent ? (
                       <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">{baseRent}</span>
                     ) : (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 italic">---</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ">---</span>
                     )}
                   </TableCell>
 
@@ -290,13 +304,25 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                         <span className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-0.5">/tháng</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 italic">Chưa chốt</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ">Chưa chốt</span>
                     )}
                   </TableCell>
 
                   {/* Status */}
                   <TableCell className="px-3 py-3 text-center">
-                    <StatusBadge status={contract.status as ContractStatus} />
+                    <div className="flex flex-col items-center gap-1">
+                      <StatusBadge status={contract.status as ContractStatus} />
+                      {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
+                        <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 leading-tight">
+                          Dọn dự kiến:{' '}
+                          {new Date(contract.expected_move_out_date).toLocaleDateString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
 
                   {/* Actions — always visible */}

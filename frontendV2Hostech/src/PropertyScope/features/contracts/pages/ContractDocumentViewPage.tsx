@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { 
-  ChevronLeft, FileText, Download, Printer, Loader2, AlertCircle, 
-  MapPin, Calendar, User as UserIcon
+  Download, Printer, Loader2, AlertCircle, 
+  MapPin, Calendar
 } from 'lucide-react';
 import { useContract, useContractActions } from '../hooks/useContracts';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { renderAsync } from 'docx-preview';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   DRAFT: { label: 'Bản nháp', color: 'bg-slate-100 text-slate-600' },
@@ -22,28 +23,33 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 export default function ContractDocumentViewPage() {
-  const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
-  const navigate = useNavigate();
+  const { contractId } = useParams<{ propertyId: string; contractId: string }>();
   const { data: contract, isLoading, error } = useContract(contractId);
   const { downloadDocument } = useContractActions();
   
   const [fileBlob, setFileBlob] = useState<Blob | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [docType, setDocType] = useState<'PDF' | 'DOCX' | null>(null);
 
   useEffect(() => {
-    const fetchFile = async () => {
-      if (!contractId || !contract) return;
-      
-      try {
-        const blob = await downloadDocument.mutateAsync(contractId);
-        setFileBlob(blob);
-        
-        const url = window.URL.createObjectURL(blob);
-        setFileUrl(url);
+    if (!contractId || !contract) return;
 
-        // Determine type
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const blob = await downloadDocument.mutateAsync({
+          id: contractId,
+          revision: contract.updated_at || contract.document_path || undefined,
+        });
+        if (cancelled) return;
+
+        setFileBlob(blob);
+        setFileUrl((prev) => {
+          if (prev) window.URL.revokeObjectURL(prev);
+          return window.URL.createObjectURL(blob);
+        });
+
         if (contract.document_type) {
           setDocType(contract.document_type.toUpperCase() as 'PDF' | 'DOCX');
         } else if (blob.type === 'application/pdf') {
@@ -52,19 +58,33 @@ export default function ContractDocumentViewPage() {
           setDocType('DOCX');
         }
       } catch (err) {
-        console.error('Error fetching document:', err);
-        toast.error('Không thể tải tệp bản mềm hợp đồng.');
+        if (!cancelled) {
+          console.error('Error fetching document:', err);
+          toast.error('Không thể tải tệp bản mềm hợp đồng.');
+        }
       }
     };
 
-    if (contract) {
-      fetchFile();
-    }
+    void run();
 
     return () => {
-      if (fileUrl) window.URL.revokeObjectURL(fileUrl);
+      cancelled = true;
+      setFileUrl((prev) => {
+        if (prev) window.URL.revokeObjectURL(prev);
+        return null;
+      });
+      setFileBlob(null);
+      setDocType(null);
     };
-  }, [contractId, contract]);
+    // Dùng các scalar từ contract (document_path, updated_at) để sau khi ký — regenerate —
+    // luôn tải lại file dù React Query giữ cùng tham chiếu object `contract`.
+  }, [
+    contractId,
+    contract?.id,
+    contract?.document_path,
+    contract?.document_type,
+    contract?.updated_at,
+  ]);
 
   useEffect(() => {
     if (docType === 'DOCX' && fileBlob && fileUrl) {
@@ -74,10 +94,6 @@ export default function ContractDocumentViewPage() {
       }
     }
   }, [docType, fileBlob, fileUrl]);
-
-  const handleBack = () => {
-    navigate(`/properties/${propertyId}/contracts/${contractId}`);
-  };
 
   const handleDownload = () => {
     if (!fileUrl || !contract) return;
@@ -108,7 +124,7 @@ export default function ContractDocumentViewPage() {
           <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
           <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase mb-2">Lỗi dữ liệu</h2>
           <p className="text-slate-500 dark:text-slate-400 mb-8">Không thể tìm thấy thông tin hợp đồng này.</p>
-          <button onClick={handleBack} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">Quay lại</button>
+          <PageBackButton className="w-full justify-center py-4 rounded-xl" />
         </div>
       </div>
     );
@@ -122,12 +138,7 @@ export default function ContractDocumentViewPage() {
       <div className="max-w-7xl mx-auto px-4 pt-6">
         <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
-            <button 
-              onClick={handleBack}
-              className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 hover:text-indigo-600"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+            <PageBackButton className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3" />
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <h1 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">

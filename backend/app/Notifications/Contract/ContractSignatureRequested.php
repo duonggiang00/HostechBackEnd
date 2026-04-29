@@ -4,6 +4,7 @@ namespace App\Notifications\Contract;
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -19,7 +20,7 @@ use Illuminate\Notifications\Notification;
  *  - broadcast → pushed via Laravel Reverb on App.Models.User.{id} private channel
  *  - mail      → optional email summary
  */
-class ContractSignatureRequested extends Notification implements ShouldQueue, ShouldBroadcast
+class ContractSignatureRequested extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 
@@ -38,13 +39,13 @@ class ContractSignatureRequested extends Notification implements ShouldQueue, Sh
     public function toArray(object $notifiable): array
     {
         return [
-            'type'         => 'contract.signature_requested',
-            'contract_id'  => $this->contract->id,
-            'room_code'    => $this->contract->room?->code,
+            'type' => 'contract.signature_requested',
+            'contract_id' => $this->contract->id,
+            'room_code' => $this->contract->room?->code,
             'property_name' => $this->contract->property?->name,
-            'start_date'   => $this->contract->start_date,
-            'message'      => "Bạn có hợp đồng thuê phòng {$this->contract->room?->code} mới cần xác nhận ký.",
-            'action_url'   => "/contracts/{$this->contract->id}",
+            'start_date' => $this->contract->start_date,
+            'message' => "Bạn có hợp đồng thuê phòng {$this->contract->room?->code} mới cần xác nhận ký.",
+            'action_url' => "/contracts/{$this->contract->id}",
         ];
     }
 
@@ -61,10 +62,10 @@ class ContractSignatureRequested extends Notification implements ShouldQueue, Sh
 
     public function toMail(object $notifiable): MailMessage
     {
-        $roomCode     = $this->contract->room?->code ?? '—';
+        $roomCode = $this->contract->room?->code ?? '—';
         $propertyName = $this->contract->property?->name ?? '—';
-        $startDate    = $this->contract->start_date
-            ? \Carbon\Carbon::parse($this->contract->start_date)->format('d/m/Y')
+        $startDate = $this->contract->start_date
+            ? Carbon::parse($this->contract->start_date)->format('d/m/Y')
             : '—';
 
         return (new MailMessage)

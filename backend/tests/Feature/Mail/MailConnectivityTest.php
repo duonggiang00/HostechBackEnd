@@ -8,9 +8,12 @@ use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\System\UserInvitation;
+use App\Services\Auth\MfaService;
+use App\Services\System\UserInvitationService;
 use App\Services\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -22,10 +25,10 @@ class MailConnectivityTest extends TestCase
     {
         parent::setUp();
         config(['auth.defaults.guard' => 'web']);
-        
+
         // Disable activity logging for tests to avoid missing table issues
         config(['activitylog.enabled' => false]);
-        
+
         // Ensure core roles exist
         Role::create(['name' => 'Admin', 'guard_name' => 'web']);
         Role::create(['name' => 'Manager', 'guard_name' => 'web']);
@@ -90,13 +93,13 @@ class MailConnectivityTest extends TestCase
     public function test_mfa_service_sends_otp()
     {
         Mail::fake();
-        
+
         // Mock the Fortify provider needed by MfaService
-        $mockProvider = \Mockery::mock(\Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider::class);
-        $this->app->instance(\Laravel\Fortify\Contracts\TwoFactorAuthenticationProvider::class, $mockProvider);
+        $mockProvider = \Mockery::mock(TwoFactorAuthenticationProvider::class);
+        $this->app->instance(TwoFactorAuthenticationProvider::class, $mockProvider);
 
         $user = User::factory()->create(['email' => 'user@example.com']);
-        $mfaService = app(\App\Services\Auth\MfaService::class);
+        $mfaService = app(MfaService::class);
 
         $mfaService->sendEmailOtp($user);
 
@@ -117,10 +120,10 @@ class MailConnectivityTest extends TestCase
 
         $inviter = User::factory()->create(['org_id' => $org->id]);
         $inviter->assignRole('Admin');
-        
+
         $this->actingAs($inviter);
 
-        $invitationService = app(\App\Services\System\UserInvitationService::class);
+        $invitationService = app(UserInvitationService::class);
 
         $invitationService->createInvite($inviter, [
             'email' => 'manager@example.com',
@@ -144,14 +147,14 @@ class MailConnectivityTest extends TestCase
         TenantManager::setOrgId($org->id);
 
         $property = Property::factory()->create(['org_id' => $org->id]);
-        
+
         $inviter = User::factory()->create(['org_id' => $org->id]);
         $inviter->assignRole('Manager');
         $inviter->properties()->attach($property->id);
-        
+
         $this->actingAs($inviter);
 
-        $invitationService = app(\App\Services\System\UserInvitationService::class);
+        $invitationService = app(UserInvitationService::class);
 
         $invitationService->createInvite($inviter, [
             'email' => 'tenant@example.com',

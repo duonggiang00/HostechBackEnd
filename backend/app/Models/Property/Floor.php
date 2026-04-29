@@ -26,9 +26,9 @@ class Floor extends Model implements HasMedia
     {
         return [
             'floor_number' => 'integer',
-            'sort_order'   => 'integer',
-            'area'         => 'decimal:2',
-            'shared_area'  => 'decimal:2',
+            'sort_order' => 'integer',
+            'area' => 'decimal:2',
+            'shared_area' => 'decimal:2',
         ];
     }
 

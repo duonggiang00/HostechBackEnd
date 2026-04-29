@@ -2,7 +2,9 @@
 
 namespace App\Http\Responses\Auth;
 
+use App\Models\Org\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\TwoFactorLoginResponse as TwoFactorLoginResponseContract;
 
 class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
@@ -10,12 +12,13 @@ class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
     /**
      * Create an HTTP response that represents the object.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      */
     public function toResponse($request): JsonResponse
     {
-        /** @var \App\Models\Org\User */
+        /** @var User */
         $user = auth()->user();
+        $user->loadMissing(['roles', 'permissions']);
 
         // Revoke previous tokens
         $user->tokens()->delete();
@@ -28,11 +31,14 @@ class TwoFactorLoginResponse implements TwoFactorLoginResponseContract
 
         return response()->json([
             'user' => [
-                'id' => $user->id,
+                'id' => (string) $user->id,
                 'full_name' => $user->full_name,
                 'email' => $user->email,
                 'phone' => $user->phone,
-                'roles' => $user->roles->pluck('name'),
+                'org_id' => $user->org_id ? (string) $user->org_id : null,
+                'role' => $user->roles->first()?->name,
+                'roles' => $user->roles->pluck('name')->values()->all(),
+                'permissions' => $user->getAllPermissions()->pluck('name')->values()->all(),
             ],
             'token' => $plainToken,
         ], 200);

@@ -11,11 +11,11 @@ class BillingBatchCompleted
     use Dispatchable, SerializesModels;
 
     public function __construct(
-        public string  $propertyId,
-        public Carbon  $periodMonth,
-        public int     $total,
-        public int     $success,
-        public int     $failed,
-        public array   $errors = []
+        public string $propertyId,
+        public Carbon $periodMonth,
+        public int $total,
+        public int $success,
+        public int $failed,
+        public array $errors = []
     ) {}
 }

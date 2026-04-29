@@ -11,6 +11,7 @@ class RoomTemplateAsset extends Model
     use HasFactory, HasUuids;
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = ['id', 'room_template_id', 'name'];

@@ -3,7 +3,9 @@
 namespace App\Policies\Contract;
 
 use App\Contracts\RbacModuleProvider;
+use App\Enums\ContractStatus;
 use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\User;
 use App\Traits\HandlesPropertyScope;
 use Illuminate\Auth\Access\HandlesAuthorization;
@@ -101,6 +103,48 @@ class ContractPolicy implements RbacModuleProvider
             ->where('user_id', $user->id)
             ->where('status', 'APPROVED')
             ->exists();
+    }
+
+    /**
+     * Cập nhật thông tin một thành viên hợp đồng (BQL hoặc người thuê chính đối với thành viên phụ).
+     */
+    public function updateMember(User $user, Contract $contract, ContractMember $member): bool
+    {
+        if ($member->contract_id !== $contract->id) {
+            return false;
+        }
+
+        if ($user->hasPermissionTo('update Contracts') && ! $user->hasRole('Tenant')) {
+            return $this->checkPropertyScope($user, $contract);
+        }
+
+        if (! $user->hasRole('Tenant')) {
+            return false;
+        }
+
+        if (! in_array($contract->status, [ContractStatus::ACTIVE, ContractStatus::PENDING_PAYMENT], true)) {
+            return false;
+        }
+
+        $isPrimaryApproved = $contract->members()
+            ->where('user_id', $user->id)
+            ->where('status', 'APPROVED')
+            ->where('is_primary', true)
+            ->exists();
+
+        if (! $isPrimaryApproved) {
+            return false;
+        }
+
+        if ($member->is_primary) {
+            return false;
+        }
+
+        if ($member->left_at) {
+            return false;
+        }
+
+        return in_array($member->status, ['APPROVED', 'PENDING'], true);
     }
 
     /**

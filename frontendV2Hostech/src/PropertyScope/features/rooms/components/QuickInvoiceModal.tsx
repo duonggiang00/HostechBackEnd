@@ -109,7 +109,7 @@ export const QuickInvoiceModal: React.FC<QuickInvoiceModalProps> = ({
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight italic">
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight ">
                     Chốt Tiền Tháng
                   </h2>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -231,7 +231,7 @@ export const QuickInvoiceModal: React.FC<QuickInvoiceModalProps> = ({
                         })}
                       </div>
                     ) : (
-                      <p className="text-sm font-medium text-slate-500 italic p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">Phòng này không có đồng hồ nào cần chốt số.</p>
+                      <p className="text-sm font-medium text-slate-500 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">Phòng này không có đồng hồ nào cần chốt số.</p>
                     )}
                   </div>
                   

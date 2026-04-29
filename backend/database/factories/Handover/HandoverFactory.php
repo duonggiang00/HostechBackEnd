@@ -2,10 +2,11 @@
 
 namespace Database\Factories\Handover;
 
+use App\Models\Handover\Handover;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Handover\Handover>
+ * @extends Factory<Handover>
  */
 class HandoverFactory extends Factory
 {

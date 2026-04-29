@@ -3,18 +3,25 @@
 export type InvoiceStatus =
   | 'DRAFT'
   | 'ISSUED'
+  | 'PENDING'
   | 'PAID'
-  | 'PARTIALLY_PAID'
+  | 'PARTIAL'
   | 'OVERDUE'
   | 'CANCELLED';
 
 export type InvoiceItemType =
   | 'RENT'
-  | 'ELECTRIC'
-  | 'WATER'
   | 'SERVICE'
   | 'ADJUSTMENT'
+  | 'DEBT'
+  | 'PENALTY'
+  | 'DEPOSIT'
+  | 'DISCOUNT'
   | 'OTHER';
+
+export type PaymentStatus = 'PENDING' | 'APPROVED' | 'FAILED' | 'CANCELLED';
+
+export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'E_WALLET' | 'CREDIT_CARD';
 
 // ─── Sub-models ───────────────────────────────────────────────────────────────
 
@@ -36,18 +43,29 @@ export interface InvoiceStatusHistory {
   from_status: InvoiceStatus | null;
   to_status: InvoiceStatus;
   note: string | null;
-  actor?: {
-    id: string;
-    full_name: string;
-    email?: string;
-  };
+  changed_by?: InvoiceUser;
   created_at: string;
 }
 
-export interface InvoiceActor {
+export interface InvoiceUser {
   id: string;
   full_name: string;
   email?: string;
+  phone?: string | null;
+  avatar?: string | null;
+}
+
+export interface InvoiceAdjustment {
+  id: string;
+  invoice_id: string;
+  type: 'CREDIT' | 'DEBIT';
+  amount: number;
+  reason: string;
+  is_approved: boolean;
+  created_by?: InvoiceUser;
+  approved_by?: InvoiceUser;
+  approved_at?: string;
+  created_at: string;
 }
 
 export interface InvoiceRoom {
@@ -59,6 +77,35 @@ export interface InvoiceRoom {
 export interface InvoiceProperty {
   id: string;
   name: string;
+}
+
+export interface PaymentAllocation {
+  id: string;
+  invoice_id: string;
+  amount: number;
+  invoice?: Invoice; // Eager-loaded relation from backend
+  invoice_code?: string;
+  invoice_status?: InvoiceStatus;
+  invoice_total?: number;
+  created_at: string;
+}
+
+export interface Payment {
+  id: string;
+  status: PaymentStatus;
+  method: PaymentMethod;
+  amount: number;
+  reference: string | null;
+  note: string | null;
+  received_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  property?: InvoiceProperty;
+  payer?: InvoiceUser;
+  received_by?: InvoiceUser;
+  approved_by?: InvoiceUser;
+  allocations?: PaymentAllocation[];
 }
 
 // ─── Main Model ───────────────────────────────────────────────────────────────
@@ -88,10 +135,15 @@ export interface Invoice {
   // Relationships (eager loaded)
   property?: InvoiceProperty;
   room?: InvoiceRoom;
+  contract?: any; // Replace with Contract type if available
   items?: InvoiceItem[];
   status_histories?: InvoiceStatusHistory[];
-  created_by?: InvoiceActor;
-  issued_by?: InvoiceActor | null;
+  adjustments?: InvoiceAdjustment[];
+  created_by?: InvoiceUser;
+  issued_by?: InvoiceUser | null;
+
+  // PDF
+  pdf_url?: string | null;
 
   // Timestamps
   issued_at: string | null;
@@ -151,6 +203,7 @@ export interface InvoiceQueryParams {
   property_id?: string;
   room_id?: string;
   status?: InvoiceStatus;
+  is_termination?: boolean;
   search?: string;
   page?: number;
   per_page?: number;
@@ -166,4 +219,21 @@ export interface PaginatedInvoices {
     per_page: number;
     total: number;
   };
+}
+// ─── Shared Editor Types ───────────────────────────────────────────────────────
+
+export interface TieredRate {
+  tier_from: number;
+  tier_to: number | null;
+  price: number;
+}
+
+export interface EditableInvoiceItem extends CreateInvoiceItemPayload {
+  id: string; // Temporary ID for frontend management
+  meter_id?: string;
+  prev_reading?: number;
+  curr_reading?: number;
+  is_metered?: boolean;
+  meter_type?: 'ELECTRIC' | 'WATER';
+  tiered_rates?: TieredRate[];
 }

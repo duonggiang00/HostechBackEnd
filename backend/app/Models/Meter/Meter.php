@@ -4,13 +4,13 @@ namespace App\Models\Meter;
 
 use App\Models\Concerns\MultiTenant;
 use App\Models\Org\Org;
+use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -53,7 +53,7 @@ class Meter extends Model implements HasMedia
 
     public function property()
     {
-        return $this->belongsTo(\App\Models\Property\Property::class);
+        return $this->belongsTo(Property::class);
     }
 
     // service() đã được gỡ bỏ - Dynamic Linking: tra cứu dịch vụ qua room_services + type
@@ -70,11 +70,34 @@ class Meter extends Model implements HasMedia
             ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
     }
 
+    /**
+     * Chỉ số mới nhất đã chốt (đã duyệt hoặc đã khóa kỳ) — dùng cho UI và đồng bộ base_reading.
+     */
     public function latestApprovedReading()
     {
         return $this->hasOne(MeterReading::class)
-            ->where('status', 'APPROVED')
-            ->latestOfMany('period_end')
+            ->ofMany([
+                'period_end' => 'max',
+                'id' => 'max',
+            ], function ($query) {
+                $query->whereIn('status', MeterReading::FINALIZED_STATUSES);
+            })
+            ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
+    }
+
+    /**
+     * Chỉ số APPROVED mới nhất dùng cho điều kiện phát hành hóa đơn nhanh.
+     * LOCKED không được dùng để pass điều kiện này.
+     */
+    public function latestInvoiceEligibleReading()
+    {
+        return $this->hasOne(MeterReading::class)
+            ->ofMany([
+                'period_end' => 'max',
+                'id' => 'max',
+            ], function ($query) {
+                $query->where('status', 'APPROVED');
+            })
             ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
     }
 }

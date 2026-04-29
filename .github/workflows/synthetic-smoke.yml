@@ -1,0 +1,28 @@
+name: Synthetic smoke
+
+on:
+  schedule:
+    - cron: '15 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+      - name: Copy environment
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+      - name: Generate application key
+        run: php artisan key:generate --force
+      - name: Synthetic smoke tests
+        run: php artisan test --filter=SyntheticSmoke

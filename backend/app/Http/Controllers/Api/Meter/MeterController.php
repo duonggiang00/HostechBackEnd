@@ -9,6 +9,7 @@ use App\Http\Requests\Meter\MeterUpdateRequest;
 use App\Http\Resources\Meter\MeterResource;
 use App\Models\Meter\Meter;
 use App\Services\Meter\MeterService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -148,7 +149,7 @@ class MeterController extends Controller
      *
      * Trả về thống kê tổng số đồng hồ, chỉ số tiêu thụ, v.v.
      */
-    public function statisticsByProperty(Request $request, string $propertyId): \Illuminate\Http\JsonResponse
+    public function statisticsByProperty(Request $request, string $propertyId): JsonResponse
     {
         $this->authorize('viewAny', Meter::class);
 

@@ -1,12 +1,12 @@
 import { Edit2, Trash2, Box, Zap, Gauge, Users, Maximize2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import type { RoomTemplate } from '../../types';
+import type { GlobalRoomTemplate } from '../../types';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
 import { formatNumber } from '@/lib/utils';
 
 interface RoomTemplateCardProps {
-  template: RoomTemplate;
-  onEdit: (template: RoomTemplate) => void;
+  template: GlobalRoomTemplate;
+  onEdit: (template: GlobalRoomTemplate) => void;
   onDelete: (id: string) => void;
 }
 

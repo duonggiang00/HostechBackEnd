@@ -4,18 +4,26 @@ namespace App\Http\Controllers\Api\Contract;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Contract\ContractIndexRequest;
+use App\Http\Requests\Contract\ContractRequestTerminationRequest;
 use App\Http\Requests\Contract\ContractStoreRequest;
 use App\Http\Requests\Contract\ContractUpdateRequest;
 use App\Http\Requests\Contract\ExecuteRoomTransferRequest;
 use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Http\Resources\Contract\ContractStatusHistoryResource;
+use App\Jobs\Contract\ProcessContractTerminationJob;
 use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
+use App\Models\Org\User;
+use App\Models\Property\Room;
 use App\Services\Contract\ContractService;
+use App\Services\Contract\Termination\TerminationReconciliationService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
+use Throwable;
 
 /**
  * Quản lý Hợp đồng (Contracts)
@@ -212,6 +220,7 @@ class ContractController extends Controller
     public function sign(Request $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
+        $this->authorize('view', $contract);
 
         $validated = $request->validate([
             'signature_image' => 'required|string',
@@ -317,6 +326,41 @@ class ContractController extends Controller
      * - Tenant hủy trước hạn + waive_penalty=true → Hoàn cọc (REFUND_PENDING, status TERMINATED)
      * - Chủ nhà hủy hoặc kết thúc đúng hạn → Hoàn cọc (REFUND_PENDING)
      */
+    /**
+     * Xem trước quyết toán cọc / nợ (ledger) trước khi xác nhận thanh lý.
+     */
+    public function liquidationPreview(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('view', $contract);
+
+        $validated = $request->validate([
+            'termination_date' => 'nullable|date',
+            'damage_fee_total' => 'nullable|numeric|min:0',
+            'waive_penalty' => 'nullable|boolean',
+            'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
+        ], [
+            'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
+            'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
+            'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
+            'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
+        ]);
+
+        $terminationDate = $validated['termination_date'] ?? now()->toDateString();
+
+        $preview = app(TerminationReconciliationService::class)->preview(
+            $contract,
+            $terminationDate,
+            $validated
+        );
+
+        return response()->json([
+            'message' => 'Đã tính xem trước quyết toán.',
+            'data' => $preview,
+        ]);
+    }
+
     public function terminate(Request $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
@@ -324,38 +368,77 @@ class ContractController extends Controller
         $this->authorize('update', $contract);
 
         $validated = $request->validate([
-            'termination_date'    => 'nullable|date',
-            'cancellation_party'  => 'nullable|string|in:LANDLORD,TENANT,MUTUAL',
+            'termination_date' => 'nullable|date',
+            'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
             'cancellation_reason' => 'nullable|string|max:1000',
-            'waive_penalty'       => 'nullable|boolean',
+            'waive_penalty' => 'nullable|boolean',
             'refund_remaining_rent' => 'nullable|boolean',
+            'forfeit_deposit' => 'nullable|boolean',
+            'damage_fee_total' => 'nullable|numeric|min:0',
+        ], [
+            'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
+            'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
+            'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
+            'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
         ]);
 
-        $this->service->terminate($contract, $validated);
+        $lockName = ProcessContractTerminationJob::terminationLockName($contract->id);
+        $lock = Cache::lock($lockName, 120);
 
-        return response()->json(['message' => 'Đã thanh lý hợp đồng thành công.']);
+        if (! $lock->get()) {
+            return response()->json([
+                'message' => 'Hợp đồng đang được thanh lý hoặc đã có yêu cầu xử lý. Vui lòng đợi vài phút hoặc làm mới trang.',
+            ], 409);
+        }
+
+        try {
+            ProcessContractTerminationJob::dispatch(
+                $contract->id,
+                $validated,
+                (string) $request->user()->id,
+                $lock->owner(),
+            )->afterCommit();
+        } catch (Throwable $e) {
+            $lock->release();
+
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'Đã tiếp nhận yêu cầu thanh lý. Hệ thống đang xử lý; kết quả sẽ được đẩy qua WebSocket (các bước pipeline và kết thúc).',
+            'status' => 'processing',
+            'contract_id' => $contract->id,
+            'property_id' => $contract->property_id,
+            'processing_mode' => 'async_eda',
+        ], 202);
     }
 
     /**
-     * Tenant gửi yêu cầu dời đi trước hạn
+     * Tenant gửi thông báo trả phòng (ngày dự kiến dọn đi + lý do).
      *
      * Chuyển hợp đồng sang trạng thái PENDING_TERMINATION.
      * Manager sẽ nhìn thấy yêu cầu này và quyết định xử lý cọc.
      */
-    public function requestTermination(Request $request, string $id): JsonResponse
+    public function requestTermination(ContractRequestTerminationRequest $request, Contract $contract): JsonResponse
     {
-        $contract = Contract::findOrFail($id);
-
         $this->authorize('view', $contract);
 
-        $validated = $request->validate([
-            'reason' => 'nullable|string|max:1000',
-        ]);
+        $result = $this->service->requestTermination($contract, $request->user(), $request->validated());
 
-        $this->service->requestTermination($contract, $request->user(), $validated);
+        /** @var Contract $updated */
+        $updated = $result['contract'];
+        $status = $updated->status instanceof \BackedEnum ? $updated->status->value : (string) $updated->status;
 
         return response()->json([
-            'message' => 'Đã gửi yêu cầu dời đi. Quản lý sẽ xác nhận và xử lý tiền cọc sau khi kiểm tra.',
+            'message' => 'Đã gửi thông báo trả phòng. Quản lý sẽ liên hệ khi cần.',
+            'warnings' => $result['warnings'],
+            'is_early_termination' => $result['is_early_termination'],
+            'contract' => [
+                'id' => $updated->id,
+                'status' => $status,
+                'expected_move_out_date' => $updated->expected_move_out_date?->toDateString(),
+                'end_date' => $updated->end_date?->toDateString(),
+            ],
         ]);
     }
 
@@ -390,6 +473,147 @@ class ContractController extends Controller
 
         return response()->json([
             'message' => 'Đã thực hiện chuyển phòng thành công.',
+        ]);
+    }
+
+    /**
+     * Danh sách yêu cầu đang chờ duyệt theo Property (Aggregated)
+     *
+     * Tổng hợp 3 nguồn:
+     * 1. Transfer Requests trong contracts.meta->transfer_requests (status=PENDING)
+     * 2. ContractMembers với status=PENDING thuộc property
+     * 3. Contracts với status=PENDING_TERMINATION thuộc property
+     */
+    public function pendingRequests(Request $request, string $propertyId): JsonResponse
+    {
+        $this->authorize('viewAny', Contract::class);
+
+        $results = [];
+
+        // ── 1. ROOM TRANSFER REQUESTS (từ meta JSON) ──────────────────────────
+        $contractsWithTransfer = Contract::with(['room:id,name,code', 'members' => fn ($q) => $q->where('is_primary', true)->with('user:id,full_name')])
+            ->where('property_id', $propertyId)
+            ->whereNotNull('meta')
+            ->whereIn('status', ['ACTIVE', 'PENDING_TRANSFER'])
+            ->get();
+
+        foreach ($contractsWithTransfer as $contract) {
+            $transferRequests = $contract->meta['transfer_requests'] ?? [];
+            foreach ($transferRequests as $index => $req) {
+                if (($req['status'] ?? '') !== 'PENDING') {
+                    continue;
+                }
+                $primaryMember = $contract->members->first();
+                $requestedById = $req['requested_by'] ?? null;
+                $requesterName = is_string($requestedById)
+                    ? (User::query()->whereKey($requestedById)->value('full_name'))
+                    : null;
+                $results[] = [
+                    'type' => 'ROOM_TRANSFER',
+                    'contract_id' => $contract->id,
+                    'room_name' => $contract->room?->name ?? $contract->room?->code ?? 'N/A',
+                    'tenant_full_name' => $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
+                    'requester_full_name' => $requesterName ?? $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
+                    'from_room' => $contract->room?->name ?? $contract->room?->code,
+                    'from_room_id' => $contract->room_id,
+                    'to_room_id' => $req['to_room_id'] ?? null,
+                    'to_room' => $req['to_room_id'] ?? null, // Will be resolved on FE or enriched below
+                    'reason' => $req['reason'] ?? null,
+                    'requested_at' => $req['requested_at'] ?? $contract->updated_at,
+                    'request_index' => $index,
+                ];
+            }
+        }
+
+        // Enrich to_room names using Room model
+        $toRoomIds = collect($results)
+            ->where('type', 'ROOM_TRANSFER')
+            ->pluck('to_room_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($toRoomIds->isNotEmpty()) {
+            $toRooms = Room::whereIn('id', $toRoomIds)
+                ->select('id', 'name', 'code')
+                ->get()
+                ->keyBy('id');
+
+            foreach ($results as &$item) {
+                if ($item['type'] === 'ROOM_TRANSFER' && isset($item['to_room_id'])) {
+                    $room = $toRooms->get($item['to_room_id']);
+                    $item['to_room'] = $room?->name ?? $room?->code ?? $item['to_room_id'];
+                }
+            }
+            unset($item);
+        }
+
+        // ── 2. ADD MEMBER REQUESTS (ContractMember status=PENDING) ────────────
+        $pendingMembers = ContractMember::with(['contract.room:id,name,code'])
+            ->whereHas('contract', fn ($q) => $q->where('property_id', $propertyId))
+            ->where('status', 'PENDING')
+            ->whereNull('is_primary') // Exclude primary tenant placeholder
+            ->orWhere(function ($q) use ($propertyId) {
+                $q->whereHas('contract', fn ($q2) => $q2->where('property_id', $propertyId))
+                    ->where('status', 'PENDING')
+                    ->where('is_primary', false);
+            })
+            ->get();
+
+        // Deduplicate — chỉ lấy is_primary = false và status = PENDING
+        $cleanPendingMembers = ContractMember::with(['contract.room:id,name,code'])
+            ->whereHas('contract', fn ($q) => $q->where('property_id', $propertyId)->whereIn('status', ['ACTIVE', 'PENDING_SIGNATURE']))
+            ->where('status', 'PENDING')
+            ->where('is_primary', false)
+            ->get();
+
+        foreach ($cleanPendingMembers as $member) {
+            $contractModel = $member->contract;
+            $primary = $contractModel
+                ? $contractModel->members()->where('is_primary', true)->with('user:id,full_name')->first()
+                : null;
+            $results[] = [
+                'type' => 'ADD_MEMBER',
+                'contract_id' => $member->contract_id,
+                'member_id' => $member->id,
+                'room_name' => $member->contract?->room?->name ?? $member->contract?->room?->code ?? 'N/A',
+                'requester_full_name' => $primary?->user?->full_name ?? $primary?->full_name ?? 'Cư dân',
+                'member_full_name' => $member->full_name,
+                'member_phone' => $member->phone,
+                'member_role' => $member->role,
+                'requested_at' => $member->created_at,
+            ];
+        }
+
+        // ── 3. TERMINATION REQUESTS (status=PENDING_TERMINATION) ──────────────
+        $terminationContracts = Contract::with(['room:id,name,code', 'members' => fn ($q) => $q->where('is_primary', true)->with('user:id,full_name')])
+            ->where('property_id', $propertyId)
+            ->where('status', 'PENDING_TERMINATION')
+            ->get();
+
+        foreach ($terminationContracts as $contract) {
+            $primaryMember = $contract->members->first();
+            $results[] = [
+                'type' => 'TERMINATION',
+                'contract_id' => $contract->id,
+                'room_name' => $contract->room?->name ?? $contract->room?->code ?? 'N/A',
+                'tenant_full_name' => $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
+                'reason' => $contract->cancellation_reason,
+                'requested_at' => $contract->notice_given_at ?? $contract->updated_at,
+            ];
+        }
+
+        // Sort all by requested_at descending
+        usort($results, fn ($a, $b) => strcmp((string) ($b['requested_at'] ?? ''), (string) ($a['requested_at'] ?? '')));
+
+        return response()->json([
+            'data' => $results,
+            'meta' => [
+                'total' => count($results),
+                'transfer_count' => count(array_filter($results, fn ($r) => $r['type'] === 'ROOM_TRANSFER')),
+                'add_member_count' => count(array_filter($results, fn ($r) => $r['type'] === 'ADD_MEMBER')),
+                'termination_count' => count(array_filter($results, fn ($r) => $r['type'] === 'TERMINATION')),
+            ],
         ]);
     }
 }

@@ -14,10 +14,10 @@ class ExecuteRoomTransferRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'target_room_id'       => 'required|exists:rooms,id',
-            'transfer_date'        => 'required|date',
-            'rent_price'           => 'nullable|numeric|min:0',
-            'deposit_amount'       => 'nullable|numeric|min:0',
+            'target_room_id' => 'required|exists:rooms,id',
+            'transfer_date' => 'required|date',
+            'rent_price' => 'nullable|numeric|min:0',
+            'deposit_amount' => 'nullable|numeric|min:0',
             'transfer_unused_rent' => 'required|boolean',
             'excess_handling_method' => 'nullable|string|in:CASH_REFUND,KEEP_AS_CREDIT',
         ];

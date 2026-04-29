@@ -1,5 +1,5 @@
 import apiClient from '@/shared/api/client';
-import type { Invoice, InvoiceItem, InvoiceAdjustment } from '@/shared/features/billing/types';
+import type { Invoice, InvoiceAdjustment } from '@/shared/features/billing/types';
 
 export const billingApi = {
   getInvoices: async (filters?: any) => {

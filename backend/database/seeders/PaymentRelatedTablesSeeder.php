@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class PaymentRelatedTablesSeeder extends Seeder
 {
@@ -17,8 +17,9 @@ class PaymentRelatedTablesSeeder extends Seeder
         // Lấy dữ liệu cơ sở ngẫu nhiên
         $org = DB::table('orgs')->inRandomOrder()->first();
 
-        if (!$org) {
+        if (! $org) {
             $this->command->warn('Chưa có dữ liệu ở bảng orgs. Bỏ qua seed thanh toán.');
+
             return;
         }
 
@@ -66,7 +67,8 @@ class PaymentRelatedTablesSeeder extends Seeder
             'id' => Str::uuid(),
             'org_id' => $org->id,
             'payment_id' => $paymentId,
-            'path' => 'receipts/' . date('Y/m') . '/' . $paymentId . '_receipt.png',
+            'kind' => 'OFFICIAL',
+            'path' => 'receipts/'.date('Y/m').'/'.$paymentId.'_receipt.png',
             'sha256' => hash('sha256', random_bytes(10)),
             'created_at' => Carbon::now(),
         ]);

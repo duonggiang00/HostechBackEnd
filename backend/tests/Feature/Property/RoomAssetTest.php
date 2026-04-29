@@ -10,6 +10,7 @@ use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
+use Database\Seeders\RBACSeeder;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\deleteJson;
@@ -18,7 +19,7 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('admin can manage room assets', function () {

@@ -2,9 +2,11 @@
 
 namespace App\Actions\Fortify;
 
+use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Services\System\UserInvitationService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -75,28 +77,52 @@ class CreateNewUser implements CreatesNewUsers
                 $orgId = $org->id;
             }
 
+            // 2b. Load contract member snapshot (Path B — Tenant invite) to fill missing fields.
+            $memberSnapshot = null;
+            if ($invitation->role_name === 'Tenant' && $orgId) {
+                $memberSnapshot = ContractMember::where('email', $invitation->email)
+                    ->where('org_id', $orgId)
+                    ->where('status', 'PENDING_INVITE')
+                    ->whereNull('user_id')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('created_at')
+                    ->first();
+            }
+
+            /** Prefer explicit form input; fall back to contract member snapshot if form is empty. */
+            $fill = function (string $formKey, ?string $snapshotValue): ?string {
+                $v = $input[$formKey] ?? null;
+                if ($v !== null && $v !== '') {
+                    return $v;
+                }
+
+                return $snapshotValue;
+            };
+
             // 3. Create the User
             $user = User::create([
                 'org_id' => $orgId,
                 'full_name' => $input['full_name'],
                 'email' => $input['email'],
-                'phone' => $input['phone'] ?? null,
+                'phone' => $fill('phone', $memberSnapshot?->phone),
                 'password_hash' => Hash::make($input['password']),
                 'email_verified_at' => now(), // Assume verified since they received the email link
                 'is_active' => true,
-                // Identity / Personal
-                'identity_number' => $input['identity_number'] ?? null,
+                // Identity / Personal — form wins; snapshot fills any blank
+                'identity_number' => $fill('identity_number', $memberSnapshot?->identity_number),
                 'identity_issued_date' => $input['identity_issued_date'] ?? null,
                 'identity_issued_place' => $input['identity_issued_place'] ?? null,
-                'date_of_birth' => $input['date_of_birth'] ?? null,
-                'address' => $input['address'] ?? null,
-                'license_plate' => $input['license_plate'] ?? null,
+                'date_of_birth' => $fill('date_of_birth', $memberSnapshot?->date_of_birth
+                    ? Carbon::parse($memberSnapshot->date_of_birth)->toDateString()
+                    : null),
+                'address' => $fill('address', $memberSnapshot?->permanent_address),
+                'license_plate' => $fill('license_plate', $memberSnapshot?->license_plate),
             ]);
 
             // 4. Assign Role
             $user->assignRole($invitation->role_name);
 
-            // 5. Assign Property Scopes (for Manager/Staff)
+            // 5. Assign Property Scopes (for Manager/Staff/Tenant)
             if (! empty($invitation->properties_scope)) {
                 $user->properties()->sync($invitation->properties_scope);
             }
@@ -104,16 +130,23 @@ class CreateNewUser implements CreatesNewUsers
             // 6. Mark invitation as used
             $invitation->update(['registered_at' => now()]);
 
-            // 7. Backfill contract_members — Path B: email stored in contract_members
-            //    email + org_id + status cho phép định danh chính xác, không cần FK phụ.
-            \App\Models\Contract\ContractMember::where('email', $invitation->email)
+            // 7. Backfill all PENDING_INVITE contract_members for this email + org.
+            //    Update snapshot fields from what the user actually submitted (form wins over
+            //    the original manager-entered data), then promote to PENDING for e-signature.
+            ContractMember::where('email', $invitation->email)
                 ->where('org_id', $orgId)
                 ->where('status', 'PENDING_INVITE')
                 ->whereNull('user_id')
-                ->update([
+                ->update(array_filter([
                     'user_id' => $user->id,
-                    'status'  => 'PENDING',  // cần ký e-signature
-                ]);
+                    'status' => 'PENDING',  // needs e-signature
+                    'full_name' => $user->full_name,
+                    'phone' => $user->phone ?: null,
+                    'identity_number' => $user->identity_number ?: null,
+                    'date_of_birth' => $user->date_of_birth ?: null,
+                    'license_plate' => $user->license_plate ?: null,
+                    'permanent_address' => $user->address ?: null,
+                ], fn ($v) => $v !== null));
 
             return $user;
         });

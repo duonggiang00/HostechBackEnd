@@ -5,6 +5,7 @@ namespace Tests\Feature\Rbac;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
+use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,7 +28,7 @@ class RoleAccessTest extends TestCase
         parent::setUp();
 
         // Run seeders to setup Roles and Permissions
-        $this->seed(\Database\Seeders\RbacSeeder::class);
+        $this->seed(RbacSeeder::class);
 
         // Create Org
         $this->org = Org::factory()->create();

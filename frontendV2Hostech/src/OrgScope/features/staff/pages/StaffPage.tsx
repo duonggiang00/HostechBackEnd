@@ -164,7 +164,7 @@ export default function StaffPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 bg-white">
-                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Tham gia {format(new Date(member.created_at), 'dd/MM/yyyy')}</p>
+                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none">Tham gia {member.created_at ? format(new Date(member.created_at), 'dd/MM/yyyy') : '—'}</p>
                    <button className="text-xs font-black uppercase tracking-widest text-indigo-600 hover:underline">Quản lý quyền</button>
                 </div>
              </div>

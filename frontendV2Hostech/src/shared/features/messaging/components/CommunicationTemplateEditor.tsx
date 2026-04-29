@@ -23,13 +23,13 @@ export default function CommunicationTemplateEditor() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>('1');
 
   const templates: Template[] = [
-    { id: '1', name: 'Billing Reminder (7 Days)', type: 'email', category: 'billing', content: 'Dear {{tenant_name}}, this is a friendly reminder that your monthly invoice for {{property_name}} is due in 7 days.', lastUpdated: '2 hours ago' },
+    { id: '1', name: 'Billing Reminder (7 Days)', type: 'email', category: 'billing', content: 'Dear {{tenant_full_name}}, this is a friendly reminder that your monthly invoice for {{property_name}} is due in 7 days.', lastUpdated: '2 hours ago' },
     { id: '2', name: 'Maintenance Notice', type: 'email', category: 'maintenance', content: 'Scheduled maintenance will be performed on {{date}} from {{time_start}} to {{time_end}}.', lastUpdated: '1 day ago' },
     { id: '3', name: 'Late Payment Alert', type: 'sms', category: 'billing', content: 'Urgent: Your payment for {{property_name}} is now overdue. Please settle immediately.', lastUpdated: '3 days ago' },
   ];
 
   const variables = [
-    { key: '{{tenant_name}}', desc: 'Full name of the primary tenant' },
+    { key: '{{tenant_full_name}}', desc: 'Full name of the primary tenant' },
     { key: '{{property_name}}', desc: 'Name of the current property' },
     { key: '{{due_date}}', desc: 'Expiration date of the invoice' },
     { key: '{{total_amount}}', desc: 'Total amount due in currency' },
@@ -40,7 +40,7 @@ export default function CommunicationTemplateEditor() {
       {/* List Sidebar */}
       <div className="col-span-4 border-r border-white/5 flex flex-col bg-white/1">
         <div className="p-8 border-b border-white/5 flex items-center justify-between">
-          <h2 className="text-sm font-black uppercase italic text-white tracking-widest">Protocols</h2>
+          <h2 className="text-sm font-black uppercase text-white tracking-widest">Protocols</h2>
           <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 rounded-xl text-xs font-black uppercase text-white shadow-lg shadow-indigo-600/20 active:scale-95 transition-all">
             <Plus className="w-3 h-3" /> New
           </button>
@@ -86,7 +86,7 @@ export default function CommunicationTemplateEditor() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-slate-500">PROD-ENV-01</span>
                     <ChevronRight className="w-3 h-3 text-slate-700" />
-                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest italic">Live Template</span>
+                    <span className="text-xs font-bold text-indigo-400 uppercase tracking-widest ">Live Template</span>
                   </div>
                 </div>
               </div>

@@ -3,9 +3,10 @@
 use App\Http\Controllers\Api\Finance\CashflowController;
 use App\Http\Controllers\Api\Finance\LedgerController;
 use App\Http\Controllers\Api\Finance\PaymentController;
+use App\Http\Controllers\Api\Finance\PaymentVerificationController;
+use App\Http\Controllers\Api\Finance\RefundReceiptController;
 use App\Http\Controllers\Api\Finance\VNPayController;
 use Illuminate\Support\Facades\Route;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -25,9 +26,19 @@ Route::prefix('finance')->group(function () {
     Route::get('payments/{id}', [PaymentController::class, 'show']);
     Route::delete('payments/{id}', [PaymentController::class, 'destroy']);
 
+    // ── Payment Verification (Manager duyệt bằng chứng Tenant) ─
+    Route::prefix('payment-verifications')->group(function () {
+        Route::get('/', [PaymentVerificationController::class, 'index']);
+        Route::post('{id}/approve', [PaymentVerificationController::class, 'approve']);
+        Route::post('{id}/reject', [PaymentVerificationController::class, 'reject']);
+    });
+
     // ── Ledger (Sổ cái đối soát) ──────────────────────────────
     Route::get('ledger', [LedgerController::class, 'index']);
+    Route::get('ledger/summary', [LedgerController::class, 'summary']);
     Route::get('ledger/balance', [LedgerController::class, 'balance']);
+
+    Route::get('refund-receipts', [RefundReceiptController::class, 'index']);
 
     // ── Cashflow (Dòng tiền thực tế In/Out) ───────────────────
     Route::get('cashflow', [CashflowController::class, 'index']);
@@ -36,13 +47,10 @@ Route::prefix('finance')->group(function () {
     // ── VNPay (routes có auth) ────────────────────────────────
     Route::prefix('vnpay')->group(function () {
         // Tạo giao dịch PENDING + URL thanh toán VNPay
-        Route::post('create',  [VNPayController::class, 'createPayment']);
+        Route::post('create', [VNPayController::class, 'createPayment']);
         // Return URL: verify sau khi browser redirect về
-        Route::get('return',   [VNPayController::class, 'handleReturn']);
+        Route::get('return', [VNPayController::class, 'handleReturn']);
         // Xác minh trạng thái từ DB (frontend gọi sau redirect)
-        Route::get('verify',   [VNPayController::class, 'verifyReturn']);
+        Route::get('verify', [VNPayController::class, 'verifyReturn']);
     });
 });
-
-
-

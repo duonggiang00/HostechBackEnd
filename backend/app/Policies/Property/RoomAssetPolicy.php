@@ -3,6 +3,7 @@
 namespace App\Policies\Property;
 
 use App\Contracts\RbacModuleProvider;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
@@ -29,8 +30,8 @@ class RoomAssetPolicy implements RbacModuleProvider
         return [
             'Owner' => 'CRUD',
             'Manager' => 'CRUD',
-            'Staff' => 'V',
-            'Tenant' => 'V',
+            'Staff' => 'R',
+            'Tenant' => 'R',
         ];
     }
 
@@ -48,7 +49,7 @@ class RoomAssetPolicy implements RbacModuleProvider
 
         // Tenants only see assets in standard active contracts
         if ($user->hasRole('Tenant')) {
-            return \App\Models\Contract\ContractMember::where('user_id', $user->id)
+            return ContractMember::where('user_id', $user->id)
                 ->whereHas('contract', function ($q) use ($targetRoom) {
                     $q->where('room_id', $targetRoom->id)->where('status', 'ACTIVE');
                 })->exists();

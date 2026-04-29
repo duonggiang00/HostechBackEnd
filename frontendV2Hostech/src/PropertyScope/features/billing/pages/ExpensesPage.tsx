@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/shared/api/client';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Payment } from '../types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,21 +28,7 @@ interface CashflowSummary {
   period: { from: string | null; to: string | null };
 }
 
-interface PaymentRecord {
-  id: string;
-  status: string;
-  method: string;
-  amount: number;
-  reference: string | null;
-  note: string | null;
-  property?: { id: string; name: string } | null;
-  payer?: { id: string; full_name: string; email?: string } | null;
-  received_by?: { id: string; full_name: string } | null;
-  allocations?: { id: string; amount: number; invoice?: { id: string; status: string; room?: { name?: string; code?: string } } }[];
-  received_at: string | null;
-  approved_at: string | null;
-  created_at: string;
-}
+// PaymentRecord is now replaced by Payment from types.ts
 
 interface DepositContract {
   id: string;
@@ -91,7 +78,7 @@ const expensesApi = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ExpensesPage() {
+export default function ExpensesPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const queryClient = useQueryClient();
 
@@ -152,7 +139,7 @@ export function ExpensesPage() {
   };
 
   const dailyData: CashflowEntry[] = cashflowData?.daily?.data ?? [];
-  const payments: PaymentRecord[] = paymentsData?.data ?? [];
+  const payments: Payment[] = paymentsData?.data ?? [];
   const paymentsMeta = paymentsData?.meta;
   const depositContracts: DepositContract[] = depositData?.data ?? [];
 
@@ -163,8 +150,10 @@ export function ExpensesPage() {
     const map: Record<string, string> = {
       CASH: 'Tiền mặt',
       TRANSFER: 'Chuyển khoản',
+      BANK_TRANSFER: 'Chuyển khoản',
       bank_transfer: 'Chuyển khoản',
       QR: 'QR Code',
+      E_WALLET: 'Ví điện tử',
       WALLET: 'Ví điện tử',
     };
     return map[method] || method;
@@ -260,7 +249,7 @@ export function ExpensesPage() {
           <div className="border-b border-slate-100 dark:border-slate-700/50 p-4 lg:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl w-full md:w-auto overflow-x-auto relative">
               {[
-                { key: 'payments' as TabType, label: 'Phiếu thu', icon: ArrowUpRight },
+                { key: 'payments' as TabType, label: 'Biên lai', icon: ArrowUpRight },
                 { key: 'expenses' as TabType, label: 'Phiếu chi', icon: ArrowDownLeft },
                 { key: 'deposits' as TabType, label: 'Hoàn cọc', icon: RefreshCcw },
               ].map((tab) => (
@@ -297,7 +286,7 @@ export function ExpensesPage() {
           {/* Tab Content */}
           <div className="p-0">
             <AnimatePresence mode="wait">
-              {/* ─── TAB: Phiếu thu (Payments) ─── */}
+              {/* ─── TAB: Biên lai (Payments) ─── */}
               {activeTab === 'payments' && (
                 <motion.div
                   key="payments"
@@ -360,7 +349,7 @@ export function ExpensesPage() {
                                     ))}
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-slate-400 italic">—</span>
+                                  <span className="text-xs text-slate-400 ">—</span>
                                 )}
                               </td>
                               <td className="px-6 py-4">
@@ -406,8 +395,8 @@ export function ExpensesPage() {
                   ) : (
                     <div className="p-16 text-center">
                       <DollarSign className="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-                      <p className="font-bold text-slate-500">Chưa có phiếu thu nào.</p>
-                      <p className="text-sm text-slate-400 mt-1">Phiếu thu sẽ được tạo khi bạn ghi nhận thanh toán cho hóa đơn.</p>
+                      <p className="font-bold text-slate-500">Chưa có biên lai nào.</p>
+                      <p className="text-sm text-slate-400 mt-1">Biên lai sẽ được tạo khi bạn ghi nhận thanh toán cho hóa đơn.</p>
                     </div>
                   )}
                 </motion.div>

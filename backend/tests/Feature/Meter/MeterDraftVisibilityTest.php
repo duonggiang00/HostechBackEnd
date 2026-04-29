@@ -4,16 +4,13 @@ namespace Tests\Feature\Meter;
 
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
-use App\Models\Property\Room;
-use App\Models\Property\Property;
 use App\Models\Org\Org;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
 use App\Models\Service\Service;
-use App\Models\User;
 use App\Services\Meter\MeterReadingService;
-use Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class MeterDraftVisibilityTest extends TestCase
 {

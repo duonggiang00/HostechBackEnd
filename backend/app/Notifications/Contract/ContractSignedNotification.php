@@ -9,7 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class ContractSignedNotification extends Notification implements ShouldQueue, ShouldBroadcast
+class ContractSignedNotification extends Notification implements ShouldBroadcast, ShouldQueue
 {
     use Queueable;
 
@@ -26,12 +26,12 @@ class ContractSignedNotification extends Notification implements ShouldQueue, Sh
     public function toArray(object $notifiable): array
     {
         return [
-            'type'        => 'contract.signed',
+            'type' => 'contract.signed',
             'contract_id' => $this->contract->id,
-            'room_code'   => $this->contract->room?->code,
+            'room_code' => $this->contract->room?->code,
             'signer_name' => $this->signerName,
-            'message'     => "Người thuê {$this->signerName} đã ký hợp đồng cho phòng {$this->contract->room?->code}.",
-            'action_url'  => "/contracts/{$this->contract->id}",
+            'message' => "Người thuê {$this->signerName} đã ký hợp đồng cho phòng {$this->contract->room?->code}.",
+            'action_url' => "/contracts/{$this->contract->id}",
         ];
     }
 

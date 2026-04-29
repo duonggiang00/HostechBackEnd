@@ -2,7 +2,13 @@ import axios, { AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  'http://localhost:8000/api/';
+
+const isApiDebugLogging =
+  Boolean(import.meta.env.DEV) || import.meta.env.VITE_DEBUG_API === '1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -14,20 +20,26 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const { token } = useAuthStore.getState();
+  const { token, user } = useAuthStore.getState();
 
-  // Extract scope IDs from URL as the single source of truth
+  // Scope headers: property from /properties/:uuid; org from /organizations/:uuid or /org/* + user.org_id
   const path = window.location.pathname;
   const propMatch = path.match(/\/properties\/([a-fA-F0-9\-]{36})/);
-  const orgMatch = path.match(/\/organizations\/([a-fA-F0-9\-]{36})/);
-  
-  const propertyId = propMatch ? propMatch[1] : null;
-  const organizationId = orgMatch ? orgMatch[1] : null;
+  const orgFromOrganizationsPath = path.match(/\/organizations\/([a-fA-F0-9\-]{36})/)?.[1] ?? null;
+  const orgFromOrgScope =
+    path.startsWith('/org') && user?.org_id && /^[a-fA-F0-9-]{36}$/.test(user.org_id) ? user.org_id : null;
 
-  // Standardized logging for every request
-  console.log(`%c 🚀 [API Request] ${config.method?.toUpperCase()} ${config.url}`, 'background: #6366f1; color: white; font-weight: bold; padding: 2px 5px; border-radius: 3px;');
-  if (config.params) console.log('   Params:', config.params);
-  if (config.data) console.log('   Body:', config.data);
+  const propertyId = propMatch ? propMatch[1] : null;
+  const organizationId = orgFromOrganizationsPath ?? orgFromOrgScope;
+
+  if (isApiDebugLogging) {
+    console.log(
+      `%c 🚀 [API Request] ${config.method?.toUpperCase()} ${config.url}`,
+      'background: #6366f1; color: white; font-weight: bold; padding: 2px 5px; border-radius: 3px;'
+    );
+    if (config.params) console.log('   Params:', config.params);
+    if (config.data) console.log('   Body:', config.data);
+  }
 
   if (token && token !== 'session-cookie-active') {
     config.headers.Authorization = `Bearer ${token}`;
@@ -41,29 +53,41 @@ apiClient.interceptors.request.use((config) => {
     config.headers['X-Property-Id'] = propertyId;
   }
 
+  if (!config.headers['X-Request-Id']) {
+    const rid =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    config.headers['X-Request-Id'] = rid;
+  }
+
   return config;
 });
 
 apiClient.interceptors.response.use(
   (response) => {
-    // Standardized logging for every successful response
-    console.group(`✅ [API Response] ${response.status} ${response.config.url}`);
-    console.log('Data:', response.data);
-    console.groupEnd();
+    if (isApiDebugLogging) {
+      console.group(`✅ [API Response] ${response.status} ${response.config.url}`);
+      console.log('Data:', response.data);
+      console.groupEnd();
+    }
     return response;
   },
   (error: AxiosError | any) => {
     // Handle request cancellation gracefully
     if (axios.isCancel(error)) {
-      console.log(`%c ℹ️ [API Canceled] ${error.config?.url || 'Unknown URL'}`, 'color: #94a3b8; font-style: italic;');
+      if (isApiDebugLogging) {
+        console.log(`%c ℹ️ [API Canceled] ${error.config?.url || 'Unknown URL'}`, 'color: #94a3b8;');
+      }
       return Promise.reject(error);
     }
 
-    // Standardized logging for every error
-    console.group(`❌ [API Error] ${error.response?.status || 'Network Error'} ${error.config?.url}`);
-    console.error('Message:', error.message);
-    console.error('Response Data:', error.response?.data);
-    console.groupEnd();
+    if (isApiDebugLogging) {
+      console.group(`❌ [API Error] ${error.response?.status || 'Network Error'} ${error.config?.url}`);
+      console.error('Message:', error.message);
+      console.error('Response Data:', error.response?.data);
+      console.groupEnd();
+    }
     // Determine the error message
     let errorMessage = 'An unexpected error occurred';
     

@@ -3,8 +3,6 @@
 namespace App\Listeners\Property;
 
 use App\Events\Meter\MeterReadingCreated;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 
 class NotifyPropertyManagers
 {

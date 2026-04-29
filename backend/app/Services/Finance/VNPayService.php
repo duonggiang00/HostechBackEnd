@@ -45,28 +45,28 @@ class VNPayService
      * Tạo URL thanh toán VNPay (redirect browser sang VNPay portal).
      *
      * @param  Payment  $payment  Giao dịch cần thanh toán
-     * @param  string   $ipAddr   IP người dùng
-     * @param  string   $bankCode Mã ngân hàng (để trống → VNPay tự hiện giao diện chọn)
-     * @return string   URL redirect sang VNPay
+     * @param  string  $ipAddr  IP người dùng
+     * @param  string  $bankCode  Mã ngân hàng (để trống → VNPay tự hiện giao diện chọn)
+     * @return string URL redirect sang VNPay
      */
     public function buildPaymentUrl(Payment $payment, string $ipAddr, string $bankCode = ''): string
     {
-        $tz      = config('vnpay.timezone', 'Asia/Ho_Chi_Minh');
-        $now     = Carbon::now($tz);
-        $expire  = $now->copy()->addMinutes((int) config('vnpay.expire_minutes', 15));
+        $tz = config('vnpay.timezone', 'Asia/Ho_Chi_Minh');
+        $now = Carbon::now($tz);
+        $expire = $now->copy()->addMinutes((int) config('vnpay.expire_minutes', 15));
 
         $params = [
-            'vnp_Version'    => config('vnpay.version', '2.1.0'),
-            'vnp_Command'    => 'pay',
-            'vnp_TmnCode'    => config('vnpay.tmn_code'),
-            'vnp_Amount'     => (int) ($payment->amount * 100),         // VNPay yêu cầu *100
-            'vnp_CurrCode'   => config('vnpay.curr_code', 'VND'),
-            'vnp_TxnRef'     => $payment->id,                           // UUID payment làm TxnRef
-            'vnp_OrderInfo'  => $this->buildOrderInfo($payment),
-            'vnp_OrderType'  => 'billpayment',
-            'vnp_Locale'     => config('vnpay.locale', 'vn'),
-            'vnp_ReturnUrl'  => config('vnpay.return_url'),
-            'vnp_IpAddr'     => $ipAddr,
+            'vnp_Version' => config('vnpay.version', '2.1.0'),
+            'vnp_Command' => 'pay',
+            'vnp_TmnCode' => config('vnpay.tmn_code'),
+            'vnp_Amount' => (int) ($payment->amount * 100),         // VNPay yêu cầu *100
+            'vnp_CurrCode' => config('vnpay.curr_code', 'VND'),
+            'vnp_TxnRef' => $payment->id,                           // UUID payment làm TxnRef
+            'vnp_OrderInfo' => $this->buildOrderInfo($payment),
+            'vnp_OrderType' => 'billpayment',
+            'vnp_Locale' => config('vnpay.locale', 'vn'),
+            'vnp_ReturnUrl' => config('vnpay.return_url'),
+            'vnp_IpAddr' => $ipAddr,
             'vnp_CreateDate' => $now->format('YmdHis'),
             'vnp_ExpireDate' => $expire->format('YmdHis'),
         ];
@@ -84,9 +84,9 @@ class VNPayService
         ksort($params);
 
         $queryString = http_build_query($params);
-        $secureHash  = strtoupper(hash_hmac('sha512', $queryString, config('vnpay.hash_secret')));
+        $secureHash = strtoupper(hash_hmac('sha512', $queryString, config('vnpay.hash_secret')));
 
-        return config('vnpay.payment_url') . '?' . $queryString . '&vnp_SecureHash=' . $secureHash;
+        return config('vnpay.payment_url').'?'.$queryString.'&vnp_SecureHash='.$secureHash;
     }
 
     // ╔═══════════════════════════════════════════════════════╗
@@ -96,9 +96,8 @@ class VNPayService
     /**
      * Xác thực chữ ký HMAC-SHA512 từ VNPay (dùng cho cả Return URL và IPN).
      *
-     * @param  array   $params        Query params từ VNPay (đã có vnp_SecureHash)
+     * @param  array  $params  Query params từ VNPay (đã có vnp_SecureHash)
      * @param  string  $receivedHash  Giá trị vnp_SecureHash nhận được
-     * @return bool
      */
     public function verifySignature(array $params, string $receivedHash): bool
     {
@@ -109,7 +108,7 @@ class VNPayService
 
         ksort($data);
 
-        $queryString  = http_build_query($data);
+        $queryString = http_build_query($data);
         $expectedHash = strtoupper(hash_hmac('sha512', $queryString, config('vnpay.hash_secret')));
 
         return hash_equals($expectedHash, strtoupper($receivedHash));
@@ -134,23 +133,22 @@ class VNPayService
      * - success:        bool (ResponseCode == '00')
      *
      * @param  array  $params  Query params từ VNPay
-     * @return array
      */
     public function parseCallbackData(array $params): array
     {
         return [
-            'txn_ref'            => $params['vnp_TxnRef']             ?? null,
-            'response_code'      => $params['vnp_ResponseCode']       ?? '99',
-            'transaction_no'     => $params['vnp_TransactionNo']      ?? null,
-            'bank_code'          => $params['vnp_BankCode']           ?? null,
-            'amount'             => isset($params['vnp_Amount'])
+            'txn_ref' => $params['vnp_TxnRef'] ?? null,
+            'response_code' => $params['vnp_ResponseCode'] ?? '99',
+            'transaction_no' => $params['vnp_TransactionNo'] ?? null,
+            'bank_code' => $params['vnp_BankCode'] ?? null,
+            'amount' => isset($params['vnp_Amount'])
                                         ? (float) $params['vnp_Amount'] / 100
                                         : 0,
-            'order_info'         => $params['vnp_OrderInfo']          ?? null,
-            'transaction_status' => $params['vnp_TransactionStatus']  ?? null,
-            'pay_date'           => $params['vnp_PayDate']            ?? null,
-            'success'            => ($params['vnp_ResponseCode'] ?? '99') === '00',
-            'raw'                => $params,
+            'order_info' => $params['vnp_OrderInfo'] ?? null,
+            'transaction_status' => $params['vnp_TransactionStatus'] ?? null,
+            'pay_date' => $params['vnp_PayDate'] ?? null,
+            'success' => ($params['vnp_ResponseCode'] ?? '99') === '00',
+            'raw' => $params,
         ];
     }
 
@@ -173,7 +171,7 @@ class VNPayService
     private function buildOrderInfo(Payment $payment): string
     {
         $propertyName = $payment->property?->name ?? 'Hostech';
-        $ref          = $payment->reference ?? $payment->id;
+        $ref = $payment->reference ?? $payment->id;
 
         // Chuyển sang ASCII không dấu
         $info = "Thanh toan hoa don {$ref} tai {$propertyName}";

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Users, Maximize2, DollarSign, Zap, 
-  ShieldAlert, X, Check, Loader2, ArrowRight, ArrowLeft,
+  ShieldAlert, X, Check, Loader2, ArrowRight,
   Package, Layout, FileText, Info, Image as ImageIcon, Trash2
 } from 'lucide-react';
 import { useRoomTemplateActions } from '../hooks/useTemplates';
@@ -16,6 +16,7 @@ import { useRooms } from '@/PropertyScope/features/rooms/hooks/useRooms';
 import { useFloors } from '@/PropertyScope/hooks/useFloors';
 import { useService } from '@/shared/features/billing/hooks/useService';
 import type { Service } from '@/shared/features/billing/types';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 
 interface RoomTemplateWizardProps {
@@ -93,7 +94,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
 
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   
-  const [assets, setAssets] = useState<Array<{ name: string; condition: string; note: string }>>([]);
+  const [assets, setAssets] = useState<Array<{ name: string; condition: string; note: string; quantity: number }>>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -116,7 +117,8 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
       setAssets(initialData.assets?.map((a: any) => ({
         name: a.name,
         condition: a.condition || 'new',
-        note: a.note || ''
+        note: a.note || '',
+        quantity: Number(a.quantity ?? 1),
       })) ?? []);
       setUploadedImages(initialData.media?.map(m => ({
         uuid: m.id,
@@ -252,7 +254,9 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
     const payload: CreateRoomTemplatePayload = {
       ...formData,
       services: selectedServices,
-      assets: assets.filter(a => a.name.trim()),
+      assets: assets
+        .filter(a => a.name.trim())
+        .map(a => ({ name: a.name, condition: a.condition, note: a.note, quantity: a.quantity ?? 1 })),
       ...(pendingMediaIds.length > 0 ? { media_ids: pendingMediaIds } : {}),
     };
 
@@ -444,7 +448,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                             value={formData.description}
                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                             rows={4}
-                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-[32px] outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 transition-all font-bold text-slate-600 dark:text-slate-400 placeholder:font-medium placeholder:italic"
+                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-[32px] outline-none focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500 transition-all font-bold text-slate-600 dark:text-slate-400 placeholder:font-medium placeholder:"
                             placeholder="Mô tả các đặc tính của lựa chọn này (ví dụ: gác lửng, cửa sổ thoáng...)"
                           />
                         </div>
@@ -495,7 +499,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-xl font-black text-slate-800 dark:text-white">Danh mục nội thất mặc định</h3>
                     <button 
-                      onClick={() => setAssets([...assets, { name: '', condition: 'new', note: '' }])}
+                      onClick={() => setAssets([...assets, { name: '', condition: 'new', note: '', quantity: 1 }])}
                       className="px-4 py-2 bg-slate-800 dark:bg-slate-700 text-white rounded-xl text-sm font-black hover:bg-slate-900 dark:hover:bg-slate-600 transition-all active:scale-95"
                     >
                       + Thêm tài sản
@@ -593,14 +597,21 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
 
         {/* ─── Footer Actions ─── */}
         <div className="p-8 md:p-12 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-          <button 
-            type="button" 
-            onClick={activeStep === 0 ? onCancel : handleBack}
-            className="flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-all uppercase tracking-widest text-xs"
-          >
-            {activeStep === 0 ? <X className="w-4 h-4" /> : <ArrowLeft className="w-4 h-4" />}
-            {activeStep === 0 ? 'Hủy bỏ' : 'Quay lại'}
-          </button>
+          {activeStep === 0 ? (
+            <button 
+              type="button" 
+              onClick={onCancel}
+              className="flex items-center gap-2 px-6 py-4 rounded-2xl font-black text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-all uppercase tracking-widest text-xs"
+            >
+              <X className="w-4 h-4" />
+              Hủy bỏ
+            </button>
+          ) : (
+            <PageBackButton
+              onBack={handleBack}
+              className="rounded-2xl px-6 py-4 font-black uppercase tracking-widest text-xs"
+            />
+          )}
 
           <div className="flex items-center gap-4">
             {activeStep < STEPS.length - 1 ? (

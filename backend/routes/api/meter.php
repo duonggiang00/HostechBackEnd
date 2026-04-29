@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Meter\AdjustmentNoteController;
 use App\Http\Controllers\Api\Meter\MeterController;
 use App\Http\Controllers\Api\Meter\MeterReadingController;
+use App\Http\Controllers\Api\Meter\TenantMeterController;
 use Illuminate\Support\Facades\Route;
 
 // Meters
@@ -13,7 +14,8 @@ Route::apiResource('meters', MeterController::class);
 
 // Meter Readings
 Route::get('meter-readings', [MeterReadingController::class, 'indexGlobal']);
-Route::post('tenant/meter-readings', [\App\Http\Controllers\Api\Meter\TenantMeterController::class, 'submit']);
+Route::post('tenant/meter-readings', [TenantMeterController::class, 'submit'])
+    ->middleware('throttle:meter-submit');
 Route::post('properties/{property_id}/meters/bulk-readings', [MeterReadingController::class, 'bulkStore']);
 Route::post('meter-readings/bulk-submit', [MeterReadingController::class, 'bulkSubmit']);
 Route::post('meter-readings/bulk-approve', [MeterReadingController::class, 'bulkApprove']);

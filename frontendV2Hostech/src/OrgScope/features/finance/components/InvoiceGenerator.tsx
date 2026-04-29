@@ -1,5 +1,4 @@
 import { Wand2, Files, Calculator, ArrowRight, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function InvoiceGenerator() {
   return (
@@ -11,7 +10,7 @@ export default function InvoiceGenerator() {
           <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-[0_0_30px_rgba(16,185,129,0.3)]">
             <Wand2 className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase">Trình tạo hóa đơn hàng loạt</h2>
+          <h2 className="text-4xl font-black text-white tracking-tighter uppercase">Trình tạo hóa đơn hàng loạt</h2>
           <p className="text-slate-400 font-medium max-w-md mx-auto">Tạo hàng trăm hóa đơn cho tất cả các cơ sở đang hoạt động chỉ với một lần thực thi duy nhất.</p>
           
           <div className="flex items-center justify-center gap-4 pt-4">

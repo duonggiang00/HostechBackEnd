@@ -8,6 +8,7 @@ use App\Services\Contract\ContractDocumentService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
@@ -45,8 +46,8 @@ class ContractDocumentController extends Controller
             ],
         ], [
             'file.required' => 'Vui lòng chọn file ảnh hoặc PDF để scan.',
-            'file.mimes'    => 'Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc PDF.',
-            'file.max'      => 'File không được vượt quá 10MB.',
+            'file.mimes' => 'Chỉ hỗ trợ file ảnh (JPG, PNG, WEBP) hoặc PDF.',
+            'file.max' => 'File không được vượt quá 10MB.',
         ]);
 
         $extracted = $this->documentService->scanContract($request->file('file'));
@@ -82,8 +83,8 @@ class ContractDocumentController extends Controller
 
         // Extra data có thể truyền thêm từ client (ghi đè một số trường trong template)
         $extraData = $request->validate([
-            'extra_notes'    => 'nullable|string|max:5000',
-            'landlord_name'  => 'nullable|string|max:255',
+            'extra_notes' => 'nullable|string|max:5000',
+            'landlord_name' => 'nullable|string|max:255',
             'landlord_phone' => 'nullable|string|max:20',
         ]);
 
@@ -102,9 +103,9 @@ class ContractDocumentController extends Controller
             ]);
 
             return response()->json([
-                'message'       => 'Tạo file hợp đồng thành công.',
+                'message' => 'Tạo file hợp đồng thành công.',
                 'document_path' => $storagePath,
-                'download_url'  => route('api.contracts.document.download', $contract->id),
+                'download_url' => route('api.contracts.document.download', $contract->id),
             ]);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -139,7 +140,7 @@ class ContractDocumentController extends Controller
             }
 
             $fullPath = $this->documentService->getDocumentFullPath($contract);
-            $filename = 'hop-dong-' . ($contract->room?->code ?? $contract->id) . '.' . ($contract->document_type ?? 'docx');
+            $filename = 'hop-dong-'.($contract->room?->code ?? $contract->id).'.'.($contract->document_type ?? 'docx');
 
             return response()->download($fullPath, $filename);
         } catch (\RuntimeException $e) {
@@ -152,17 +153,19 @@ class ContractDocumentController extends Controller
      */
     protected function getSignatureExtraData(string $contractId): array
     {
-        $existingFiles = \Illuminate\Support\Facades\Storage::disk('local')->files('contracts/signatures');
+        $existingFiles = Storage::disk('local')->files('contracts/signatures');
         $signatures = [];
         foreach (['manager', 'tenant'] as $role) {
             foreach ($existingFiles as $file) {
-                if (str_starts_with(basename($file), 'signature_' . $role . '_' . $contractId . '-')) {
+                if (str_starts_with(basename($file), 'signature_'.$role.'_'.$contractId.'-')) {
                     $key = $role === 'manager' ? 'signature_landlord' : 'signature_tenant';
-                    $signatures[$key] = \Illuminate\Support\Facades\Storage::disk('local')->path($file);
+                    // Đường dẫn tương đối trên disk `local` — khớp với ContractDocumentService (path() được gọi khi merge vào template).
+                    $signatures[$key] = $file;
                     break;
                 }
             }
         }
+
         return $signatures;
     }
 
@@ -186,26 +189,26 @@ class ContractDocumentController extends Controller
             'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:20480', // 20MB
         ], [
             'file.required' => 'Vui lòng chọn file hợp đồng có chữ ký.',
-            'file.mimes'    => 'Chỉ hỗ trợ file PDF, JPG, PNG.',
-            'file.max'      => 'File không được vượt quá 20MB.',
+            'file.mimes' => 'Chỉ hỗ trợ file PDF, JPG, PNG.',
+            'file.max' => 'File không được vượt quá 20MB.',
         ]);
 
         // Gắn vào MediaLibrary collection 'signed_contracts'
         $media = $contract
             ->addMediaFromRequest('file')
-            ->usingFileName('signed-contract-' . now()->timestamp . '.' . $request->file('file')->getClientOriginalExtension())
+            ->usingFileName('signed-contract-'.now()->timestamp.'.'.$request->file('file')->getClientOriginalExtension())
             ->toMediaCollection('signed_contracts');
 
         // Lưu tên file scan gốc
         $contract->update([
             'scan_original_filename' => $request->file('file')->getClientOriginalName(),
-            'signed_at'              => now(),
+            'signed_at' => now(),
         ]);
 
         return response()->json([
-            'message'  => 'Upload hợp đồng có chữ ký thành công.',
+            'message' => 'Upload hợp đồng có chữ ký thành công.',
             'media_id' => $media->id,
-            'url'      => $media->getUrl(),
+            'url' => $media->getUrl(),
         ]);
     }
 }

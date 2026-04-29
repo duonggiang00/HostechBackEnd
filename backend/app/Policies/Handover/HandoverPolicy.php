@@ -3,6 +3,7 @@
 namespace App\Policies\Handover;
 
 use App\Contracts\RbacModuleProvider;
+use App\Models\Contract\ContractMember;
 use App\Models\Handover\Handover;
 use App\Models\Org\User;
 use App\Traits\HandlesOrgScope;
@@ -46,7 +47,7 @@ class HandoverPolicy implements RbacModuleProvider
 
         if ($user->hasAnyRole(['tenant', 'Tenant'])) {
             // Chỉ thấy biên bản đã Confirm gắn với hợp đồng thuê của họ
-            return $handover->status === 'CONFIRMED' && \App\Models\Contract\ContractMember::where('user_id', $user->id)->where('contract_id', $handover->contract_id)->exists();
+            return $handover->status === 'CONFIRMED' && ContractMember::where('user_id', $user->id)->where('contract_id', $handover->contract_id)->exists();
         }
 
         return false;

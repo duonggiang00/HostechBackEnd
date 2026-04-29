@@ -30,8 +30,8 @@ class PropertyResource extends JsonResource
                 'total_rooms' => (int) ($this->rooms_count ?? $this->rooms()->count()),
                 'occupied_rooms' => (int) ($this->occupied_rooms_count ?? 0),
                 'vacant_rooms' => (int) ($this->vacant_rooms_count ?? 0),
-                'occupancy_rate' => ($this->rooms_count ?? 0) > 0 
-                    ? round(($this->occupied_rooms_count / $this->rooms_count) * 100, 1) 
+                'occupancy_rate' => ($this->rooms_count ?? 0) > 0
+                    ? round(($this->occupied_rooms_count / $this->rooms_count) * 100, 1)
                     : 0,
             ],
             'floors' => FloorResource::collection($this->whenLoaded('floors')),

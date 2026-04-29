@@ -1,9 +1,16 @@
+import { lazy } from 'react';
 import type { RouteObject } from 'react-router-dom';
-// import { DashboardOverview } from './pages/DashboardOverview';
+
+const PropertyDashboardPage = lazy(() => import('./pages/PropertyDashboardPage'));
+const StaffHomePage = lazy(() => import('./pages/StaffHomePage'));
 
 export const dashboardRoutes: RouteObject[] = [
   {
     path: 'dashboard',
-    element: <div className="p-8">Dashboard Overview (Coming Soon)</div>,
+    element: <PropertyDashboardPage />,
+  },
+  {
+    path: 'staff-home',
+    element: <StaffHomePage />,
   },
 ];

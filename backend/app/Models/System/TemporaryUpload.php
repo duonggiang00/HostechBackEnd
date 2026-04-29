@@ -5,11 +5,12 @@ namespace App\Models\System;
 use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
-class TemporaryUpload extends \Illuminate\Database\Eloquent\Model implements HasMedia
+class TemporaryUpload extends Model implements HasMedia
 {
     use HasFactory, HasUuids, InteractsWithMedia, SoftDeletes;
 

@@ -46,11 +46,11 @@ class Payment extends Model
     protected function casts(): array
     {
         return [
-            'amount'          => 'decimal:2',
-            'received_at'     => 'datetime',
-            'approved_at'     => 'datetime',
+            'amount' => 'decimal:2',
+            'received_at' => 'datetime',
+            'approved_at' => 'datetime',
             'webhook_payload' => 'array',
-            'meta'            => 'array',
+            'meta' => 'array',
         ];
     }
 
@@ -88,9 +88,20 @@ class Payment extends Model
         return $this->hasMany(LedgerEntry::class, 'ref_id')->where('ref_type', 'payment');
     }
 
+    /**
+     * Official PDF receipt generated after payment is approved.
+     */
     public function receipt(): HasOne
     {
-        return $this->hasOne(Receipt::class);
+        return $this->hasOne(Receipt::class)->where('kind', Receipt::KIND_OFFICIAL);
+    }
+
+    /**
+     * Tenant-uploaded proof image (manual flow), stored before approval.
+     */
+    public function proofReceipt(): HasOne
+    {
+        return $this->hasOne(Receipt::class)->where('kind', Receipt::KIND_PROOF);
     }
 
     // ╔═══════════════════════════════════════════════════════╗

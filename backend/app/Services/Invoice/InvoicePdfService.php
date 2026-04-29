@@ -5,7 +5,6 @@ namespace App\Services\Invoice;
 use App\Models\Invoice\Invoice;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class InvoicePdfService
 {
@@ -21,9 +20,9 @@ class InvoicePdfService
 
     /**
      * Generate a PDF for a given invoice.
-     * 
-     * @param Invoice $invoice
+     *
      * @return string The path to the stored PDF
+     *
      * @throws \Exception
      */
     public function generate(Invoice $invoice): string
@@ -42,11 +41,11 @@ class InvoicePdfService
         $content = $pdf->output();
 
         // 3. Save file to storage
-        $filename = 'invoice_' . $invoice->id . '_' . time() . '.pdf';
-        $path = $this->directory . '/' . $filename;
+        $filename = 'invoice_'.$invoice->id.'_'.time().'.pdf';
+        $path = $this->directory.'/'.$filename;
 
         // Ensure directory exists
-        if (!Storage::disk($this->disk)->exists($this->directory)) {
+        if (! Storage::disk($this->disk)->exists($this->directory)) {
             Storage::disk($this->disk)->makeDirectory($this->directory);
         }
 

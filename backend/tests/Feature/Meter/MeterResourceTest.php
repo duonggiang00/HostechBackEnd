@@ -35,7 +35,7 @@ class MeterResourceTest extends TestCase
 
         // 2. Wrap in Resource
         $resource = new MeterResource($meter);
-        $data = $resource->toArray(new Request());
+        $data = $resource->toArray(new Request);
 
         // 3. Proper PHPUnit Assertions
         $this->assertEquals('M001', $data['code']);

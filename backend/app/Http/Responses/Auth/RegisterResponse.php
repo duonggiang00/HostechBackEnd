@@ -2,7 +2,9 @@
 
 namespace App\Http\Responses\Auth;
 
+use App\Models\Org\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Laravel\Fortify\Contracts\RegisterResponse as RegisterResponseContract;
 
 class RegisterResponse implements RegisterResponseContract
@@ -10,11 +12,11 @@ class RegisterResponse implements RegisterResponseContract
     /**
      * Create an HTTP response that represents the object.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      */
     public function toResponse($request): JsonResponse
     {
-        /** @var \App\Models\Org\User */
+        /** @var User */
         $user = auth()->user();
 
         // Generate initial API token

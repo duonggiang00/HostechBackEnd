@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Building2,
   Bell,
@@ -11,12 +12,18 @@ import Sidebar from '@/shared/components/ui/Sidebar';
 import { useNavigation } from '@/shared/hooks/useNavigation';
 import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
 import NotificationCenter from '@/shared/features/messaging/components/NotificationCenter';
+import { usePropertyFinanceRealtime } from '@/shared/features/billing/hooks/useFinanceRealtime';
+import { useSessionBootstrap } from '@/shared/features/auth/hooks/useSessionBootstrap';
 
 interface PropertyScopeLayoutProps {
   children: ReactNode;
 }
 
 export default function PropertyScopeLayout({ children }: PropertyScopeLayoutProps) {
+  const { propertyId } = useParams<{ propertyId: string }>();
+  useSessionBootstrap();
+  usePropertyFinanceRealtime(propertyId);
+
   const { menuSections, scopeLabel } = useNavigation();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -30,6 +37,7 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
         onClose={() => setIsMobileMenuOpen(false)}
         menuSections={menuSections}
         scopeLabel={scopeLabel}
+        profilePath={propertyId ? `/properties/${propertyId}/profile` : undefined}
       />
 
       <div className="flex-1 flex flex-col min-w-0">

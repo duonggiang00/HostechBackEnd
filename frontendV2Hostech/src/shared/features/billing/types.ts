@@ -53,13 +53,16 @@ export interface Invoice {
   due_date: string | null;
   period_start?: string | null;
   period_end?: string | null;
-  status: 'DRAFT' | 'ISSUED' | 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'PARTIALLY_PAID';
-  subtotal: number;
-  tax: number;
-  total: number;
-  total_amount?: number;
+  status: 'DRAFT' | 'ISSUED' | 'PENDING' | 'PAID' | 'OVERDUE' | 'CANCELLED' | 'PARTIAL';
+  /** Tổng trước thuế (alias UI / normalize từ API) */
+  subtotal?: number;
+  tax?: number;
+  /** Tổng phải thu (alias của total_amount khi cần tách dòng) */
+  total?: number;
+  total_amount: number;
   paid_amount: number;
   debt: number;
+  pdf_url?: string | null;
   notes: string | null;
   items?: InvoiceItem[];
   tenant?: {
@@ -131,4 +134,58 @@ export interface VnpayVerifyResponse {
   amount: number;
   success: boolean;
   data?: any;
+}
+
+// ── Payment types (matching PaymentResource) ───────────────────────────────
+
+export interface PaymentReceipt {
+  id: string;
+  url: string;
+  path: string;
+}
+
+export interface PaymentAllocationItem {
+  id: string;
+  payment_id: string;
+  invoice_id: string;
+  amount: number;
+  invoice?: Pick<Invoice, 'id' | 'code' | 'status' | 'total_amount' | 'paid_amount'>;
+}
+
+export type PaymentStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'QR' | 'WALLET';
+
+export interface Payment {
+  id: string;
+  org_id: string;
+  property_id: string | null;
+  payer_user_id: string | null;
+  status: PaymentStatus;
+  method: PaymentMethod;
+  amount: number;
+  reference: string | null;
+  note: string | null;
+  meta: Record<string, any> | null;
+  receipt?: PaymentReceipt | null;
+  allocations?: PaymentAllocationItem[];
+  payer?: { id: string; name: string; email?: string } | null;
+  property?: { id: string; name: string } | null;
+  received_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubmitPaymentProofPayload {
+  invoice_id: string;
+  method: 'CASH' | 'BANK_TRANSFER';
+  amount: number;
+  reference?: string;
+  note?: string;
+  proof_image?: File;
+}
+
+export interface PaymentVerificationResponse {
+  message: string;
+  data: Payment;
 }

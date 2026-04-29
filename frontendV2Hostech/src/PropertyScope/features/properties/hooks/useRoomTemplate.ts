@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { templatesApi } from '../templates/api/templates';
+import { templatesApi } from '../api/templates';
 import { isUuid } from '@/lib/utils';
 
 export const ROOM_TEMPLATE_KEY = 'room-template';

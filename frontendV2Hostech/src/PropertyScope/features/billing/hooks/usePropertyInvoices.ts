@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { billingApi } from '../api/billing';
 import type {
-  Invoice,
   InvoiceQueryParams,
   GenerateMonthlyPayload,
   IssueInvoicePayload,
@@ -87,7 +86,7 @@ export function useRecordPayment(propertyId?: string) {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: RecordPaymentPayload }) =>
       billingApi.recordPayment(id, payload),
-    onSuccess: (data, { id }) => {
+    onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) });
       if (propertyId) {
         queryClient.invalidateQueries({ queryKey: ['invoices', 'property', propertyId] });

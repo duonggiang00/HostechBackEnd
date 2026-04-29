@@ -2,32 +2,20 @@
 
 namespace App\Providers\Auth;
 
-use App\Models\Org\User;
-use App\Services\Auth\MfaService;
 use Laravel\Fortify\TwoFactorAuthenticationProvider as FortifyProvider;
 
+/**
+ * Extends Fortify's TOTP provider.
+ *
+ * The custom MFA challenge (email OTP vs TOTP choice) is handled by
+ * TwoFactorChallengeController using a cache-based challenge token.
+ * This provider's verify() is only used by Fortify's own internal
+ * two-factor pipeline (e.g., password confirmation flow). For the
+ * main login challenge we bypass this provider entirely.
+ */
 class TwoFactorAuthenticationProvider extends FortifyProvider
 {
-    /**
-     * Verify the given code for the given secret/email.
-     *
-     * @param  string  $secret
-     * @param  string  $code
-     * @return bool
-     */
-    public function verify($secret, $code)
-    {
-        // Get the challenged user from session
-        $userId = request()->session()->get('fortify.two_factor_user_id');
-        
-        if ($userId) {
-            $user = User::find($userId);
-            if ($user && $user->mfa_enabled && $user->mfa_method === 'email') {
-                return app(MfaService::class)->verifyCode($user, $code, $secret);
-            }
-        }
-
-        // For TOTP or if user not in session (setup phase), use standard logic
-        return parent::verify($secret, $code);
-    }
+    // Inherits generateSecretKey(), qrCodeUrl(), and verify() from FortifyProvider.
+    // No overrides needed — the custom challenge flow is fully handled in
+    // TwoFactorChallengeController + MfaService.
 }

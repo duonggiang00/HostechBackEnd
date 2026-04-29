@@ -6,11 +6,18 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:analyze": "tsc -b && vite build --mode analyze",
     "lint": "eslint .",
     "preview": "vite preview",
     "type-sync": "openapi-typescript ../backend/api.json -o ./src/shared/types/api.generated.ts",
+    "type-sync:partial": "openapi-typescript ../backend/api.json -o ./src/shared/types/api.generated.partial.ts",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:staff": "playwright test --project=chromium-staff",
+    "test:e2e:tenant": "playwright test --project=chromium-tenant"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -56,10 +63,12 @@
     "laravel-echo": "^2.3.1",
     "openapi-typescript": "^7.13.0",
     "pusher-js": "^8.4.3",
+    "rollup-plugin-visualizer": "^5.14.0",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^6.0.0",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^3.2.4"
   }
 }

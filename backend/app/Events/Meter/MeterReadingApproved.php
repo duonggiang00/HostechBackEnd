@@ -2,10 +2,10 @@
 
 namespace App\Events\Meter;
 
+use App\Enums\ContractStatus;
 use App\Models\Meter\MeterReading;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -22,14 +22,31 @@ class MeterReadingApproved implements ShouldBroadcast
     /**
      * Get the channels the event should broadcast on.
      *
-     * @return array<int, \Illuminate\Broadcasting\Channel>
+     * @return array<int, Channel>
      */
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('property.' . $this->reading->meter->property_id),
-            new PrivateChannel('org.' . $this->reading->org_id),
+        $channels = [
+            new PrivateChannel('property.'.$this->reading->meter->property_id),
+            new PrivateChannel('org.'.$this->reading->org_id),
         ];
+
+        // Broadcast to tenants of the room to trigger real-time UI refresh
+        $room = $this->reading->meter->room;
+        if ($room) {
+            $tenantIds = $room->contracts()
+                ->whereIn('status', [ContractStatus::ACTIVE, ContractStatus::PENDING_TERMINATION])
+                ->get()
+                ->flatMap(fn ($contract) => $contract->members()->where('status', 'APPROVED')->pluck('user_id'))
+                ->unique()
+                ->filter();
+
+            foreach ($tenantIds as $userId) {
+                $channels[] = new PrivateChannel('App.Models.User.'.$userId);
+            }
+        }
+
+        return $channels;
     }
 
     /**

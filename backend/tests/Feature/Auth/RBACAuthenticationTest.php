@@ -2,9 +2,13 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\System\UserInvitation;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RBACAuthenticationTest extends TestCase
@@ -14,7 +18,7 @@ class RBACAuthenticationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
     }
 
     /**
@@ -22,13 +26,13 @@ class RBACAuthenticationTest extends TestCase
      */
     public function test_registered_user_gets_tenant_role(): void
     {
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
             'expires_at' => now()->addDays(1),
-            'org_id' => \App\Models\Org\Org::factory()->create()->id,
-            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+            'org_id' => Org::factory()->create()->id,
+            'invited_by' => User::factory()->create()->id,
         ]);
 
         $response = $this->postJson('/api/auth/register', [
@@ -125,7 +129,7 @@ class RBACAuthenticationTest extends TestCase
     public function test_user_can_checkown_permissions(): void
     {
         $user = User::factory()->create([
-            'org_id' => \Illuminate\Support\Str::uuid(),
+            'org_id' => Str::uuid(),
         ]);
         // Use Owner role which has permission to view users in org
         $user->assignRole('Owner');

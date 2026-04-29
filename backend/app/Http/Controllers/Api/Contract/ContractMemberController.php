@@ -12,6 +12,7 @@ use App\Services\Contract\ContractService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Arr;
 
 /**
  * Thành viên hợp đồng
@@ -35,7 +36,9 @@ class ContractMemberController extends Controller
 
         $this->authorize('view', $contract);
 
-        return ContractMemberResource::collection($contract->members);
+        return ContractMemberResource::collection(
+            $contract->members()->with(['user', 'media'])->get()
+        );
     }
 
     /**
@@ -43,7 +46,7 @@ class ContractMemberController extends Controller
      *
      * Khai báo thêm thành viên vào một hợp đồng đang tồn tại mà không cần thiết lập tài khoản User trước.
      */
-    public function store(ContractMemberStoreRequest $request, string $contractId): ContractMemberResource
+    public function store(ContractMemberStoreRequest $request, string $contractId): JsonResponse
     {
         $contract = $this->service->find($contractId);
         if (! $contract) {
@@ -54,7 +57,9 @@ class ContractMemberController extends Controller
 
         $member = $this->service->addMember($contract, $request->validated(), $request->user());
 
-        return new ContractMemberResource($member);
+        return ContractMemberResource::make($member->load(['user', 'media']))
+            ->toResponse($request)
+            ->setStatusCode(201);
     }
 
     /**
@@ -69,7 +74,9 @@ class ContractMemberController extends Controller
 
         $this->authorize('view', $contract);
 
-        $member = ContractMember::where('contract_id', $contractId)->find($memberId);
+        $member = ContractMember::where('contract_id', $contractId)
+            ->with(['user', 'media'])
+            ->find($memberId);
         if (! $member) {
             abort(404, 'Member Not Found');
         }
@@ -89,15 +96,38 @@ class ContractMemberController extends Controller
             abort(404, 'Contract Not Found');
         }
 
-        $this->authorize('update', $contract);
+        $member = ContractMember::where('contract_id', $contractId)->find($memberId);
+        if (! $member) {
+            abort(404, 'Member Not Found');
+        }
 
-        $updated = $this->service->updateMember($contractId, $memberId, $request->validated());
+        $this->authorize('updateMember', [$contract, $member]);
+
+        $validated = $request->validated();
+        if ($request->user()->hasRole('Tenant')) {
+            $validated = Arr::only($validated, [
+                'full_name',
+                'phone',
+                'identity_number',
+                'permanent_address',
+                'date_of_birth',
+                'license_plate',
+                'identity_front_media_id',
+                'identity_back_media_id',
+            ]);
+        }
+
+        if ($validated === []) {
+            abort(422, 'Không có dữ liệu hợp lệ để cập nhật.');
+        }
+
+        $updated = $this->service->updateMember($contractId, $memberId, $validated);
 
         if (! $updated) {
             abort(404, 'Member Not Found');
         }
 
-        return new ContractMemberResource($updated);
+        return new ContractMemberResource($updated->load(['user', 'media']));
     }
 
     /**
@@ -141,6 +171,6 @@ class ContractMemberController extends Controller
             abort(400, 'Member Not Found or already approved');
         }
 
-        return new ContractMemberResource($member);
+        return new ContractMemberResource($member->load(['user', 'media']));
     }
 }

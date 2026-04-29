@@ -5,11 +5,12 @@ namespace App\Services\Handover;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
-use App\Models\Org\Org;
+use App\Models\Contract\Contract;
+use App\Models\Property\Room;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // For potential use or just clean
+// For potential use or just clean
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
@@ -28,8 +29,18 @@ class HandoverService
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
+                // Lọc theo property_id thông qua quan hệ room (Handover không có cột property_id)
+                AllowedFilter::callback('property_id', function ($query, $value) {
+                    $query->whereHas('room', fn ($q) => $q->where('property_id', $value));
+                }),
             ])
-            ->allowedIncludes(['room', 'contract', 'confirmedBy'])
+            ->allowedIncludes([
+                'room',
+                'room.property',
+                'contract',
+                'contract.primaryMember',
+                'confirmedBy',
+            ])
             ->defaultSort('-created_at')
             ->paginate($perPage);
     }
@@ -53,9 +64,32 @@ class HandoverService
     /**
      * Tạo biên bản bàn giao nháp (DRAFT)
      */
-    public function createDraft(Org $org, array $data): Handover
+    public function createDraft(?string $actorOrgId, array $data): Handover
     {
-        $data['org_id'] = $org->id;
+        $contractOrgId = null;
+        $roomOrgId = null;
+
+        if (! empty($data['contract_id'])) {
+            $contractOrgId = Contract::query()->whereKey($data['contract_id'])->value('org_id');
+        }
+        if (! empty($data['room_id'])) {
+            $roomOrgId = Room::query()->whereKey($data['room_id'])->value('org_id');
+        }
+
+        if ($contractOrgId && $roomOrgId && (string) $contractOrgId !== (string) $roomOrgId) {
+            throw ValidationException::withMessages([
+                'room_id' => 'Phòng không thuộc cùng tổ chức với hợp đồng.',
+            ]);
+        }
+
+        $resolvedOrgId = $actorOrgId ?: $contractOrgId ?: $roomOrgId;
+        if (! $resolvedOrgId) {
+            throw ValidationException::withMessages([
+                'org_id' => 'Không xác định được tổ chức để tạo biên bản bàn giao.',
+            ]);
+        }
+
+        $data['org_id'] = $resolvedOrgId;
         $data['status'] = 'DRAFT';
 
         return DB::transaction(function () use ($data) {

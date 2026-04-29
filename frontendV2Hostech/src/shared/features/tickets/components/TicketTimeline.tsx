@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   CheckCircle2,
@@ -6,142 +7,177 @@ import {
   UserCheck,
   AlertCircle,
   MessageSquare,
-  FileText,
-  Shield,
+  Loader2,
+  Package,
+  Ban,
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import { ticketsApi } from '@/PropertyScope/features/tickets/api/ticketsApi';
+import { ticketKeys } from '@/PropertyScope/features/tickets/hooks/useTickets';
+import type { TicketEvent, TicketStatus } from '@/PropertyScope/features/tickets/types';
 
-type TicketStatus = 'REPORTED' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'VERIFIED';
-
-interface TimelineStep {
-  status: TicketStatus;
-  label: string;
-  date: string;
-  description: string;
-  icon: any;
-}
-
-const steps: TimelineStep[] = [
-  {
-    status: 'REPORTED',
-    label: 'Đã tiếp nhận',
-    date: '12/10 - 10:45',
-    description: 'Hệ thống đã ghi nhận yêu cầu sự cố từ cư dân.',
-    icon: Clock,
-  },
-  {
-    status: 'ASSIGNED',
-    label: 'Đã phân công',
-    date: '12/10 - 11:15',
-    description: 'Ban quản lý đã phân công nhân sự phụ trách xử lý.',
-    icon: UserCheck,
-  },
-  {
-    status: 'IN_PROGRESS',
-    label: 'Đang xử lý',
-    date: '12/10 - 14:30',
-    description: 'Nhân sự kỹ thuật đang kiểm tra và xử lý tại chỗ.',
-    icon: Wrench,
-  },
-  {
-    status: 'RESOLVED',
-    label: 'Đã khắc phục',
-    date: 'Chờ cập nhật',
-    description: 'Yêu cầu sẽ chuyển sang trạng thái hoàn tất sau khi xử lý xong.',
-    icon: CheckCircle2,
-  },
-  {
-    status: 'VERIFIED',
-    label: 'Cư dân xác nhận',
-    date: 'Chờ cập nhật',
-    description: 'Bạn xác nhận lại kết quả sau khi ban quản lý hoàn tất xử lý.',
-    icon: Shield,
-  },
+const STATUS_ORDER: TicketStatus[] = [
+  'OPEN',
+  'RECEIVED',
+  'IN_PROGRESS',
+  'WAITING_PARTS',
+  'DONE',
 ];
 
-export default function TicketTimeline() {
-  const currentStatus: TicketStatus = 'IN_PROGRESS';
+const STATUS_LABELS: Record<TicketStatus, string> = {
+  OPEN: 'Mới tạo',
+  RECEIVED: 'Đã tiếp nhận',
+  IN_PROGRESS: 'Đang xử lý',
+  WAITING_PARTS: 'Chờ vật tư',
+  DONE: 'Hoàn tất',
+  CANCELLED: 'Đã hủy',
+};
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  CREATED: 'Tạo phiếu',
+  STATUS_CHANGED: 'Đổi trạng thái',
+  COMMENT: 'Ghi chú',
+};
+
+function formatWhen(iso?: string | null) {
+  if (!iso) return '—';
+  try {
+    return format(new Date(iso), 'dd/MM/yyyy HH:mm', { locale: vi });
+  } catch {
+    return iso;
+  }
+}
+
+interface TicketTimelineProps {
+  ticketId: string;
+}
+
+export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
+  const { data: ticket, isLoading, isError, error } = useQuery({
+    queryKey: ticketKeys.detail(ticketId),
+    queryFn: () => ticketsApi.getTicket(ticketId),
+    enabled: !!ticketId,
+    staleTime: 15_000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-16">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
+        <p className="text-sm font-bold text-slate-400">Đang tải tiến độ…</p>
+      </div>
+    );
+  }
+
+  if (isError || !ticket) {
+    return (
+      <div className="rounded-3xl border border-rose-500/30 bg-rose-500/10 p-8 text-center">
+        <AlertCircle className="mx-auto h-10 w-10 text-rose-400" />
+        <p className="mt-3 text-sm font-bold text-rose-200">
+          {(error as Error)?.message || 'Không tải được chi tiết phiếu.'}
+        </p>
+      </div>
+    );
+  }
+
+  const status = ticket.status;
+  const currentIdx = STATUS_ORDER.indexOf(status);
+  const isCancelled = status === 'CANCELLED';
+
+  const events: TicketEvent[] = [...(ticket.events ?? [])].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+
+  const statusIcons: Record<TicketStatus, typeof Clock> = {
+    OPEN: Clock,
+    RECEIVED: UserCheck,
+    IN_PROGRESS: Wrench,
+    WAITING_PARTS: Package,
+    DONE: CheckCircle2,
+    CANCELLED: Ban,
+  };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h3 className="text-xl font-black text-white tracking-tight">Tiến độ xử lý yêu cầu</h3>
-          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Mã phiếu #TK-99284 • Ưu tiên cao</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all">
-            <MessageSquare className="w-5 h-5" />
-          </button>
-          <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-all">
-            <FileText className="w-5 h-5" />
-          </button>
-        </div>
+    <div className="max-h-[min(80vh,640px)] overflow-y-auto rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">
+      <div className="mb-8 flex flex-col gap-2 border-b border-white/10 pb-6">
+        <h3 className="text-xl font-black tracking-tight text-white">Tiến độ xử lý</h3>
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+          Phiếu #{ticket.id.slice(0, 8)} · {STATUS_LABELS[status]}
+          {ticket.category ? ` · ${ticket.category}` : ''}
+        </p>
+        <p className="text-sm leading-relaxed text-slate-300">{ticket.description}</p>
       </div>
 
-      <div className="space-y-0 relative">
-        <div className="absolute left-[23px] top-2 bottom-2 w-0.5 bg-white/10" />
-
-        {steps.map((step, idx) => {
-          const isCompleted = idx <= steps.findIndex((item) => item.status === currentStatus);
-          const isCurrent = step.status === currentStatus;
-
-          return (
-            <motion.div
-              key={step.status}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: idx * 0.1 }}
-              className="relative pl-16 pb-12 last:pb-0 group"
-            >
-              <div className={`absolute left-0 top-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 z-10 ${
-                isCurrent
-                  ? 'bg-amber-500 shadow-[0_0_25px_rgba(245,158,11,0.4)] scale-110'
-                  : isCompleted
-                    ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-500'
-                    : 'bg-white/5 border border-white/10 text-slate-600'
-              }`}>
-                <step.icon className={`w-5 h-5 ${isCurrent ? 'text-white' : ''}`} />
-              </div>
-
-              {isCompleted && idx < steps.length - 1 && (
-                <div className="absolute left-[23px] top-12 h-full w-0.5 bg-emerald-500/30" />
-              )}
-
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm font-black uppercase tracking-wider ${
-                    isCurrent ? 'text-amber-500' : isCompleted ? 'text-emerald-500' : 'text-slate-500'
-                  }`}>
-                    {step.label}
-                  </span>
-                  <span className="text-xs font-bold text-slate-600 uppercase tracking-widest bg-white/5 px-2 py-1 rounded-lg">
-                    {step.date}
-                  </span>
+      {!isCancelled && (
+        <div className="mb-10 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Trạng thái</p>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_ORDER.map((st, idx) => {
+              const Icon = statusIcons[st];
+              const reached = currentIdx >= idx;
+              const active = status === st;
+              return (
+                <div
+                  key={st}
+                  className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-black uppercase tracking-wider ${
+                    active
+                      ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
+                      : reached
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                        : 'border-white/10 bg-white/5 text-slate-500'
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {STATUS_LABELS[st]}
                 </div>
-                <p className={`mt-2 text-sm leading-relaxed ${
-                  isCurrent ? 'text-white' : 'text-slate-400'
-                }`}>
-                  {step.description}
-                </p>
-                {isCurrent && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex gap-4 items-center"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                      <AlertCircle className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs font-bold text-amber-500 uppercase tracking-wider">Lưu ý hiện tại</p>
-                      <p className="text-xs text-amber-200/70 mt-0.5 font-medium">Nếu sự cố liên quan đến điện hoặc nước, vui lòng hạn chế sử dụng khu vực này cho tới khi xử lý xong.</p>
-                    </div>
-                  </motion.div>
-                )}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="mb-8 flex items-center gap-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-rose-200">
+          <Ban className="h-6 w-6 shrink-0" />
+          <span className="text-sm font-bold">Phiếu đã hủy, không còn xử lý.</span>
+        </div>
+      )}
+
+      <div className="space-y-0 relative">
+        <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-white/10" />
+        <p className="mb-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Dòng thời gian</p>
+        {events.length === 0 ? (
+          <p className="pl-12 text-sm text-slate-500">Chưa có sự kiện ghi nhận.</p>
+        ) : (
+          events.map((ev, idx) => (
+            <motion.div
+              key={ev.id}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.04 }}
+              className="relative pl-14 pb-8 last:pb-0"
+            >
+              <div className="absolute left-0 top-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-900 text-slate-300 z-10">
+                <MessageSquare className="h-4 w-4" />
               </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-emerald-400">
+                  {EVENT_TYPE_LABELS[ev.type] || ev.type}
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                  {formatWhen(ev.created_at)}
+                </span>
+              </div>
+              {ev.actor?.full_name && (
+                <p className="mt-1 text-[11px] font-bold text-slate-500">Bởi {ev.actor.full_name}</p>
+              )}
+              {ev.message && (
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">{ev.message}</p>
+              )}
             </motion.div>
-          );
-        })}
+          ))
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default function PaymentAllocationEngine() {
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-500 rounded-full border border-emerald-500/20 text-xs font-black uppercase tracking-widest">
                 <ShieldCheck className="w-3 h-3" /> Trí tuệ hệ thống đang hoạt động
               </div>
-              <h2 className="text-4xl font-black text-white italic tracking-tighter uppercase leading-none">Đối soát <br/><span className="text-emerald-500">tự động</span></h2>
+              <h2 className="text-4xl font-black text-white tracking-tighter uppercase leading-none">Đối soát <br/><span className="text-emerald-500">tự động</span></h2>
               <p className="text-slate-400 font-medium max-w-sm">Công cụ tự động so khớp sao kê ngân hàng với các hóa đơn chưa thanh toán với độ chính xác 99,8% trên tất cả các bút toán.</p>
               
               <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
@@ -30,7 +30,7 @@ export default function PaymentAllocationEngine() {
                          <stat.icon className={`w-4 h-4 ${stat.color}`} />
                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
                       </div>
-                      <span className="text-sm font-black text-white italic">{stat.value}</span>
+                      <span className="text-sm font-black text-white ">{stat.value}</span>
                    </div>
                  ))}
               </div>

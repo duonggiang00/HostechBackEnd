@@ -2,8 +2,12 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\System\UserInvitation;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -14,7 +18,8 @@ class AuthenticationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
+        Artisan::call('rbac:sync');
     }
 
     // ===== REGISTRATION TESTS =====
@@ -25,13 +30,13 @@ class AuthenticationTest extends TestCase
     public function test_user_can_register(): void
     {
         $this->withoutExceptionHandling();
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
             'expires_at' => now()->addDays(1),
-            'org_id' => \App\Models\Org\Org::factory()->create()->id,
-            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+            'org_id' => Org::factory()->create()->id,
+            'invited_by' => User::factory()->create()->id,
         ]);
 
         try {
@@ -142,13 +147,13 @@ class AuthenticationTest extends TestCase
      */
     public function test_registered_user_has_tenant_role_permissions(): void
     {
-        $invitation = \App\Models\System\UserInvitation::create([
+        $invitation = UserInvitation::create([
             'email' => 'john@example.com',
             'token' => 'mock-token-123',
             'role_name' => 'Tenant',
             'expires_at' => now()->addDays(1),
-            'org_id' => \App\Models\Org\Org::factory()->create()->id,
-            'invited_by' => \App\Models\Org\User::factory()->create()->id,
+            'org_id' => Org::factory()->create()->id,
+            'invited_by' => User::factory()->create()->id,
         ]);
 
         $response = $this->postJson('/api/auth/register', [
@@ -188,8 +193,10 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
-            'user' => ['id', 'email', 'full_name'],
+            'user' => ['id', 'email', 'full_name', 'phone', 'org_id', 'role', 'roles', 'permissions'],
         ]);
+        $this->assertIsArray($response->json('user.permissions'));
+        $this->assertContains('viewAny Properties', $response->json('user.permissions'));
 
         // Token should be present (Sanctum returns it in response)
         $this->assertNotNull($response->json('token'));

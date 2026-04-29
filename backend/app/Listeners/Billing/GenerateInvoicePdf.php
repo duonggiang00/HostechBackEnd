@@ -38,13 +38,13 @@ class GenerateInvoicePdf implements ShouldQueue
 
         try {
             Log::info("Generating PDF for Invoice #{$invoice->id}");
-            
+
             $path = $this->invoicePdfService->generate($invoice);
-            
+
             Log::info("PDF generated for Invoice #{$invoice->id}: {$path}");
         } catch (\Exception $e) {
-            Log::error("Failed to generate PDF for Invoice #{$invoice->id}: " . $e->getMessage());
-            
+            Log::error("Failed to generate PDF for Invoice #{$invoice->id}: ".$e->getMessage());
+
             // Re-throw to allow queue retry if any
             throw $e;
         }

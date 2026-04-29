@@ -50,6 +50,8 @@ export interface RoomFloor {
 export interface RoomProperty {
   id: string;
   name: string;
+  address?: string;
+  bank_accounts?: any[];
 }
 
 export interface RoomFloorPlanNode {
@@ -121,7 +123,7 @@ export interface Room {
     service?: {
       id: string;
       name: string;
-      current_price: number;
+      price: number;
       unit: string;
       calc_mode: string;
     };
@@ -187,7 +189,8 @@ export interface RoomTemplateMeter {
   type: 'ELECTRIC' | 'WATER';
 }
 
-export interface RoomTemplate {
+/** `/room-templates` resource (amenities/meters shape); property templates use `RoomTemplate` in `properties/types/templates.types`. */
+export interface GlobalRoomTemplate {
   id: string;
   property_id: string;
   name: string;

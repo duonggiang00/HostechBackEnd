@@ -3,9 +3,13 @@
 namespace App\Services\Meter;
 
 use App\Events\Meter\BulkMeterReadingsApproved;
+use App\Events\Meter\MeterReadingApproved;
+use App\Events\Meter\MeterReadingStatusChanged;
+use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\System\TemporaryUpload;
 use App\Services\Notification\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +23,7 @@ class MeterReadingService
     public function __construct(
         protected NotificationService $notificationService,
     ) {}
+
     /**
      * Get paginated meter readings with optional filtering.
      */
@@ -78,7 +83,7 @@ class MeterReadingService
             } elseif ($user->hasRole('Staff')) {
                 $query->where(function ($q) use ($user) {
                     $q->where('status', '!=', 'DRAFT')
-                      ->orWhere('submitted_by_user_id', $user->id);
+                        ->orWhere('submitted_by_user_id', $user->id);
                 });
             }
         }
@@ -119,10 +124,16 @@ class MeterReadingService
             }
 
             // Keep one record per meter-period. If a soft-deleted row exists, remove it first.
-            $existing = MeterReading::withTrashed()->where('meter_id', $meterId)
-                ->where('period_start', $data['period_start'])
-                ->where('period_end', $data['period_end'])
-                ->first();
+            $pStart = $data['period_start'] ?? null;
+            $pEnd = $data['period_end'] ?? null;
+
+            $existing = null;
+            if ($pStart && $pEnd) {
+                $existing = MeterReading::withTrashed()->where('meter_id', $meterId)
+                    ->where('period_start', $pStart)
+                    ->where('period_end', $pEnd)
+                    ->first();
+            }
 
             if ($existing && $existing->trashed()) {
                 $existing->forceDelete();
@@ -141,20 +152,20 @@ class MeterReadingService
 
             // Get previous approved reading
             $prev = MeterReading::where('meter_id', $meterId)
-                ->where('status', 'APPROVED')
+                ->finalized()
                 ->orderBy('period_end', 'desc')
                 ->first();
 
-            $meter = \App\Models\Meter\Meter::find($meterId);
+            $meter = Meter::find($meterId);
             $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
-            
+
             // Validation: Reading cannot be smaller than previous
             if ($readingValue < $prevValue) {
                 throw new \Exception("Chỉ số mới ($readingValue) không thể nhỏ hơn chỉ số cũ ($prevValue)");
             }
 
             // Preservation of initial reading for history integrity
-            if (!$prev && $meter && !isset($meter->meta['initial_reading'])) {
+            if (! $prev && $meter && ! isset($meter->meta['initial_reading'])) {
                 $meta = $meter->meta ?? [];
                 $meta['initial_reading'] = $meter->base_reading;
                 $meter->update(['meta' => $meta]);
@@ -176,10 +187,8 @@ class MeterReadingService
                     'period_start' => 'Đã tồn tại bản chốt số cho kỳ này.',
                 ]);
             }
-            
+
             // Consumption calculation and events are now handled by MeterReadingObserver
-            
-            $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
             $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
@@ -235,28 +244,29 @@ class MeterReadingService
                 $existing->update($data);
                 $this->recalculateConsumption($existing);
                 $this->attachProofs($existing, $data['proof_media_ids'] ?? []);
+
                 return $existing->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
             }
 
             $prev = MeterReading::where('meter_id', $meterId)
-                ->where('status', 'APPROVED')
+                ->finalized()
                 ->orderBy('period_end', 'desc')
                 ->first();
 
-            $meter = \App\Models\Meter\Meter::find($meterId);
+            $meter = Meter::find($meterId);
             $prevValue = $prev ? $prev->reading_value : ($meter ? $meter->base_reading : 0);
 
             if ($readingValue < $prevValue) {
                 throw new \Exception("Chỉ số mới ($readingValue) không thể nhỏ hơn chỉ số cũ ($prevValue)");
             }
 
-            if (!$prev && $meter && !isset($meter->meta['initial_reading'])) {
+            if (! $prev && $meter && ! isset($meter->meta['initial_reading'])) {
                 $meta = $meter->meta ?? [];
                 $meta['initial_reading'] = $meter->base_reading;
                 $meter->update(['meta' => $meta]);
             }
 
-            $reading = MeterReading::withoutEvents(fn() => MeterReading::create($data));
+            $reading = MeterReading::withoutEvents(fn () => MeterReading::create($data));
             $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
             return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);
@@ -272,13 +282,13 @@ class MeterReadingService
      */
     public function bulkStore(array $readings): array
     {
-        $results      = [];
-        $approvedIds  = [];
+        $results = [];
+        $approvedIds = [];
 
         DB::transaction(function () use ($readings, &$results, &$approvedIds) {
             foreach ($readings as $readingData) {
                 // createSilent: creates the reading WITHOUT firing any events
-                $reading   = $this->createSilent($readingData);
+                $reading = $this->createSilent($readingData);
                 $results[] = $reading;
 
                 if ($reading->status === 'APPROVED') {
@@ -288,8 +298,8 @@ class MeterReadingService
         });
 
         // Fire ONE batch event for all approved readings
-        if (!empty($approvedIds)) {
-            $propertyId = !empty($results) ? $results[0]->meter->property_id : null;
+        if (! empty($approvedIds)) {
+            $propertyId = ! empty($results) ? $results[0]->meter->property_id : null;
             event(new BulkMeterReadingsApproved($approvedIds, $propertyId));
         }
 
@@ -312,6 +322,7 @@ class MeterReadingService
             foreach ($readings as $reading) {
                 $results[] = $this->update($reading, ['status' => 'SUBMITTED']);
             }
+
             return $results;
         });
     }
@@ -334,12 +345,12 @@ class MeterReadingService
                 // Pass false to update to skip single MeterReadingApproved event
                 $results[] = $this->update($reading, ['status' => 'APPROVED'], false);
                 $approvedIds[] = $reading->id;
-                if (!$propertyId) {
+                if (! $propertyId) {
                     $propertyId = $reading->meter->property_id;
                 }
             }
 
-            if (!empty($approvedIds)) {
+            if (! empty($approvedIds)) {
                 event(new BulkMeterReadingsApproved($approvedIds, $propertyId));
             }
 
@@ -361,9 +372,10 @@ class MeterReadingService
             foreach ($readings as $reading) {
                 $results[] = $this->update($reading, [
                     'status' => 'REJECTED',
-                    'meta' => array_merge($reading->meta ?? [], ['rejection_reason' => $reason])
+                    'meta' => array_merge($reading->meta ?? [], ['rejection_reason' => $reason]),
                 ]);
             }
+
             return $results;
         });
     }
@@ -377,10 +389,14 @@ class MeterReadingService
             $results = [];
             foreach ($updates as $updateData) {
                 $id = $updateData['id'] ?? null;
-                if (!$id) continue;
+                if (! $id) {
+                    continue;
+                }
 
                 $reading = MeterReading::find($id);
-                if (!$reading) continue;
+                if (! $reading) {
+                    continue;
+                }
 
                 // Strip ID from updates to avoid mass-assignment errors or unexpected behavior
                 $data = $updateData;
@@ -388,6 +404,7 @@ class MeterReadingService
 
                 $results[] = $this->update($reading, $data);
             }
+
             return $results;
         });
     }
@@ -405,16 +422,13 @@ class MeterReadingService
             $this->enrichStatusAuditFields($data, $targetStatus, $originalStatus);
 
             $isBecameApproved = $targetStatus === 'APPROVED' && $originalStatus !== 'APPROVED';
+            $lockedFromApproved = $targetStatus === 'LOCKED' && $originalStatus === 'APPROVED';
             $isReadingValueChanged = isset($data['reading_value']) || isset($data['period_start']) || isset($data['period_end']);
 
             $reading->update($data);
-            
-            // Recalculate only when value/date changed or when status moves into APPROVED.
-            if ($isReadingValueChanged || $isBecameApproved) {
-                $this->recalculateConsumption($reading);
-            }
-            
-            // If we are updating in the middle of history, we might need to cascade
+
+            // Consumption tính bởi MeterReadingObserver@saving (xử lý cả trường hợp status → APPROVED).
+            // Nếu giá trị lịch sử thay đổi, cascade lại các kỳ sau.
             if ($isReadingValueChanged) {
                 $this->triggerCascadeRecalculation($reading->meter, $reading->period_end);
             }
@@ -424,11 +438,19 @@ class MeterReadingService
                 if ($reading->status === 'APPROVED') {
                     $isValueChanged = $isReadingValueChanged || isset($data['consumption']);
                     if ($isBecameApproved || $isValueChanged) {
-                        event(new \App\Events\Meter\MeterReadingApproved($reading));
+                        event(new MeterReadingApproved($reading));
                     }
                 } elseif (isset($data['status'])) {
                     // For SUBMITTED, REJECTED, etc.
-                    event(new \App\Events\Meter\MeterReadingStatusChanged($reading->load('meter')));
+                    event(new MeterReadingStatusChanged($reading->load('meter')));
+                }
+            }
+
+            // Khóa kỳ không bắn MeterReadingApproved — vẫn đồng bộ base_reading theo chỉ số đã chốt
+            if ($lockedFromApproved) {
+                $meter = Meter::query()->find($reading->meter_id);
+                if ($meter) {
+                    $this->syncMeterBaseReading($meter);
                 }
             }
 
@@ -437,23 +459,52 @@ class MeterReadingService
         });
     }
 
-    // recalculateConsumption has been moved to MeterReadingObserver@saving
+    /**
+     * Tính lại tiêu thụ cho một lần ghi chỉ số.
+     *
+     * Quy tắc:
+     * - Tìm chỉ số đã chốt (APPROVED hoặc LOCKED) gần nhất trước thời điểm period_start.
+     * - Nếu không có, dùng initial_reading (hoặc base_reading) của đồng hồ làm mốc.
+     * - consumption = reading_value - prev_value
+     * - Lưu trực tiếp vào DB bằng updateQuietly để tránh trigger lại Observer.
+     */
+    protected function recalculateConsumption(MeterReading $reading): void
+    {
+        $prev = MeterReading::where('meter_id', $reading->meter_id)
+            ->where('id', '!=', $reading->id)
+            ->where('period_end', '<=', $reading->period_start)
+            ->finalized()
+            ->orderBy('period_end', 'desc')
+            ->first();
+
+        $meter = $reading->meter;
+        $initialReading = $meter?->meta['initial_reading'] ?? $meter?->base_reading ?? 0;
+        $prevValue = $prev ? $prev->reading_value : $initialReading;
+
+        $consumption = $reading->reading_value - $prevValue;
+
+        // Lưu trực tiếp, không dispatch events để tránh vòng lặp vô tận
+        $reading->updateQuietly(['consumption' => $consumption]);
+
+        // Cập nhật property trên model in-memory để caller dùng được ngay
+        $reading->consumption = $consumption;
+    }
 
     /**
-     * Synchronize the meter's base_reading with its latest approved reading.
+     * Synchronize the meter's base_reading with its latest finalized reading (APPROVED or LOCKED).
      * Also synchronizes the master meter's base_reading effectively.
      */
-    public function syncMeterBaseReading(\App\Models\Meter\Meter $meter): void
+    public function syncMeterBaseReading(Meter $meter): void
     {
-        // 1. Update the meter's own base_reading to its latest approved reading
+        // 1. Update the meter's own base_reading to its latest finalized reading
         $latest = $meter->latestApprovedReading;
         if ($latest) {
             $meter->update(['base_reading' => $latest->reading_value]);
         }
 
         // 2. If it's a room meter, also ensure the master meter's base_reading is current
-        if (!$meter->is_master) {
-            $masterMeter = \App\Models\Meter\Meter::where('property_id', $meter->property_id)
+        if (! $meter->is_master) {
+            $masterMeter = Meter::where('property_id', $meter->property_id)
                 ->where('type', $meter->type)
                 ->where('is_master', true)
                 ->first();
@@ -474,11 +525,11 @@ class MeterReadingService
      * Optimization: instead of firing N individual MeterReadingApproved events,
      * we recalculate consumption for each and then fire ONE BulkMeterReadingsApproved.
      */
-    public function triggerCascadeRecalculation(\App\Models\Meter\Meter $meter, \Carbon\Carbon|string $startDate): void
+    public function triggerCascadeRecalculation(Meter $meter, Carbon|string $startDate): void
     {
         $subsequentReadings = MeterReading::where('meter_id', $meter->id)
             ->where('period_start', '>=', $startDate)
-            ->where('status', 'APPROVED')
+            ->finalized()
             ->orderBy('period_start', 'asc')
             ->get();
 
@@ -501,6 +552,7 @@ class MeterReadingService
         if (empty($mediaIds)) {
             \Log::debug('📸 No proof media IDs to attach - clearing existing proofs to allow deletion');
             $reading->clearMediaCollection('reading_proofs');
+
             return;
         }
 
@@ -516,17 +568,18 @@ class MeterReadingService
 
                 if (! $relativePath) {
                     \Log::warning("📸 No relative path for media {$tempMedia->id}");
+
                     continue;
                 }
 
                 $reading->addMediaFromDisk($relativePath, $tempMedia->disk)
                     ->usingFileName($tempMedia->file_name)
                     ->toMediaCollection('reading_proofs');
-                    
+
                 \Log::debug("📸 Attached media {$tempMedia->file_name} to reading {$reading->id}");
             }
         }
-        
+
         // Verify attachment
         $proofs = $reading->getMedia('reading_proofs');
         \Log::debug("📸 After attachment, reading {$reading->id} has {$proofs->count()} proofs");
@@ -539,7 +592,7 @@ class MeterReadingService
             'SUBMITTED' => ['SUBMITTED', 'APPROVED', 'REJECTED'],
             'REJECTED' => ['REJECTED', 'DRAFT', 'SUBMITTED'],
             // Keep correction flow for approved records (same status with value fix).
-            'APPROVED' => ['APPROVED'],
+            'APPROVED' => ['APPROVED', 'LOCKED'],
             'LOCKED' => ['LOCKED'],
         ];
 
@@ -563,6 +616,10 @@ class MeterReadingService
         if ($targetStatus === 'APPROVED' && $originalStatus !== 'APPROVED') {
             $data['approved_at'] = now();
             $data['approved_by_user_id'] = $actorId;
+        }
+
+        if ($targetStatus === 'LOCKED' && $originalStatus !== 'LOCKED') {
+            $data['locked_at'] = now();
         }
     }
 

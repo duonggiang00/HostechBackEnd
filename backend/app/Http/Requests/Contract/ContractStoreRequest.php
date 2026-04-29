@@ -6,6 +6,9 @@ use App\Enums\ContractStatus;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Models\System\TemporaryUpload;
+use App\Support\ContractMemberAge;
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -47,6 +50,16 @@ class ContractStoreRequest extends FormRequest
             'members.*.role' => ['nullable', 'string', 'in:TENANT,ROOMMATE,GUARANTOR'],
             'members.*.is_primary' => ['nullable', 'boolean'],
             'members.*.joined_at' => ['nullable', 'date'],
+            'members.*.identity_front_media_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('media', 'uuid')->where('model_type', TemporaryUpload::class),
+            ],
+            'members.*.identity_back_media_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('media', 'uuid')->where('model_type', TemporaryUpload::class),
+            ],
 
             'custom_content' => ['nullable', 'string'],
             'meta' => ['nullable', 'array'],
@@ -63,8 +76,6 @@ class ContractStoreRequest extends FormRequest
             $members = $this->input('members', []);
             $dueDay = $this->input('due_day');
             $cutoffDay = $this->input('cutoff_day');
-
-
 
             if ($propertyId && $roomId) {
                 $room = Room::query()
@@ -94,11 +105,11 @@ class ContractStoreRequest extends FormRequest
                     ?? 1
                 );
 
-                $minimumEndDate = \Carbon\Carbon::parse($startDate)
+                $minimumEndDate = Carbon::parse($startDate)
                     ->addMonths($effectiveBillingCycle)
                     ->toDateString();
 
-                if (\Carbon\Carbon::parse($endDate)->lt(\Carbon\Carbon::parse($minimumEndDate))) {
+                if (Carbon::parse($endDate)->lt(Carbon::parse($minimumEndDate))) {
                     $validator->errors()->add(
                         'end_date',
                         "Ngày kết thúc không được nhỏ hơn {$minimumEndDate} theo chu kỳ thuê."
@@ -120,10 +131,82 @@ class ContractStoreRequest extends FormRequest
                 $validator->errors()->add('members', 'Người thuê chính phải có vai trò TENANT.');
             }
 
+            $startDateStr = null;
+            if ($startDate) {
+                try {
+                    $startDateStr = Carbon::parse($startDate)->toDateString();
+                } catch (\Throwable) {
+                    $startDateStr = null;
+                }
+            }
+
+            if ($startDateStr) {
+                $userIdToDobCache = [];
+
+                foreach ($members as $index => $member) {
+                    if (! is_array($member)) {
+                        continue;
+                    }
+
+                    $isPrimary = filter_var($member['is_primary'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+                    $dob = null;
+                    if (! empty($member['date_of_birth'])) {
+                        try {
+                            $dob = Carbon::parse($member['date_of_birth'])->toDateString();
+                        } catch (\Throwable) {
+                            $dob = null;
+                        }
+                    }
+
+                    if ($dob === null && ! empty($member['user_id'])) {
+                        $uid = (string) $member['user_id'];
+                        if (! array_key_exists($uid, $userIdToDobCache)) {
+                            $raw = User::query()->whereKey($uid)->value('date_of_birth');
+                            $userIdToDobCache[$uid] = $raw ? Carbon::parse($raw)->toDateString() : null;
+                        }
+                        $dob = $userIdToDobCache[$uid];
+                    }
+
+                    $front = isset($member['identity_front_media_id']) && $member['identity_front_media_id'] !== '' && $member['identity_front_media_id'] !== null
+                        ? trim((string) $member['identity_front_media_id'])
+                        : null;
+                    $back = isset($member['identity_back_media_id']) && $member['identity_back_media_id'] !== '' && $member['identity_back_media_id'] !== null
+                        ? trim((string) $member['identity_back_media_id'])
+                        : null;
+                    $hasF = (bool) $front;
+                    $hasB = (bool) $back;
+
+                    if ($hasF xor $hasB) {
+                        $validator->errors()->add("members.$index.identity_front_media_id", 'Khi tải CCCD, vui lòng gửi cả mặt trước và mặt sau.');
+
+                        continue;
+                    }
+
+                    if ($isPrimary) {
+                        if ($dob === null) {
+                            $validator->errors()->add("members.$index.date_of_birth", 'Người thuê chính cần có ngày sinh (khai báo hoặc trong tài khoản liên kết).');
+                        } elseif (! ContractMemberAge::isAdultAtContractStart($dob, $startDateStr)) {
+                            $validator->errors()->add("members.$index.date_of_birth", 'Người thuê chính phải đủ 18 tuổi tại ngày bắt đầu hợp đồng.');
+                        }
+                    }
+
+                    if (! ContractMemberAge::requiresIdentity($isPrimary, $dob, $startDateStr)) {
+                        continue;
+                    }
+
+                    if (! $hasF || ! $hasB) {
+                        $msg = 'Thành viên từ đủ 18 tuổi (hoặc chưa khai báo ngày sinh) cần tải đủ ảnh CCCD.';
+                        $validator->errors()->add("members.$index.identity_front_media_id", $msg);
+                        $validator->errors()->add("members.$index.identity_back_media_id", $msg);
+                    }
+                }
+            }
+
             // Cross-field: Path C (no user_id, no email) → require full_name + identity_number
             foreach ($members as $index => $member) {
                 $hasUserId = ! empty($member['user_id']);
-                $hasEmail  = ! empty($member['email']);
+                $hasEmail = ! empty($member['email']);
                 if (! $hasUserId && ! $hasEmail) {
                     if (empty($member['full_name'])) {
                         $validator->errors()->add("members.$index.full_name", 'Vui lòng nhập họ tên hoặc cung cấp email tài khoản.');
@@ -191,6 +274,9 @@ class ContractStoreRequest extends FormRequest
             'rent_price' => 'Giá thuê',
             'deposit_amount' => 'Tiền cọc',
             'members' => 'Thành viên',
+            'members.*.identity_front_media_id' => 'Ảnh CCCD mặt trước (thành viên)',
+            'members.*.identity_back_media_id' => 'Ảnh CCCD mặt sau (thành viên)',
+            'members.*.date_of_birth' => 'Ngày sinh (thành viên)',
         ];
     }
 

@@ -3,12 +3,12 @@
 namespace App\Services\Property;
 
 use App\Events\Property\BuildingOverviewUpdated;
+use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomFloorPlanNode;
 use App\Models\Property\RoomTemplate;
-use App\Models\Org\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -42,10 +42,10 @@ class BuildingOverviewService
 
         return DB::transaction(function () use ($property, $payload, $user) {
             $summary = [
-                'floors_added'   => 0,
-                'rooms_added'    => 0,
-                'rooms_moved'    => 0,
-                'rooms_deleted'  => 0,
+                'floors_added' => 0,
+                'rooms_added' => 0,
+                'rooms_moved' => 0,
+                'rooms_deleted' => 0,
                 'floors_deleted' => 0,
             ];
 
@@ -98,12 +98,12 @@ class BuildingOverviewService
                         RoomFloorPlanNode::updateOrCreate(
                             ['room_id' => $roomId],                 // search key
                             [
-                                'org_id'   => $property->org_id,   // update values only
+                                'org_id' => $property->org_id,   // update values only
                                 'floor_id' => $floorId,
-                                'x'        => (int) $roomData['x'],
-                                'y'        => (int) ($roomData['y'] ?? 0),
-                                'width'    => (int) ($roomData['width'] ?? 1),
-                                'height'   => (int) ($roomData['height'] ?? 1),
+                                'x' => (int) $roomData['x'],
+                                'y' => (int) ($roomData['y'] ?? 0),
+                                'width' => (int) ($roomData['width'] ?? 1),
+                                'height' => (int) ($roomData['height'] ?? 1),
                             ]
                         );
                         $summary['rooms_moved']++;
@@ -158,7 +158,7 @@ class BuildingOverviewService
             $sequence++;
         }
 
-        return $prefix . str_pad($sequence, 2, '0', STR_PAD_LEFT);
+        return $prefix.str_pad($sequence, 2, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -174,12 +174,12 @@ class BuildingOverviewService
         // Tầng MỚI — có temp_id
         if (! empty($floorData['temp_id'])) {
             $floorNumber = $floorData['floor_number'] ?? ($property->floors()->max('floor_number') + 1);
-            $floorName   = $floorData['name'] ?? "Tầng {$floorNumber}";
+            $floorName = $floorData['name'] ?? "Tầng {$floorNumber}";
 
             $floor = Floor::create([
-                'org_id'       => $property->org_id,
-                'property_id'  => $property->id,
-                'name'         => $floorName,
+                'org_id' => $property->org_id,
+                'property_id' => $property->id,
+                'name' => $floorName,
                 'floor_number' => $floorNumber,
             ]);
             $floorIdMap[$floorData['temp_id']] = $floor->id;
@@ -218,18 +218,18 @@ class BuildingOverviewService
                 // Tạo từ Template — Observer sẽ tạo FloorPlanNode, Template tạo Meters
                 $room = $this->roomService->createFromTemplate($templateId, [
                     'property_id' => $property->id,
-                    'floor_id'    => $floorId,
-                    'name'        => $autoName,
-                    'code'        => $roomData['code'] ?? $autoName,
-                    'status'      => 'available',
+                    'floor_id' => $floorId,
+                    'name' => $autoName,
+                    'code' => $roomData['code'] ?? $autoName,
+                    'status' => 'available',
                 ], $user);
             } else {
                 // Tạo nhanh không dùng template — Observer tạo FloorPlanNode + 2 Meters mặc định
                 $room = $this->roomService->quickCreate([
                     'property_id' => $property->id,
-                    'floor_id'    => $floorId,
-                    'name'        => $autoName,
-                    'code'        => $roomData['code'] ?? $autoName,
+                    'floor_id' => $floorId,
+                    'name' => $autoName,
+                    'code' => $roomData['code'] ?? $autoName,
                 ], $user);
             }
 
@@ -254,7 +254,7 @@ class BuildingOverviewService
                 ->toArray();
 
             if (! empty($floorsWithRooms)) {
-                throw new \Exception("Không thể xóa tầng đang có chứa phòng: " . implode(', ', $floorsWithRooms) . ". Vui lòng chuyển hoặc xóa phòng trước.");
+                throw new \Exception('Không thể xóa tầng đang có chứa phòng: '.implode(', ', $floorsWithRooms).'. Vui lòng chuyển hoặc xóa phòng trước.');
             }
         }
 
@@ -266,7 +266,7 @@ class BuildingOverviewService
                 ->toArray();
 
             if (! empty($occupiedRooms)) {
-                throw new \Exception("Không thể xóa các phòng đang có người ở: " . implode(', ', $occupiedRooms));
+                throw new \Exception('Không thể xóa các phòng đang có người ở: '.implode(', ', $occupiedRooms));
             }
         }
 
@@ -276,7 +276,7 @@ class BuildingOverviewService
         foreach ($payload['sync_data'] as $floorData) {
             $floorId = $floorData['floor_id'] ?? null;
             $floor = $floorId ? Floor::find($floorId) : null;
-            
+
             $effectiveFloorArea = $floor ? ($floor->area - $floor->shared_area) : ($property->area - $property->shared_area);
             $totalRoomArea = 0;
             $rects = [];
@@ -308,13 +308,15 @@ class BuildingOverviewService
                     $totalRoomArea += $roomTemplates[$templateId]->area;
                 } elseif (! empty($roomData['id'])) {
                     $existingRoom = Room::find($roomData['id']);
-                    if ($existingRoom) $totalRoomArea += $existingRoom->area;
+                    if ($existingRoom) {
+                        $totalRoomArea += $existingRoom->area;
+                    }
                 }
             }
 
             if ($effectiveFloorArea > 0 && $totalRoomArea > $effectiveFloorArea) {
-                 $floorName = $floorData['name'] ?? ($floor ? $floor->name : 'Mặt bằng');
-                 throw new \Exception("Tổng diện tích các phòng ({$totalRoomArea} m2) vượt quá diện tích khả dụng của {$floorName} ({$effectiveFloorArea} m2).");
+                $floorName = $floorData['name'] ?? ($floor ? $floor->name : 'Mặt bằng');
+                throw new \Exception("Tổng diện tích các phòng ({$totalRoomArea} m2) vượt quá diện tích khả dụng của {$floorName} ({$effectiveFloorArea} m2).");
             }
         }
     }
@@ -335,9 +337,9 @@ class BuildingOverviewService
             ->select(['id', 'name', 'area', 'base_price'])
             ->get()
             ->map(fn ($tpl) => [
-                'id'         => $tpl->id,
-                'name'       => $tpl->name,
-                'area'       => (float) $tpl->area,
+                'id' => $tpl->id,
+                'name' => $tpl->name,
+                'area' => (float) $tpl->area,
                 'base_price' => (float) $tpl->base_price,
             ])
             ->toArray();

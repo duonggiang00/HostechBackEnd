@@ -45,6 +45,9 @@ class InvoiceResource extends JsonResource
             'created_by' => new UserResource($this->whenLoaded('createdBy')),
             'issued_by' => new UserResource($this->whenLoaded('issuedBy')),
 
+            // PDF
+            'pdf_url' => $this->pdf_url,
+
             // Timestamps
             'issued_at' => $this->issued_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),

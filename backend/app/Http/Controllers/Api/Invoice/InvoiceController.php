@@ -11,7 +11,11 @@ use App\Http\Resources\Invoice\InvoiceItemResource;
 use App\Http\Resources\Invoice\InvoiceResource;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
+use App\Models\Property\Property;
+use App\Services\Finance\PaymentService;
 use App\Services\Invoice\InvoiceService;
+use App\Services\Invoice\RecurringBillingService;
+use Carbon\Carbon;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,10 +32,8 @@ class InvoiceController extends Controller
 {
     public function __construct(
         protected InvoiceService $service,
-        protected \App\Services\Finance\PaymentService $paymentService
-    ) {
-    }
-
+        protected PaymentService $paymentService
+    ) {}
 
     // ╔═══════════════════════════════════════════════════════╗
     // ║  LIST / READ ENDPOINTS                                ║
@@ -116,7 +118,7 @@ class InvoiceController extends Controller
     public function show(string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -134,7 +136,7 @@ class InvoiceController extends Controller
      *
      * Tạo hóa đơn tự động cho các hợp đồng đang hoạt động trong tháng chỉ định.
      */
-    public function generateMonthly(Request $request, \App\Services\Invoice\RecurringBillingService $recurringBillingService): JsonResponse
+    public function generateMonthly(Request $request, RecurringBillingService $recurringBillingService): JsonResponse
     {
         $this->authorize('create', Invoice::class);
 
@@ -144,16 +146,25 @@ class InvoiceController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user->hasRole('Admin') && $user->org_id !== $validated['org_id']) {
+        if (! $user->hasRole('Admin') && $user->org_id !== $validated['org_id']) {
             abort(403, 'Unauthorized to run billing for this organization.');
         }
 
-        $periodMonth = \Carbon\Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+        $periodMonth = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
 
         $results = $recurringBillingService->generateMonthlyInvoices($validated['org_id'], $periodMonth);
 
+        $summary = $results['failed'] > 0
+            ? sprintf(
+                'Đã tạo hóa đơn cho %d/%d hợp đồng. %d hợp đồng chưa tạo mới — mở chi tiết lỗi trong phản hồi.',
+                $results['success'],
+                $results['total'],
+                $results['failed'],
+            )
+            : sprintf('Đã tạo hóa đơn cho %d hợp đồng.', $results['success']);
+
         return response()->json([
-            'message' => 'Invoice generation completed',
+            'message' => $summary,
             'data' => $results,
         ], 200);
     }
@@ -161,14 +172,14 @@ class InvoiceController extends Controller
     /**
      * Kích hoạt tạo hóa đơn định kỳ cho cụ thể 1 tòa nhà
      */
-    public function generateMonthlyForProperty(Request $request, string $property_id, \App\Services\Invoice\RecurringBillingService $recurringBillingService): JsonResponse
+    public function generateMonthlyForProperty(Request $request, string $property_id, RecurringBillingService $recurringBillingService): JsonResponse
     {
         $this->authorize('create', Invoice::class);
 
-        $property = \App\Models\Property\Property::findOrFail($property_id);
+        $property = Property::findOrFail($property_id);
 
         $user = $request->user();
-        if (!$user->hasRole('Admin') && $user->org_id !== $property->org_id) {
+        if (! $user->hasRole('Admin') && $user->org_id !== $property->org_id) {
             abort(403, 'Unauthorized to run billing for this organization.');
         }
 
@@ -177,15 +188,25 @@ class InvoiceController extends Controller
         ]);
 
         $billingDate = $validated['billing_date'] ?? now()->toDateString();
-        $periodMonth = \Carbon\Carbon::parse($billingDate)->startOfMonth();
+        $periodMonth = Carbon::parse($billingDate)->startOfMonth();
 
         $results = $recurringBillingService->generateMonthlyInvoicesForProperty($property->id, $periodMonth);
 
+        $message = $results['failed'] > 0
+            ? sprintf(
+                'Đã tạo hóa đơn cho %d/%d phòng. %d phòng chưa tạo mới — xem chi tiết (thường do đã có hóa đơn kỳ này hoặc chưa chốt số điện/nước).',
+                $results['success'],
+                $results['total'],
+                $results['failed'],
+            )
+            : sprintf('Đã tạo hóa đơn tháng cho %d phòng.', $results['success']);
+
         return response()->json([
-            'message' => 'Đã chốt tiền tháng cho tòa nhà.',
+            'message' => $message,
             'count' => $results['success'],
             'failed' => $results['failed'],
             'errors' => $results['errors'],
+            'total' => $results['total'],
         ], 200);
     }
 
@@ -216,7 +237,7 @@ class InvoiceController extends Controller
     public function update(InvoiceUpdateRequest $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -235,7 +256,7 @@ class InvoiceController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -266,7 +287,7 @@ class InvoiceController extends Controller
     public function issue(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -294,7 +315,7 @@ class InvoiceController extends Controller
     public function pay(Request $request, string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -306,8 +327,9 @@ class InvoiceController extends Controller
 
         // Chuẩn hóa phương thức (frontend có thể gửi 'transfer', 'cash')
         $method = strtoupper($method);
-        if ($method === 'TRANSFER')
+        if ($method === 'TRANSFER') {
             $method = 'BANK_TRANSFER';
+        }
 
         $paymentData = [
             'org_id' => $invoice->org_id,
@@ -318,8 +340,8 @@ class InvoiceController extends Controller
             'note' => $request->input('note'),
             'received_at' => now(),
             'allocations' => [
-                ['invoice_id' => $invoice->id, 'amount' => $amount]
-            ]
+                ['invoice_id' => $invoice->id, 'amount' => $amount],
+            ],
         ];
 
         $payment = $this->paymentService->create($paymentData, $request->user());
@@ -327,21 +349,20 @@ class InvoiceController extends Controller
         return response()->json([
             'message' => 'Thanh toán đã được ghi nhận thành công.',
             'data' => $payment,
-            'invoice' => new InvoiceResource($invoice->fresh())
+            'invoice' => new InvoiceResource($invoice->fresh()),
         ], 200);
     }
-
 
     /**
      * Ghi nhận thanh toán (Partial or Full)
      *
      * Ghi nhận một giao dịch thanh toán cho hóa đơn.
-     * Tự động chuyển trạng thái sang PAID hoặc PARTIALLY_PAID.
+     * Tự động chuyển trạng thái sang PAID hoặc PARTIAL.
      */
     public function recordPayment(Request $request, string $id): JsonResponse
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -360,8 +381,8 @@ class InvoiceController extends Controller
             'org_id' => $invoice->org_id,
             'property_id' => $invoice->property_id,
             'allocations' => [
-                ['invoice_id' => $invoice->id, 'amount' => $validated['amount']]
-            ]
+                ['invoice_id' => $invoice->id, 'amount' => $validated['amount']],
+            ],
         ]);
 
         $payment = $this->paymentService->create($paymentData, $request->user());
@@ -369,7 +390,7 @@ class InvoiceController extends Controller
         return response()->json([
             'message' => 'Thanh toán đã được ghi nhận thành công.',
             'data' => $payment,
-            'invoice' => new InvoiceResource($invoice->fresh())
+            'invoice' => new InvoiceResource($invoice->fresh()),
         ], 201);
 
     }
@@ -383,7 +404,7 @@ class InvoiceController extends Controller
     public function cancel(Request $request, string $id): InvoiceResource
     {
         $invoice = $this->service->find($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -412,7 +433,7 @@ class InvoiceController extends Controller
     public function restore(string $id): InvoiceResource
     {
         $invoice = $this->service->findTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -429,7 +450,7 @@ class InvoiceController extends Controller
     public function forceDelete(string $id): JsonResponse
     {
         $invoice = $this->service->findWithTrashed($id);
-        if (!$invoice) {
+        if (! $invoice) {
             abort(404, 'Not Found');
         }
 
@@ -453,7 +474,7 @@ class InvoiceController extends Controller
     public function storeItem(Request $request, string $invoice): JsonResponse
     {
         $invoiceModel = $this->service->find($invoice);
-        if (!$invoiceModel) {
+        if (! $invoiceModel) {
             abort(404, 'Invoice Not Found');
         }
 
@@ -482,7 +503,7 @@ class InvoiceController extends Controller
     public function destroyItem(string $item): JsonResponse
     {
         $invoiceItem = InvoiceItem::with('invoice')->find($item);
-        if (!$invoiceItem) {
+        if (! $invoiceItem) {
             abort(404, 'Invoice Item Not Found');
         }
 

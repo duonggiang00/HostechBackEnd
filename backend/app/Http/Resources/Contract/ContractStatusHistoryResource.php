@@ -15,17 +15,17 @@ class ContractStatusHistoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'           => $this->id,
-            'contract_id'  => $this->contract_id,
-            'old_status'   => $this->old_status,
-            'new_status'   => $this->new_status,
-            'reason'       => $this->reason,
-            'comment'      => $this->comment,
-            'created_at'   => $this->created_at?->toIso8601String(),
-            'changedBy'    => [
-                'id'        => $this->changedBy?->id,
+            'id' => $this->id,
+            'contract_id' => $this->contract_id,
+            'old_status' => $this->old_status,
+            'new_status' => $this->new_status,
+            'reason' => $this->reason,
+            'comment' => $this->comment,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'changedBy' => [
+                'id' => $this->changedBy?->id,
                 'full_name' => $this->changedBy?->full_name,
-                'email'     => $this->changedBy?->email,
+                'email' => $this->changedBy?->email,
             ],
         ];
     }

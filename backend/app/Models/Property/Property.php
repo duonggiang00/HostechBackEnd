@@ -3,6 +3,9 @@
 namespace App\Models\Property;
 
 use App\Models\Concerns\MultiTenant;
+use App\Models\Contract\Contract;
+use App\Models\Org\User;
+use App\Models\Service\Service;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,7 +35,7 @@ class Property extends Model
         'default_cutoff_day',
         'bank_accounts',
         'default_deposit_months',
-        'house_rules'
+        'house_rules',
     ];
 
     protected function casts(): array
@@ -63,18 +66,18 @@ class Property extends Model
      */
     public function managers()
     {
-        return $this->belongsToMany(\App\Models\Org\User::class, 'property_user')
+        return $this->belongsToMany(User::class, 'property_user')
             ->withTimestamps();
     }
 
     public function contracts()
     {
-        return $this->hasMany(\App\Models\Contract\Contract::class);
+        return $this->hasMany(Contract::class);
     }
 
     public function defaultServices()
     {
-        return $this->belongsToMany(\App\Models\Service\Service::class, 'property_default_services')
+        return $this->belongsToMany(Service::class, 'property_default_services')
             ->using(PropertyDefaultService::class)
             ->withTimestamps();
     }

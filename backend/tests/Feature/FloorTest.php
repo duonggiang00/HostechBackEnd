@@ -8,6 +8,7 @@ use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
+use Database\Seeders\RBACSeeder;
 use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
@@ -17,7 +18,7 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('admin can crud floor', function () {

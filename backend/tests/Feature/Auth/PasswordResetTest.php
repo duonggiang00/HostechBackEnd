@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Org\User;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,7 @@ class PasswordResetTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
     }
 
     /**

@@ -126,7 +126,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                   </button>
                 )}
                 
-                {['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && invoice.debt > 0 && (
+                {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(invoice.status) && invoice.debt > 0 && (
                   <button
                     onClick={() => setShowPaymentModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] text-sm font-black transition-all"
@@ -208,7 +208,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                       
                       <div className="flex items-baseline justify-between mb-1">
                         <span className="text-xs font-bold text-slate-900 dark:text-white">
-                          {history.actor?.full_name || 'Hệ thống'}
+                          {history.changed_by?.full_name || 'Hệ thống'}
                         </span>
                         <span className="text-[10px] text-slate-400 font-medium">{formatDate(history.created_at)}</span>
                       </div>
@@ -226,7 +226,7 @@ export function InvoiceDetailPanel({ invoiceId, onClose }: Props) {
                       </div>
                       
                       {history.note && (
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 bg-white dark:bg-slate-800 p-3 rounded-[8px] border border-slate-100 dark:border-slate-700 italic">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 bg-white dark:bg-slate-800 p-3 rounded-[8px] border border-slate-100 dark:border-slate-700 ">
                           "{history.note}"
                         </p>
                       )}

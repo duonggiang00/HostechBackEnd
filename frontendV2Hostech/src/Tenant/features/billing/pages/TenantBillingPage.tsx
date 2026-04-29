@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, Clock, Loader2, Search } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, Clock, Search } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
-import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import type { Invoice } from '@/shared/features/billing/types';
 import { TenantInvoiceDetailModal } from '../components/TenantInvoiceDetailModal';
 
@@ -14,16 +13,14 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString('vi-VN');
 };
 
-const getOutstandingAmount = (invoice: Invoice) => Math.max(0, Number(invoice.debt ?? invoice.total - invoice.paid_amount));
+const getOutstandingAmount = (invoice: Invoice) => Math.max(0, Number(invoice.debt ?? invoice.total_amount - invoice.paid_amount));
 
 export default function TenantBillingPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [processingInvoiceId, setProcessingInvoiceId] = useState<string | null>(null);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
-  const { user } = useAuthStore();
-  const { useInvoices, createVnpayPayment } = useInvoice();
+  const { useInvoices } = useInvoice();
   const { data: invoicesResponse, isLoading } = useInvoices();
 
   const invoices = invoicesResponse?.data || [];
@@ -49,6 +46,8 @@ export default function TenantBillingPage() {
         return 'Đã thanh toán';
       case 'ISSUED':
         return 'Chờ thanh toán';
+      case 'PARTIAL':
+        return 'Thanh toán 1 phần';
       case 'OVERDUE':
         return 'Quá hạn';
       case 'CANCELLED':
@@ -64,6 +63,8 @@ export default function TenantBillingPage() {
         return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300';
       case 'ISSUED':
         return 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300';
+      case 'PARTIAL':
+        return 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300';
       case 'OVERDUE':
         return 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300';
       default:
@@ -82,55 +83,21 @@ export default function TenantBillingPage() {
     }
   };
 
-  const outstandingInvoices = invoices.filter((invoice: Invoice) => ['ISSUED', 'OVERDUE'].includes(invoice.status));
+  const outstandingInvoices = invoices.filter((invoice: Invoice) => ['ISSUED', 'PARTIAL', 'OVERDUE'].includes(invoice.status));
   const totalOutstanding = outstandingInvoices.reduce((total: number, invoice: Invoice) => total + getOutstandingAmount(invoice), 0);
   const nearestInvoice = outstandingInvoices
     .slice()
     .sort((a: Invoice, b: Invoice) => new Date(a.due_date || '').getTime() - new Date(b.due_date || '').getTime())[0];
 
-  const handlePayInvoice = (invoice: Invoice) => {
+  const handleOpenPayment = (invoice: Invoice) => {
     const outstandingAmount = getOutstandingAmount(invoice);
-
-    if (!user?.id) {
-      toast.error('Không xác định được tài khoản thanh toán hiện tại.');
-      return;
-    }
-
-    if (!invoice.org_id || !invoice.property_id) {
-      toast.error('Thiếu dữ liệu để tạo thanh toán.');
-      return;
-    }
 
     if (outstandingAmount <= 0) {
       toast.error('Hóa đơn này không còn số dư cần thanh toán.');
       return;
     }
 
-    setProcessingInvoiceId(invoice.id);
-    createVnpayPayment.mutate(
-      {
-        org_id: invoice.org_id,
-        property_id: invoice.property_id,
-        payer_user_id: user.id,
-        method: 'QR',
-        amount: outstandingAmount,
-        note: `Thanh toán ${invoice.code}`,
-        allocations: [
-          {
-            invoice_id: invoice.id,
-            amount: outstandingAmount,
-          },
-        ],
-      },
-      {
-        onSuccess: (response) => {
-          window.location.assign(response.payment_url);
-        },
-        onError: () => {
-          setProcessingInvoiceId(null);
-        },
-      },
-    );
+    setSelectedInvoiceId(invoice.id);
   };
 
   return (
@@ -161,15 +128,10 @@ export default function TenantBillingPage() {
               </p>
             </div>
             <button
-              onClick={() => handlePayInvoice(nearestInvoice)}
-              disabled={processingInvoiceId === nearestInvoice.id && createVnpayPayment.isPending}
+              onClick={() => handleOpenPayment(nearestInvoice)}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
             >
-              {processingInvoiceId === nearestInvoice.id && createVnpayPayment.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <ArrowRight className="h-4 w-4" />
-              )}
+              <ArrowRight className="h-4 w-4" />
               Thanh toán ngay
             </button>
           </div>
@@ -196,6 +158,7 @@ export default function TenantBillingPage() {
           >
             <option value="all">Tất cả trạng thái</option>
             <option value="ISSUED">Chờ thanh toán</option>
+            <option value="PARTIAL">Thanh toán 1 phần</option>
             <option value="PAID">Đã thanh toán</option>
             <option value="OVERDUE">Quá hạn</option>
           </select>
@@ -214,7 +177,6 @@ export default function TenantBillingPage() {
         ) : (
           filteredInvoices.map((invoice: Invoice) => {
             const outstandingAmount = getOutstandingAmount(invoice);
-            const isPaying = processingInvoiceId === invoice.id && createVnpayPayment.isPending;
 
             return (
               <article
@@ -245,14 +207,13 @@ export default function TenantBillingPage() {
                       <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">{formatCurrency(outstandingAmount)}</p>
                     </div>
 
-                    {['ISSUED', 'OVERDUE'].includes(invoice.status) && outstandingAmount > 0 ? (
+                    {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(invoice.status) && outstandingAmount > 0 ? (
                       <button
-                        onClick={(e) => { e.stopPropagation(); handlePayInvoice(invoice); }}
-                        disabled={isPaying}
+                        onClick={(e) => { e.stopPropagation(); handleOpenPayment(invoice); }}
                         className="inline-flex min-w-[170px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                       >
-                        {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
-                        {isPaying ? 'Đang chuyển sang VNPay' : 'Thanh toán'}
+                        <ArrowRight className="h-4 w-4" />
+                        Thanh toán
                       </button>
                     ) : (
                       <div className="text-sm font-bold text-slate-500 dark:text-slate-400">

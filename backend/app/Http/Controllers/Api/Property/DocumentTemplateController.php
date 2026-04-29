@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Property;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Property\DocumentTemplateRequest;
 use App\Models\Document\DocumentTemplate;
+use App\Services\Contract\ContractDocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -50,7 +51,7 @@ class DocumentTemplateController extends Controller
 
         return response()->json([
             'message' => 'Tạo mẫu tài liệu thành công.',
-            'data'    => $template
+            'data' => $template,
         ], 201);
     }
 
@@ -60,6 +61,7 @@ class DocumentTemplateController extends Controller
     public function show(string $id): JsonResponse
     {
         $template = DocumentTemplate::where('org_id', auth()->user()->org_id)->findOrFail($id);
+
         return response()->json($template);
     }
 
@@ -85,7 +87,7 @@ class DocumentTemplateController extends Controller
 
         return response()->json([
             'message' => 'Cập nhật mẫu tài liệu thành công.',
-            'data'    => $template
+            'data' => $template,
         ]);
     }
 
@@ -95,25 +97,25 @@ class DocumentTemplateController extends Controller
     public function destroy(string $id): JsonResponse
     {
         $template = DocumentTemplate::where('org_id', auth()->user()->org_id)->findOrFail($id);
-        
+
         $template->update(['is_active' => false]);
 
         return response()->json([
-            'message' => 'Đã vô hiệu hóa mẫu tài liệu.'
+            'message' => 'Đã vô hiệu hóa mẫu tài liệu.',
         ]);
     }
 
     /**
      * Get discovery variables from a template.
      */
-    public function placeholders(string $id, \App\Services\Contract\ContractDocumentService $service): JsonResponse
+    public function placeholders(string $id, ContractDocumentService $service): JsonResponse
     {
         $template = DocumentTemplate::where('org_id', auth()->user()->org_id)->findOrFail($id);
         $vars = $service->placeholderDiscovery($template);
 
         return response()->json([
             'template_id' => $id,
-            'placeholders' => $vars
+            'placeholders' => $vars,
         ]);
     }
 }

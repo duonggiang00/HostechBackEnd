@@ -13,16 +13,17 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Ticket\Ticket;
-use Illuminate\Support\Carbon;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 
 beforeEach(function () {
     Cache::flush();
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 
     // Shared org
     $this->org = Org::factory()->create();
@@ -486,7 +487,7 @@ test('dashboard accepts from/to filter params', function () {
 test('time filter affects admin org new_in_range count', function () {
     // Create org 2 months ago
     Org::withoutGlobalScopes()->forceCreate([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'name' => 'Old Org',
         'phone' => '0901234567',
         'email' => 'old@org.test',

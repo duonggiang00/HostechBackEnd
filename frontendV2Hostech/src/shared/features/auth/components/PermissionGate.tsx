@@ -26,6 +26,10 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
   let hasAccess = true;
 
   if (permission) {
+    // Deny until session RBAC is hydrated (see useSessionBootstrap / LoginPage getMe).
+    if (user.profile_loaded !== true) {
+      return <>{fallback}</>;
+    }
     const permissions = Array.isArray(permission) ? permission : [permission];
     if (requireAll) {
       hasAccess = permissions.every(p => hasPermission(p));

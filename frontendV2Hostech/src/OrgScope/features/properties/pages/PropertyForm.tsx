@@ -5,9 +5,10 @@ import { useServices } from '@/PropertyScope/features/services/hooks/useServices
 import type { Property } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { 
-  ArrowLeft, Save, Loader2, Building2, MapPin, Hash, 
+  Save, Loader2, Building2, MapPin, Hash, 
   Ruler, FileText, Settings, CreditCard, Users, CheckCircle2, PlusCircle
 } from 'lucide-react';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 export default function PropertyForm() {
   const { id } = useParams();
@@ -80,12 +81,7 @@ export default function PropertyForm() {
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
-          >
-            <ArrowLeft className="w-6 h-6" />
-          </button>
+          <PageBackButton className="rounded-xl px-2 py-2" />
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
               {isEdit ? 'Edit Property' : 'Register New Property'}
@@ -303,7 +299,7 @@ export default function PropertyForm() {
               })}
             </div>
             
-            <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-xl border border-slate-100">
               Lưu ý: Dịch vụ được chọn sẽ tự động áp dụng cho tất cả phòng thuộc tòa nhà này, trừ khi được ghi đè thủ công.
             </p>
           </section>
@@ -332,7 +328,7 @@ export default function PropertyForm() {
                 </h3>
                 <p className="text-slate-500 text-xs">Dùng cho hóa đơn tự động</p>
              </div>
-             <p className="text-slate-400 text-sm italic">Tính năng cấu hình ngân hàng đang được phát triển.</p>
+             <p className="text-slate-400 text-sm ">Tính năng cấu hình ngân hàng đang được phát triển.</p>
           </section>
 
           <div className="space-y-3">

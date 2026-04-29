@@ -31,6 +31,7 @@ class FloorResource extends JsonResource
             'rooms' => RoomResource::collection($this->whenLoaded('rooms')),
             'floor_plan_image' => $this->whenLoaded('media', function () {
                 $media = $this->getFirstMedia('floor_plan');
+
                 return $media ? $media->getUrl() : null;
             }),
             'created_at' => $this->created_at,

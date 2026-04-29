@@ -73,7 +73,11 @@ app/
 ### 3.2. Phân hệ Sổ cái & Dòng tiền (Ledger & Cashflow)
 - **GET** `/api/finance/ledger`
     - *Mô tả*: Truy vấn lịch sử bút toán sổ cái để đối soát tài chính.
-    - *Query Params*: `filter[ref_type]`, `filter[ref_id]`, `filter[occurred_between]`.
+    - *Query Params*: `filter[ref_type]`, `filter[ref_id]`, `filter[occurred_between]`, `filter[property_id]` (lọc theo `meta.property_id` trên từng dòng ledger), `filter[view]` (`cashflow` | `full`).
+- **GET** `/api/finance/ledger/summary`
+    - *Mô tả*: KPI thu quỹ / hoàn quỹ (nhánh CASH_BANK) và **cọc đang giữ** (từ hợp đồng), theo org và **tùy chọn theo tòa** qua `filter[property_id]`, khoảng thời gian qua `filter[occurred_between]`.
+- **GET** `/api/finance/ledger/balance`
+    - *Mô tả*: Tổng `debit` / `credit` / số dư **toàn tổ chức (`org_id`)** — **không** hỗ trợ `filter[property_id]`. UI hoặc báo cáo theo tòa phải dùng **`/ledger`** + filter tòa hoặc **`/ledger/summary`**, không dùng `/ledger/balance` để suy diễn số dư một tòa.
 - **GET** `/api/finance/cashflow`
     - *Mô tả*: Báo cáo dòng tiền thực tế In/Out theo thời gian.
 - **POST** `/api/finance/cashflow`

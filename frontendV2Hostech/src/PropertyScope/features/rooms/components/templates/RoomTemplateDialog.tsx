@@ -3,12 +3,13 @@ import {
   X, Box, Maximize2, Coins, Plus, Trash2, Users, Zap, Gauge, Check, Loader2, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { RoomTemplate, RoomTemplateAsset, RoomTemplateMeter } from '../../types';
+import type { GlobalRoomTemplate, RoomTemplateAsset, RoomTemplateMeter } from '../../types';
 import { ActionButton } from '@/shared/components/ui/ActionButton';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import { formatNumber, parseNumber } from '@/lib/utils';
 
 interface RoomTemplateDialogProps {
-  initialData?: RoomTemplate | null;
+  initialData?: GlobalRoomTemplate | null;
   propertyId: string;
   onClose: () => void;
   onSave: (data: any) => void;
@@ -269,7 +270,7 @@ export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, i
                     ))}
                     {assets.length === 0 && (
                       <div className="text-center py-6 border-2 border-dashed border-slate-100 dark:border-slate-700 rounded-2xl">
-                        <p className="text-xs font-bold text-slate-400 italic">Chưa có nội thất nào được thêm</p>
+                        <p className="text-xs font-bold text-slate-400 ">Chưa có nội thất nào được thêm</p>
                       </div>
                     )}
                   </div>
@@ -322,13 +323,10 @@ export function RoomTemplateDialog({ initialData, propertyId, onClose, onSave, i
           {/* Footer Actions */}
           <div className="pt-10 flex gap-4 pr-4">
             {step === 2 && (
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="flex-1 px-8 py-5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-3xl font-black uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
-              >
-                Quay lại
-              </button>
+              <PageBackButton
+                onBack={() => setStep(1)}
+                className="flex-1 justify-center rounded-3xl bg-slate-100 px-8 py-5 font-black uppercase tracking-widest hover:bg-slate-200 active:scale-95 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+              />
             )}
             {step === 1 ? (
               <button

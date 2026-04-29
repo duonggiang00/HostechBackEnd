@@ -52,7 +52,7 @@ export const ticketsApi = {
 
   // ─── Status ────────────────────────────────────────────────────────────────
   updateStatus: async (id: string, data: UpdateTicketStatusPayload): Promise<Ticket> => {
-    const response = await apiClient.patch(`/tickets/${id}/status`, data);
+    const response = await apiClient.put(`/tickets/${id}/status`, data);
     return response.data.data as Ticket;
   },
 

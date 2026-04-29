@@ -2,12 +2,13 @@
 
 namespace Database\Factories\Org;
 
+use App\Models\Org\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Org\User>
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
@@ -17,7 +18,7 @@ class UserFactory extends Factory
             'id' => Str::uuid(),
             'org_id' => null,
             'full_name' => fake('vi_VN')->name(),
-            'phone' => '0' . fake()->numberBetween(3, 9) . fake()->numerify('########'),
+            'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
             'email' => fake()->unique()->safeEmail(),
             'password_hash' => Hash::make('12345678'),
             'email_verified_at' => now(),

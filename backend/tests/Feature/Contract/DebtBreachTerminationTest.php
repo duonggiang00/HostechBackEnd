@@ -2,17 +2,16 @@
 
 namespace Tests\Feature\Contract;
 
+use App\Enums\ContractCancellationParty;
+use App\Enums\ContractStatus;
+use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
-use App\Models\Invoice\Invoice;
-use App\Models\Invoice\InvoiceItem;
-use App\Enums\ContractStatus;
-use App\Enums\DepositStatus;
-use App\Enums\ContractCancellationParty;
-use Spatie\Permission\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class DebtBreachTerminationTest extends TestCase
@@ -32,7 +31,7 @@ class DebtBreachTerminationTest extends TestCase
         $room = Room::factory()->create([
             'property_id' => $property->id,
             'org_id' => $org->id,
-            'status' => 'occupied'
+            'status' => 'occupied',
         ]);
 
         // Contract with 2,000,000 deposit
@@ -70,14 +69,14 @@ class DebtBreachTerminationTest extends TestCase
         $this->assertEquals(DepositStatus::FORFEITED, $contract->deposit_status);
         $this->assertEquals(2000000, $contract->forfeited_amount);
         $this->assertEquals(ContractCancellationParty::SYSTEM, $contract->cancellation_party);
-        
+
         // Verify settlement invoice exists
         $settlementInvoice = Invoice::where('contract_id', $contract->id)
             ->where('is_termination', true)
             ->first();
-            
+
         $this->assertNotNull($settlementInvoice);
-        
+
         // Verify room is released
         $room->refresh();
         $this->assertEquals('available', $room->status);
@@ -91,7 +90,7 @@ class DebtBreachTerminationTest extends TestCase
             'name' => 'Non-Breach Room',
             'property_id' => $property->id,
             'org_id' => $org->id,
-            'status' => 'occupied'
+            'status' => 'occupied',
         ]);
 
         // Contract with 5,000,000 deposit

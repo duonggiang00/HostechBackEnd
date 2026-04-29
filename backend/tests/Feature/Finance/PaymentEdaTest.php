@@ -2,11 +2,18 @@
 
 namespace Tests\Feature\Finance;
 
-use App\Events\Finance\PaymentApproved;
+use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Events\Finance\PaymentVoided;
-use App\Models\Invoice\Invoice;
+use App\Models\Contract\Contract;
 use App\Models\Finance\Payment;
+use App\Models\Invoice\Invoice;
+use App\Models\Org\Org;
+use App\Models\Org\User;
+use App\Models\Property\Floor;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
 use App\Services\Finance\PaymentService;
+use App\Services\TenantManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -21,36 +28,36 @@ class PaymentEdaTest extends TestCase
 
     public function test_create_dispatches_payment_approved_event(): void
     {
-        Event::fake([PaymentApproved::class]);
+        Event::fake([PaymentSuccessfullyVerified::class]);
 
         // Arrange
-        $org      = \App\Models\Org\Org::factory()->create();
-        \App\Services\TenantManager::setOrgId($org->id);
+        $org = Org::factory()->create();
+        TenantManager::setOrgId($org->id);
 
-        $user     = \App\Models\Org\User::factory()->create(['org_id' => $org->id]);
-        $property = \App\Models\Property\Property::factory()
+        $user = User::factory()->create(['org_id' => $org->id]);
+        $property = Property::factory()
             ->create(['org_id' => $org->id]);
-        $floor    = \App\Models\Property\Floor::factory()
+        $floor = Floor::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-        $room     = \App\Models\Property\Room::factory()
+        $room = Room::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
 
-        $contract = \App\Models\Contract\Contract::factory()
+        $contract = Contract::factory()
             ->create([
-                'org_id'      => $org->id,
+                'org_id' => $org->id,
                 'property_id' => $property->id,
-                'room_id'     => $room->id,
+                'room_id' => $room->id,
             ]);
 
-        $invoice  = Invoice::factory()
+        $invoice = Invoice::factory()
             ->create([
-                'org_id'       => $org->id,
-                'property_id'  => $property->id,
-                'room_id'      => $room->id,
-                'contract_id'  => $contract->id,
-                'status'       => 'ISSUED',
+                'org_id' => $org->id,
+                'property_id' => $property->id,
+                'room_id' => $room->id,
+                'contract_id' => $contract->id,
+                'status' => 'ISSUED',
                 'total_amount' => 1000000,
-                'paid_amount'  => 0,
+                'paid_amount' => 0,
             ]);
 
         /** @var PaymentService $service */
@@ -58,62 +65,62 @@ class PaymentEdaTest extends TestCase
 
         // Act
         $service->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'method'      => 'CASH',
-            'amount'      => 1000000,
+            'method' => 'CASH',
+            'amount' => 1000000,
             'allocations' => [
                 ['invoice_id' => $invoice->id, 'amount' => 1000000],
             ],
         ], $user);
 
         // Assert
-        Event::assertDispatched(PaymentApproved::class, 1);
+        Event::assertDispatched(PaymentSuccessfullyVerified::class, 1);
         Event::assertNotDispatched(PaymentVoided::class);
     }
 
     public function test_void_dispatches_payment_voided_event(): void
     {
-        Event::fake([PaymentApproved::class, PaymentVoided::class]);
+        Event::fake([PaymentSuccessfullyVerified::class, PaymentVoided::class]);
 
         // Arrange — create an approved payment with a real allocation
-        $org      = \App\Models\Org\Org::factory()->create();
-        \App\Services\TenantManager::setOrgId($org->id);
+        $org = Org::factory()->create();
+        TenantManager::setOrgId($org->id);
 
-        $user     = \App\Models\Org\User::factory()->create(['org_id' => $org->id]);
-        $property = \App\Models\Property\Property::factory()
+        $user = User::factory()->create(['org_id' => $org->id]);
+        $property = Property::factory()
             ->create(['org_id' => $org->id]);
-        $floor    = \App\Models\Property\Floor::factory()
+        $floor = Floor::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-        $room     = \App\Models\Property\Room::factory()
+        $room = Room::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
 
-        $contract = \App\Models\Contract\Contract::factory()
+        $contract = Contract::factory()
             ->create([
-                'org_id'      => $org->id,
+                'org_id' => $org->id,
                 'property_id' => $property->id,
-                'room_id'     => $room->id,
+                'room_id' => $room->id,
             ]);
 
-        $invoice  = Invoice::factory()
+        $invoice = Invoice::factory()
             ->create([
-                'org_id'       => $org->id,
-                'property_id'  => $property->id,
-                'room_id'      => $room->id,
-                'contract_id'  => $contract->id,
-                'status'       => 'ISSUED',
+                'org_id' => $org->id,
+                'property_id' => $property->id,
+                'room_id' => $room->id,
+                'contract_id' => $contract->id,
+                'status' => 'ISSUED',
                 'total_amount' => 500000,
-                'paid_amount'  => 0,
+                'paid_amount' => 0,
             ]);
 
         /** @var PaymentService $service */
         $service = app(PaymentService::class);
 
         $payment = $service->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'method'      => 'TRANSFER',
-            'amount'      => 500000,
+            'method' => 'TRANSFER',
+            'amount' => 500000,
             'allocations' => [
                 ['invoice_id' => $invoice->id, 'amount' => 500000],
             ],
@@ -128,50 +135,50 @@ class PaymentEdaTest extends TestCase
 
         // Assert
         Event::assertDispatched(PaymentVoided::class, 1);
-        Event::assertNotDispatched(PaymentApproved::class);
+        Event::assertNotDispatched(PaymentSuccessfullyVerified::class);
     }
 
     public function test_create_does_not_directly_call_ledger_service(): void
     {
-        Event::fake([PaymentApproved::class]);
+        Event::fake([PaymentSuccessfullyVerified::class]);
 
-        $org      = \App\Models\Org\Org::factory()->create();
-        \App\Services\TenantManager::setOrgId($org->id);
+        $org = Org::factory()->create();
+        TenantManager::setOrgId($org->id);
 
-        $user     = \App\Models\Org\User::factory()->create(['org_id' => $org->id]);
-        $property = \App\Models\Property\Property::factory()
+        $user = User::factory()->create(['org_id' => $org->id]);
+        $property = Property::factory()
             ->create(['org_id' => $org->id]);
-        $floor    = \App\Models\Property\Floor::factory()
+        $floor = Floor::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id]);
-        $room     = \App\Models\Property\Room::factory()
+        $room = Room::factory()
             ->create(['org_id' => $org->id, 'property_id' => $property->id, 'floor_id' => $floor->id]);
 
-        $contract = \App\Models\Contract\Contract::factory()
+        $contract = Contract::factory()
             ->create([
-                'org_id'      => $org->id,
+                'org_id' => $org->id,
                 'property_id' => $property->id,
-                'room_id'     => $room->id,
+                'room_id' => $room->id,
             ]);
 
-        $invoice  = Invoice::factory()
+        $invoice = Invoice::factory()
             ->create([
-                'org_id'       => $org->id,
-                'property_id'  => $property->id,
-                'room_id'      => $room->id,
-                'contract_id'  => $contract->id,
-                'status'       => 'ISSUED',
+                'org_id' => $org->id,
+                'property_id' => $property->id,
+                'room_id' => $room->id,
+                'contract_id' => $contract->id,
+                'status' => 'ISSUED',
                 'total_amount' => 200000,
-                'paid_amount'  => 0,
+                'paid_amount' => 0,
             ]);
 
         /** @var PaymentService $service */
         $service = app(PaymentService::class);
 
         $service->create([
-            'org_id'      => $org->id,
+            'org_id' => $org->id,
             'property_id' => $property->id,
-            'method'      => 'CASH',
-            'amount'      => 200000,
+            'method' => 'CASH',
+            'amount' => 200000,
             'allocations' => [
                 ['invoice_id' => $invoice->id, 'amount' => 200000],
             ],

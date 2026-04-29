@@ -2,17 +2,24 @@
 
 namespace App\Services\Property;
 
+use App\Events\Property\RoomCreated;
+use App\Events\Property\RoomDeleted;
+use App\Events\Property\RoomUpdated;
+use App\Models\Contract\Contract;
 use App\Models\Org\User;
+use App\Models\Property\Floor;
+use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomAsset;
 use App\Models\Property\RoomFloorPlanNode;
-use App\Models\Property\RoomPrice;
-use App\Models\Property\RoomStatusHistory;
+use App\Models\Property\RoomTemplate;
+use App\Services\Contract\ContractService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use App\Models\Property\RoomTemplate;
 use Illuminate\Validation\ValidationException;
+use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class RoomService
@@ -20,30 +27,30 @@ class RoomService
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
         $allowedFilters = array_merge($allowedFilters, [
-            \Spatie\QueryBuilder\AllowedFilter::exact('property_id'),
-            \Spatie\QueryBuilder\AllowedFilter::exact('floor_id'),
+            AllowedFilter::exact('property_id'),
+            AllowedFilter::exact('floor_id'),
         ]);
 
         $query = QueryBuilder::for(Room::class)
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price'])
-            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'invoices', 'roomServices'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'meters.latestInvoiceEligibleReading', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
         // Scoping Pattern: Membership-based for Tenant (Renters) OR they can see 'available' rooms
-            if ($performer && $performer->hasRole('Tenant')) {
-                $myPropertyIds = \App\Models\Contract\Contract::query()
-                    ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
-                    ->whereHas('members', function ($q) use ($performer) {
-                        $q->where('user_id', $performer->id);
-                    })
-                    ->pluck('property_id')
-                    ->unique()
-                    ->toArray();
+        if ($performer && $performer->hasRole('Tenant')) {
+            $myPropertyIds = Contract::query()
+                ->whereIn('status', ['ACTIVE', 'PENDING_PAYMENT'])
+                ->whereHas('members', function ($q) use ($performer) {
+                    $q->where('user_id', $performer->id);
+                })
+                ->pluck('property_id')
+                ->unique()
+                ->toArray();
 
-                $query->whereIn('property_id', $myPropertyIds);
-            } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
+            $query->whereIn('property_id', $myPropertyIds);
+        } elseif ($performer && $performer->hasRole(['Manager', 'Staff'])) {
             $query->whereHas('property.managers', function ($q) use ($performer) {
                 $q->where('user_id', $performer->id);
             });
@@ -56,21 +63,29 @@ class RoomService
             });
         }
 
+        // Business rule for contract creation:
+        // rooms in PENDING_SIGNATURE flow must not appear in "available" picker.
+        if ((string) request()->input('filter.status') === 'available') {
+            $query->whereDoesntHave('contracts', function ($q) {
+                $q->where('status', 'PENDING_SIGNATURE');
+            });
+        }
+
         return $query->distinct()->paginate($perPage)->withQueryString();
     }
 
     public function paginateTrash(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $performer = null): LengthAwarePaginator
     {
         $allowedFilters = array_merge($allowedFilters, [
-            \Spatie\QueryBuilder\AllowedFilter::exact('property_id'),
-            \Spatie\QueryBuilder\AllowedFilter::exact('floor_id'),
+            AllowedFilter::exact('property_id'),
+            AllowedFilter::exact('floor_id'),
         ]);
 
         $query = QueryBuilder::for(Room::onlyTrashed())
             ->with(['floor', 'property'])
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price', 'deleted_at'])
-            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'invoices', 'roomServices'])
+            ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'meters.latestInvoiceEligibleReading', 'invoices', 'roomServices'])
             ->defaultSort('code');
 
         if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
@@ -108,7 +123,7 @@ class RoomService
     {
         return DB::transaction(function () use ($data, $performer) {
             // Consolidated Property Check & Org Auto-assignment
-            $property = \App\Models\Property\Property::findOrFail($data['property_id']);
+            $property = Property::findOrFail($data['property_id']);
 
             // Security: Check if Property belongs to User's Org (if not Admin)
             if (! $performer->hasRole('Admin') && $performer->org_id && (string) $property->org_id !== (string) $performer->org_id) {
@@ -128,8 +143,6 @@ class RoomService
             if (isset($data['area']) && $data['area'] > 0) {
                 $this->validateRoomArea($property, $data['floor_id'] ?? null, (float) $data['area']);
             }
-
-
 
             $room = Room::create($data);
 
@@ -163,7 +176,7 @@ class RoomService
 
             // --- DECOUPLED: EVENT DISPATCH ---
             // Side effects (Meters, Price History, Status History) are now handled in Listeners
-            \App\Events\Property\RoomCreated::dispatch($room, null, $performer->id);
+            RoomCreated::dispatch($room, null, $performer->id);
             // ---------------------------------
 
             return $room;
@@ -178,12 +191,12 @@ class RoomService
             $template = RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
 
             $roomData = array_merge([
-                'area'        => $template->area,
-                'capacity'    => $template->capacity,
-                'base_price'  => $template->base_price,
+                'area' => $template->area,
+                'capacity' => $template->capacity,
+                'base_price' => $template->base_price,
                 'description' => $template->description,
                 'property_id' => $template->property_id,
-                'status'      => 'available',
+                'status' => 'available',
             ], $overrides);
 
             // Inherit services if not explicitly provided
@@ -197,10 +210,10 @@ class RoomService
             if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
                 foreach ($template->assets as $tAsset) {
                     $room->assets()->create([
-                        'id'      => Str::uuid()->toString(),
-                        'org_id'  => $room->org_id,
+                        'id' => Str::uuid()->toString(),
+                        'org_id' => $room->org_id,
                         'room_id' => $room->id,
-                        'name'    => $tAsset->name,
+                        'name' => $tAsset->name,
                     ]);
                 }
             }
@@ -254,7 +267,7 @@ class RoomService
                 $toAdd = array_diff($serviceIds, $existingServiceIds);
                 $toRemove = array_diff($existingServiceIds, $serviceIds);
 
-                if (!empty($toRemove)) {
+                if (! empty($toRemove)) {
                     \App\Models\Service\RoomService::where('room_id', $room->id)
                         ->whereIn('service_id', $toRemove)
                         ->delete();
@@ -299,7 +312,7 @@ class RoomService
 
             // --- DECOUPLED: EVENT DISPATCH ---
             // Side effects like price/status history or cache clearing are handled in Listeners
-            \App\Events\Property\RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
+            RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
             // ---------------------------------
 
             return $room;
@@ -322,9 +335,9 @@ class RoomService
         }
 
         $deleted = $room->delete();
-        
+
         if ($deleted) {
-            \App\Events\Property\RoomDeleted::dispatch($room);
+            RoomDeleted::dispatch($room);
         }
 
         return $deleted;
@@ -342,6 +355,7 @@ class RoomService
                 $hasActiveContracts = $room->contracts()->whereIn('status', ['ACTIVE', 'PENDING'])->exists();
                 if ($hasActiveContracts) {
                     $failed[] = ['id' => $id, 'reason' => 'Room has active contracts.'];
+
                     continue;
                 }
 
@@ -411,7 +425,7 @@ class RoomService
     public function quickCreate(array $data, User $performer): Room
     {
         return DB::transaction(function () use ($data, $performer) {
-            $property = \App\Models\Property\Property::findOrFail($data['property_id']);
+            $property = Property::findOrFail($data['property_id']);
 
             if (! $performer->hasRole('Admin') && $performer->org_id && (string) $property->org_id !== (string) $performer->org_id) {
                 abort(403, 'Unauthorized: You cannot add rooms to a property in another organization.');
@@ -434,10 +448,10 @@ class RoomService
         });
     }
 
-    public function quickCreateBatch(array $data, User $performer): \Illuminate\Support\Collection
+    public function quickCreateBatch(array $data, User $performer): Collection
     {
         return DB::transaction(function () use ($data, $performer) {
-            $property = \App\Models\Property\Property::findOrFail($data['property_id']);
+            $property = Property::findOrFail($data['property_id']);
             $count = $data['count'] ?? 1;
             $prefix = $data['prefix'] ?? 'Room';
             $startNumber = $data['start_number'] ?? 1;
@@ -501,9 +515,9 @@ class RoomService
                     // Create Assets
                     foreach ($template->assets as $tAsset) {
                         $room->assets()->create([
-                            'id'     => Str::uuid()->toString(),
+                            'id' => Str::uuid()->toString(),
                             'org_id' => $room->org_id,
-                            'name'   => $tAsset->name,
+                            'name' => $tAsset->name,
                         ]);
                     }
 
@@ -545,9 +559,8 @@ class RoomService
 
             $room->update(array_merge($data, ['status' => 'available']));
 
-
             // --- DECOUPLED: EVENT DISPATCH ---
-            \App\Events\Property\RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
+            RoomUpdated::dispatch($room, $room->getChanges(), $performer->id);
             // ---------------------------------
 
             return $room;
@@ -568,7 +581,7 @@ class RoomService
 
     public function batchSetFloorPlanNodes(array $nodesData, User $performer): array
     {
-        return DB::transaction(function () use ($nodesData, $performer) {
+        return DB::transaction(function () use ($nodesData) {
             $results = [];
             foreach ($nodesData as $data) {
                 $room = $this->find($data['room_id']);
@@ -582,6 +595,7 @@ class RoomService
                     $results[] = $node;
                 }
             }
+
             return $results;
         });
     }
@@ -596,7 +610,7 @@ class RoomService
     /**
      * Validate that the room's area does not exceed limits.
      */
-    protected function validateRoomArea(\App\Models\Property\Property $property, ?string $floorId, float $newArea, ?string $excludeRoomId = null): void
+    protected function validateRoomArea(Property $property, ?string $floorId, float $newArea, ?string $excludeRoomId = null): void
     {
         // Rule 1: Room Area <= Property Area (If property area is defined)
         if ($property->area > 0 && $newArea > (float) $property->area) {
@@ -606,7 +620,7 @@ class RoomService
         }
 
         if ($property->use_floors && $floorId) {
-            $floor = \App\Models\Property\Floor::find($floorId);
+            $floor = Floor::find($floorId);
             if ($floor && $floor->area > 0) {
                 // Feature limits check for Floor
                 if ($newArea > (float) $floor->area) {
@@ -649,6 +663,6 @@ class RoomService
      */
     public function getAvailabilityStatus(string $roomId): array
     {
-        return app(\App\Services\Contract\ContractService::class)->getRoomAvailabilityStatus($roomId);
+        return app(ContractService::class)->getRoomAvailabilityStatus($roomId);
     }
 }

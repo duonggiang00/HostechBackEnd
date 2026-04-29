@@ -291,6 +291,12 @@ class DashboardService
             $tickets = $this->managerTicketStats($orgId, $propertyIds);
             $propStats = $this->managerPropertyStats($orgId, $propertyIds);
 
+            $unpaidInvoices = Invoice::withoutGlobalScopes()
+                ->where('org_id', $orgId)
+                ->whereIn('property_id', $propertyIds)
+                ->whereIn('status', ['ISSUED', 'OVERDUE', 'PENDING'])
+                ->count();
+
             return [
                 'stats' => [
                     'totalTenants' => $tenants['active'],
@@ -300,7 +306,7 @@ class DashboardService
                     'occupancyRate' => $propStats['occupancy_rate'],
                     'pendingTickets' => $tickets['pending'],
                     'unresolvedTickets' => $tickets['pending'] + $tickets['in_progress'],
-                    'unpaidInvoices' => $contracts['overdue'], // Using overdue contracts as proxy for unpaid invoices in this context
+                    'unpaidInvoices' => $unpaidInvoices,
                     'thisMonthRevenue' => $revenue['total'],
                 ],
                 'revenueTrend' => $this->getPropertyRevenueTrend($orgId, $property->id),

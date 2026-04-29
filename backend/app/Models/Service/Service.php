@@ -3,6 +3,7 @@
 namespace App\Models\Service;
 
 use App\Models\Concerns\MultiTenant;
+use App\Models\Property\Property;
 use App\Traits\SystemLoggable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,8 +18,10 @@ class Service extends Model
 
     // ── Service Type Constants (Dynamic Linking) ──
     const TYPE_ELECTRIC = 'ELECTRIC';
-    const TYPE_WATER    = 'WATER';
-    const TYPE_OTHER    = 'OTHER';
+
+    const TYPE_WATER = 'WATER';
+
+    const TYPE_OTHER = 'OTHER';
 
     protected $fillable = [
         'org_id',
@@ -72,7 +75,7 @@ class Service extends Model
 
     public function property()
     {
-        return $this->belongsTo(\App\Models\Property\Property::class);
+        return $this->belongsTo(Property::class);
     }
 
     /**

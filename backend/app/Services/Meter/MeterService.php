@@ -8,7 +8,6 @@ use App\Models\System\TemporaryUpload;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -36,12 +35,20 @@ class MeterService
                         $q->where('floor_id', $value);
                     });
                 }),
+                // Custom filter: chỉ lấy đồng hồ của phòng có hợp đồng ACTIVE
+                AllowedFilter::callback('has_active_contract', function (Builder $query, $value) {
+                    if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                        $query->whereHas('room.contracts', function (Builder $q) {
+                            $q->where('status', 'ACTIVE');
+                        });
+                    }
+                }),
             ])
             ->allowedSorts(['installed_at', 'code', 'type', 'created_at'])
             ->defaultSort('-created_at')
             ->allowedIncludes(['room', 'room.property', 'room.floor', 'latestReading', 'latestApprovedReading'])
             ->with(['room', 'latestReading', 'latestApprovedReading']); // Eager load them by default for performance
-        
+
         // Apply manual filters if provided
         foreach ($filters as $key => $value) {
             if ($key === 'property_id' && $value) {
@@ -58,6 +65,11 @@ class MeterService
                 $query->where('is_active', (bool) $value);
             } elseif ($key === 'room_id' && $value) {
                 $query->where('room_id', $value);
+            } elseif ($key === 'has_active_contract' && filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                // Chỉ lấy đồng hồ của phòng đang có hợp đồng ACTIVE
+                $query->whereHas('room.contracts', function (Builder $q) {
+                    $q->where('status', 'ACTIVE');
+                });
             }
         }
 
@@ -94,7 +106,7 @@ class MeterService
     public function getStatistics(array $filters = [], ?string $propertyId = null): array
     {
         $query = Meter::query();
-        
+
         // Apply filters
         foreach ($filters as $key => $value) {
             if ($key === 'property_id' && $value) {
@@ -111,19 +123,19 @@ class MeterService
                 $query->where('is_active', (bool) $value);
             }
         }
-        
+
         // Apply property_id if provided
         if ($propertyId) {
             $query->whereHas('room', function (Builder $q) use ($propertyId) {
                 $q->where('property_id', $propertyId);
             });
         }
-        
+
         $meters = $query->with('latestApprovedReading')->get();
-        
+
         $totalElectric = 0;
         $totalWater = 0;
-        
+
         foreach ($meters as $meter) {
             if ($meter->latestApprovedReading && $meter->latestApprovedReading->reading_value) {
                 if ($meter->type === 'ELECTRIC') {
@@ -133,7 +145,7 @@ class MeterService
                 }
             }
         }
-        
+
         return [
             'total_meters' => $meters->count(),
             'active_meters' => $meters->where('is_active', true)->count(),
@@ -217,7 +229,7 @@ class MeterService
             'property_id' => $room->property_id,
             'is_master' => false,
         ]);
-        
+
         return $meter;
     }
 
@@ -227,7 +239,7 @@ class MeterService
     public function detachFromRoom(Meter $meter): Meter
     {
         $meter->update(['room_id' => null]);
-        
+
         return $meter;
     }
 
@@ -243,7 +255,7 @@ class MeterService
                 ->where('is_master', true)
                 ->where('id', '!=', $meter->id)
                 ->update(['is_master' => false]);
-            
+
             $meter->update(['is_master' => true, 'room_id' => null]);
         } else {
             $meter->update(['is_master' => false]);
@@ -278,6 +290,7 @@ class MeterService
 
         return true;
     }
+
     /**
      * Reset all base readings to 0 for a given organization and optionally a specific property.
      */

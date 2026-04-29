@@ -20,8 +20,8 @@ class RoomQuickCreateRequest extends FormRequest
     {
         return [
             'property_id' => ['required', 'uuid', 'exists:properties,id'],
-            'name'        => ['required', 'string', 'max:255'],
-            'floor_id'    => ['nullable', 'uuid', 'exists:floors,id'],
+            'name' => ['required', 'string', 'max:255'],
+            'floor_id' => ['nullable', 'uuid', 'exists:floors,id'],
         ];
     }
 }

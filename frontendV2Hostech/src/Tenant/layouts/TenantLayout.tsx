@@ -1,5 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { useSessionBootstrap } from '@/shared/features/auth/hooks/useSessionBootstrap';
+import { useTenantFinanceRealtime, useTenantMeterRealtime } from '@/shared/features/billing/hooks/useFinanceRealtime';
 import Sidebar from '@/shared/components/ui/Sidebar';
 import { useNavigation } from '@/shared/hooks/useNavigation';
 import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
@@ -31,6 +34,11 @@ const getPageDescription = (pathname: string) => {
 
 export default function TenantLayout({ children }: TenantLayoutProps) {
   const location = useLocation();
+  const user = useAuthStore((s) => s.user);
+  useSessionBootstrap();
+  useTenantFinanceRealtime(user?.id);
+  useTenantMeterRealtime(user?.id);
+
   const { menuSections, scopeLabel } = useNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 

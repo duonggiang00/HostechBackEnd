@@ -1,27 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import {
-  ArrowLeft,
   Building2,
   Calendar,
-
   CircleDollarSign,
   Clock3,
-  CreditCard,
   FileText,
   Loader2,
   Users,
   XCircle,
   PenTool,
   Printer,
+  DoorOpen,
+  ArrowRightLeft,
 } from 'lucide-react';
-import { useContract, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useContract, useContractActions, CONTRACT_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { TenantRoomTransferModal } from '../components/TenantRoomTransferModal';
+import { TenantAddRoommateModal } from '../components/TenantAddRoommateModal';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import SignatureModal from '@/PropertyScope/features/contracts/components/SignatureModal';
 import { ContractPreviewModal } from '@/PropertyScope/features/contracts/components/ContractPreviewModal';
+import { useQueryClient } from '@tanstack/react-query';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { Button } from '@/shared/components/ui/button';
+import { echo } from '@/shared/utils/echo';
+import { SubmitPaymentProofModal } from '@/Tenant/features/billing/components/SubmitPaymentProofModal';
+import { TenantInvoicePaymentActions } from '@/Tenant/features/billing/components/TenantInvoicePaymentActions';
+import { TenantEditRoommateModal } from '../components/TenantEditRoommateModal';
+import { MemberIdentityViewDialog } from '@/PropertyScope/features/contracts/components/MemberIdentityViewDialog';
+import { contractInitialInvoiceAsInvoice } from '../utils/initialInvoiceForProof';
+import type { ContractMember } from '@/PropertyScope/features/contracts/types';
+
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -46,12 +58,50 @@ export default function TenantContractDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { data: contract, isLoading } = useContract(id);
-  const { signContract, rejectSignature, downloadDocument } = useContractActions();
+  const queryClient = useQueryClient();
+  const { signContract, rejectSignature, downloadDocument, requestTermination, removeContractMember } = useContractActions();
+
+  // Listen for real-time status updates (especially PENDING_PAYMENT)
+  useEffect(() => {
+    if (!id || !user?.id || !echo) return;
+
+    const channel = echo.private(`App.Models.Org.User.${user.id}`);
+    
+    channel.listen('.contract.pending_payment', (data: any) => {
+      console.log('[Socket] Contract moved to PENDING_PAYMENT:', data);
+      if (data.id === id) {
+        queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, id] });
+        toast.success('Hợp đồng của bạn đã chuyển sang trạng thái chờ thanh toán!', {
+          duration: 5000,
+          icon: '💰',
+        });
+      }
+    });
+
+    return () => {
+      channel.stopListening('.contract.pending_payment');
+    };
+  }, [id, user?.id, queryClient]);
   const { createVnpayPayment } = useInvoice();
   const [showModal, setShowModal] = useState<'reject' | null>(null);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(false);
+  const [noticeDate, setNoticeDate] = useState('');
+  const [noticeReason, setNoticeReason] = useState('');
+  const [terminationWarningsOpen, setTerminationWarningsOpen] = useState(false);
+  const [terminationWarnings, setTerminationWarnings] = useState<string[]>([]);
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [roommateModalOpen, setRoommateModalOpen] = useState(false);
+  const [initialProofModalOpen, setInitialProofModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<ContractMember | null>(null);
+  const [identityViewMember, setIdentityViewMember] = useState<ContractMember | null>(null);
+
+  const initialInvoiceStub = useMemo(
+    () => (contract ? contractInitialInvoiceAsInvoice(contract) : null),
+    [contract],
+  );
 
   const handlePrintContract = async () => {
     if (!contract || !contract.id) return;
@@ -87,9 +137,9 @@ export default function TenantContractDetailPage() {
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center">
         <h3 className="text-lg font-bold text-slate-900 dark:text-white">Không tìm thấy hợp đồng</h3>
-        <button onClick={() => navigate(-1)} className="mt-4 text-sm font-bold text-indigo-600 dark:text-indigo-300">
-          Quay lại
-        </button>
+        <div className="mt-4">
+          <PageBackButton className="text-sm font-bold" />
+        </div>
       </div>
     );
   }
@@ -100,6 +150,38 @@ export default function TenantContractDetailPage() {
   const initialInvoiceOutstanding = contract.initial_invoice
     ? Math.max(0, (contract.initial_invoice.total_amount || 0) - (contract.initial_invoice.paid_amount || 0))
     : 0;
+
+  const isApprovedPrimary = !!(
+    user?.id &&
+    contract.members?.some((m) => m.user_id === user.id && m.is_primary && String(m.status).toUpperCase() === 'APPROVED')
+  );
+  const currentUserMember = contract.members?.find(
+    (m) =>
+      m.user_id === user?.id &&
+      !m.left_at &&
+      String(m.status).toUpperCase() === 'PENDING',
+  ) ?? contract.members?.find((m) => m.user_id === user?.id && !m.left_at);
+  const currentMemberStatus = String(currentUserMember?.status || '').toUpperCase();
+  const tenantAlreadySigned = Boolean(contract.meta?.tenant_signed_at || currentUserMember?.signed_at);
+  const canCurrentTenantSign =
+    ['DRAFT', 'PENDING_SIGNATURE'].includes(String(contract.status).toUpperCase()) &&
+    !!currentUserMember &&
+    ['PENDING', 'APPROVED'].includes(currentMemberStatus) &&
+    !tenantAlreadySigned;
+
+  const canTenantManageRoommates =
+    isApprovedPrimary && (contract.status === 'ACTIVE' || contract.status === 'PENDING_PAYMENT');
+
+  const tenantCanEditMember = (m: ContractMember) =>
+    canTenantManageRoommates &&
+    !m.is_primary &&
+    !m.left_at &&
+    ['APPROVED', 'PENDING'].includes(String(m.status).toUpperCase());
+
+  const rawTransfers = Array.isArray(contract.meta?.transfer_requests) ? contract.meta.transfer_requests : [];
+  const pendingTransfers = rawTransfers.filter(
+    (t: { status?: string }) => (String(t?.status || 'PENDING').toUpperCase() === 'PENDING'),
+  );
 
   const handleAction = () => {
     rejectSignature.mutate(contract.id, {
@@ -170,19 +252,65 @@ export default function TenantContractDetailPage() {
     );
   };
 
+  const openNoticeDialog = () => {
+    if (!contract) return;
+    const d = contract.end_date
+      ? contract.end_date.slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+    setNoticeDate(d);
+    setNoticeReason('');
+    setNoticeOpen(true);
+  };
+
+  const submitNoticeOfTermination = () => {
+    if (!contract?.id) return;
+    if (!noticeDate) {
+      toast.error('Vui lòng chọn ngày dự kiến dọn đi.');
+      return;
+    }
+    requestTermination.mutate(
+      {
+        id: contract.id,
+        data: {
+          expected_move_out_date: noticeDate,
+          reason: noticeReason.trim() || undefined,
+        },
+      },
+      {
+        onSuccess: (res) => {
+          setNoticeOpen(false);
+          toast.success(res?.message || 'Đã gửi thông báo trả phòng.');
+          const w = res?.warnings ?? [];
+          if (w.length > 0) {
+            setTerminationWarnings(w);
+            setTerminationWarningsOpen(true);
+          }
+          queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, contract.id] });
+        },
+        onError: (error: any) => {
+          const errs = error?.response?.data?.errors;
+          const msg =
+            error?.response?.data?.message ||
+            (errs && typeof errs === 'object'
+              ? Object.values(errs)
+                  .flat()
+                  .filter(Boolean)
+                  .join(' ')
+              : null) ||
+            'Không gửi được thông báo. Vui lòng thử lại.';
+          toast.error(msg);
+        },
+      },
+    );
+  };
+
   return (
     <div className="space-y-8">
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_360px]">
         <div className="relative overflow-hidden rounded-[32px] bg-slate-950 p-7 text-white shadow-2xl shadow-slate-900/10 lg:p-8">
           <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.35),transparent_65%)]" />
           <div className="relative">
-            <button
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-white/20"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Quay lại
-            </button>
+            <PageBackButton variant="inverse" />
 
             <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-slate-400">Chi tiết hợp đồng</p>
             <h1 className="mt-3 text-3xl font-black tracking-tight lg:text-4xl">
@@ -195,12 +323,14 @@ export default function TenantContractDetailPage() {
             <div className={`mt-7 inline-flex rounded-2xl px-4 py-2 text-sm font-black ${
               contract.status === 'PENDING_PAYMENT' ? 'bg-amber-500/15 text-amber-300' :
               contract.status === 'PENDING_SIGNATURE' ? 'bg-amber-500/15 text-amber-300' :
+              contract.status === 'PENDING_TERMINATION' ? 'bg-amber-500/15 text-amber-300' :
               contract.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' :
               'bg-slate-500/15 text-slate-300'
             }`}>
               Trạng thái hiện tại:{' '}
               {contract.status === 'PENDING_PAYMENT' ? 'chờ thanh toán' :
                contract.status === 'PENDING_SIGNATURE' ? 'chờ ký điện tử' :
+               contract.status === 'PENDING_TERMINATION' ? 'đã báo trả phòng, chờ thanh lý' :
                contract.status === 'ACTIVE' ? 'đang có hiệu lực' : 'đã kết thúc'}
             </div>
           </div>
@@ -209,8 +339,10 @@ export default function TenantContractDetailPage() {
         <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
           <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Hành động chính</p>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-            {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' : 
-             contract.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' : 'Thông tin chung'}
+            {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' :
+             contract.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' :
+             contract.status === 'PENDING_TERMINATION' ? 'Thông báo trả phòng' :
+             'Thông tin chung'}
           </h2>
 
           <div className="mt-6 space-y-3">
@@ -234,13 +366,19 @@ export default function TenantContractDetailPage() {
 
             {contract.status === 'PENDING_SIGNATURE' ? (
               <>
-                <button
-                  onClick={() => setIsSignatureModalOpen(true)}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
-                >
-                  <PenTool className="h-5 w-5" />
-                  Vẽ chữ ký xác nhận
-                </button>
+                {canCurrentTenantSign ? (
+                  <button
+                    onClick={() => setIsSignatureModalOpen(true)}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
+                  >
+                    <PenTool className="h-5 w-5" />
+                    Vẽ chữ ký xác nhận
+                  </button>
+                ) : (
+                  <div className="rounded-[24px] bg-slate-50 p-4 text-center text-sm font-medium text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+                    Bạn đã ký hoặc không nằm trong danh sách chờ ký của hợp đồng này.
+                  </div>
+                )}
                 <button
                   onClick={() => setShowModal('reject')}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:border-rose-300 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-rose-500 dark:hover:text-rose-300"
@@ -251,14 +389,15 @@ export default function TenantContractDetailPage() {
               </>
             ) : contract.status === 'PENDING_PAYMENT' ? (
               <>
-                <button
-                  onClick={handlePayInitialInvoice}
-                  disabled={createVnpayPayment.isPending || initialInvoiceOutstanding <= 0}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-                >
-                  {createVnpayPayment.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <CreditCard className="h-5 w-5" />}
-                  {createVnpayPayment.isPending ? 'Đang chuyển sang VNPay' : 'Thanh toán VNPay'}
-                </button>
+                <TenantInvoicePaymentActions
+                  sectionTitle="Chọn hình thức thanh toán hóa đơn đầu kỳ"
+                  vnpayLabel="Thanh toán VNPay"
+                  isVnpayPending={createVnpayPayment.isPending}
+                  vnpayDisabled={initialInvoiceOutstanding <= 0}
+                  manualDisabled={initialInvoiceOutstanding <= 0 || !initialInvoiceStub}
+                  onVnpay={handlePayInitialInvoice}
+                  onManualProof={() => setInitialProofModalOpen(true)}
+                />
                 <button
                   onClick={() => navigate('/app/billing')}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm font-black text-slate-700 transition-colors hover:border-indigo-300 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
@@ -266,11 +405,44 @@ export default function TenantContractDetailPage() {
                   Xem tất cả hóa đơn
                 </button>
               </>
+            ) : contract.status === 'ACTIVE' ? (
+              <div className="space-y-3">
+                <p className="rounded-[24px] bg-slate-50 p-4 text-center text-sm font-medium text-slate-600 dark:bg-slate-800/50 dark:text-slate-300">
+                  Hợp đồng đang có hiệu lực. Khi bạn dọn ra, hãy gửi thông báo để quản lý chuẩn bị thanh lý.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTransferModalOpen(true)}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-3.5 text-sm font-black text-indigo-800 transition-colors hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20"
+                >
+                  <ArrowRightLeft className="h-5 w-5" />
+                  Đề nghị chuyển phòng
+                </button>
+                <button
+                  type="button"
+                  onClick={openNoticeDialog}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-amber-600 px-5 py-3.5 text-sm font-black text-white transition-colors hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+                >
+                  <DoorOpen className="h-5 w-5" />
+                  Thông báo trả phòng
+                </button>
+              </div>
+            ) : contract.status === 'PENDING_TERMINATION' ? (
+              <div className="rounded-[24px] bg-amber-50 p-5 text-left dark:bg-amber-500/10">
+                <p className="text-sm font-black text-amber-900 dark:text-amber-100">Đã gửi thông báo trả phòng</p>
+                <p className="mt-2 text-sm leading-6 text-amber-800 dark:text-amber-200">
+                  Ngày dự kiến dọn đi:{' '}
+                  <span className="font-black">
+                    {contract.expected_move_out_date ? formatDate(contract.expected_move_out_date) : '—'}
+                  </span>
+                  . Quản lý sẽ liên hệ để chốt chi phí và các bước tiếp theo.
+                </p>
+              </div>
             ) : (
               <div className="rounded-[24px] bg-slate-50 p-5 dark:bg-slate-800/50">
-                 <p className="text-center text-sm font-medium text-slate-500">
-                   {contract.status === 'ACTIVE' ? 'Hợp đồng này đang có hiệu lực.' : 'Hợp đồng này đã kết thúc hoặc hủy bỏ.'}
-                 </p>
+                <p className="text-center text-sm font-medium text-slate-500">
+                  Hợp đồng này đã kết thúc hoặc hủy bỏ.
+                </p>
               </div>
             )}
           </div>
@@ -285,6 +457,21 @@ export default function TenantContractDetailPage() {
           )}
         </div>
       </section>
+
+      {pendingTransfers.length > 0 && (
+        <section className="rounded-[28px] border border-indigo-200 bg-indigo-50/90 p-6 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-500/10">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-indigo-600 dark:text-indigo-300">Chuyển phòng</p>
+          <h3 className="mt-2 text-lg font-black text-indigo-950 dark:text-white">Bạn có {pendingTransfers.length} đề nghị đang chờ xử lý</h3>
+          <ul className="mt-4 list-inside list-disc space-y-2 text-sm font-medium text-indigo-900/90 dark:text-indigo-100">
+            {pendingTransfers.map((t: { reason?: string | null }, i: number) => (
+              <li key={i}>
+                Đang chờ ban quản lý duyệt và thực hiện chuyển phòng.
+                {t.reason ? ` Ghi chú: ${t.reason}` : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
@@ -389,21 +576,32 @@ export default function TenantContractDetailPage() {
           </div>
 
           <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
-                <Users className="h-6 w-6" />
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Thành viên hợp đồng</p>
+                  <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Trạng thái ký điện tử</h2>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">Thành viên hợp đồng</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">Trạng thái ký điện tử</h2>
-              </div>
+              {canTenantManageRoommates && (
+                <button
+                  type="button"
+                  onClick={() => setRoommateModalOpen(true)}
+                  className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black uppercase tracking-widest text-white dark:bg-white dark:text-slate-950"
+                >
+                  Thêm người ở cùng
+                </button>
+              )}
             </div>
 
             <div className="mt-6 space-y-3">
               {(contract.members || []).map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between gap-3 rounded-[24px] bg-slate-50 px-4 py-4 dark:bg-slate-800"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] bg-slate-50 px-4 py-4 dark:bg-slate-800"
                 >
                   <div>
                     <p className="text-sm font-black text-slate-900 dark:text-white">
@@ -413,16 +611,71 @@ export default function TenantContractDetailPage() {
                     <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                       {member.signed_at ? `Đã ký lúc ${formatDate(member.signed_at)}` : 'Chưa ký điện tử'}
                     </p>
+                    {String(member.status).toUpperCase() === 'PENDING' && (
+                      <p className="mt-1 text-xs font-bold text-amber-600 dark:text-amber-300">Chờ ban quản lý duyệt</p>
+                    )}
                   </div>
-                  <span
-                    className={`inline-flex rounded-xl px-3 py-1.5 text-xs font-black ${
-                      member.signed_at
-                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
-                        : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-                    }`}
-                  >
-                    {member.signed_at ? 'Đã ký' : 'Chờ ký'}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(member.identity_front_url || member.identity_back_url) && (
+                      <button
+                        type="button"
+                        onClick={() => setIdentityViewMember(member)}
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Xem CCCD
+                      </button>
+                    )}
+                    <span
+                      className={`inline-flex rounded-xl px-3 py-1.5 text-xs font-black ${
+                        member.signed_at
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                          : 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                      }`}
+                    >
+                      {member.signed_at ? 'Đã ký' : 'Chờ ký'}
+                    </span>
+                    {tenantCanEditMember(member) && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingMember(member)}
+                        className="rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-800 hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20"
+                      >
+                        Sửa
+                      </button>
+                    )}
+                    {isApprovedPrimary &&
+                      !member.is_primary &&
+                      String(member.status).toUpperCase() === 'APPROVED' &&
+                      !member.left_at && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                `Báo người "${member.full_name}" đã rời khỏi phòng? Họ sẽ được gỡ khỏi danh sách thành viên hiện tại.`,
+                              )
+                            ) {
+                              return;
+                            }
+                            removeContractMember.mutate(
+                              { contractId: contract.id, memberId: member.id },
+                              {
+                                onSuccess: () => {
+                                  toast.success('Đã cập nhật.');
+                                  queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, contract.id] });
+                                },
+                                onError: (err: any) => {
+                                  toast.error(err?.response?.data?.message || 'Không thực hiện được.');
+                                },
+                              },
+                            );
+                          }}
+                          className="rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-black text-slate-600 hover:bg-white dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-900"
+                        >
+                          Báo rời phòng
+                        </button>
+                      )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -444,14 +697,18 @@ export default function TenantContractDetailPage() {
                   Trạng thái hóa đơn: {contract.initial_invoice.status}
                 </p>
                 {contract.status === 'PENDING_PAYMENT' && initialInvoiceOutstanding > 0 && (
-                  <button
-                    onClick={handlePayInitialInvoice}
-                    disabled={createVnpayPayment.isPending}
-                    className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-                  >
-                    {createVnpayPayment.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-                    {createVnpayPayment.isPending ? 'Đang chuyển sang VNPay' : 'Thanh toán VNPay'}
-                  </button>
+                  <div className="mt-4">
+                    <TenantInvoicePaymentActions
+                      cardSplitRow
+                      sectionTitle="Chọn hình thức thanh toán"
+                      vnpayLabel="VNPay"
+                      manualLabel="Tiền mặt / CK"
+                      isVnpayPending={createVnpayPayment.isPending}
+                      manualDisabled={!initialInvoiceStub}
+                      onVnpay={handlePayInitialInvoice}
+                      onManualProof={() => setInitialProofModalOpen(true)}
+                    />
+                  </div>
                 )}
               </div>
             ) : (
@@ -520,6 +777,128 @@ export default function TenantContractDetailPage() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {noticeOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm"
+              onClick={() => !requestTermination.isPending && setNoticeOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              className="relative z-10 w-full max-w-lg rounded-[32px] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+            >
+              <h3 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                Thông báo trả phòng
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Chọn ngày dự kiến dọn đi và ghi lý do (nếu có). Quản lý sẽ nhận thông báo để chuẩn bị thanh lý.
+              </p>
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label htmlFor="notice-move-out" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                    Ngày dự kiến dọn đi
+                  </label>
+                  <input
+                    id="notice-move-out"
+                    type="date"
+                    value={noticeDate}
+                    onChange={(e) => setNoticeDate(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="notice-reason" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                    Lý do (tuỳ chọn)
+                  </label>
+                  <textarea
+                    id="notice-reason"
+                    value={noticeReason}
+                    onChange={(e) => setNoticeReason(e.target.value)}
+                    rows={3}
+                    maxLength={1000}
+                    placeholder="Ví dụ: chuyển công tác, hết hạn hợp đồng..."
+                    className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  />
+                </div>
+              </div>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse">
+                <Button
+                  type="button"
+                  disabled={requestTermination.isPending}
+                  onClick={submitNoticeOfTermination}
+                  className="rounded-2xl font-black"
+                >
+                  {requestTermination.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    'Gửi thông báo'
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={requestTermination.isPending}
+                  onClick={() => setNoticeOpen(false)}
+                  className="rounded-2xl font-black"
+                >
+                  Huỷ
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {terminationWarningsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-950/55 backdrop-blur-sm"
+              onClick={() => setTerminationWarningsOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              className="relative z-10 w-full max-w-lg rounded-[32px] border border-amber-200 bg-amber-50 p-8 shadow-2xl dark:border-amber-700/60 dark:bg-amber-950/40"
+            >
+              <h3 className="text-xl font-black text-amber-950 dark:text-amber-100">Lưu ý quan trọng</h3>
+              <ul className="mt-4 list-disc space-y-2 pl-5 text-sm font-medium leading-6 text-amber-900 dark:text-amber-200">
+                {terminationWarnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+              <Button
+                type="button"
+                className="mt-8 w-full rounded-2xl font-black"
+                onClick={() => setTerminationWarningsOpen(false)}
+              >
+                Đã hiểu
+              </Button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <MemberIdentityViewDialog
+        open={!!identityViewMember}
+        onClose={() => setIdentityViewMember(null)}
+        memberName={identityViewMember?.full_name ?? ''}
+        frontUrl={identityViewMember?.identity_front_url}
+        backUrl={identityViewMember?.identity_back_url}
+      />
       <SignatureModal
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
@@ -530,7 +909,39 @@ export default function TenantContractDetailPage() {
         isOpen={isPreviewModalOpen}
         onClose={() => setIsPreviewModalOpen(false)}
         contractId={id || ''}
+        contract={contract}
       />
+
+      <TenantRoomTransferModal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        contractId={contract.id}
+      />
+      <TenantAddRoommateModal
+        isOpen={roommateModalOpen}
+        onClose={() => setRoommateModalOpen(false)}
+        contractId={contract.id}
+      />
+      <TenantEditRoommateModal
+        isOpen={!!editingMember}
+        onClose={() => setEditingMember(null)}
+        contractId={contract.id}
+        member={editingMember}
+        contractStartDate={contract.start_date ? String(contract.start_date).slice(0, 10) : null}
+      />
+
+      {initialProofModalOpen && initialInvoiceStub && (
+        <SubmitPaymentProofModal
+          invoice={initialInvoiceStub}
+          onClose={() => setInitialProofModalOpen(false)}
+          onSuccess={() => {
+            setInitialProofModalOpen(false);
+            if (contract.id) {
+              queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, contract.id] });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

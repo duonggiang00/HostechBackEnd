@@ -1,5 +1,5 @@
 import { CreditCard, Copy, Landmark } from 'lucide-react';
-import type { Property } from '../types';
+import type { Property } from '@/OrgScope/features/properties/types';
 import { toast } from 'react-hot-toast';
 
 interface PropertyBankAccountsProps {
@@ -63,7 +63,9 @@ export function PropertyBankAccounts({ property }: PropertyBankAccountsProps) {
 
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-white/50 mb-1">Chủ tài khoản</p>
-                  <p className="text-sm font-bold uppercase tracking-wide">{account.account_holder}</p>
+                  <p className="text-sm font-bold uppercase tracking-wide">
+                    {account.account_name || account.account_holder || account.name || account.holder || '---'}
+                  </p>
                 </div>
               </div>
             </div>

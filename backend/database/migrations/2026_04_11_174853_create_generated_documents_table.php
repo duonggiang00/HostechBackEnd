@@ -15,12 +15,12 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->uuid('org_id');
             $table->uuid('template_id')->nullable();
-            
+
             $table->uuidMorphs('owner'); // owner_type, owner_id (e.g. Contract)
-            
+
             $table->string('path', 1000);
             $table->string('sha256', 64)->nullable();
-            
+
             $table->timestamps();
 
             // Indexes

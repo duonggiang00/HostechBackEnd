@@ -19,6 +19,16 @@ class InvoiceObserver
     }
 
     /**
+     * Handle the Invoice "updating" event.
+     */
+    public function updating(Invoice $invoice): void
+    {
+        if ($invoice->isDirty('status') && $invoice->status === 'ISSUED') {
+            $invoice->snapshot = $this->buildSnapshot($invoice);
+        }
+    }
+
+    /**
      * Handle the Invoice "updated" event.
      */
     public function updated(Invoice $invoice): void
@@ -56,7 +66,7 @@ class InvoiceObserver
                 'changed_by_user_id' => request()->user()?->id,
             ]);
         } catch (\Exception $e) {
-            Log::error("Failed to record invoice status history: " . $e->getMessage());
+            Log::error('Failed to record invoice status history: '.$e->getMessage());
         }
     }
 
@@ -79,10 +89,42 @@ class InvoiceObserver
 
             // Xóa cache cá nhân của các Manager liên quan
             DB::table('cache')
-                ->where('key', 'like', "%dashboard:manager:%")
+                ->where('key', 'like', '%dashboard:manager:%')
                 ->delete();
         } catch (\Exception $e) {
-            Log::warning("Failed to clear dashboard cache for invoice: " . $e->getMessage());
+            Log::warning('Failed to clear dashboard cache for invoice: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Build invoice snapshot when transitioning to ISSUED.
+     */
+    private function buildSnapshot(Invoice $invoice): array
+    {
+        $invoice->loadMissing(['contract.primaryMember.user', 'room', 'items']);
+
+        $primaryMember = $invoice->contract?->primaryMember;
+        $tenantInfo = [
+            'name' => $primaryMember?->name ?? $primaryMember?->user?->name ?? 'Unknown',
+            'phone' => $primaryMember?->phone ?? $primaryMember?->user?->phone ?? null,
+            'email' => $primaryMember?->email ?? $primaryMember?->user?->email ?? null,
+        ];
+
+        return [
+            'room_code' => $invoice->room?->code,
+            'contract_code' => $invoice->contract?->code,
+            'tenant' => $tenantInfo,
+            'items' => $invoice->items->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'type' => $item->type,
+                    'description' => $item->description,
+                    'amount' => $item->amount,
+                    'quantity' => $item->quantity,
+                    'total' => $item->total,
+                ];
+            })->toArray(),
+            'snapshot_at' => now()->toIso8601String(),
+        ];
     }
 }

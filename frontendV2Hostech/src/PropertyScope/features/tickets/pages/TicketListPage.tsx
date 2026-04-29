@@ -8,6 +8,7 @@ import TicketPriorityBadge from '../components/TicketPriorityBadge';
 import TicketDetailPanel from '../components/TicketDetailPanel';
 import TicketForm from '../components/TicketForm';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
+import { PERMISSIONS } from '@/shared/features/auth/permissions';
 import type { TicketStatus, TicketQueryParams } from '../types';
 
 const STATUS_FILTERS: { value: TicketStatus | 'ALL'; label: string }[] = [
@@ -56,7 +57,7 @@ export default function TicketListPage() {
             </p>
           </div>
         </div>
-        <PermissionGate role={['Owner', 'Manager', 'Staff']}>
+        <PermissionGate permission={PERMISSIONS.createTicket} role={['Owner', 'Manager', 'Staff']}>
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all"

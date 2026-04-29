@@ -9,6 +9,7 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -21,9 +22,9 @@ class DormantTenantAccessTest extends TestCase
         parent::setUp();
 
         // Roles and permissions required
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Properties', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Rooms', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'viewAny Room', 'guard_name' => 'web']); // Some policies use singular/plural mixed depending on your setup
+        Permission::firstOrCreate(['name' => 'viewAny Properties', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'viewAny Rooms', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'viewAny Room', 'guard_name' => 'web']); // Some policies use singular/plural mixed depending on your setup
 
         Role::firstOrCreate(['name' => 'Manager', 'guard_name' => 'web']);
         $tenantRole = Role::firstOrCreate(['name' => 'Tenant', 'guard_name' => 'web']);
@@ -162,7 +163,7 @@ class DormantTenantAccessTest extends TestCase
     public function test_unrelated_tenant_cannot_sign_others_contract()
     {
         // Tenant 1 tạo hợp đồng
-        $org = \App\Models\Org\Org::create(['name' => 'Shared Org']);
+        $org = Org::create(['name' => 'Shared Org']);
         $tenant1 = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Tenant One']);
         $tenant1->assignRole('Tenant');
 

@@ -1,11 +1,18 @@
 import { useState } from 'react';
-import { X, Zap, Calendar, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Zap, Calendar, AlertCircle, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGenerateMonthly } from '../hooks/usePropertyInvoices';
 
 interface GenerateMonthlyModalProps {
   propertyId: string;
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface GenerateResult {
+  count: number;
+  failed: number;
+  errors: string[];
+  billingDate: string;
 }
 
 export function GenerateMonthlyModal({
@@ -15,25 +22,38 @@ export function GenerateMonthlyModal({
 }: GenerateMonthlyModalProps) {
   const today = new Date().toISOString().slice(0, 10);
   const [billingDate, setBillingDate] = useState(today);
-  const [resultCount, setResultCount] = useState<number | null>(null);
+  const [result, setResult] = useState<GenerateResult | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
 
   const generateMutation = useGenerateMonthly(propertyId);
 
   const handleSubmit = async () => {
-    setResultCount(null);
+    setResult(null);
     try {
-      const result = await generateMutation.mutateAsync({ billing_date: billingDate });
-      setResultCount(result.count);
+      const res = await generateMutation.mutateAsync({ billing_date: billingDate });
+      setResult({
+        count: res.count ?? 0,
+        failed: res.failed ?? 0,
+        errors: res.errors ?? [],
+        billingDate,
+      });
     } catch {
       // error handled via mutation state
     }
   };
 
   const handleClose = () => {
-    setResultCount(null);
+    setResult(null);
+    setShowErrors(false);
     generateMutation.reset();
     onClose();
   };
+
+  const billingMonth = (() => {
+    if (!billingDate) return '';
+    const d = new Date(billingDate);
+    return `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+  })();
 
   if (!isOpen) return null;
 
@@ -72,23 +92,78 @@ export function GenerateMonthlyModal({
 
         {/* Body */}
         <div className="p-6 space-y-5">
-          {/* Result success */}
-          {resultCount !== null ? (
-            <div className="flex flex-col items-center py-8 gap-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center">
-                <Zap className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-2xl font-black text-slate-900 dark:text-white">
-                  {resultCount} hóa đơn
+          {/* ─── Result Screen ─── */}
+          {result !== null ? (
+            <div className="flex flex-col gap-4">
+              {/* Success header */}
+              <div className="flex flex-col items-center gap-2 pt-2 text-center">
+                <div className={`w-14 h-14 rounded-full flex items-center justify-center ${result.failed === 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-amber-50 dark:bg-amber-500/10'}`}>
+                  {result.failed === 0
+                    ? <CheckCircle2 className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                    : <AlertCircle className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                  }
+                </div>
+                <p className="text-base font-black text-slate-900 dark:text-white">
+                  {result.failed === 0 ? 'Hoàn tất tạo hóa đơn' : 'Hoàn tất — một số phòng chưa tạo mới'}
                 </p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  đã được tạo thành công cho ngày <strong>{billingDate}</strong>
-                </p>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{billingMonth}</span>
               </div>
+
+              {/* Stats table */}
+              <div className="rounded-[10px] border border-slate-100 dark:border-slate-800 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 dark:bg-emerald-500/10 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Thành công</span>
+                  </div>
+                  <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                    {result.count} hợp đồng
+                  </span>
+                </div>
+                {result.failed > 0 && (
+                  <div className="flex items-center justify-between px-4 py-3 bg-rose-50 dark:bg-rose-500/10">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Chưa tạo hóa đơn mới</span>
+                    </div>
+                    <span className="text-sm font-black text-rose-600 dark:text-rose-400">
+                      {result.failed} hợp đồng
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Error detail collapsible */}
+              {result.errors.length > 0 && (
+                <div className="rounded-[10px] border border-rose-100 dark:border-rose-500/20 overflow-hidden">
+                  <button
+                    onClick={() => setShowErrors(v => !v)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 bg-rose-50 dark:bg-rose-500/10 text-xs font-black text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
+                  >
+                    <span>Chi tiết từng phòng ({result.errors.length})</span>
+                    {showErrors ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                  {showErrors && (
+                    <ul className="max-h-36 overflow-y-auto px-4 py-2 space-y-1 bg-white dark:bg-slate-900">
+                      {result.errors.map((err, i) => (
+                        <li key={i} className="text-[11px] text-slate-600 dark:text-slate-400 flex gap-1.5">
+                          <span className="text-rose-400 flex-shrink-0">•</span>
+                          <span>{err}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {/* Info note */}
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
+                Các phòng đủ điều kiện đã có hóa đơn mới. Phòng trong phần chi tiết thường đã có hóa đơn cùng kỳ hoặc cần chốt số điện/nước — danh sách hóa đơn đã được làm mới.
+              </p>
+
               <button
                 onClick={handleClose}
-                className="px-6 py-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-sm rounded-[8px] hover:bg-[#1E3A8A] dark:hover:bg-blue-500 dark:hover:text-white transition-colors"
+                className="w-full py-3 px-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-sm rounded-[8px] hover:bg-[#1E3A8A] dark:hover:bg-blue-500 dark:hover:text-white transition-colors"
               >
                 Đóng
               </button>
@@ -118,8 +193,8 @@ export function GenerateMonthlyModal({
               <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-500/10 rounded-[8px] border border-amber-100 dark:border-amber-500/20">
                 <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                  Chức năng này sẽ tạo hóa đơn DRAFT cho tất cả phòng đang có hợp đồng
-                  hoạt động. Hóa đơn đã tồn tại trong kỳ này sẽ không bị tạo lại.
+                  Hệ thống sẽ tạo hóa đơn theo kỳ cho tất cả hợp đồng đang hoạt động của tòa nhà (theo quy tắc
+                  chỉ số điện/nước đã duyệt). Hóa đơn đã tồn tại trong kỳ này sẽ không bị tạo lại.
                 </p>
               </div>
 
@@ -146,7 +221,7 @@ export function GenerateMonthlyModal({
                   {generateMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Đang tạo...
+                      Đang xử lý...
                     </>
                   ) : (
                     <>

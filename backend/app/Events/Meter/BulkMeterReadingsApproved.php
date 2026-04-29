@@ -2,7 +2,8 @@
 
 namespace App\Events\Meter;
 
-use Illuminate\Broadcasting\Channel;
+use App\Enums\ContractStatus;
+use App\Models\Org\User;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
@@ -28,8 +29,26 @@ class BulkMeterReadingsApproved implements ShouldBroadcast
     {
         $channels = [];
         if ($this->propertyId) {
-            $channels[] = new PrivateChannel('property.' . $this->propertyId);
+            $channels[] = new PrivateChannel('property.'.$this->propertyId);
         }
+
+        // Add tenant channels for affected users to trigger real-time UI refresh
+        if (! empty($this->readingIds)) {
+            $tenantIds = User::whereHas('contractMembers', function ($q) {
+                $q->where('status', 'APPROVED')
+                    ->whereHas('contract', function ($cq) {
+                        $cq->whereIn('status', [ContractStatus::ACTIVE, ContractStatus::PENDING_TERMINATION])
+                            ->whereHas('room.meters.readings', function ($rq) {
+                                $rq->whereIn('id', $this->readingIds);
+                            });
+                    });
+            })->pluck('id');
+
+            foreach ($tenantIds->unique() as $userId) {
+                $channels[] = new PrivateChannel('App.Models.User.'.$userId);
+            }
+        }
+
         return $channels;
     }
 

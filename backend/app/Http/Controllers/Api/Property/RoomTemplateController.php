@@ -7,7 +7,9 @@ use App\Http\Requests\Property\RoomTemplateStoreRequest;
 use App\Http\Requests\Property\RoomTemplateUpdateRequest;
 use App\Http\Resources\Property\RoomTemplateResource;
 use App\Models\Property\RoomTemplate;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 
 class RoomTemplateController extends Controller
@@ -15,15 +17,15 @@ class RoomTemplateController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request, $propertyId = null): \Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Http\JsonResponse
+    public function index(Request $request, $propertyId = null): AnonymousResourceCollection|JsonResponse
     {
         // Support both nested route /properties/{property}/room-templates
         // and flat URL /room-templates?filter[property_id]=...
         $id = $propertyId ?: $request->input('filter.property_id') ?: $request->input('property_id');
 
-        if (!$id) {
+        if (! $id) {
             return response()->json([
-                'message' => 'The property_id is required.'
+                'message' => 'The property_id is required.',
             ], 422);
         }
 
@@ -45,7 +47,7 @@ class RoomTemplateController extends Controller
             unset($data['media_ids']);
 
             $template = RoomTemplate::create(array_merge($data, [
-                'org_id' => $request->user()->org_id ?? $request->user()->id
+                'org_id' => $request->user()->org_id ?? $request->user()->id,
             ]));
 
             if ($request->has('services')) {
@@ -57,13 +59,13 @@ class RoomTemplateController extends Controller
                     $template->assets()->create([
                         'name' => $asset['name'],
                         'condition' => $asset['condition'] ?? 'new',
-                        'note' => $asset['note'] ?? ''
+                        'note' => $asset['note'] ?? '',
                     ]);
                 }
             }
 
             // Sync gallery images from TemporaryUpload
-            if (!empty($mediaIds)) {
+            if (! empty($mediaIds)) {
                 $template->syncMediaAttachments($mediaIds, 'gallery');
             }
 
@@ -74,6 +76,7 @@ class RoomTemplateController extends Controller
     public function show($propertyId, $templateId)
     {
         $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
+
         return new RoomTemplateResource(
             $roomTemplate->load(['services.currentRate', 'assets', 'media'])
         );
@@ -82,6 +85,7 @@ class RoomTemplateController extends Controller
     public function update(RoomTemplateUpdateRequest $request, $propertyId, $templateId)
     {
         $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
+
         return DB::transaction(function () use ($request, $roomTemplate) {
             $data = $request->validated();
 
@@ -101,13 +105,13 @@ class RoomTemplateController extends Controller
                     $roomTemplate->assets()->create([
                         'name' => $asset['name'],
                         'condition' => $asset['condition'] ?? 'new',
-                        'note' => $asset['note'] ?? ''
+                        'note' => $asset['note'] ?? '',
                     ]);
                 }
             }
 
             // Sync gallery images if provided
-            if (!empty($mediaIds)) {
+            if (! empty($mediaIds)) {
                 $roomTemplate->syncMediaAttachments($mediaIds, 'gallery');
             }
 
@@ -121,6 +125,7 @@ class RoomTemplateController extends Controller
     {
         $roomTemplate = RoomTemplate::where('property_id', $propertyId)->findOrFail($templateId);
         $roomTemplate->delete();
+
         return response()->json(['message' => 'Template deleted successfully']);
     }
 }

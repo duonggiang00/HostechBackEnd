@@ -2,15 +2,16 @@
 
 namespace App\Services\System;
 
+use App\Mail\Contract\ContractInvitationMail;
+use App\Mail\System\UserInvitationMail;
 use App\Models\Contract\Contract;
+use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\System\UserInvitation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Mail\System\UserInvitationMail;
-use App\Mail\Contract\ContractInvitationMail;
 
 class UserInvitationService
 {
@@ -106,7 +107,7 @@ class UserInvitationService
                 if (empty($data['org_name'])) {
                     abort(422, 'Tên tổ chức (org_name) là bắt buộc để khởi tạo tài khoản Chủ sở hữu.');
                 }
-                $org = \App\Models\Org\Org::create(['name' => $data['org_name']]);
+                $org = Org::create(['name' => $data['org_name']]);
                 $orgId = $org->id;
             } else {
                 $orgId = $invitation->org_id;
@@ -158,19 +159,19 @@ class UserInvitationService
      * (user_id backfilled + status changed to PENDING) via a separate command/listener.
      */
     public function createContractInvite(
-        User     $inviter,
-        string   $email,
+        User $inviter,
+        string $email,
         Contract $contract,
-        array    $memberData = [],
+        array $memberData = [],
     ): UserInvitation {
         $data = [
-            'token'             => Str::random(64),
-            'role_name'         => 'Tenant',
-            'org_id'            => $contract->org_id,
-            'properties_scope'  => [$contract->property_id],
-            'invited_by'        => $inviter->id,
-            'expires_at'        => Carbon::now()->addDays(72 / 24),
-            'registered_at'     => null, // Đảm bảo lời mời có thể sử dụng lại nếu mời lại
+            'token' => Str::random(64),
+            'role_name' => 'Tenant',
+            'org_id' => $contract->org_id,
+            'properties_scope' => [$contract->property_id],
+            'invited_by' => $inviter->id,
+            'expires_at' => Carbon::now()->addDays(72 / 24),
+            'registered_at' => null, // Đảm bảo lời mời có thể sử dụng lại nếu mời lại
         ];
 
         // Tránh lỗi Duplicate Entry bằng cách cập nhật bản ghi cũ nếu có

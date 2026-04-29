@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('media:cleanup-temp')->daily();
 Schedule::command('contracts:expire')->dailyAt('00:00'); // Tự động xử lý HĐ hết hạn
-
+Schedule::command('app:mark-overdue-invoices')->dailyAt('00:05'); // Tự động chuyển hóa đơn sang OVERDUE

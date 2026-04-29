@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
@@ -8,13 +7,15 @@ use App\Models\Property\Room;
 use App\Models\Property\RoomTemplate;
 use App\Models\Service\Service;
 use App\Services\Property\RoomService;
+use Database\Seeders\RBACSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\actingAs;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
     $this->roomService = app(RoomService::class);
 });
 
@@ -22,7 +23,7 @@ test('room without template inherits property default services', function () {
     $admin = User::factory()->admin()->create();
     $org = Org::factory()->create();
     $property = Property::factory()->create(['org_id' => $org->id]);
-    
+
     // Create some default services for the property
     $service1 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Electricity']);
     $service2 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Water']);
@@ -47,7 +48,7 @@ test('room with template inherits template services and SKIPS property defaults'
     $admin = User::factory()->admin()->create();
     $org = Org::factory()->create();
     $property = Property::factory()->create(['org_id' => $org->id]);
-    
+
     // Property defaults
     $propService1 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Default Electricity']);
     $property->defaultServices()->attach([$propService1->id]);
@@ -75,7 +76,7 @@ test('room with template inherits template services and SKIPS property defaults'
     // Verify it inherited Template services
     expect($room->services()->count())->toBe(1);
     expect($room->services->pluck('id')->toArray())->toContain($tplService1->id);
-    
+
     // Verify it DID NOT inherit Property defaults (the fix!)
     expect($room->services->pluck('id')->toArray())->not->toContain($propService1->id);
 });
@@ -84,7 +85,7 @@ test('quickCreateBatch respects template services and skips property defaults', 
     $admin = User::factory()->admin()->create();
     $org = Org::factory()->create();
     $property = Property::factory()->create(['org_id' => $org->id]);
-    
+
     // Property defaults
     $propService1 = Service::factory()->create(['org_id' => $org->id, 'name' => 'Default Electricity']);
     $property->defaultServices()->attach([$propService1->id]);
@@ -118,7 +119,7 @@ test('quickCreateBatch respects template services and skips property defaults', 
         // Verify it inherited Template services
         expect($room->services()->count())->toBe(1);
         expect($room->services->pluck('id')->toArray())->toContain($tplService1->id);
-        
+
         // Verify it DID NOT inherit Property defaults
         expect($room->services->pluck('id')->toArray())->not->toContain($propService1->id);
     }

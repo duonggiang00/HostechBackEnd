@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { 
   Zap, Droplet, Plus, AlertCircle, X, 
   ChevronLeft, ChevronRight, FileText, Loader2,
@@ -18,6 +19,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { meteringApi } from '@/PropertyScope/features/metering/api/metering';
 import type { MeterReading } from '@/PropertyScope/features/metering/types';
 import toast from 'react-hot-toast';
+import { roomsApi } from '@/PropertyScope/features/rooms/api/rooms';
+import { isRoomReadyForQuickInvoiceSubmit } from '@/PropertyScope/features/billing/utils/roomMeterReadiness';
 
 interface RoomUtilityTabProps {
   propertyId: string;
@@ -33,6 +36,17 @@ const formatDate = (dateStr?: string | null) => {
 };
 
 export default function RoomUtilityTab({ propertyId, roomId, meters: initialMeters, isReadOnly }: RoomUtilityTabProps) {
+  const navigate = useNavigate();
+
+  const { data: roomInvoiceSnapshot, isFetching: invoiceReadinessLoading } = useQuery({
+    queryKey: ['room-utility-invoice-readiness', roomId],
+    queryFn: () =>
+      roomsApi.getRoom(roomId, {
+        include: 'roomServices.service,meters.latestApprovedReading',
+      }),
+    enabled: !!roomId && !isReadOnly,
+  });
+
   // Use provided meters or fetch them if not available
   const { data: metersData, isLoading: metersLoading } = useQuery({
     queryKey: ['room-meters', roomId],
@@ -61,9 +75,38 @@ export default function RoomUtilityTab({ propertyId, roomId, meters: initialMete
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <MeterColumn meter={electricMeter} type="ELECTRIC" isReadOnly={isReadOnly} />
-      <MeterColumn meter={waterMeter} type="WATER" isReadOnly={isReadOnly} />
+    <div className="flex flex-col gap-6">
+      {!isReadOnly && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              if (invoiceReadinessLoading) {
+                toast.error('Đang tải dữ liệu phòng, vui lòng thử lại sau vài giây.');
+                return;
+              }
+              if (!isRoomReadyForQuickInvoiceSubmit(roomInvoiceSnapshot ?? null)) {
+                toast.error('Chưa đủ điều kiện đồng hồ (duyệt chỉ số và có tiêu thụ kỳ). Vui lòng chốt số trước khi lập hóa đơn nhanh.');
+                navigate(`/properties/${propertyId}/meters/room/${roomId}`);
+                return;
+              }
+              navigate(`/properties/${propertyId}/billing/quick-invoice/${roomId}`, {
+                state: { from: 'room-detail', roomId },
+              });
+            }}
+            className="flex items-center gap-2 px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-2xl shadow-lg shadow-teal-500/20 transition-all active:scale-95 group"
+          >
+            <div className="p-1.5 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+              <FileText className="w-4 h-4 text-white" />
+            </div>
+            Phát hành hóa đơn
+          </button>
+        </div>
+      )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MeterColumn meter={electricMeter} type="ELECTRIC" isReadOnly={isReadOnly} propertyId={propertyId} roomId={roomId} />
+        <MeterColumn meter={waterMeter} type="WATER" isReadOnly={isReadOnly} propertyId={propertyId} roomId={roomId} />
+      </div>
     </div>
   );
 }
@@ -72,9 +115,12 @@ interface MeterColumnProps {
   meter: any;
   type: 'ELECTRIC' | 'WATER';
   isReadOnly?: boolean;
+  propertyId: string;
+  roomId: string;
 }
 
-function MeterColumn({ meter, type, isReadOnly }: MeterColumnProps) {
+function MeterColumn({ meter, type, isReadOnly, propertyId, roomId }: MeterColumnProps) {
+  const navigate = useNavigate();
   const [readingsPage, setReadingsPage] = useState(1);
   const perPage = 10;
   const [previewingImage, setPreviewingImage] = useState<string | null>(null);
@@ -199,15 +245,26 @@ function MeterColumn({ meter, type, isReadOnly }: MeterColumnProps) {
             <p className="text-[0.65rem] text-slate-400 font-bold uppercase tracking-widest">Mã: {meter.code}</p>
           </div>
         </div>
-        {!isReadOnly && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleOpenAddForm}
-            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-lg transition-all active:scale-95"
-            title="Chốt số mới"
+            onClick={() => navigate(`/properties/${propertyId}/rooms/${roomId}/meters`, {
+              state: { from: 'room-detail', roomId }
+            })}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-300 dark:hover:text-slate-100 rounded-lg transition-all active:scale-95"
+            title="Xem chi tiết chốt số"
           >
-            <Plus className="w-5 h-5" />
+            <FileText className="w-4 h-4" />
           </button>
-        )}
+          {!isReadOnly && (
+            <button
+              onClick={handleOpenAddForm}
+              className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 rounded-lg transition-all active:scale-95"
+              title="Chốt số mới"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary Stats */}

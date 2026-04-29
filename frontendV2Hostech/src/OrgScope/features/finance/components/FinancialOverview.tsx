@@ -29,7 +29,7 @@ export default function FinancialOverview() {
               </div>
             </div>
             <p className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">{card.label}</p>
-            <h3 className="text-3xl font-black text-white mt-2 italic tracking-tight">{card.value}</h3>
+            <h3 className="text-3xl font-black text-white mt-2 tracking-tight">{card.value}</h3>
           </motion.div>
         ))}
       </div>

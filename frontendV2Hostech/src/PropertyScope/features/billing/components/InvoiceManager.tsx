@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   FileText, 
   CheckCircle2, 
@@ -12,18 +13,22 @@ import {
 } from 'lucide-react';
 import type { Invoice } from '../types';
 import { RecordPaymentModal } from './RecordPaymentModal';
+import { CreateManualInvoiceModal } from './CreateManualInvoiceModal';
 import { useIssueInvoice } from '../hooks/usePropertyInvoices';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
 
 interface InvoiceManagerProps {
   roomId: string;
+  propertyId?: string;
   data?: Invoice[];
   isLoading?: boolean;
   isReadOnly?: boolean;
 }
 
-export default function InvoiceManager({ data = [], isLoading, isReadOnly }: InvoiceManagerProps) {
+export default function InvoiceManager({ roomId, propertyId, data = [], isLoading, isReadOnly }: InvoiceManagerProps) {
+  const navigate = useNavigate();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const { mutateAsync: issueInvoice, isPending: isIssuing } = useIssueInvoice();
 
   if (isLoading) {
@@ -71,7 +76,7 @@ export default function InvoiceManager({ data = [], isLoading, isReadOnly }: Inv
 
       <div className="space-y-4">
         {data.sort((a, b) => new Date(b.period_start).getTime() - new Date(a.period_start).getTime()).map((invoice) => (
-          <div key={invoice.id} className="group relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-4xl p-5 hover:border-indigo-100 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-50/50 dark:hover:shadow-none transition-all cursor-pointer">
+          <div key={invoice.id} onClick={() => propertyId && navigate(`/properties/${propertyId}/billing/invoices/${invoice.id}`)} className="group relative bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-4xl p-5 hover:border-indigo-100 dark:hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-50/50 dark:hover:shadow-none transition-all cursor-pointer">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-2xl transition-colors ${
@@ -104,13 +109,13 @@ export default function InvoiceManager({ data = [], isLoading, isReadOnly }: Inv
                 {invoice.status === 'ISSUED' && <Clock className="w-3 h-3" />}
                 {invoice.status === 'DRAFT' && <FileText className="w-3 h-3" />}
                 {invoice.status === 'CANCELLED' && <Ban className="w-3 h-3" />}
-                {invoice.status === 'PARTIALLY_PAID' && <CreditCard className="w-3 h-3" />}
+                {invoice.status === 'PARTIAL' && <CreditCard className="w-3 h-3" />}
                 {
                   invoice.status === 'PAID' ? 'Đã thanh toán' : 
                   invoice.status === 'OVERDUE' ? 'Quá hạn' : 
                   invoice.status === 'DRAFT' ? 'Nháp' :
                   invoice.status === 'CANCELLED' ? 'Đã hủy' :
-                  invoice.status === 'PARTIALLY_PAID' ? 'Trợ một phần' : 'Đã phát hành'
+                  invoice.status === 'PARTIAL' ? 'Thanh toán 1 phần' : 'Đã phát hành'
                 }
               </div>
             </div>
@@ -131,7 +136,7 @@ export default function InvoiceManager({ data = [], isLoading, isReadOnly }: Inv
             </div>
 
             <div className="mt-4 flex items-center justify-between transition-colors">
-              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 italic">
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 ">
                 <Clock className="w-3 h-3" />
                 Kỳ: {new Date(invoice.period_start).toLocaleDateString('vi-VN')} - {new Date(invoice.period_end).toLocaleDateString('vi-VN')}
               </div>
@@ -148,7 +153,7 @@ export default function InvoiceManager({ data = [], isLoading, isReadOnly }: Inv
                     </button>
                   )}
                   
-                  {['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && (invoice.debt || 0) > 0 && (
+                  {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(invoice.status) && (invoice.debt || 0) > 0 && (
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -173,10 +178,22 @@ export default function InvoiceManager({ data = [], isLoading, isReadOnly }: Inv
       </div>
 
       {!isReadOnly && (
-        <button className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group">
+        <button 
+          onClick={() => setIsManualModalOpen(true)}
+          className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group"
+        >
           <DollarSign className="w-5 h-5 group-hover:scale-110 transition-transform" />
           Tạo hóa đơn tùy chỉnh
         </button>
+      )}
+
+      {isManualModalOpen && propertyId && (
+        <CreateManualInvoiceModal
+          isOpen={true}
+          onClose={() => setIsManualModalOpen(false)}
+          roomId={roomId}
+          propertyId={propertyId}
+        />
       )}
 
       {selectedInvoice && (

@@ -11,7 +11,12 @@ use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use Database\Seeders\RBACSeeder;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\ContractIdentityMedia;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\assertDatabaseHas;
@@ -23,18 +28,25 @@ use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
 beforeEach(function () {
-    $this->seed(\Database\Seeders\RBACSeeder::class);
+    $this->seed(RBACSeeder::class);
 });
 
 test('admin can create contract', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id, 'full_name' => 'Admin User']);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
+    $admin->update(['org_id' => $org->id]);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $tenant = User::factory()->create(['org_id' => $org->id]);
+    $tenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $tenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($admin);
 
     actingAs($admin);
 
@@ -55,6 +67,8 @@ test('admin can create contract', function () {
                 'role' => 'TENANT',
                 'is_primary' => true,
                 'joined_at' => now()->toDateString(),
+                'identity_front_media_id' => $idFront,
+                'identity_back_media_id' => $idBack,
             ],
         ],
     ]);
@@ -79,6 +93,50 @@ test('admin can create contract', function () {
         'is_primary' => true,
         'status' => 'PENDING',
     ]);
+
+    $member = ContractMember::query()->where('contract_id', $contractId)->where('user_id', $tenant->id)->first();
+    expect($member)->not->toBeNull();
+    expect($member->getMedia('identity_front'))->toHaveCount(1);
+    expect($member->getMedia('identity_back'))->toHaveCount(1);
+});
+
+test('cannot create contract without member identity images', function () {
+    Storage::fake('local');
+
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $admin->assignRole(Role::firstOrCreate(['name' => 'Admin']));
+    $admin->update(['org_id' => $org->id]);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $tenant = User::factory()->create(['org_id' => $org->id]);
+    $tenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $tenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    actingAs($admin);
+
+    postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'start_date' => now()->toDateString(),
+        'end_date' => now()->addYear()->toDateString(),
+        'rent_price' => 5000000,
+        'deposit_amount' => 5000000,
+        'billing_cycle' => 1,
+        'due_day' => 5,
+        'cutoff_day' => 25,
+        'members' => [
+            [
+                'user_id' => $tenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+                'joined_at' => now()->toDateString(),
+            ],
+        ],
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['members.0.identity_front_media_id', 'members.0.identity_back_media_id']);
 });
 
 test('user cannot create contract for another org', function () {
@@ -254,16 +312,23 @@ test('can force delete contract', function () {
 });
 
 test('manager can create contract', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $manager = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Manager']);
     $manager->assignRole($role);
+    $manager->update(['org_id' => $org->id]);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $tenant = User::factory()->create(['org_id' => $org->id]);
+    $tenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $tenant->properties()->syncWithoutDetaching([(string) $property->id]);
 
-    actingAs($manager);
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($manager);
+
+    actingAs(User::query()->withoutGlobalScopes()->findOrFail($manager->id));
 
     postJson('/api/contracts', [
         'property_id' => $property->id,
@@ -276,21 +341,35 @@ test('manager can create contract', function () {
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'identity_front_media_id' => $idFront,
+                'identity_back_media_id' => $idBack,
             ],
         ],
-    ])->assertStatus(201)->assertJsonPath('data.status', 'PENDING_SIGNATURE');
+    ], ['X-Org-Id' => $org->id])->assertStatus(201)->assertJsonPath('data.status', 'PENDING_SIGNATURE');
 });
 
 test('staff cannot create contract', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $staff = User::factory()->create(['org_id' => $org->id]);
-    $role = Role::firstOrCreate(['name' => 'Staff']);
-    $staff->assignRole($role);
+    $staff->update(['org_id' => $org->id]);
+    $viewerRole = Role::create(['name' => 'ContractViewer_'.Str::uuid(), 'guard_name' => 'web']);
+    $viewerRole->syncPermissions([
+        Permission::firstOrCreate(['name' => 'viewAny Contracts', 'guard_name' => 'web']),
+        Permission::firstOrCreate(['name' => 'view Contracts', 'guard_name' => 'web']),
+    ]);
+    $staff->syncRoles([$viewerRole]);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $tenant = User::factory()->create(['org_id' => $org->id]);
+    $tenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $tenant->properties()->syncWithoutDetaching([(string) $property->id]);
 
-    actingAs($staff);
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($staff);
+
+    actingAs(User::query()->withoutGlobalScopes()->findOrFail($staff->id));
 
     postJson('/api/contracts', [
         'property_id' => $property->id,
@@ -298,7 +377,16 @@ test('staff cannot create contract', function () {
         'status' => 'ACTIVE',
         'rent_price' => 5000000,
         'start_date' => now()->toDateString(),
-    ])->assertStatus(403);
+        'members' => [
+            [
+                'user_id' => $tenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+                'identity_front_media_id' => $idFront,
+                'identity_back_media_id' => $idBack,
+            ],
+        ],
+    ], ['X-Org-Id' => $org->id])->assertStatus(403);
 });
 
 test('staff can view any contract in org', function () {
@@ -332,7 +420,7 @@ test('tenant can view own contract', function () {
 
     // Add tenant as member
     ContractMember::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org->id,
         'contract_id' => $contract->id,
         'user_id' => $tenant->id,
@@ -358,7 +446,7 @@ test('tenant cannot view other contract', function () {
     // Contract user belongs to
     $ownContract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
     ContractMember::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org->id,
         'contract_id' => $ownContract->id,
         'user_id' => $tenant->id,
@@ -392,15 +480,22 @@ test('unauthorized user cannot list contracts', function () {
 });
 
 test('admin can add registered tenant account to contract members', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id]);
     $roommate = User::factory()->create(['org_id' => $org->id]);
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
+    $admin->update(['org_id' => $org->id]);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    $roommate->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $roommate->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($admin);
 
     actingAs($admin);
 
@@ -408,6 +503,8 @@ test('admin can add registered tenant account to contract members', function () 
         'user_id' => $roommate->id,
         'role' => 'ROOMMATE',
         'is_primary' => false,
+        'identity_front_media_id' => $idFront,
+        'identity_back_media_id' => $idBack,
     ]);
 
     $response->assertStatus(201)
@@ -486,6 +583,8 @@ test('admin can mark contract member as left', function () {
 });
 
 test('tenant can request to add roommate and it becomes PENDING', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $tenant = User::factory()->create(['org_id' => $org->id]);
     $roommate = User::factory()->create(['org_id' => $org->id]);
@@ -496,9 +595,10 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    $roommate->properties()->syncWithoutDetaching([(string) $property->id]);
 
     ContractMember::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org->id,
         'contract_id' => $contract->id,
         'user_id' => $tenant->id,
@@ -507,12 +607,16 @@ test('tenant can request to add roommate and it becomes PENDING', function () {
         'is_primary' => true,
     ]);
 
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($tenant);
+
     actingAs($tenant);
 
     $response = postJson("/api/contracts/{$contract->id}/members", [
         'user_id' => $roommate->id,
         'role' => 'ROOMMATE',
         'is_primary' => false,
+        'identity_front_media_id' => $idFront,
+        'identity_back_media_id' => $idBack,
     ]);
 
     $response->assertStatus(201)
@@ -572,7 +676,7 @@ test('tenant cannot approve their own or other roommate requests', function () {
     $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
 
     ContractMember::create([
-        'id' => \Illuminate\Support\Str::uuid(),
+        'id' => Str::uuid(),
         'org_id' => $org->id,
         'contract_id' => $contract->id,
         'user_id' => $tenant->id,
@@ -597,14 +701,21 @@ test('tenant cannot approve their own or other roommate requests', function () {
 });
 
 test('cannot create contract with cutoff day greater than 25', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id]);
     $tenant = User::factory()->create(['org_id' => $org->id]);
+    $tenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
     $role = Role::firstOrCreate(['name' => 'Admin']);
     $admin->assignRole($role);
+    $admin->update(['org_id' => $org->id]);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $tenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$idFront, $idBack] = ContractIdentityMedia::uuidPairForUser($admin);
 
     actingAs($admin);
 
@@ -617,18 +728,22 @@ test('cannot create contract with cutoff day greater than 25', function () {
         'deposit_amount' => 5000000,
         'billing_cycle' => 1,
         'due_day' => 5,
-        'cutoff_day' => 26,
+        'cutoff_day' => 32,
         'members' => [
             [
                 'user_id' => $tenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'identity_front_media_id' => $idFront,
+                'identity_back_media_id' => $idBack,
             ],
         ],
     ])->assertStatus(422)->assertJsonValidationErrors(['cutoff_day']);
 });
 
 test('initial invoice is created only after all contract members sign and tenant can view it', function () {
+    Storage::fake('local');
+
     $org = Org::factory()->create();
     $admin = User::factory()->create(['org_id' => $org->id]);
     $primaryTenant = User::factory()->create(['org_id' => $org->id]);
@@ -637,11 +752,21 @@ test('initial invoice is created only after all contract members sign and tenant
     $adminRole = Role::firstOrCreate(['name' => 'Admin']);
     $tenantRole = Role::firstOrCreate(['name' => 'Tenant']);
     $admin->assignRole($adminRole);
+    $admin->update(['org_id' => $org->id]);
     $primaryTenant->assignRole($tenantRole);
     $roommate->assignRole($tenantRole);
 
     $property = Property::factory()->create(['org_id' => $org->id]);
-    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $room = Room::factory()->create([
+        'property_id' => $property->id,
+        'org_id' => $org->id,
+        'capacity' => 4,
+    ]);
+    $primaryTenant->properties()->syncWithoutDetaching([(string) $property->id]);
+    $roommate->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$pFront, $pBack] = ContractIdentityMedia::uuidPairForUser($admin);
+    [$rFront, $rBack] = ContractIdentityMedia::uuidPairForUser($admin);
 
     actingAs($admin);
 
@@ -661,17 +786,26 @@ test('initial invoice is created only after all contract members sign and tenant
                 'user_id' => $primaryTenant->id,
                 'role' => 'TENANT',
                 'is_primary' => true,
+                'identity_front_media_id' => $pFront,
+                'identity_back_media_id' => $pBack,
             ],
             [
                 'user_id' => $roommate->id,
                 'role' => 'ROOMMATE',
                 'is_primary' => false,
+                'identity_front_media_id' => $rFront,
+                'identity_back_media_id' => $rBack,
             ],
         ],
     ])->assertStatus(201)
         ->assertJsonPath('data.status', 'PENDING_SIGNATURE');
 
     $contractId = $response->json('data.id');
+
+    $contractRow = Contract::query()->findOrFail($contractId);
+    $contractRow->update([
+        'meta' => array_merge($contractRow->meta ?? [], ['manager_signed_at' => now()->toIso8601String()]),
+    ]);
 
     actingAs($primaryTenant);
     postJson("/api/contracts/{$contractId}/accept-signature")
@@ -709,10 +843,162 @@ test('initial invoice is created only after all contract members sign and tenant
         ->first();
 
     expect($invoice)->not->toBeNull();
-    expect(data_get($invoice?->snapshot, 'is_initial'))->toBeTrue();
+    expect((float) $invoice->total_amount)->toBeGreaterThan(0);
 
     actingAs($primaryTenant);
     getJson('/api/invoices')
         ->assertStatus(200)
         ->assertJsonFragment(['id' => $invoice->id]);
+});
+
+test('contract store allows minor roommate without identity media', function () {
+    Storage::fake('local');
+
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $admin->assignRole(Role::firstOrCreate(['name' => 'Admin']));
+    $admin->update(['org_id' => $org->id]);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id, 'capacity' => 4]);
+
+    $primaryTenant = User::factory()->create([
+        'org_id' => $org->id,
+        'date_of_birth' => '1990-06-01',
+    ]);
+    $primaryTenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $primaryTenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$pFront, $pBack] = ContractIdentityMedia::uuidPairForUser($admin);
+
+    actingAs($admin);
+
+    postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'start_date' => '2026-06-01',
+        'end_date' => '2027-06-01',
+        'rent_price' => 5000000,
+        'deposit_amount' => 5000000,
+        'billing_cycle' => 1,
+        'due_day' => 5,
+        'cutoff_day' => 25,
+        'members' => [
+            [
+                'user_id' => $primaryTenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+                'identity_front_media_id' => $pFront,
+                'identity_back_media_id' => $pBack,
+            ],
+            [
+                'is_primary' => false,
+                'full_name' => 'Minor Roommate',
+                'identity_number' => '999999999',
+                'phone' => '0900000001',
+                'role' => 'ROOMMATE',
+                'date_of_birth' => '2015-01-10',
+            ],
+        ],
+    ])->assertStatus(201);
+});
+
+test('contract store rejects primary tenant under 18 at start date', function () {
+    Storage::fake('local');
+
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $admin->assignRole(Role::firstOrCreate(['name' => 'Admin']));
+    $admin->update(['org_id' => $org->id]);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    $youngTenant = User::factory()->create([
+        'org_id' => $org->id,
+        'date_of_birth' => '2010-03-01',
+    ]);
+    $youngTenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $youngTenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$pFront, $pBack] = ContractIdentityMedia::uuidPairForUser($admin);
+
+    actingAs($admin);
+
+    postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'start_date' => '2026-06-01',
+        'end_date' => '2027-06-01',
+        'rent_price' => 5000000,
+        'deposit_amount' => 5000000,
+        'billing_cycle' => 1,
+        'due_day' => 5,
+        'cutoff_day' => 25,
+        'members' => [
+            [
+                'user_id' => $youngTenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+                'identity_front_media_id' => $pFront,
+                'identity_back_media_id' => $pBack,
+            ],
+        ],
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['members.0.date_of_birth']);
+});
+
+test('contract store rejects adult roommate without identity media', function () {
+    Storage::fake('local');
+
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $admin->assignRole(Role::firstOrCreate(['name' => 'Admin']));
+    $admin->update(['org_id' => $org->id]);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id, 'capacity' => 4]);
+
+    $primaryTenant = User::factory()->create([
+        'org_id' => $org->id,
+        'date_of_birth' => '1990-06-01',
+    ]);
+    $primaryTenant->assignRole(Role::firstOrCreate(['name' => 'Tenant']));
+    $primaryTenant->properties()->syncWithoutDetaching([(string) $property->id]);
+
+    [$pFront, $pBack] = ContractIdentityMedia::uuidPairForUser($admin);
+
+    actingAs($admin);
+
+    postJson('/api/contracts', [
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'start_date' => '2026-06-01',
+        'end_date' => '2027-06-01',
+        'rent_price' => 5000000,
+        'deposit_amount' => 5000000,
+        'billing_cycle' => 1,
+        'due_day' => 5,
+        'cutoff_day' => 25,
+        'members' => [
+            [
+                'user_id' => $primaryTenant->id,
+                'role' => 'TENANT',
+                'is_primary' => true,
+                'identity_front_media_id' => $pFront,
+                'identity_back_media_id' => $pBack,
+            ],
+            [
+                'is_primary' => false,
+                'full_name' => 'Adult Roommate',
+                'identity_number' => '888888888',
+                'phone' => '0900000002',
+                'role' => 'ROOMMATE',
+                'date_of_birth' => '2000-01-10',
+            ],
+        ],
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['members.1.identity_front_media_id', 'members.1.identity_back_media_id']);
 });

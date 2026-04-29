@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ChevronLeft, FileText, User, Home, Calendar, Shield, 
+  FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
-  AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft
+  AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft, IdCard
 } from 'lucide-react';
 import { useContract, useContractActions, useContractStatusHistories } from '../hooks/useContracts';
 import { TerminateContractModal } from '../components/TerminateContractModal';
@@ -14,8 +14,11 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import SignatureModal from '../components/SignatureModal';
 import { AddMemberModal } from '../components/AddMemberModal';
+import { MemberIdentityViewDialog } from '../components/MemberIdentityViewDialog';
+import type { ContractMember } from '../types';
 import { PenTool, UserPlus, LogOut } from 'lucide-react';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -42,6 +45,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 export default function ContractDetailPage() {
   const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: contract, isLoading, error } = useContract(contractId);
   const { generateDocument, downloadDocument } = useContractActions();
   const { data: histories, isLoading: isLoadingHistories } = useContractStatusHistories(contractId);
@@ -50,12 +54,30 @@ export default function ContractDetailPage() {
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [identityViewMember, setIdentityViewMember] = useState<ContractMember | null>(null);
   const { signContract, removeContractMember, approveContractMember } = useContractActions();
-  const { user, hasPermission } = useAuth();
+  const { user, hasPermission, hasRole } = useAuth();
+
+  useEffect(() => {
+    if (searchParams.get('openTerminate') !== '1' || !contract) return;
+    setIsTerminateModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('openTerminate');
+    setSearchParams(next, { replace: true });
+  }, [contract, searchParams, setSearchParams]);
   
   const isManager = hasPermission('update Contracts');
+  const canLandlordSign =
+    ['DRAFT', 'PENDING_SIGNATURE'].includes(contract?.status as string) &&
+    hasRole(['Owner', 'Manager', 'Admin', 'Staff']) &&
+    !!contract &&
+    !contract.meta?.manager_signed_at;
   const currentMembership = contract?.members?.find(m => m.user_id === user?.id);
   const isPrimaryTenant = !!currentMembership?.is_primary;
+  const roomCapacity = Number(contract?.room?.capacity ?? 0);
+  const roomHasCapacityLimit = roomCapacity > 0;
+  const currentOccupants = (contract?.members ?? []).filter((m) => !m.left_at).length;
+  const canAddOccupant = !roomHasCapacityLimit || currentOccupants < roomCapacity;
   
   const handleApproveMember = async (memberId: string) => {
     if (!contractId) return;
@@ -89,7 +111,10 @@ export default function ContractDetailPage() {
       await generateDocument.mutateAsync({ id: contractId });
       
       // 2. Download the Blob
-      const blob = await downloadDocument.mutateAsync(contractId);
+      const blob = await downloadDocument.mutateAsync({
+        id: contractId,
+        revision: contract?.updated_at || contract?.document_path || undefined,
+      });
       
       // 3. Create URL and download
       const url = window.URL.createObjectURL(blob);
@@ -115,10 +140,6 @@ export default function ContractDetailPage() {
     }
   };
   
-  const handleBack = () => {
-    navigate(`/properties/${propertyId}/contracts`);
-  };
-
   const handleEdit = () => {
     // Navigate to edit page if implemented
     console.log('Edit contract', contractId);
@@ -144,12 +165,7 @@ export default function ContractDetailPage() {
           </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Lỗi tải dữ liệu</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">Không thể tìm thấy thông tin hợp đồng này hoặc đã có lỗi xẩy ra.</p>
-          <button 
-            onClick={handleBack}
-            className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 dark:shadow-none"
-          >
-            Quay lại danh sách
-          </button>
+          <PageBackButton className="w-full justify-center py-4 rounded-2xl" />
         </div>
       </div>
     );
@@ -163,20 +179,20 @@ export default function ContractDetailPage() {
       {/* Header & Actions */}
       <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
-          <button 
-            onClick={handleBack}
-            className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all shadow-sm group"
-          >
-            <ChevronLeft className="w-6 h-6 transition-transform group-hover:-translate-x-1" />
-          </button>
+          <PageBackButton className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 shadow-sm" />
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="flex flex-wrap items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight transition-colors">
                 Chi tiết Hợp đồng
               </h1>
               <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color}`}>
                 {statusInfo.label}
               </div>
+              {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
+                <div className="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                  Sắp trả phòng
+                </div>
+              )}
             </div>
             <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 text-xs transition-colors">
               <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md font-bold">
@@ -203,7 +219,7 @@ export default function ContractDetailPage() {
             {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
             <span>{isPrinting ? 'Đang tạo file...' : 'In hợp đồng'}</span>
           </button>
-          {(contract.status === 'DRAFT' || contract.status === 'PENDING_SIGNATURE') && (
+          {canLandlordSign && (
             <button 
               onClick={() => setIsSignatureModalOpen(true)}
               className="flex items-center gap-2 px-6 py-3.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 dark:shadow-none ring-4 ring-emerald-50 dark:ring-emerald-500/20"
@@ -335,6 +351,13 @@ export default function ContractDetailPage() {
                   value={contract.end_date ? format(new Date(contract.end_date), 'dd/MM/yyyy') : '---'}
                   icon={<Calendar className="w-4 h-4" />}
                 />
+                {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
+                  <DetailItem
+                    label="Ngày dự kiến dọn (tenant)"
+                    value={format(new Date(contract.expected_move_out_date), 'dd/MM/yyyy')}
+                    icon={<Calendar className="w-4 h-4" />}
+                  />
+                )}
                 <DetailItem 
                   label="Chu kỳ đóng tiền" 
                   value={`${contract.billing_cycle_months ?? normalizeBillingCycleMonths(contract.billing_cycle)} tháng`}
@@ -394,14 +417,26 @@ export default function ContractDetailPage() {
 
                 {!['ENDED', 'TERMINATED', 'CANCELLED', 'EXPIRED'].includes(contract.status as string) && (
                   <button
-                    onClick={() => setIsAddMemberOpen(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/30"
+                    onClick={() => {
+                      if (!canAddOccupant) {
+                        toast.error(`Phòng chỉ giới hạn ${roomCapacity} người. Không thể thêm cư dân.`);
+                        return;
+                      }
+                      setIsAddMemberOpen(true);
+                    }}
+                    disabled={!canAddOccupant}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors shadow-sm border border-indigo-100 dark:border-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <UserPlus className="w-4 h-4" />
                     Thêm cư dân
                   </button>
                 )}
               </div>
+              {!canAddOccupant && (
+                <p className="mb-4 text-xs font-medium text-rose-600 dark:text-rose-400">
+                  Phòng chỉ giới hạn tối đa {roomCapacity} người (đã đủ số lượng).
+                </p>
+              )}
               
               <div className="overflow-hidden bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-sm transition-colors">
                 <table className="w-full text-left border-collapse">
@@ -456,7 +491,17 @@ export default function ContractDetailPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-2 flex-wrap">
+                            {(member.identity_front_url || member.identity_back_url) && (
+                              <button
+                                type="button"
+                                onClick={() => setIdentityViewMember(member)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-xs font-bold"
+                              >
+                                <IdCard className="w-3.5 h-3.5" />
+                                Xem CCCD
+                              </button>
+                            )}
                             {isManager && member.status === 'PENDING' && (
                               <button 
                                 onClick={() => handleApproveMember(member.id)}
@@ -638,6 +683,14 @@ export default function ContractDetailPage() {
         isOpen={isAddMemberOpen}
         onClose={() => setIsAddMemberOpen(false)}
         contractId={contractId || ''}
+        contractStartDate={contract.start_date ? String(contract.start_date).slice(0, 10) : null}
+      />
+      <MemberIdentityViewDialog
+        open={!!identityViewMember}
+        onClose={() => setIdentityViewMember(null)}
+        memberName={identityViewMember?.full_name ?? ''}
+        frontUrl={identityViewMember?.identity_front_url}
+        backUrl={identityViewMember?.identity_back_url}
       />
     </div>
   );

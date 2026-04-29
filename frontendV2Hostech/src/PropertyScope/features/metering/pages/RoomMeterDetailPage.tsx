@@ -1,12 +1,22 @@
-import { useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
-import { 
-  ArrowLeft, Loader2, Plus, Zap, Droplet, 
-  AlertCircle, X,
-  ChevronLeft, ChevronRight, FileText, Settings,
-  Send, CheckCircle, XCircle, MessageSquare, Camera
+import {
+  Loader2,
+  Plus,
+  Zap,
+  Droplet,
+  AlertCircle,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Send,
+  CheckCircle,
+  XCircle,
+  DoorOpen,
+  Receipt,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/shared/components/ui/skeleton';
@@ -16,7 +26,8 @@ import type { Meter, MeterReading } from '../types';
 import toast from 'react-hot-toast';
 import { ReadingStatusBadge } from '../components/ReadingStatusBadge';
 import { MultipleImageUploader, type UploadedProof } from '../components/MultipleImageUploader';
-import { AdjustmentNoteDrawer } from '../components/AdjustmentNoteDrawer';
+import { ReadingDetailModal } from '../components/ReadingDetailModal';
+import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 // Skeleton for Header
 const HeaderSkeleton = () => (
@@ -59,7 +70,6 @@ const formatDate = (dateStr?: string | null) => {
 
 export default function RoomMeterDetailPage() {
   const { propertyId, roomId } = useParams<{ propertyId: string; roomId: string }>();
-  const navigate = useNavigate();
 
   const { data: room, isLoading: roomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
@@ -85,7 +95,7 @@ export default function RoomMeterDetailPage() {
       <div className="flex flex-col items-center justify-center min-h-screen text-slate-500">
         <AlertCircle className="w-12 h-12 mb-2" />
         <p>{roomError ? 'Lỗi khi tải thông tin' : 'Phòng không tồn tại'}</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-indigo-600 hover:underline">Quay lại</button>
+        <PageBackButton className="mt-4" />
       </div>
     );
   }
@@ -100,24 +110,39 @@ export default function RoomMeterDetailPage() {
   return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto px-4">
       {/* Header */}
-      <div className="flex items-center gap-4 pt-6">
-        <button
-          onClick={() => navigate(`/properties/${propertyId}/meters`)}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-            Phòng {room.name}
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Chi tiết chốt số đồng hồ</p>
+      <div className="flex flex-col gap-4 pt-6 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-4 min-w-0">
+          <PageBackButton />
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+              Phòng {room.name}
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 font-medium">Chi tiết chốt số đồng hồ</p>
+          </div>
         </div>
+        {propertyId && roomId ? (
+          <div className="flex flex-wrap gap-2 shrink-0">
+            <Link
+              to={`/properties/${propertyId}/rooms/${roomId}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-700 shadow-sm transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-500 dark:hover:bg-indigo-950/40"
+            >
+              <DoorOpen className="h-4 w-4" />
+              Chi tiết phòng
+            </Link>
+            <Link
+              to={`/properties/${propertyId}/billing/quick-invoice/${roomId}`}
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-800 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+            >
+              <Receipt className="h-4 w-4" />
+              Hóa đơn nhanh
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MeterColumn meter={electricMeter} type="ELECTRIC" />
-        <MeterColumn meter={waterMeter} type="WATER" />
+        <MeterColumn meter={electricMeter} type="ELECTRIC" propertyId={propertyId!} />
+        <MeterColumn meter={waterMeter} type="WATER" propertyId={propertyId!} />
       </div>
     </div>
   );
@@ -126,10 +151,10 @@ export default function RoomMeterDetailPage() {
 interface MeterColumnProps {
   meter: Meter | null;
   type: 'ELECTRIC' | 'WATER';
+  propertyId: string;
 }
 
-function MeterColumn({ meter, type }: MeterColumnProps) {
-  const queryClient = useQueryClient();
+function MeterColumn({ meter, type, propertyId }: MeterColumnProps) {
   const hasRole = useAuthStore((s) => s.hasRole);
   const isManager = hasRole(['Manager', 'Owner']);
   const [readingsPage, setReadingsPage] = useState(1);
@@ -169,17 +194,18 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
   const [formData, setFormData] = useState({ reading_value: '', period_start: '', period_end: '' });
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingStatus, setSubmittingStatus] = useState<'SUBMITTED' | 'APPROVED' | null>(null);
 
   // Multiple image upload state
   const [proofs, setProofs] = useState<UploadedProof[]>([]);
-
-  // Adjustment note drawer state
-  const [adjustmentReading, setAdjustmentReading] = useState<MeterReading | null>(null);
 
   // Reject modal state
   const [rejectingReading, setRejectingReading] = useState<MeterReading | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
+
+  // Detail Modal State
+  const [selectedReadingForModal, setSelectedReadingForModal] = useState<MeterReading | null>(null);
 
   const handlePageChange = (newPage: number) => {
     setReadingsPage(newPage);
@@ -217,27 +243,36 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
     return null;
   };
 
-  const handleSaveReading = async () => {
+  const handleSaveReading = async (status: 'SUBMITTED' | 'APPROVED') => {
     if (!meter) return;
     const err = validateForm();
     if (err) { setFormError(err); return; }
 
     try {
       setIsSubmitting(true);
+      setSubmittingStatus(status);
 
       await meteringApi.createReading(meter.id, {
         reading_value: parseInt(formData.reading_value),
         period_start: formData.period_start,
         period_end: formData.period_end,
+        status,
         ...(proofs.length > 0 ? { proof_media_ids: proofs.map(p => p.temporaryId) } : {}),
       });
-      toast.success('Thêm chốt số thành công');
+
+      if (status === 'APPROVED') {
+        toast.success('\u2705 Đã chốt và duyệt ngay thành công');
+      } else {
+        toast.success('Đã gửi chốt số, chờ duyệt');
+      }
+
       setShowAddForm(false);
       refetch();
     } catch (error: any) {
       setFormError(error?.response?.data?.message || 'Có lỗi xảy ra');
     } finally {
       setIsSubmitting(false);
+      setSubmittingStatus(null);
     }
   };
 
@@ -314,7 +349,7 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
                 {title}
                 {meter.is_master && (
                   <span className="px-1.5 py-0.5 text-[10px] uppercase font-black bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 rounded-md">
-                    Master
+                    Đồng hồ tổng
                   </span>
                 )}
               </h2>
@@ -333,12 +368,6 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
         {/* Meter Summary Stats */}
         <div className="px-5 py-3 bg-gray-50/50 dark:bg-gray-800/20 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between">
           <div className="flex gap-6">
-            <div className="space-y-0.5">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chỉ số đầu</p>
-              <p className="text-xs font-black text-slate-700 dark:text-slate-300">
-                {meter.base_reading.toLocaleString()} <span className="font-normal opacity-50">{unit}</span>
-              </p>
-            </div>
             <div className="space-y-0.5">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chỉ số cuối</p>
               <p className="text-xs font-black text-indigo-600 dark:text-indigo-400">
@@ -442,14 +471,38 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
                 maxFiles={5}
               />
 
-              <button
-                onClick={handleSaveReading}
-                disabled={isSubmitting}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                Lưu chốt số
-              </button>
+              {/* Action buttons --- phân quyền theo role */}
+              {isManager ? (
+                // Manager/Owner: 2 lựa chọn
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleSaveReading('SUBMITTED')}
+                    disabled={isSubmitting}
+                    className="flex-1 py-2.5 border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
+                  >
+                    {isSubmitting && submittingStatus === 'SUBMITTED' && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Lưu để duyệt
+                  </button>
+                  <button
+                    onClick={() => handleSaveReading('APPROVED')}
+                    disabled={isSubmitting}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isSubmitting && submittingStatus === 'APPROVED' && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Chốt &amp; Duyệt ngay
+                  </button>
+                </div>
+              ) : (
+                // Staff: chỉ gửi duyệt
+                <button
+                  onClick={() => handleSaveReading('SUBMITTED')}
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Gửi duyệt
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -567,16 +620,13 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
                               </button>
                             </>
                           )}
-                          {/* LOCKED: Adjustment Notes (mọi người đều xem, Manager có thể duyệt) */}
-                          {reading.status === 'LOCKED' && (
-                            <button
-                              onClick={() => setAdjustmentReading(reading)}
-                              title="Ghi chú điều chỉnh"
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => setSelectedReadingForModal(reading)}
+                            className="p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-500/10 rounded-lg transition-colors"
+                            title="Xem chi tiết"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -663,16 +713,11 @@ function MeterColumn({ meter, type }: MeterColumnProps) {
         </div>
       )}
 
-      {/* Adjustment Note Drawer */}
-      {adjustmentReading && (
-        <AdjustmentNoteDrawer
-          reading={adjustmentReading}
-          isOpen={!!adjustmentReading}
-          onClose={() => setAdjustmentReading(null)}
-          canManage={isManager}
-          unit={unit}
-        />
-      )}
+      {/* Reading Detail Modal */}
+      <ReadingDetailModal
+        reading={selectedReadingForModal}
+        onClose={() => setSelectedReadingForModal(null)}
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature\Rbac;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
+use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +16,7 @@ class UniversalScopeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(\Database\Seeders\RBACSeeder::class);
+        $this->seed(RBACSeeder::class);
     }
 
     /**

@@ -2,9 +2,9 @@
 
 namespace App\Observers;
 
-use App\Models\Meter\MeterReading;
 use App\Events\Meter\MeterReadingApproved;
 use App\Events\Meter\MeterReadingCreated;
+use App\Models\Meter\MeterReading;
 use Illuminate\Support\Facades\Cache;
 
 class MeterReadingObserver
@@ -14,8 +14,14 @@ class MeterReadingObserver
      */
     public function saving(MeterReading $reading): void
     {
-        // 1. Tự động tính toán consumption nếu reading_value có sự thay đổi
-        if ($reading->isDirty(['reading_value', 'meter_id', 'period_start'])) {
+        // 1. Tự động tính toán consumption nếu:
+        //    a) Giá trị số / kỳ / đồng hồ thay đổi  → tính lại chính xác.
+        //    b) Trạng thái chuyển sang APPROVED lần đầu → đảm bảo tiêu thụ luôn có giá trị
+        //       ngay cả khi reading_value không đổi (bulk approve flow).
+        $valueChanged = $reading->isDirty(['reading_value', 'meter_id', 'period_start']);
+        $becameApproved = $reading->isDirty('status') && $reading->status === 'APPROVED';
+
+        if ($valueChanged || $becameApproved) {
             $this->calculateConsumption($reading);
         }
     }
@@ -64,7 +70,7 @@ class MeterReadingObserver
         $prev = MeterReading::where('meter_id', $reading->meter_id)
             ->where('id', '!=', $reading->id)
             ->where('period_end', '<=', $reading->period_start)
-            ->where('status', 'APPROVED')
+            ->finalized()
             ->orderBy('period_end', 'desc')
             ->first();
 
@@ -90,7 +96,7 @@ class MeterReadingObserver
         $propertyId = $reading->meter->property_id ?? null;
         if ($propertyId) {
             Cache::forget("dashboard:property:{$propertyId}:stats");
-            Cache::forget("dashboard:owner:stats"); // Cần tinh chỉnh nếu có nhiều owner
+            Cache::forget('dashboard:owner:stats'); // Cần tinh chỉnh nếu có nhiều owner
         }
     }
 }

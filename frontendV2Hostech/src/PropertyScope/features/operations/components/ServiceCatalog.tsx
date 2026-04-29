@@ -6,7 +6,7 @@ import {
   TrendingUp, BarChart3, Receipt, Loader2
 } from 'lucide-react';
 import { useService } from '@/shared/features/billing/hooks/useService';
-import type { Service } from '@/shared/features/billing/hooks/useService';
+import type { Service } from '@/shared/features/billing/types';
 
 const CATEGORY_ICONS: Record<string, any> = {
   rent: Home,
@@ -34,7 +34,7 @@ export default function ServiceCatalog() {
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <h3 className="font-semibold flex items-center gap-2">
             <Receipt className="w-4 h-4 text-emerald-400" />
-            Service Catalog
+            Danh mục Dịch vụ
           </h3>
           <button className="p-1.5 hover:bg-white/5 rounded-lg transition-colors">
             <Plus className="w-4 h-4" />
@@ -105,16 +105,16 @@ export default function ServiceCatalog() {
                       </span>
                     </div>
                   </div>
-                  <p className="text-slate-400 max-w-md">Configuration for {selectedService.name} billing and rates.</p>
+                  <p className="text-slate-400 max-w-md">Cấu hình tính phí và mức giá cho {selectedService.name}.</p>
                 </div>
 
                 <div className="flex gap-2">
                   <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 transition-all border border-white/10">
-                    Duplicate
+                    Sao chép
                   </button>
                   <button className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition-all shadow-[0_4px_12px_rgba(16,185,129,0.3)] flex items-center gap-2">
                     <Save className="w-4 h-4" />
-                    Save Changes
+                    Lưu thay đổi
                   </button>
                 </div>
               </div>
@@ -124,11 +124,11 @@ export default function ServiceCatalog() {
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                       <Calculator className="w-4 h-4" />
-                      Configuration
+                      Cấu hình
                     </h4>
                     
                     <div className="space-y-2">
-                      <label className="text-sm text-slate-400">Calculation Mode</label>
+                      <label className="text-sm text-slate-400">Cách tính phí</label>
                       <div className="grid grid-cols-3 gap-2">
                         {['fixed', 'meterer', 'tiered'].map((mode) => (
                           <button
@@ -139,7 +139,7 @@ export default function ServiceCatalog() {
                                 : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
                             }`}
                           >
-                            {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                            {mode === 'fixed' ? 'Cố định' : mode === 'meterer' ? 'Chỉ số' : 'Bậc thang'}
                           </button>
                         ))}
                       </div>
@@ -147,7 +147,7 @@ export default function ServiceCatalog() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm text-slate-400">Base Price (VND)</label>
+                        <label className="text-sm text-slate-400">Giá cơ bản (VND)</label>
                         <div className="relative">
                           <input 
                             type="number" 
@@ -158,7 +158,7 @@ export default function ServiceCatalog() {
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm text-slate-400">Per Unit</label>
+                        <label className="text-sm text-slate-400">Mỗi đơn vị</label>
                         <input 
                           type="text" 
                           defaultValue={selectedService.unit}
@@ -173,15 +173,15 @@ export default function ServiceCatalog() {
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                       <TrendingUp className="w-4 h-4" />
-                      Pricing Tiers
+                      Mức giá bậc thang
                     </h4>
                     <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="bg-white/5 text-slate-400 font-medium">
-                            <th className="px-4 py-3 text-left">From</th>
-                            <th className="px-4 py-3 text-left">To</th>
-                            <th className="px-4 py-3 text-left">Price</th>
+                            <th className="px-4 py-3 text-left">Từ</th>
+                            <th className="px-4 py-3 text-left">Đến</th>
+                            <th className="px-4 py-3 text-left">Giá</th>
                             <th className="px-4 py-3 text-right"></th>
                           </tr>
                         </thead>
@@ -202,7 +202,7 @@ export default function ServiceCatalog() {
                         </tbody>
                       </table>
                       <button className="w-full py-3 text-slate-400 hover:text-white hover:bg-white/5 transition-all text-xs font-medium border-t border-white/10">
-                        + Add Tier
+                        + Thêm bậc
                       </button>
                     </div>
                   </div>
@@ -215,8 +215,8 @@ export default function ServiceCatalog() {
                 <Receipt className="w-16 h-16 opacity-20" />
               </div>
               <div className="text-center">
-                <h4 className="text-lg font-medium text-slate-400">Select a Service</h4>
-                <p className="text-sm max-w-[200px]">Configure pricing, calculation modes, and tiers for billing.</p>
+                <h4 className="text-lg font-medium text-slate-400">Chọn một dịch vụ</h4>
+                <p className="text-sm max-w-[200px]">Cấu hình giá, cách tính và các mức bậc thang để lập hóa đơn.</p>
               </div>
             </div>
           )}

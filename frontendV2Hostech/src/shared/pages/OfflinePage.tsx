@@ -23,7 +23,7 @@ export default function OfflinePage() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
         >
-          <h1 className="text-3xl font-black text-white mb-3 tracking-tight italic uppercase">Connection Lost</h1>
+          <h1 className="text-3xl font-black text-white mb-3 tracking-tight uppercase">Connection Lost</h1>
           <p className="text-slate-400 font-medium mb-10 leading-relaxed">
             You're currently offline. Don't worry, your data is safe and we'll sync back as soon as you're connected.
           </p>
@@ -37,7 +37,7 @@ export default function OfflinePage() {
         >
           <button
             onClick={handleRetry}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-slate-950 font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10 italic uppercase tracking-wider"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-white text-slate-950 font-black rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-white/10 uppercase tracking-wider"
           >
             <RefreshCcw className="w-4 h-4" />
             Retry Connection

@@ -9,6 +9,7 @@ enum ContractStatus: string
     case PENDING_PAYMENT = 'PENDING_PAYMENT';
     case ACTIVE = 'ACTIVE';
     case PENDING_TERMINATION = 'PENDING_TERMINATION'; // Tenant đã báo dời, chờ Manager thanh lý
+    case PENDING_SETTLEMENT = 'PENDING_SETTLEMENT'; // Chờ khách thanh toán khoản nợ sau khi cấn trừ cọc (EDA thanh lý)
     case ENDED = 'ENDED';
     case TERMINATED = 'TERMINATED';
     case CANCELLED = 'CANCELLED';
@@ -73,15 +74,16 @@ enum ContractStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::DRAFT                => 'Bản nháp',
-            self::PENDING_SIGNATURE    => 'Chờ ký',
-            self::PENDING_PAYMENT      => 'Chờ thanh toán',
-            self::ACTIVE               => 'Đang hiệu lực',
-            self::PENDING_TERMINATION  => 'Chờ thanh lý',
-            self::ENDED                => 'Đã kết thúc',
-            self::TERMINATED           => 'Đã thanh lý',
-            self::CANCELLED            => 'Đã huỷ (phạt cọc)',
-            self::EXPIRED              => 'Hết hạn (chờ xử lý)',
+            self::DRAFT => 'Bản nháp',
+            self::PENDING_SIGNATURE => 'Chờ ký',
+            self::PENDING_PAYMENT => 'Chờ thanh toán',
+            self::ACTIVE => 'Đang hiệu lực',
+            self::PENDING_TERMINATION => 'Chờ thanh lý',
+            self::PENDING_SETTLEMENT => 'Chờ quyết toán nợ',
+            self::ENDED => 'Đã kết thúc',
+            self::TERMINATED => 'Đã thanh lý',
+            self::CANCELLED => 'Đã huỷ (phạt cọc)',
+            self::EXPIRED => 'Hết hạn (chờ xử lý)',
         };
     }
 }

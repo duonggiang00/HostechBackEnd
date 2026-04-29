@@ -5,6 +5,7 @@ namespace App\Models\Meter;
 use App\Models\Concerns\MultiTenant;
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 class MeterReading extends Model implements HasMedia
 {
     use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes;
+
+    /**
+     * Đã duyệt và/hoặc đã khóa kỳ — dùng làm mốc tiêu thụ, đồng bộ base_reading và tổng đồng hồ tổng.
+     */
+    public const FINALIZED_STATUSES = ['APPROVED', 'LOCKED'];
 
     public $incrementing = false;
 
@@ -65,6 +71,11 @@ class MeterReading extends Model implements HasMedia
     public function adjustmentNotes()
     {
         return $this->hasMany(AdjustmentNote::class);
+    }
+
+    public function scopeFinalized(Builder $query): Builder
+    {
+        return $query->whereIn('status', self::FINALIZED_STATUSES);
     }
 
     public function registerMediaCollections(): void
