@@ -14,7 +14,7 @@ class RoomTemplateAsset extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'room_template_id', 'name'];
+    protected $fillable = ['id', 'room_template_id', 'name', 'condition', 'note', 'quantity'];
 
     public function template()
     {

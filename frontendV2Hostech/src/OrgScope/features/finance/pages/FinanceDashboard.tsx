@@ -13,7 +13,6 @@ import InvoiceGenerator from '@/OrgScope/features/finance/components/InvoiceGene
 import PaymentAllocationEngine from '@/OrgScope/features/finance/components/PaymentAllocationEngine';
 import ServiceCatalog from '@/PropertyScope/features/operations/components/ServiceCatalog';
 import InvoiceProfessionalView from '@/OrgScope/features/finance/components/InvoiceProfessionalView';
-import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
 
 type FinanceTab = 'overview' | 'generation' | 'reconciliation' | 'catalog';
 
@@ -29,10 +28,10 @@ export default function FinanceDashboard() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#0A0A0B]">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Tab Navigation Bar */}
-      <div className="bg-[#0A0A0B] border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="-mx-4 -mt-4 mb-6 flex flex-col gap-4 border-b border-white/10 bg-[#0d0d0f]/80 px-4 py-4 backdrop-blur-sm md:-mx-8 md:-mt-8 md:px-6 md:py-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="bg-emerald-500 rounded-lg p-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
@@ -44,24 +43,24 @@ export default function FinanceDashboard() {
           </div>
         </div>
 
-        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+        <div className="flex max-w-full flex-1 overflow-x-auto rounded-2xl border border-white/10 bg-white/5 p-1 [scrollbar-width:thin]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as FinanceTab)}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.id 
-                  ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 scale-[1.02]' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all sm:px-6 ${
+                activeTab === tab.id
+                  ? 'scale-[1.02] bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className="h-4 w-4 shrink-0" />
               {tab.label}
             </button>
           ))}
         </div>
 
-        <div className="hidden items-center gap-3 sm:flex">
+        <div className="flex w-full flex-wrap items-center justify-end gap-3 lg:w-auto">
           <button
             type="button"
             onClick={() => setShowInvoicePreview(true)}
@@ -69,23 +68,11 @@ export default function FinanceDashboard() {
           >
             <Printer className="h-4 w-4" /> Mẫu hóa đơn
           </button>
-          <ThemeToggle />
         </div>
       </div>
 
-      <div className="flex border-b border-white/10 px-4 py-2 sm:hidden">
-        <button
-          type="button"
-          onClick={() => setShowInvoicePreview(true)}
-          className="mr-2 flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-bold text-slate-300"
-        >
-          <Printer className="h-4 w-4" /> Mẫu hóa đơn
-        </button>
-        <ThemeToggle />
-      </div>
-
       {/* Main Content Area */}
-      <div className="min-h-0 flex-1 overflow-auto bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent_50%)] p-4 md:p-8">
+      <div className="min-h-0 flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}

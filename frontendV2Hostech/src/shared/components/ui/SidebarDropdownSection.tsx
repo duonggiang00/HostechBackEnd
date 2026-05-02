@@ -9,8 +9,26 @@ export interface SidebarDropdownItem {
   label: string;
   path: string;
   exact?: boolean;
+  /** Nếu pathname chứa một trong các chuỗi này, item không được coi là active (dù vẫn khớp prefix). VD: hóa đơn `/billing` vs `/billing/payment-verifications`. */
+  activeExcludePathIncludes?: string[];
   badge?: number | string;
   children?: Omit<SidebarDropdownItem, 'icon'>[];
+}
+
+function isSidebarItemPathActive(
+  pathname: string,
+  search: string,
+  item: Pick<SidebarDropdownItem, 'path' | 'exact' | 'activeExcludePathIncludes'>,
+): boolean {
+  const current = pathname + search;
+  const base = item.exact
+    ? current === item.path
+    : pathname === item.path || pathname.startsWith(`${item.path}/`);
+  if (!base) return false;
+  if (item.activeExcludePathIncludes?.some((frag) => pathname.includes(frag))) {
+    return false;
+  }
+  return true;
 }
 
 export type SidebarNavVariant = 'default' | 'darkConsole';
@@ -44,19 +62,13 @@ function SidebarNavLink({
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
 
-  const isActive = item.exact
-    ? location.pathname + location.search === item.path
-    : (location.pathname + location.search).startsWith(item.path);
+  const isActive = isSidebarItemPathActive(location.pathname, location.search, item);
 
   const hasChildren = item.children && item.children.length > 0;
 
   const isChildActive =
     hasChildren &&
-    item.children!.some((child) =>
-      child.exact
-        ? location.pathname + location.search === child.path
-        : (location.pathname + location.search).startsWith(child.path),
-    );
+    item.children!.some((child) => isSidebarItemPathActive(location.pathname, location.search, child));
 
   const shouldBeOpen = isOpen || isChildActive;
 
@@ -176,9 +188,11 @@ function SidebarNavLink({
               >
                 <div className="mt-1 space-y-1 pb-1">
                   {item.children!.map((child) => {
-                    const isChildCurrentlyActive = child.exact
-                      ? location.pathname + location.search === child.path
-                      : (location.pathname + location.search).startsWith(child.path);
+                    const isChildCurrentlyActive = isSidebarItemPathActive(
+                      location.pathname,
+                      location.search,
+                      child,
+                    );
 
                     return (
                       <NavLink
@@ -263,10 +277,9 @@ export default function SidebarDropdownSection({
 
   if (items.length === 0 && !children) return null;
 
-  const hasActiveItem = items.some((item) => {
-    const currentPath = location.pathname + location.search;
-    return item.exact ? currentPath === item.path : currentPath.startsWith(item.path);
-  });
+  const hasActiveItem = items.some((item) =>
+    isSidebarItemPathActive(location.pathname, location.search, item),
+  );
 
   const shouldBeOpen = isOpen || hasActiveItem;
   const isDark = navVariant === 'darkConsole';

@@ -1,19 +1,21 @@
-import { useState, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { echo } from '@/shared/utils/echo';
 import { useMeters, useMeterActions, type Meter } from '../hooks/useMeters';
 import { useBulkSubmitReadings } from '../hooks/useMeters';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { meteringApi } from '../api/metering';
 import { Zap, Droplet, Save, AlertCircle, Loader2, Calendar, TrendingUp, TrendingDown, Minus, CheckCircle2, X, Send } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
 import toast from 'react-hot-toast';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { deriveNextReadingPeriod, READING_CHAIN_STATUSES } from '../utils/deriveNextReadingPeriod';
 
 export default function QuickReadingPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
+  const [searchParams] = useSearchParams();
+  const billingMonthParam = searchParams.get('billing_month');
   const hasRole = useAuthStore((s) => s.hasRole);
   const isManager = hasRole(['Manager', 'Owner']);
 
@@ -48,9 +50,37 @@ export default function QuickReadingPage() {
   const meters = (Array.isArray(metersData) ? metersData : metersData) || [] as Meter[];
   const { bulkCreateReadings } = useMeterActions(propertyId!);
 
-  // Default to this month
-  const [periodStart, setPeriodStart] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [periodEnd, setPeriodEnd] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const derivedPeriod = useMemo(() => deriveNextReadingPeriod(meters), [meters]);
+  const prevDerivedStartRef = useRef<string | null>(null);
+
+  const [periodStart, setPeriodStart] = useState(derivedPeriod.periodStart);
+  const [periodEnd, setPeriodEnd] = useState(derivedPeriod.periodEnd);
+
+  useEffect(() => {
+    if (isLoading || meters.length === 0) return;
+
+    if (billingMonthParam && /^\d{4}-\d{2}$/.test(billingMonthParam)) {
+      const d = parseISO(`${billingMonthParam}-01`);
+      if (!Number.isNaN(d.getTime())) {
+        const ps = format(startOfMonth(d), 'yyyy-MM-dd');
+        const pe = format(endOfMonth(d), 'yyyy-MM-dd');
+        const tag = `billing_month:${billingMonthParam}`;
+        if (prevDerivedStartRef.current !== tag) {
+          prevDerivedStartRef.current = tag;
+          setPeriodStart(ps);
+          setPeriodEnd(pe);
+        }
+        return;
+      }
+    }
+
+    const { periodStart: dStart, periodEnd: dEnd } = derivedPeriod;
+    if (prevDerivedStartRef.current !== dStart) {
+      prevDerivedStartRef.current = dStart;
+      setPeriodStart(dStart);
+      setPeriodEnd(dEnd);
+    }
+  }, [isLoading, meters.length, derivedPeriod.periodStart, derivedPeriod.periodEnd, billingMonthParam]);
 
   // Keyed by meter ID
   const [readings, setReadings] = useState<Record<string, string>>({});
@@ -78,6 +108,19 @@ export default function QuickReadingPage() {
 
   const MAX_PROOF_IMAGE_SIZE_MB = 5;
   const MAX_PROOF_IMAGE_SIZE = MAX_PROOF_IMAGE_SIZE_MB * 1024 * 1024;
+
+  /** Mốc “số cũ” trên form: gồm bản SUBMITTED mới nhất (latest_period_reading), không chỉ APPROVED. */
+  const baselineReadingValue = (meter: Meter) => {
+    const lp = meter.latest_period_reading;
+    if (
+      lp?.reading_value != null &&
+      lp.status &&
+      READING_CHAIN_STATUSES.has(lp.status)
+    ) {
+      return Number(lp.reading_value);
+    }
+    return meter.latest_reading ?? meter.base_reading ?? 0;
+  };
 
   const handleProofFileChange = (meterId: string, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
@@ -193,8 +236,7 @@ export default function QuickReadingPage() {
 
   const calculateConsumption = (meter: Meter, newValue: string) => {
     if (!newValue) return 0;
-    // latest_reading from API already falls back to base_reading if no approved readings exist
-    const prev = meter.latest_reading ?? meter.base_reading ?? 0;
+    const prev = baselineReadingValue(meter);
     const current = parseFloat(newValue);
     return Math.max(0, current - prev);
   };
@@ -205,6 +247,17 @@ export default function QuickReadingPage() {
    * - status='APPROVED'   → chốt và duyệt ngay (chỉ Manager/Owner)
    */
   const handleSaveAndSubmit = async (status: 'SUBMITTED' | 'APPROVED') => {
+    if (meters.length > 0) {
+      if (periodStart !== derivedPeriod.periodStart) {
+        toast.error('Kỳ “Từ ngày” không còn khớp dữ liệu mới. Vui lòng tải lại trang.');
+        return;
+      }
+      if (periodEnd < periodStart) {
+        toast.error('“Đến ngày” phải sau hoặc bằng “Từ ngày”.');
+        return;
+      }
+    }
+
     // Thu thập các chỉ số hợp lệ đã nhập
     const basePayload = Object.entries(readings)
       .map(([meterId, value]) => ({
@@ -223,7 +276,7 @@ export default function QuickReadingPage() {
     // Kiểm tra đơn điệu: chỉ số mới không được nhỏ hơn chỉ số cũ
     for (const item of basePayload) {
       const meter = meters.find((m: Meter) => m.id === item.meter_id);
-      const prevReading = meter?.latest_reading ?? meter?.base_reading ?? 0;
+      const prevReading = meter ? baselineReadingValue(meter) : 0;
       if (item.reading_value < prevReading) {
         toast.error(
           `Chỉ số mới của đồng hồ phòng ${meter?.room?.name} (${meter?.code}) không thể nhỏ hơn chỉ số cũ (${prevReading})`
@@ -351,15 +404,26 @@ export default function QuickReadingPage() {
           <Calendar className="w-5 h-5 text-[#1E3A8A]" />
           Kỳ chốt số
         </h2>
+        {billingMonthParam && /^\d{4}-\d{2}$/.test(billingMonthParam) && (
+          <div className="mb-4 rounded-[8px] border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/80 dark:bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+            Kỳ đang khớp tháng chốt hóa đơn <span className="font-black">{billingMonthParam}</span> (từ trang Hóa đơn). Chỉ số cần có <span className="font-black">đến ngày</span> nằm trong tháng này để &quot;Tạo hóa đơn tháng&quot; nhận diện.
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Từ ngày</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+              Từ ngày
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">Cố định</span>
+            </label>
             <input
               type="date"
               value={periodStart}
               data-testid="reading-period-start"
-              onChange={(e) => setPeriodStart(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all text-slate-900 dark:text-white text-sm"
+              readOnly
+              disabled
+              aria-readonly="true"
+              title="Tự động: ngày sau cùng của kỳ đã duyệt gần nhất (theo đồng hồ chậm nhất)"
+              className="w-full cursor-not-allowed px-4 py-2.5 bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-[8px] text-slate-600 dark:text-slate-400 text-sm"
             />
           </div>
           <div>
@@ -368,14 +432,25 @@ export default function QuickReadingPage() {
               type="date"
               value={periodEnd}
               data-testid="reading-period-end"
+              min={periodStart}
               onChange={(e) => setPeriodEnd(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[8px] focus:ring-1 focus:ring-[#1E3A8A] focus:border-[#1E3A8A] transition-all text-slate-900 dark:text-white text-sm"
             />
           </div>
         </div>
+        {derivedPeriod.minPreviousPeriodEnd && meters.length > 0 && (
+          <p className="mt-3 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Mốc kỳ gần nhất đã gửi hoặc đã duyệt (theo đồng hồ chậm nhất) kết thúc{' '}
+            <span className="font-bold text-slate-800 dark:text-slate-200">
+              {format(parseISO(derivedPeriod.minPreviousPeriodEnd), 'dd/MM/yyyy')}
+            </span>
+            . Kỳ trên form là kỳ liền sau; có thể mở chốt nhanh tháng mới kể cả khi kỳ trước vẫn{' '}
+            <span className="font-semibold">chờ duyệt (SUBMITTED)</span>.
+          </p>
+        )}
         <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          Kỳ chốt số này sẽ được áp dụng cho tất cả các chỉ số bạn nhập bên dưới.
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          Mặc định kỳ là <span className="font-semibold text-slate-600 dark:text-slate-300">ngày sau chốt gần nhất (đồng hồ chậm nhất)</span> — có thể khác tháng lịch hoặc tháng bạn chọn trên trang Hóa đơn. Hóa đơn tháng chỉ dùng chỉ số có <span className="font-semibold">đến ngày</span> nằm trong tháng đó; dùng nút &quot;Chốt số nhanh&quot; từ trang Hóa đơn để căn đúng kỳ. “Đến ngày” có thể chỉnh nếu kỳ tính lệch.
         </p>
       </div>
 
@@ -421,7 +496,7 @@ export default function QuickReadingPage() {
                         const isElectric = meter.type === 'ELECTRIC';
                         const currentValue = readings[meter.id] || '';
                         const consumption = calculateConsumption(meter, currentValue);
-                        const prevValue = meter.latest_reading ?? meter.base_reading ?? 0;
+                        const prevValue = baselineReadingValue(meter);
 
                         return (
                           <div key={meter.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors space-y-2">
@@ -452,7 +527,7 @@ export default function QuickReadingPage() {
                                   className="text-sm font-bold text-slate-700 dark:text-slate-300"
                                   data-testid={`prev-reading-value-${meter.id}`}
                                 >
-                                  {(meter.latest_reading ?? meter.base_reading ?? 0).toLocaleString('vi-VN')}
+                                  {baselineReadingValue(meter).toLocaleString('vi-VN')}
                                   <span className="text-[10px] text-slate-400 ml-0.5 font-normal">
                                     {isElectric ? 'kWh' : 'm³'}
                                   </span>

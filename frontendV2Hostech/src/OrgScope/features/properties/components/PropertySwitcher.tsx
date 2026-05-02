@@ -54,12 +54,12 @@ export default function PropertySwitcher({ variant = 'header' }: { variant?: 'he
       <div
         className={`flex w-full items-center gap-3 rounded-2xl border px-3.5 py-3 ${
           variant === 'sidebar'
-            ? 'border-slate-200/50 bg-slate-50/50 dark:border-slate-700/50 dark:bg-slate-800/50'
+            ? 'border-white/10 bg-white/5'
             : 'border-white/80 bg-white/80 shadow-[0_10px_28px_rgba(15,23,42,0.06)] dark:border-slate-800/70 dark:bg-slate-900/80'
         }`}
       >
-        <Loader2 className="w-4 h-4 text-indigo-500 animate-spin" />
-        <span className="text-xs font-bold text-slate-400">Đang tải...</span>
+        <Loader2 className={`w-4 h-4 animate-spin ${variant === 'sidebar' ? 'text-emerald-400' : 'text-indigo-500'}`} />
+        <span className={`text-xs font-bold ${variant === 'sidebar' ? 'text-slate-500' : 'text-slate-400'}`}>Đang tải...</span>
       </div>
     );
   }
@@ -98,9 +98,17 @@ export default function PropertySwitcher({ variant = 'header' }: { variant?: 'he
               width: dropdownRect.width,
               zIndex: 9999,
             }}
-            className="rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900"
+            className={
+              variant === 'sidebar'
+                ? 'rounded-2xl border border-white/10 bg-[#141416]/98 p-2 shadow-[0_24px_48px_rgba(0,0,0,0.55)] backdrop-blur-md'
+                : 'rounded-2xl border border-slate-200/80 bg-white/95 p-2 shadow-[0_18px_40px_rgba(15,23,42,0.14)] backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900'
+            }
           >
-            <div className="mb-1 border-b border-slate-100 px-3 py-2 dark:border-slate-800/60">
+            <div
+              className={`mb-1 border-b px-3 py-2 ${
+                variant === 'sidebar' ? 'border-white/10' : 'border-slate-100 dark:border-slate-800/60'
+              }`}
+            >
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 Chọn phạm vi
               </p>
@@ -126,17 +134,33 @@ export default function PropertySwitcher({ variant = 'header' }: { variant?: 'he
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-3 py-2 transition-colors ${
                     property.id === propertyId
-                      ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-300'
+                      ? variant === 'sidebar'
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300'
+                      : variant === 'sidebar'
+                        ? 'text-slate-300 hover:bg-white/5'
+                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5'
                   }`}
                 >
                   <div className="text-left">
-                    <p className="text-[13px] font-semibold">{property.name}</p>
-                    <p className="text-[11px] font-medium opacity-60">
+                    <p
+                      className={`text-[13px] font-semibold ${
+                        variant === 'sidebar' ? 'text-white' : 'text-slate-900 dark:text-white'
+                      }`}
+                    >
+                      {property.name}
+                    </p>
+                    <p
+                      className={`text-[11px] font-medium ${
+                        variant === 'sidebar' ? 'text-slate-500' : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
                       {property.address || property.code}
                     </p>
                   </div>
-                  {property.id === propertyId && <Check className="w-4 h-4 shrink-0" />}
+                  {property.id === propertyId && (
+                    <Check className={`w-4 h-4 shrink-0 ${variant === 'sidebar' ? 'text-emerald-400' : 'text-emerald-500'}`} />
+                  )}
                 </button>
               ))}
             </div>
@@ -154,30 +178,42 @@ export default function PropertySwitcher({ variant = 'header' }: { variant?: 'he
           onClick={() => setIsOpen((prev) => !prev)}
           className={`group flex w-full items-center justify-between gap-3 rounded-xl border transition-all duration-300 ${
             variant === 'sidebar'
-              ? 'border-transparent bg-transparent px-2.5 py-2 hover:bg-slate-500/5 dark:hover:bg-white/5'
+              ? 'border-white/10 bg-white/5 px-2.5 py-2 hover:bg-white/10'
               : 'border border-slate-200 bg-white px-3 py-1.5 shadow-sm hover:border-indigo-200 hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800 dark:hover:border-indigo-500/30'
           }`}
         >
           <div className="flex min-w-0 items-center gap-3">
             <div
-              className={`flex shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm dark:bg-indigo-500 dark:shadow-none ${
-                variant === 'sidebar' ? 'h-9 w-9' : 'h-8 w-8'
+              className={`flex shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${
+                variant === 'sidebar'
+                  ? 'h-9 w-9 bg-emerald-600 shadow-emerald-500/20'
+                  : 'h-8 w-8 bg-indigo-600 dark:bg-indigo-500 dark:shadow-none'
               }`}
             >
               <Building2 className={`${variant === 'sidebar' ? 'h-3.5 w-3.5' : 'h-4 w-4'}`} />
             </div>
             <div className="min-w-0 text-left flex flex-col justify-center">
-              <p className="mb-0.5 text-[10px] font-bold uppercase leading-none tracking-widest text-slate-400">
+              <p
+                className={`mb-0.5 text-[10px] font-bold uppercase leading-none tracking-widest ${
+                  variant === 'sidebar' ? 'text-slate-500' : 'text-slate-400'
+                }`}
+              >
                 Cơ sở hiện tại
               </p>
-              <p className="truncate text-[13px] font-bold tracking-tight text-slate-900 dark:text-white">
+              <p
+                className={`truncate text-[13px] font-bold tracking-tight ${
+                  variant === 'sidebar' ? 'text-white' : 'text-slate-900 dark:text-white'
+                }`}
+              >
                 {selectedProperty?.name || 'Chọn cơ sở'}
               </p>
             </div>
           </div>
           <div
-            className={`flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-400 dark:bg-white/5 dark:text-slate-500 ${
-              variant === 'sidebar' ? 'h-7 w-7' : 'h-8 w-8'
+            className={`flex shrink-0 items-center justify-center rounded-full text-slate-400 ${
+              variant === 'sidebar'
+                ? 'h-7 w-7 bg-white/10 text-slate-400'
+                : 'h-8 w-8 bg-slate-100/80 dark:bg-white/5 dark:text-slate-500'
             }`}
           >
             <ChevronDown

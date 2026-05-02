@@ -55,10 +55,7 @@ class ContractTerminationTest extends TestCase
             'org_id' => $org->id,
             'contract_id' => $contract->id,
             'room_id' => $room->id,
-            'type' => 'CHECKOUT',
-            'status' => 'CONFIRMED',
-            'confirmed_at' => now(),
-            'locked_at' => now(),
+            'created_by_user_id' => $admin->id,
         ]);
 
         $terminationDate = now()->format('Y-m-d');
@@ -91,6 +88,50 @@ class ContractTerminationTest extends TestCase
         $this->assertGreaterThan(0, (float) $invoice->total_amount);
     }
 
+    public function test_admin_can_terminate_without_prior_handover_record(): void
+    {
+        $org = Org::factory()->create();
+        $admin = User::factory()->create(['org_id' => $org->id]);
+        $admin->assignRole('Admin');
+
+        $property = Property::factory()->create(['org_id' => $org->id]);
+        $room = Room::factory()->create([
+            'property_id' => $property->id,
+            'org_id' => $org->id,
+            'status' => 'occupied',
+        ]);
+
+        $contract = Contract::factory()->create([
+            'org_id' => $org->id,
+            'property_id' => $property->id,
+            'room_id' => $room->id,
+            'status' => ContractStatus::ACTIVE,
+            'deposit_amount' => 5000000,
+            'deposit_status' => DepositStatus::HELD,
+            'rent_price' => 3000000,
+        ]);
+
+        $terminationDate = now()->format('Y-m-d');
+
+        $this->actingAs($admin)
+            ->postJson("/api/contracts/{$contract->id}/terminate", [
+                'termination_date' => $terminationDate,
+                'cancellation_party' => 'MUTUAL',
+                'reason' => 'Termination without manual handover step',
+                'forfeit_deposit' => false,
+            ])
+            ->assertStatus(202)
+            ->assertJsonPath('processing_mode', 'async_eda');
+
+        $this->assertTrue(Handover::where('contract_id', $contract->id)->exists());
+
+        $invoice = Invoice::where('contract_id', $contract->id)
+            ->where('is_termination', true)
+            ->first();
+
+        $this->assertNotNull($invoice);
+    }
+
     public function test_admin_can_terminate_contract_with_deposit_forfeiture()
     {
         $org = Org::factory()->create();
@@ -118,10 +159,7 @@ class ContractTerminationTest extends TestCase
             'org_id' => $org->id,
             'contract_id' => $contract->id,
             'room_id' => $room->id,
-            'type' => 'CHECKOUT',
-            'status' => 'CONFIRMED',
-            'confirmed_at' => now(),
-            'locked_at' => now(),
+            'created_by_user_id' => $admin->id,
         ]);
 
         $this->actingAs($admin)
@@ -171,10 +209,7 @@ class ContractTerminationTest extends TestCase
             'org_id' => $org->id,
             'contract_id' => $contract->id,
             'room_id' => $room->id,
-            'type' => 'CHECKOUT',
-            'status' => 'CONFIRMED',
-            'confirmed_at' => now(),
-            'locked_at' => now(),
+            'created_by_user_id' => $admin->id,
         ]);
 
         $payload = [

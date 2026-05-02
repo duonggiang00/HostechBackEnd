@@ -4,6 +4,47 @@ import toast from 'react-hot-toast';
 import type { BuildingFloor, BuildingRoom, RoomTemplateOption } from '../types';
 import type { RoomStatus } from '@/PropertyScope/features/rooms/types';
 
+/** Diện tích phòng nhỏ nhất trong mẫu — dùng ước lượng “còn chỗ thêm phòng hay không”. */
+function getMinTemplateAreaM2(templates: RoomTemplateOption[]): number {
+  const areas = templates
+    .map(t => Number(t.area))
+    .filter(a => Number.isFinite(a) && a > 0);
+  if (areas.length === 0) {
+    return 25;
+  }
+  return Math.min(...areas);
+}
+
+/**
+ * Số cột lưới ngang cho một tầng:
+ * - Hết (hoặc gần hết) diện tích khả dụng → chỉ đủ cột cho phòng + ô thêm (edit), ô phòng giãn hết chiều ngang.
+ * - Vẫn đủ chỗ thêm phòng → tối thiểu 4 cột để giữ khoảng trống gợi ý còn thể mở rộng.
+ */
+function getFloorGridColumnCount(options: {
+  floor: BuildingFloor;
+  isEditMode: boolean;
+  remainingAreaM2: number;
+  minRoomAreaM2: number;
+}): number {
+  const { floor, isEditMode, remainingAreaM2, minRoomAreaM2 } = options;
+  const rooms = floor.rooms || [];
+  const usedCols = rooms.reduce(
+    (max, r) => Math.max(max, (r.layout?.column ?? 0) + (r.layout?.col_span ?? 1)),
+    0,
+  );
+  const occupied = Math.max(usedCols, 1);
+  const addSlot = isEditMode ? 1 : 0;
+  const epsilon = 1e-6;
+  const treatAsFull = remainingAreaM2 < minRoomAreaM2 - epsilon;
+
+  if (treatAsFull) {
+    return Math.max(occupied + addSlot, 1);
+  }
+
+  const minVisualColsWhenSpareCapacity = 4;
+  return Math.max(occupied + addSlot, minVisualColsWhenSpareCapacity);
+}
+
 interface BuildingOverviewProps {
   floors: BuildingFloor[];
   templates?: RoomTemplateOption[];
@@ -45,10 +86,7 @@ export function BuildingOverview({
     }
   }, [isEditMode, templates]);
 
-  // Calculate max columns for uniform grid (based on actual occupancy, not count)
-  const maxColumns = Math.max(4, ...(floors || []).map(f => 
-    (f.rooms || []).reduce((max, r) => Math.max(max, (r.layout?.column ?? 0) + (r.layout?.col_span ?? 1)), 0)
-  ));
+  const minRoomAreaM2 = getMinTemplateAreaM2(templates);
 
   // ─── Handlers ───────────────────────────────────────────────────────────
 
@@ -88,6 +126,7 @@ export function BuildingOverview({
     const roomSequence = floor.rooms.length + 1;
     const roomSuffix = roomSequence < 10 ? `0${roomSequence}` : `${roomSequence}`;
     const roomTempId = `temp-room-${Date.now()}`;
+    const codePrefix = floorNumber === 0 ? 'G' : `${floorNumber}`;
     
     const template = templates.find(t => t.id === selectedTemplate);
     const newRoomArea = template?.area || 25;
@@ -103,10 +142,12 @@ export function BuildingOverview({
       return;
     }
     
+    const draftCode = `${codePrefix}${roomSuffix}`;
     const newRoom: BuildingRoom = {
       id: roomTempId,
       temp_id: roomTempId,
-      code: `${floorNumber}${roomSuffix}`, // E.g., 101, 102, 201...
+      code: draftCode, // G01 | 101, 401… — unique theo property khi lưu; name có thể khác sau này
+      name: draftCode,
       floor_id: floorId,
       status: 'available' as RoomStatus,
       area: newRoomArea,
@@ -136,7 +177,8 @@ export function BuildingOverview({
     });
 
     if (roomToDelete && roomToDelete.status === 'occupied') {
-      alert(`Không thể xóa phòng "${roomToDelete.code}" vì đang có người ở (Occupied).`);
+      const label = roomToDelete.name?.trim() ? roomToDelete.name : roomToDelete.code;
+      alert(`Không thể xóa phòng "${label}" vì đang có người ở (Occupied).`);
       return;
     }
 
@@ -298,7 +340,7 @@ export function BuildingOverview({
                         const usableArea = Math.max(0, propertyArea - propertySharedArea);
                         const usedArea = floorData.rooms.reduce((sum, r) => sum + Number(r.area || 0), 0);
                         const remainingArea = Math.max(0, usableArea - usedArea);
-                        
+
                         return (
                             <div className="flex flex-col items-center w-full">
                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter mb-0.5" title="Diên tích tòa nhà - Lối đi chung - DT đã dùng">Còn trống</span>
@@ -316,10 +358,22 @@ export function BuildingOverview({
 
                   {/* Rooms area */}
                   <div className="flex-1 flex items-center p-4 relative h-36 bg-white">
+                    {(() => {
+                      const usableArea = Math.max(0, propertyArea - propertySharedArea);
+                      const usedArea = floorData.rooms.reduce((sum, r) => sum + Number(r.area || 0), 0);
+                      const remainingArea = Math.max(0, usableArea - usedArea);
+                      const gridCols = getFloorGridColumnCount({
+                        floor: floorData,
+                        isEditMode,
+                        remainingAreaM2: remainingArea,
+                        minRoomAreaM2: minRoomAreaM2,
+                      });
+
+                      return (
                     <div
                       className="grid gap-4 items-stretch"
                       style={{
-                        gridTemplateColumns: `repeat(${Math.max(4, maxColumns + (isEditMode ? 1 : 0))}, 1fr)`,
+                        gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
                         width: '100%',
                         height: '100%',
                       }}
@@ -340,7 +394,7 @@ export function BuildingOverview({
                             onClick={() => onRoomSelect?.(room)}
                           >
                             <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover/room:opacity-100 transition-opacity rounded-lg pointer-events-none" />
-                            <span className="text-xl font-bold leading-none z-10">{room.code}</span>
+                            <span className="text-xl font-bold leading-none z-10">{room.name?.trim() ? room.name : room.code}</span>
                             <span className="text-[11px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none z-10">
                               {room.isDraft ? 'Draft' :
                                 room.status === 'occupied' ? 'Đã thuê' :
@@ -396,6 +450,8 @@ export function BuildingOverview({
                         </div>
                       )}
                     </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Delete floor button — ONLY in Edit Mode */}

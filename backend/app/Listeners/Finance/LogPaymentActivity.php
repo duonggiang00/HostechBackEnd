@@ -2,6 +2,8 @@
 
 namespace App\Listeners\Finance;
 
+use App\Events\Finance\PaymentProofSubmitted;
+use App\Events\Finance\PaymentRejected;
 use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Events\Finance\PaymentVoided;
 use App\Models\Finance\PaymentStatusHistory;
@@ -60,6 +62,57 @@ class LogPaymentActivity implements ShouldQueue
         } catch (\Exception $e) {
             // Non-critical: do not re-throw; logging failure must not block payment flow
             Log::warning('[Finance][EDA] Failed to log approved payment activity', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function handleProofSubmitted(PaymentProofSubmitted $event): void
+    {
+        $payment = $event->payment;
+
+        try {
+            activity('payment')
+                ->performedOn($payment)
+                ->withProperties([
+                    'amount' => (float) $payment->amount,
+                    'method' => $payment->method,
+                    'property_id' => $payment->property_id,
+                    'submitted_at' => $payment->meta['submitted_at'] ?? now()->toIso8601String(),
+                ])
+                ->log('payment.proof_submitted');
+        } catch (\Exception $e) {
+            Log::warning('[Finance][EDA] Failed to log proof submitted activity', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public function handleRejected(PaymentRejected $event): void
+    {
+        $payment = $event->payment;
+
+        try {
+            $causerId = $payment->meta['rejected_by'] ?? null;
+            $causer = $causerId ? User::query()->find($causerId) : null;
+
+            $activity = activity('payment')
+                ->performedOn($payment)
+                ->withProperties([
+                    'amount' => (float) $payment->amount,
+                    'reject_reason' => $payment->meta['reject_reason'] ?? null,
+                    'rejected_at' => $payment->meta['rejected_at'] ?? now()->toIso8601String(),
+                ]);
+
+            if ($causer instanceof User) {
+                $activity->causedBy($causer);
+            }
+
+            $activity->log('payment.rejected');
+        } catch (\Exception $e) {
+            Log::warning('[Finance][EDA] Failed to log rejected payment activity', [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
             ]);

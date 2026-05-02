@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ComponentType, type ReactNode } from 'react';
 import { 
   Building2, 
   MapPin, 
@@ -42,7 +42,7 @@ const validationMessageMap: Record<string, string> = {
   'code': 'Mã tòa nhà',
   'address': 'Địa chỉ',
   'area': 'Tổng diện tích',
-  'shared_area': 'Diện tích chung',
+  'shared_area': 'Diện tích lối đi chung',
   'default_due_day': 'Ngày hạn thanh toán',
   'default_cutoff_day': 'Ngày chốt số',
   'default_deposit_months': 'Số tháng tiền cọc',
@@ -57,14 +57,35 @@ const InfoSection = ({ title, children, fullWidth }: any) => (
   </div>
 );
 
-const InfoItem = ({ icon: Icon, label, value, colorClass = "bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400" }: any) => (
+const InfoItem = ({
+  icon: Icon,
+  label,
+  value,
+  colorClass = 'bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-400',
+  /** Địa chỉ / nội dung dài: hiển thị đủ nhiều dòng, không cắt … */
+  multiline = false,
+}: {
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  value: ReactNode;
+  colorClass?: string;
+  multiline?: boolean;
+}) => (
   <div className="flex gap-4 group">
     <div className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm ${colorClass}`}>
       <Icon className="w-5 h-5" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1">{label}</p>
-      <p className="font-bold text-gray-900 dark:text-white truncate">{value || '---'}</p>
+      <p
+        className={
+          multiline
+            ? 'font-bold text-gray-900 dark:text-white text-sm leading-snug break-words whitespace-normal'
+            : 'font-bold text-gray-900 dark:text-white truncate'
+        }
+      >
+        {value || '---'}
+      </p>
     </div>
   </div>
 );
@@ -258,9 +279,9 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <InfoSection title="Thông tin cơ bản">
             <InfoItem icon={Building2} label="Tên tòa nhà" value={property.name} />
-            <InfoItem icon={MapPin} label="Địa chỉ đầy đủ" value={property.address} />
+            <InfoItem icon={MapPin} label="Địa chỉ đầy đủ" value={property.address} multiline />
             <InfoItem icon={Square} label="Tổng diện tích" value={property.area ? `${property.area.toLocaleString('vi-VN')} m²` : '---'} />
-            <InfoItem icon={Share2} label="Diện tích chung" value={property.shared_area ? `${property.shared_area.toLocaleString('vi-VN')} m²` : '---'} />
+            <InfoItem icon={Share2} label="Diện tích lối đi chung" value={property.shared_area ? `${property.shared_area.toLocaleString('vi-VN')} m²` : '---'} />
           </InfoSection>
 
           <InfoSection title="Chu kỳ & Ngày hạn">
@@ -487,7 +508,7 @@ export function PropertyInfoView({ propertyId }: PropertyInfoViewProps) {
 
             <div className="space-y-2">
               <label className="text-[11px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <Combine className="w-3.5 h-3.5 text-blue-900 dark:text-blue-400" /> Chung/Hành lang
+                <Combine className="w-3.5 h-3.5 text-blue-900 dark:text-blue-400" /> Diện tích lối đi chung
               </label>
               <div className="relative">
                 <Input 

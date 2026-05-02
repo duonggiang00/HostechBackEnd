@@ -5,6 +5,7 @@ import { useServices, useUpdateService, useDeleteService } from '../hooks/useSer
 import { useParams, Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import type { Service } from '../types';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 
 interface ServiceListPageProps {
   hideHeader?: boolean;
@@ -13,7 +14,11 @@ interface ServiceListPageProps {
 export default function ServiceListPage({ hideHeader = false }: ServiceListPageProps) {
   const { propertyId } = useParams<{ propertyId: string }>();
   const [search, setSearch] = useState('');
-  
+  const { hasRole } = useAuth();
+  /** Staff chỉ xem; không thêm / sửa / xóa / bật tắt dịch vụ */
+  const canManageServices = hasRole(['Owner', 'Manager', 'Admin']);
+  const tableColCount = canManageServices ? 6 : 5;
+
   const { data: response, isLoading } = useServices({ search, per_page: 50 });
   const services = response?.data || [];
 
@@ -67,13 +72,15 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
             </p>
           </div>
 
-          <Link
-            to={`/properties/${propertyId}/services/create`}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] shadow-sm transition-all focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-2 w-full sm:w-auto font-semibold"
-          >
-            <Plus className="w-5 h-5" />
-            Thêm dịch vụ mới
-          </Link>
+          {canManageServices && (
+            <Link
+              to={`/properties/${propertyId}/services/create`}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] shadow-sm transition-all focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-2 w-full sm:w-auto font-semibold"
+            >
+              <Plus className="w-5 h-5" />
+              Thêm dịch vụ mới
+            </Link>
+          )}
         </div>
       )}
 
@@ -90,7 +97,7 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         </div>
 
-        {hideHeader && (
+        {hideHeader && canManageServices && (
           <Link
             to={`/properties/${propertyId}/services/create`}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] shadow-sm transition-all focus:ring-2 focus:ring-[#F59E0B] focus:ring-offset-2 w-full sm:w-auto font-semibold"
@@ -112,20 +119,22 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Đơn giá / Đơn vị</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-center">Tự động</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-center">Kích hoạt</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
+                {canManageServices && (
+                  <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={tableColCount} className="px-6 py-12 text-center text-slate-500">
                     <div className="w-6 h-6 border-2 border-[#1E3A8A] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                     Đang tải dữ liệu...
                   </td>
                 </tr>
               ) : services.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-[#4B5563] dark:text-slate-400">
+                  <td colSpan={tableColCount} className="px-6 py-12 text-center text-[#4B5563] dark:text-slate-400">
                     <Settings className="w-12 h-12 text-[#E5E7EB] dark:text-slate-600 mx-auto mb-3" />
                     Chưa có dịch vụ nào định nghĩa.
                   </td>
@@ -172,37 +181,53 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <button
-                          onClick={() => handleToggleActive(service)}
-                          className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            service.is_active ? 'bg-[#1E3A8A]' : 'bg-slate-200 dark:bg-slate-700'
-                          }`}
-                        >
-                          <span
-                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              service.is_active ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
-                          <Link
-                            to={`/properties/${propertyId}/services/${service.id}/edit`}
-                            className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
-                            title="Sửa dịch vụ"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Link>
+                        {canManageServices ? (
                           <button
-                            onClick={() => handleDelete(service)}
-                            className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
-                            title="Xóa dịch vụ"
+                            type="button"
+                            onClick={() => handleToggleActive(service)}
+                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              service.is_active ? 'bg-[#1E3A8A]' : 'bg-slate-200 dark:bg-slate-700'
+                            }`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                service.is_active ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                            />
                           </button>
-                        </div>
+                        ) : (
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-bold ${
+                              service.is_active
+                                ? 'bg-blue-50 text-[#1E3A8A] dark:bg-blue-500/10 dark:text-blue-400'
+                                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                            }`}
+                          >
+                            {service.is_active ? 'Đang bật' : 'Đang tắt'}
+                          </span>
+                        )}
                       </td>
+                      {canManageServices && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
+                            <Link
+                              to={`/properties/${propertyId}/services/${service.id}/edit`}
+                              className="p-2 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-colors"
+                              title="Sửa dịch vụ"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(service)}
+                              className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
+                              title="Xóa dịch vụ"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </motion.tr>
                   ))}
                 </AnimatePresence>

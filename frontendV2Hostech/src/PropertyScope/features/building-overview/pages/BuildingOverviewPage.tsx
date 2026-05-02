@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
@@ -16,7 +16,9 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
   const [isEditMode, setIsEditMode] = useState(false);
-  const { user } = useAuth();
+  const { hasRole } = useAuth();
+  /** Staff chỉ xem; chỉnh sửa mặt bằng cho Owner / Manager / Admin */
+  const canEditBuildingOverview = hasRole(['Owner', 'Manager', 'Admin']);
 
   // ─── Data fetching ────────────────────────────────────────────────────
   const { data: overview, isLoading, error, refetch } = useBuildingOverview(propertyId);
@@ -26,6 +28,9 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
   // ─── Local edit state ─────────────────────────────────────────────────
   // Floors state is derived from API in view mode, and managed locally in edit mode
   const [localFloors, setLocalFloors] = useState<BuildingFloor[]>([]);
+  /** Một key cho mỗi lần bấm Lưu (giữ khi retry cùng payload) — khớp idempotency backend */
+  const saveIdempotencyKeyRef = useRef<string | null>(null);
+  const savePayloadFingerprintRef = useRef<string | null>(null);
 
   // Sync local state when API data changes (e.g. after save or initial load)
   useEffect(() => {
@@ -34,20 +39,22 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
     }
   }, [overview]);
 
-  // Floors used for display
-  const displayFloors = isEditMode ? localFloors : (overview?.floors ?? []);
-
   // ─── Handlers ───────────────────────────────────────────────────────────
 
   const handleEnterEdit = useCallback(() => {
+    if (!canEditBuildingOverview) return;
+    saveIdempotencyKeyRef.current = null;
+    savePayloadFingerprintRef.current = null;
     // Clone API state into local state for editing
     if (overview?.floors) {
       setLocalFloors(JSON.parse(JSON.stringify(overview.floors)));
     }
     setIsEditMode(true);
-  }, [overview]);
+  }, [overview, canEditBuildingOverview]);
 
   const handleCancel = useCallback(() => {
+    saveIdempotencyKeyRef.current = null;
+    savePayloadFingerprintRef.current = null;
     // Revert to last saved state
     if (overview?.floors) {
       setLocalFloors(JSON.parse(JSON.stringify(overview.floors)));
@@ -56,7 +63,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
   }, [overview]);
 
   const handleSave = useCallback(async () => {
-    if (!propertyId) return;
+    if (!propertyId || !canEditBuildingOverview) return;
 
     // Build payload from local state
     const deletedRoomIds: string[] = [];
@@ -82,16 +89,32 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
       floor_number: floor.floor_number,
       rooms: floor.rooms.map((room): SyncRoomEntry => ({
         ...(room.isDraft ? { temp_id: room.temp_id } : { id: room.id }),
+        name: room.name ?? room.code,
         code: room.code,
         template_id: room.template_id,
         x: room.layout?.column ?? 0,
         y: room.layout?.row ?? 0,
-        width: room.layout?.col_span ?? 1,
-        height: room.layout?.row_span ?? 1,
+        width: Math.max(1, room.layout?.col_span ?? 1),
+        height: Math.max(1, room.layout?.row_span ?? 1),
       })),
     }));
 
+    const fingerprintPayload = {
+      sync_data: syncData,
+      deleted_room_ids: deletedRoomIds.length > 0 ? deletedRoomIds : undefined,
+      deleted_floor_ids: deletedFloorIds.length > 0 ? deletedFloorIds : undefined,
+    };
+    const fingerprint = JSON.stringify(fingerprintPayload);
+    if (saveIdempotencyKeyRef.current && savePayloadFingerprintRef.current !== fingerprint) {
+      saveIdempotencyKeyRef.current = null;
+    }
+    savePayloadFingerprintRef.current = fingerprint;
+    if (!saveIdempotencyKeyRef.current) {
+      saveIdempotencyKeyRef.current = crypto.randomUUID();
+    }
+
     const payload: SyncBuildingOverviewPayload = {
+      idempotency_key: saveIdempotencyKeyRef.current,
       sync_data: syncData,
       deleted_room_ids: deletedRoomIds.length > 0 ? deletedRoomIds : undefined,
       deleted_floor_ids: deletedFloorIds.length > 0 ? deletedFloorIds : undefined,
@@ -99,11 +122,26 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
 
     try {
       await syncMutation.mutateAsync(payload);
+      saveIdempotencyKeyRef.current = null;
+      savePayloadFingerprintRef.current = null;
       setIsEditMode(false);
-    } catch {
-      // Error toast is handled by the mutation hook
+    } catch (err: unknown) {
+      const res = err as { response?: { data?: { errors?: { idempotency_key?: string[] } } } };
+      if (res.response?.data?.errors?.idempotency_key?.length) {
+        saveIdempotencyKeyRef.current = null;
+        savePayloadFingerprintRef.current = null;
+      }
     }
-  }, [propertyId, localFloors, overview, syncMutation]);
+  }, [propertyId, localFloors, overview, syncMutation, canEditBuildingOverview]);
+
+  useEffect(() => {
+    if (!canEditBuildingOverview) {
+      setIsEditMode(false);
+    }
+  }, [canEditBuildingOverview]);
+
+  const effectiveEditMode = canEditBuildingOverview && isEditMode;
+  const displayFloorsResolved = effectiveEditMode ? localFloors : (overview?.floors ?? []);
 
   // ─── Render ───────────────────────────────────────────────────────────
 
@@ -126,7 +164,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
             </div>
 
             <div className="flex items-center gap-3">
-              {user?.role !== 'Staff' && !isEditMode ? (
+              {canEditBuildingOverview && !isEditMode ? (
                 <button
                   onClick={handleEnterEdit}
                   disabled={isLoading}
@@ -135,7 +173,7 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
                   <Pencil className="w-4 h-4" />
                   Chỉnh sửa mặt bằng
                 </button>
-              ) : isEditMode ? (
+              ) : canEditBuildingOverview && isEditMode ? (
                 <div className="flex gap-2 animate-in fade-in slide-in-from-right-4">
                   <button
                     onClick={handleCancel}
@@ -174,15 +212,15 @@ export default function BuildingOverviewPage({ hideHeader = false }: BuildingOve
       <div className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <BuildingOverview
-            floors={displayFloors}
+            floors={displayFloorsResolved}
             templates={overview?.templates ?? []}
-            isEditMode={isEditMode}
+            isEditMode={effectiveEditMode}
             isLoading={isLoading}
             onFloorsChange={setLocalFloors}
             propertyArea={propertyDetail?.area ?? undefined}
             propertySharedArea={propertyDetail?.shared_area ?? undefined}
             onRoomSelect={(room) => {
-              if (!isEditMode && room) {
+              if (!effectiveEditMode && room) {
                 navigate(`/properties/${propertyId}/rooms/${room.id}`, { state: { from: 'building-view' } });
               }
             }}

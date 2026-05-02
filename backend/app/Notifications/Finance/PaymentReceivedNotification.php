@@ -3,6 +3,7 @@
 namespace App\Notifications\Finance;
 
 use App\Models\Finance\Payment;
+use App\Support\PaymentMethod;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -38,6 +39,7 @@ class PaymentReceivedNotification extends Notification implements ShouldQueue
             'payment_id' => $this->payment->id,
             'amount' => (float) $this->payment->amount,
             'method' => $this->payment->method,
+            'method_label' => PaymentMethod::labelVi($this->payment->method),
             'reference' => $this->payment->reference,
             'received_at' => $this->payment->received_at?->toIso8601String(),
             'property_id' => $this->payment->property_id,
@@ -52,7 +54,7 @@ class PaymentReceivedNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $amount = number_format((float) $this->payment->amount, 0, '.', ',');
-        $method = $this->payment->method;
+        $method = PaymentMethod::labelVi($this->payment->method);
         $receivedAt = $this->payment->received_at?->format('d/m/Y H:i') ?? 'N/A';
         $receipt = $this->payment->receipt;
 

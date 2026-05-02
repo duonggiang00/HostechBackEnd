@@ -39,6 +39,35 @@ class MeterResource extends JsonResource
             'last_read_at' => $this->latestInvoiceEligibleReading?->period_end ? $this->latestInvoiceEligibleReading->period_end->format('Y-m-d') : null,
             'consumption' => $this->latestInvoiceEligibleReading?->consumption ?? 0,
             'room' => new RoomResource($this->whenLoaded('room')),
+            'latest_approved_reading' => $this->whenLoaded('latestApprovedReading', function () {
+                $r = $this->latestApprovedReading;
+                if (! $r) {
+                    return null;
+                }
+
+                return [
+                    'id' => $r->id,
+                    'period_start' => $r->period_start ? $r->period_start->format('Y-m-d') : null,
+                    'period_end' => $r->period_end ? $r->period_end->format('Y-m-d') : null,
+                    'reading_value' => $r->reading_value,
+                    'status' => $r->status ?? null,
+                ];
+            }),
+            /** Bản ghi mới nhất theo period_end (mọi trạng thái) — UI dùng để tính kỳ chốt nhanh kế tiếp kể cả SUBMITTED */
+            'latest_period_reading' => $this->whenLoaded('latestReading', function () {
+                $r = $this->latestReading;
+                if (! $r) {
+                    return null;
+                }
+
+                return [
+                    'id' => $r->id,
+                    'period_start' => $r->period_start ? $r->period_start->format('Y-m-d') : null,
+                    'period_end' => $r->period_end ? $r->period_end->format('Y-m-d') : null,
+                    'reading_value' => $r->reading_value,
+                    'status' => $r->status ?? null,
+                ];
+            }),
             'media' => $this->getMedia('meter_attachments')->map(fn ($media) => [
                 'id' => $media->id,
                 'url' => $media->getFullUrl(),

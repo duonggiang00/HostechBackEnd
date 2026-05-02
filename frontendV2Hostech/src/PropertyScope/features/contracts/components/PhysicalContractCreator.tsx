@@ -33,6 +33,14 @@ import {
   requiresIdentityForMember,
 } from '../utils/contractMemberAge';
 
+/** Nhãn phòng trên form hợp đồng: ưu tiên tên, fallback mã. */
+function roomDisplayLabel(r: { name?: string | null; code?: string | null } | null | undefined): string {
+  if (!r) return '???';
+  const n = typeof r.name === 'string' ? r.name.trim() : '';
+  if (n) return n;
+  return r.code?.trim() || '???';
+}
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 /** Ngày kết thúc = ngày bắt đầu + đúng N tháng (khớp Carbon addMonths). */
 function contractEndDateFromStart(startDateStr: string, cycleMonths: number): string {
@@ -346,8 +354,9 @@ export default function PhysicalContractCreator({
 
   // resolved user from TenantSearchInput (Path A: email matched existing account)
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
-  /** Số tháng tiền cọc — chỉ dùng trên UI, không gửi API; tiền cọc = rent_price × số tháng này. */
-  const [depositMonths, setDepositMonths] = useState(1);
+  /** Số tháng tiền cọc (chuỗi) — cho phép xóa hết ô để gõ số mới; blur sẽ chuẩn hóa 1–24. */
+  const [depositMonthsInput, setDepositMonthsInput] = useState('1');
+  const lastValidDepositMonthsRef = useRef(1);
 
   const v = watch();
   const rentPrice = watch('rent_price');
@@ -361,23 +370,53 @@ export default function PhysicalContractCreator({
   const roomHasCapacityLimit = roomCapacity > 0;
   const canAddMoreMembers = !roomHasCapacityLimit || totalMembersPlanned < roomCapacity;
 
-  // Auto-fill rent_price when room changes; cọc mặc định 1 tháng (depositMonths)
+  /**
+   * Tổng phí dịch vụ cố định/tháng (sum của các dịch vụ không phải PER_METER).
+   * Khớp công thức backend `(rent_price + fixed_services_fee) × deposit_months`.
+   */
+  const fixedServicesTotal = useMemo(() => {
+    const rs = (roomDetail as any)?.room_services as any[] | undefined;
+    if (!rs || rs.length === 0) return 0;
+    return rs
+      .filter((row) => row?.service?.calc_mode !== 'PER_METER')
+      .reduce((acc, row) => {
+        const unitPrice = Number(row?.service?.current_price ?? row?.service?.price ?? 0);
+        const qty = Number(row?.quantity ?? 1);
+        return acc + (Number.isFinite(unitPrice * qty) ? unitPrice * qty : 0);
+      }, 0);
+  }, [roomDetail]);
+
+  // Auto-fill rent_price when room changes; cọc mặc định lấy từ property.default_deposit_months
   useEffect(() => {
     if (!roomDetail) return;
     const price = roomDetail.base_price ?? 0;
     if (price > 0) {
       setValue('rent_price', price, { shouldValidate: true });
-      setDepositMonths(1);
+      const propertyDefault = Number((property as any)?.default_deposit_months) || 1;
+      const defaultMonths = Math.max(1, Math.min(24, propertyDefault));
+      setDepositMonthsInput(String(defaultMonths));
+      lastValidDepositMonthsRef.current = defaultMonths;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomDetail?.id]);
+  }, [roomDetail?.id, (property as any)?.default_deposit_months]);
 
-  // Tiền cọc luôn = giá thuê/tháng × số tháng cọc (chỉ nhập số tháng trên UI)
+  /**
+   * Công thức cọc: (rent_price + fixed_services_fee) × deposit_months.
+   * Đồng bộ với BE auto-calc trong ContractService::create để document hiển thị đúng số.
+   */
   useEffect(() => {
     const rent = Number(rentPrice) || 0;
-    const months = Math.max(1, Math.min(24, Math.floor(depositMonths) || 1));
-    setValue('deposit_amount', Math.round(rent * months), { shouldValidate: true });
-  }, [rentPrice, depositMonths, setValue]);
+    const parsed = Number.parseInt(depositMonthsInput, 10);
+    let months: number;
+    if (depositMonthsInput === '' || Number.isNaN(parsed)) {
+      months = lastValidDepositMonthsRef.current;
+    } else {
+      months = Math.max(1, Math.min(24, parsed));
+      lastValidDepositMonthsRef.current = months;
+    }
+    const total = (rent + fixedServicesTotal) * months;
+    setValue('deposit_amount', Math.round(total), { shouldValidate: true });
+  }, [rentPrice, fixedServicesTotal, depositMonthsInput, setValue]);
 
   const previewEndDateStr = useMemo(
     () => contractEndDateFromStart(v.start_date, Number(v.cycle_months) || 0),
@@ -543,6 +582,10 @@ export default function PhysicalContractCreator({
     });
 
     const endDate = contractEndDateFromStart(data.start_date, Number(data.cycle_months));
+    const depositMonthsValue = Math.max(
+      1,
+      Math.min(24, Number.parseInt(depositMonthsInput, 10) || lastValidDepositMonthsRef.current || 1),
+    );
     const payload: CreateContractPayload = {
       property_id: propertyId,
       room_id: data.room_id,
@@ -550,6 +593,7 @@ export default function PhysicalContractCreator({
       end_date: endDate || undefined,
       rent_price: data.rent_price,
       deposit_amount: data.deposit_amount,
+      deposit_months: depositMonthsValue,
       billing_cycle: data.billing_cycle,
       due_day: data.due_day,
       cutoff_day: data.cutoff_day,
@@ -635,7 +679,7 @@ export default function PhysicalContractCreator({
               <p className="font-bold text-lg uppercase mt-3">HỢP ĐỒNG THUÊ NHÀ</p>
               <p className="text-xs text-gray-500 mt-1">
                 Mã hợp đồng: <span className="text-gray-400 ">
-                  {selectedRoom?.code || '???'}/
+                  {roomDisplayLabel(selectedRoom)}/
                   <span className="text-[10px]">Tự động khi lưu</span>
                 </span>
               </p>
@@ -928,14 +972,14 @@ export default function PhysicalContractCreator({
                 <span>Bên A đồng ý cho Bên B thuê căn phòng số:</span>
                 {selectedRoom ? (
                   <span className="font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">
-                    {selectedRoom.code || selectedRoom.name}
+                    {roomDisplayLabel(selectedRoom)}
                   </span>
                 ) : (
                   <select {...register('room_id')}
                     className="text-sm border border-dashed border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-2 py-0.5 outline-none focus:border-indigo-600 dark:text-indigo-200">
                     <option value="">-- Chọn phòng --</option>
                     {rooms.map((r: any) => (
-                      <option key={r.id} value={r.id}>{r.code || r.name}</option>
+                      <option key={r.id} value={r.id}>{roomDisplayLabel(r)}</option>
                     ))}
                   </select>
                 )}
@@ -948,7 +992,7 @@ export default function PhysicalContractCreator({
                   <select {...register('room_id')}
                     className="border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 outline-none bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300">
                     {rooms.map((r: any) => (
-                      <option key={r.id} value={r.id}>{r.code || r.name}</option>
+                      <option key={r.id} value={r.id}>{roomDisplayLabel(r)}</option>
                     ))}
                   </select>
                 </div>
@@ -996,7 +1040,6 @@ export default function PhysicalContractCreator({
                       <tr className="text-xs text-gray-500 border-b border-dotted border-gray-400">
                         <th className="text-left font-semibold py-0.5 w-8">STT</th>
                         <th className="text-left font-semibold py-0.5">Tên tài sản</th>
-                        <th className="text-left font-semibold py-0.5 w-36">Số hiệu / S/N</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1005,9 +1048,6 @@ export default function PhysicalContractCreator({
                           className="border-b border-dotted border-gray-300 dark:border-gray-600">
                           <td className="py-1 text-gray-500">{i + 1}</td>
                           <td className="py-1 font-medium text-gray-800 dark:text-gray-200">{asset.name}</td>
-                          <td className="py-1 font-mono text-gray-500 text-xs">
-                            {asset.serial || <span className="text-gray-300">—</span>}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1036,25 +1076,50 @@ export default function PhysicalContractCreator({
 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-gray-500 font-semibold shrink-0">2.2.</span>
-                <span>Tiền đặt cọc:</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">bằng</span>
+                <span>Tiền đặt cọc — số tháng:</span>
                 <input
-                  type="number"
-                  min={1}
-                  max={24}
-                  step={1}
-                  value={depositMonths}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={2}
+                  value={depositMonthsInput}
                   onChange={(e) => {
-                    const n = Math.max(1, Math.min(24, Number.parseInt(e.target.value, 10) || 1));
-                    setDepositMonths(n);
+                    const raw = e.target.value.replace(/\D/g, '').slice(0, 2);
+                    setDepositMonthsInput(raw);
+                  }}
+                  onBlur={() => {
+                    if (depositMonthsInput === '') {
+                      setDepositMonthsInput('1');
+                      lastValidDepositMonthsRef.current = 1;
+                      return;
+                    }
+                    const n = Math.max(1, Math.min(24, Number.parseInt(depositMonthsInput, 10) || 1));
+                    setDepositMonthsInput(String(n));
+                    lastValidDepositMonthsRef.current = n;
                   }}
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
                     text-sm font-bold text-indigo-900 dark:text-indigo-200 outline-none focus:border-indigo-600 rounded-sm w-12 text-center"
                 />
-                <span>tháng tiền thuê</span>
-                <span className="text-sm font-bold text-indigo-900 dark:text-indigo-200 tabular-nums">
-                  = {formatVND(v.deposit_amount)} đồng
-                </span>
+                <span>tháng.</span>
+              </div>
+              <div className="pl-6 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                <div>
+                  Công thức: (Tiền thuê phòng <span className="font-semibold">+</span> Tổng phí dịch vụ cố định) <span className="font-semibold">×</span> Số tháng cọc.
+                </div>
+                <div className="tabular-nums">
+                  = ({formatVND(Number(rentPrice) || 0)}
+                  {' + '}
+                  <span title="Tổng phí dịch vụ cố định/tháng">{formatVND(fixedServicesTotal)}</span>
+                  {') × '}
+                  <span className="font-semibold">{lastValidDepositMonthsRef.current}</span>
+                  {' = '}
+                  <span className="font-bold text-indigo-900 dark:text-indigo-200">{formatVND(v.deposit_amount)} đồng</span>.
+                </div>
+                {fixedServicesTotal > 0 && (
+                  <div className="text-[11px] text-gray-500">
+                    Phí dịch vụ cố định/tháng được tính từ các dịch vụ kèm phòng (không gồm dịch vụ tính theo đồng hồ).
+                  </div>
+                )}
               </div>
               <StaticClause>
                 <span className="text-gray-400 text-xs pl-6">
@@ -1109,13 +1174,17 @@ export default function PhysicalContractCreator({
 
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-gray-500 font-semibold shrink-0">2.4.</span>
-                <span>Thời gian thanh toán:</span>
-                <select {...register('billing_cycle', { valueAsNumber: true })}
+                <span>Thời gian thanh toán: mỗi</span>
+                <input
+                  {...register('billing_cycle', { valueAsNumber: true })}
+                  type="number"
+                  min={1}
+                  max={12}
+                  step={1}
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
-                    text-sm outline-none focus:border-indigo-600 rounded-sm dark:text-indigo-200">
-                  {[1, 2, 3, 6, 12].map(m => <option key={m} value={m}>{m} tháng</option>)}
-                </select>
-                <span>một lần — Hạn đóng: mùng</span>
+                    text-sm outline-none focus:border-indigo-600 rounded-sm w-14 text-center dark:text-indigo-200"
+                />
+                <span>tháng một lần — Hạn đóng: mùng</span>
                 <input {...register('due_day', { valueAsNumber: true })} type="number" min={1} max={31}
                   className="border-b-2 border-dashed border-indigo-400 bg-indigo-50/60 dark:bg-indigo-900/20 px-1 py-0.5
                     text-sm outline-none focus:border-indigo-600 rounded-sm w-12 text-center dark:text-indigo-200" />

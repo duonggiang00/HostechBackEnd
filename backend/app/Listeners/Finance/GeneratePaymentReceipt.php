@@ -4,25 +4,16 @@ namespace App\Listeners\Finance;
 
 use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Services\Finance\ReceiptService;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Automates PDF collection/generation when a payment is approved.
+ * Sinh biên lai PDF (bản mềm) khi thanh toán được xác nhận.
  *
- * This runs in the background to ensure the main transaction is not blocked
- * by PDF rendering overhead.
+ * Chạy đồng bộ: path file và bản ghi receipts phải có ngay sau khi duyệt thanh toán.
+ * Nếu để queue (hàng finance), khi không chạy worker thì không có PDF dù payment đã APPROVED.
  */
-class GeneratePaymentReceipt implements ShouldQueue
+class GeneratePaymentReceipt
 {
-    use InteractsWithQueue;
-
-    /**
-     * The priority of the listener in the queue.
-     */
-    public string $queue = 'finance';
-
     public function __construct(
         protected ReceiptService $receiptService
     ) {}
@@ -37,20 +28,18 @@ class GeneratePaymentReceipt implements ShouldQueue
         ]);
 
         try {
-            // Service handles idempotency via updateOrCreate
             $this->receiptService->generateForPayment($payment);
 
             Log::info('[Finance][EDA] Receipt successfully generated', [
                 'payment_id' => $payment->id,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('[Finance][EDA] Failed to generate receipt', [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            // Re-throw if you want the queue to retry
             throw $e;
         }
     }

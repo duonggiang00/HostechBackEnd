@@ -21,6 +21,7 @@ export const billingApi = {
         search: params?.search || undefined,
         'filter[status]': params?.status || undefined,
         'filter[room_id]': params?.room_id || undefined,
+        'filter[contract_id]': params?.contract_id || undefined,
         'filter[is_termination]': params?.is_termination !== undefined ? (params.is_termination ? 1 : 0) : undefined,
         page: params?.page ?? 1,
         per_page: params?.per_page ?? 20,

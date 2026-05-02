@@ -77,10 +77,12 @@ class LedgerSummaryTest extends TestCase
             'refunded_amount' => 0,
         ]);
 
+        // HĐ đã kết thúc + cọc đã hoàn → KHÔNG còn nằm trong total_deposit_held theo semantic mới
+        // (Sổ cái 5 tab: tổng cọc của hợp đồng ACTIVE).
         Contract::factory()->create([
             'org_id' => $org->id,
             'room_id' => $room->id,
-            'status' => ContractStatus::ACTIVE,
+            'status' => ContractStatus::TERMINATED,
             'deposit_status' => DepositStatus::REFUNDED,
             'deposit_amount' => 3_000_000,
             'refunded_amount' => 3_000_000,
@@ -94,7 +96,11 @@ class LedgerSummaryTest extends TestCase
         $response->assertOk();
         $data = $response->json('data');
         $this->assertSame(1_000_000.0, (float) $data['total_collected']);
-        $this->assertSame(200_000.0, (float) $data['total_refunded']);
+        // total_refunded đổi semantic: chỉ tính RefundReceipt đã chi (paid_at != null) — chưa có phiếu nào → 0.
+        $this->assertSame(0.0, (float) $data['total_refunded']);
+        // Giá trị void Payment cũ nay nằm ở `total_payment_reversal`.
+        $this->assertSame(200_000.0, (float) $data['total_payment_reversal']);
+        // Chỉ còn HĐ ACTIVE (5tr); HĐ TERMINATED không cộng vào.
         $this->assertSame(5_000_000.0, (float) $data['total_deposit_held']);
     }
 

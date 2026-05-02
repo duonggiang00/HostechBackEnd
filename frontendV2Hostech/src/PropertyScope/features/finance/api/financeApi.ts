@@ -4,12 +4,17 @@ import type {
   PaginatedPayments,
   PaginatedLedger,
   PaginatedRefundReceipts,
+  PaginatedCashflowFeed,
+  PaginatedOutstandingInvoices,
   LedgerBalance,
   LedgerFinancialSummary,
   PaymentQueryParams,
   LedgerQueryParams,
   LedgerSummaryParams,
   RefundReceiptQueryParams,
+  RefundReceiptRow,
+  MarkRefundPaidPayload,
+  CashflowFeedQueryParams,
 } from '../types';
 
 export const financeApi = {
@@ -81,5 +86,50 @@ export const financeApi = {
   getRefundReceipts: async (params?: RefundReceiptQueryParams): Promise<PaginatedRefundReceipts> => {
     const response = await apiClient.get('/finance/refund-receipts', { params });
     return response.data as PaginatedRefundReceipts;
+  },
+
+  /**
+   * Chi tiết 1 phiếu hoàn cọc (kèm pdf_url nếu đã sinh).
+   * GET /api/finance/refund-receipts/{id}
+   */
+  getRefundReceipt: async (id: string): Promise<RefundReceiptRow> => {
+    const response = await apiClient.get(`/finance/refund-receipts/${id}`);
+    return response.data.data as RefundReceiptRow;
+  },
+
+  /**
+   * BQL xác nhận đã chi hoàn cọc → set deposit_status = REFUNDED + sinh PDF.
+   * POST /api/finance/refund-receipts/{id}/mark-paid
+   */
+  markRefundPaid: async (id: string, payload: MarkRefundPaidPayload): Promise<RefundReceiptRow> => {
+    const response = await apiClient.post(`/finance/refund-receipts/${id}/mark-paid`, payload);
+    return response.data.data as RefundReceiptRow;
+  },
+
+  /**
+   * Dòng tiền thực tế hợp nhất (Payment IN + RefundReceipt OUT) — phục vụ tab "Dòng tiền tất cả".
+   * GET /api/finance/cashflow-feed
+   */
+  getCashflowFeed: async (params?: CashflowFeedQueryParams): Promise<PaginatedCashflowFeed> => {
+    const response = await apiClient.get('/finance/cashflow-feed', { params });
+    return response.data as PaginatedCashflowFeed;
+  },
+
+  /**
+   * Hóa đơn còn nợ (outstanding > 0, status không PAID/CANCELLED) — tab "Tiền nợ".
+   * GET /api/properties/{propertyId}/invoices?filter[has_outstanding]=1
+   */
+  getOutstandingInvoices: async (
+    propertyId: string,
+    params?: { page?: number; per_page?: number; sort?: string },
+  ): Promise<PaginatedOutstandingInvoices> => {
+    const response = await apiClient.get(`/properties/${propertyId}/invoices`, {
+      params: {
+        ...params,
+        'filter[has_outstanding]': 1,
+        sort: params?.sort ?? '-due_date',
+      },
+    });
+    return response.data as PaginatedOutstandingInvoices;
   },
 };

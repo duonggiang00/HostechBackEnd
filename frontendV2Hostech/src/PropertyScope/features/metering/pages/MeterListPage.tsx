@@ -23,7 +23,8 @@ export default function MeterListPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
   const hasRole = useAuthStore((state) => state.hasRole);
-  const isManager = hasRole(['Manager', 'Owner']);
+  /** Duyệt chốt số hàng loạt — không dành cho Staff */
+  const canBulkApproveReadings = hasRole(['Admin', 'Owner', 'Manager']);
 
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,7 +93,7 @@ export default function MeterListPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Theo dõi chỉ số theo từng phòng trong tòa nhà</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {isManager && pendingCount > 0 && (
+          {canBulkApproveReadings && pendingCount > 0 && (
             <button
               onClick={() => setShowBulkApprove(true)}
               className="relative inline-flex items-center gap-2 px-5 py-2.5 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-[8px] text-sm font-semibold hover:bg-amber-100 dark:hover:bg-amber-500/20 transition-all shadow-sm active:scale-95"

@@ -72,67 +72,70 @@ export default function PropertyForm() {
   if (isEdit && isFetching) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
       </div>
     );
   }
 
+  const fieldBase =
+    'w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-white outline-none transition-all placeholder:text-slate-600 focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/20';
+  const labelCls = 'text-sm font-bold text-slate-300 ml-1';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-20">
+    <div className="mx-auto max-w-4xl space-y-8 pb-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <PageBackButton className="rounded-xl px-2 py-2" />
+          <PageBackButton className="rounded-xl border border-white/10 bg-white/5 px-2 py-2 text-slate-300 hover:bg-white/10" />
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
-              {isEdit ? 'Edit Property' : 'Register New Property'}
+            <h1 className="text-3xl font-bold tracking-tight text-white">
+              {isEdit ? 'Chỉnh sửa cơ sở' : 'Đăng ký cơ sở mới'}
             </h1>
-            <p className="text-slate-500 mt-1">
-              {isEdit ? 'Update details for your asset.' : 'Add a new asset to your portfolio.'}
+            <p className="mt-1 text-slate-500">
+              {isEdit ? 'Cập nhật thông tin tài sản.' : 'Thêm tài sản mới vào danh mục của bạn.'}
             </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-8 md:grid-cols-3">
         {/* Main Info */}
-        <div className="md:col-span-2 space-y-6">
-          <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
-              <Building2 className="w-5 h-5 text-indigo-500" />
-              <h2 className="font-bold text-slate-800">Basic Information</h2>
+        <div className="space-y-6 md:col-span-2">
+          <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-2">
+              <Building2 className="h-5 w-5 text-emerald-400" />
+              <h2 className="font-bold text-white">Thông tin cơ bản</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Property Name</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Building2 className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <label className={labelCls}>Tên cơ sở</label>
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Building2 className="h-4 w-4 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
                   </div>
                   <input
                     required
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
+                    className={`${fieldBase} pl-11`}
                     placeholder="Grand Plaza"
                   />
                 </div>
               </div>
 
-
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Property Code</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Hash className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <label className={labelCls}>Mã cơ sở</label>
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Hash className="h-4 w-4 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
                   </div>
                   <input
                     required
                     type="text"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
+                    className={`${fieldBase} pl-11`}
                     placeholder="GP-001"
                   />
                 </div>
@@ -140,68 +143,68 @@ export default function PropertyForm() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">Address</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <MapPin className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+              <label className={labelCls}>Địa chỉ</label>
+              <div className="group relative">
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                  <MapPin className="h-4 w-4 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
                 </div>
                 <input
                   required
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
+                  className={`${fieldBase} pl-11`}
                   placeholder="123 Harmony St, Central District"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Total area (m²)</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Ruler className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <label className={labelCls}>Tổng diện tích (m²)</label>
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Ruler className="h-4 w-4 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
                   </div>
                   <input
                     type="number"
                     value={formData.area || 0}
                     onChange={(e) => setFormData({ ...formData, area: Number(e.target.value) })}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
+                    className={`${fieldBase} pl-11`}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Shared area (m²)</label>
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Users className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <label className={labelCls}>Diện tích lối đi chung (m²)</label>
+                <div className="group relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Users className="h-4 w-4 text-slate-500 transition-colors group-focus-within:text-emerald-400" />
                   </div>
                   <input
                     type="number"
                     value={formData.shared_area || 0}
                     onChange={(e) => setFormData({ ...formData, shared_area: Number(e.target.value) })}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all font-medium"
+                    className={`${fieldBase} pl-11`}
                   />
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-50">
-              <Settings className="w-5 h-5 text-indigo-500" />
-              <h2 className="font-bold text-slate-800">Cài đặt vận hành</h2>
+          <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8">
+            <div className="flex items-center gap-3 border-b border-white/10 pb-2">
+              <Settings className="h-5 w-5 text-emerald-400" />
+              <h2 className="font-bold text-white">Cài đặt vận hành</h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2 col-span-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Chu kỳ thanh toán mặc định</label>
-                <select 
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+              <div className="col-span-2 space-y-2">
+                <label className={labelCls}>Chu kỳ thanh toán mặc định</label>
+                <select
                   value={formData.default_billing_cycle}
                   onChange={(e) => setFormData({ ...formData, default_billing_cycle: e.target.value as any })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none font-medium appearance-none"
+                  className={`${fieldBase} appearance-none`}
                 >
                   <option value="monthly">Hàng tháng</option>
                   <option value="quarterly">Hàng quý</option>
@@ -210,49 +213,50 @@ export default function PropertyForm() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Ngày đến hạn (trong tháng)</label>
+                <label className={labelCls}>Ngày đến hạn (trong tháng)</label>
                 <input
                   type="number"
-                  min="1" max="31"
+                  min="1"
+                  max="31"
                   value={formData.default_due_day}
                   onChange={(e) => setFormData({ ...formData, default_due_day: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none font-medium"
+                  className={fieldBase}
                 />
               </div>
 
-               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 ml-1">Ngày chốt dữ liệu</label>
+              <div className="space-y-2">
+                <label className={labelCls}>Ngày chốt dữ liệu</label>
                 <input
                   type="number"
-                   min="1" max="31"
+                  min="1"
+                  max="31"
                   value={formData.default_cutoff_day}
                   onChange={(e) => setFormData({ ...formData, default_cutoff_day: Number(e.target.value) })}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none font-medium"
+                  className={fieldBase}
                 />
               </div>
             </div>
           </section>
 
-          {/* Default Services Section */}
-          <section className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm space-y-6">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-50">
+          <section className="space-y-6 rounded-3xl border border-white/10 bg-white/5 p-8">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
               <div className="flex items-center gap-3">
-                <PlusCircle className="w-5 h-5 text-indigo-500" />
-                <h2 className="font-bold text-slate-800">Dịch vụ mặc định của tòa nhà</h2>
+                <PlusCircle className="h-5 w-5 text-emerald-400" />
+                <h2 className="font-bold text-white">Dịch vụ mặc định của tòa nhà</h2>
               </div>
-              <span className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg font-bold uppercase tracking-wider">
+              <span className="rounded-lg bg-emerald-500/15 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                 Kế thừa tự động
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {servicesList.length === 0 && (
-                <div className="col-span-full py-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                  <p className="text-slate-400 text-sm font-medium">Chưa có dịch vụ nào trong tổ chức.</p>
-                  <button 
+                <div className="col-span-full rounded-2xl border border-dashed border-white/15 py-8 text-center">
+                  <p className="text-sm font-medium text-slate-500">Chưa có dịch vụ nào trong tổ chức.</p>
+                  <button
                     type="button"
                     onClick={() => navigate('/property-scope/services/create')}
-                    className="mt-2 text-indigo-600 text-sm font-bold hover:underline"
+                    className="mt-2 text-sm font-bold text-emerald-400 hover:underline"
                   >
                     + Tạo dịch vụ chung
                   </button>
@@ -261,87 +265,86 @@ export default function PropertyForm() {
               {servicesList.map((service: any) => {
                 const isSelected = formData.default_services?.includes(service.id);
                 return (
-                  <div 
+                  <div
                     key={service.id}
                     onClick={() => {
                       const current = formData.default_services || [];
-                      const next = isSelected 
-                        ? current.filter(sid => sid !== service.id)
-                        : [...current, service.id];
+                      const next = isSelected ? current.filter((sid) => sid !== service.id) : [...current, service.id];
                       setFormData({ ...formData, default_services: next });
                     }}
-                    className={`group relative p-4 rounded-2xl border-2 transition-all cursor-pointer select-none ${
-                      isSelected 
-                        ? 'border-indigo-600 bg-indigo-50/30' 
-                        : 'border-slate-100 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    className={`group relative cursor-pointer select-none rounded-2xl border-2 p-4 transition-all ${
+                      isSelected
+                        ? 'border-emerald-500/50 bg-emerald-500/10'
+                        : 'border-white/10 bg-white/[0.03] hover:border-white/20'
                     }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-xl border transition-colors ${
-                        isSelected ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-50 border-slate-100'
-                      }`}>
-                        <CheckCircle2 className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-300'}`} />
+                      <div
+                        className={`rounded-xl border p-2 transition-colors ${
+                          isSelected ? 'border-emerald-500 bg-emerald-500' : 'border-white/10 bg-white/5'
+                        }`}
+                      >
+                        <CheckCircle2 className={`h-4 w-4 ${isSelected ? 'text-white' : 'text-slate-600'}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className={`text-sm font-bold truncate ${isSelected ? 'text-indigo-900' : 'text-slate-700'}`}>
+                        <p className={`truncate text-sm font-bold ${isSelected ? 'text-emerald-200' : 'text-white'}`}>
                           {service.name}
                         </p>
-                        <p className="text-xs text-slate-400 font-medium">{service.unit}</p>
+                        <p className="text-xs font-medium text-slate-500">{service.unit}</p>
                       </div>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-2 right-2 flex gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      <div className="absolute right-2 top-2 flex gap-1">
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-            
-            <p className="text-xs text-slate-400 bg-slate-50 p-3 rounded-xl border border-slate-100">
+
+            <p className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs text-slate-500">
               Lưu ý: Dịch vụ được chọn sẽ tự động áp dụng cho tất cả phòng thuộc tòa nhà này, trừ khi được ghi đè thủ công.
             </p>
           </section>
         </div>
 
-        {/* Sidebar Settings */}
         <div className="space-y-6">
-           <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-4">
-            <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-indigo-500" />
+          <section className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h3 className="flex items-center gap-2 font-bold text-white">
+              <FileText className="h-4 w-4 text-emerald-400" />
               Ghi chú
             </h3>
             <textarea
               value={formData.note || ''}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-              className="w-full h-32 p-4 bg-slate-50 border border-slate-100 rounded-2xl focus:bg-white outline-none text-sm resize-none font-medium"
+              className={`${fieldBase} h-32 resize-none text-sm`}
               placeholder="Ghi chú nội bộ cho ban quản lý..."
             />
           </section>
 
-          <section className="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-lg space-y-6">
-             <div className="space-y-1">
-                <h3 className="text-white font-bold flex items-center gap-2">
-                  <CreditCard className="w-4 h-4 text-indigo-400" />
-                  Tài khoản ngân hàng
-                </h3>
-                <p className="text-slate-500 text-xs">Dùng cho hóa đơn tự động</p>
-             </div>
-             <p className="text-slate-400 text-sm ">Tính năng cấu hình ngân hàng đang được phát triển.</p>
+          <section className="space-y-6 rounded-3xl border border-white/10 bg-white/[0.07] p-6 ring-1 ring-emerald-500/10">
+            <div className="space-y-1">
+              <h3 className="flex items-center gap-2 font-bold text-white">
+                <CreditCard className="h-4 w-4 text-emerald-400" />
+                Tài khoản ngân hàng
+              </h3>
+              <p className="text-xs text-slate-500">Dùng cho hóa đơn tự động</p>
+            </div>
+            <p className="text-sm text-slate-500">Tính năng cấu hình ngân hàng đang được phát triển.</p>
           </section>
 
           <div className="space-y-3">
             <button
               disabled={isSaving}
               type="submit"
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-lg font-black text-white shadow-xl shadow-emerald-500/25 transition-all hover:bg-emerald-400 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
             >
               {isSaving ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin" />
               ) : (
                 <>
-                  <Save className="w-6 h-6" />
+                  <Save className="h-6 w-6" />
                   {isEdit ? 'Cập nhật tòa nhà' : 'Lưu tòa nhà'}
                 </>
               )}
@@ -349,7 +352,7 @@ export default function PropertyForm() {
             <button
               type="button"
               onClick={() => navigate('/org/properties')}
-              className="w-full py-4 text-slate-500 font-bold hover:text-slate-700 transition-colors"
+              className="w-full py-4 font-bold text-slate-500 transition-colors hover:text-slate-300"
             >
               Hủy bỏ
             </button>

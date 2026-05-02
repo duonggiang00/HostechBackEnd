@@ -257,8 +257,11 @@ export default function RequestListPage() {
   };
 
   const handleViewContract = (contractId: string, opts?: { openTerminate?: boolean }) => {
-    const qs = opts?.openTerminate ? '?openTerminate=1' : '';
-    navigate(`/properties/${propertyId}/contracts/${contractId}${qs}`);
+    if (opts?.openTerminate) {
+      navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`);
+      return;
+    }
+    navigate(`/properties/${propertyId}/contracts/${contractId}`);
   };
 
   return (

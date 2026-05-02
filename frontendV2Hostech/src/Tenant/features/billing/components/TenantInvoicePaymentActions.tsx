@@ -29,7 +29,7 @@ export function TenantInvoicePaymentActions({
   sectionTitle = 'Chọn hình thức thanh toán',
   vnpayLabel = 'Thanh toán VNPay',
   vnpayPendingLabel = 'Đang chuyển sang VNPay',
-  manualLabel = 'Đã trả tiền mặt / chuyển khoản',
+  manualLabel = 'Trả tiền mặt / chuyển khoản',
   isVnpayPending,
   onVnpay,
   onManualProof,

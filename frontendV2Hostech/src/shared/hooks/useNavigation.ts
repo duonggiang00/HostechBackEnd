@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import type { User } from '@/shared/features/auth/types';
 import { 
   ORG_NAVIGATION, 
   PROPERTY_NAVIGATION, 
@@ -15,8 +16,20 @@ import type { PropertyDashboardData } from '@/PropertyScope/features/dashboard/t
 
 import { usePendingPayments } from '@/shared/features/billing/hooks/usePaymentVerification';
 
+function matchesNavRoles(user: User | null | undefined, roles?: string[]): boolean {
+  if (!roles?.length) return true;
+  const userRoles =
+    user?.roles && user.roles.length > 0
+      ? user.roles
+      : user?.role
+        ? [user.role]
+        : [];
+  return roles.some((r) => userRoles.includes(r));
+}
+
 export function useNavigation() {
   const { user } = useAuthStore();
+  const hasRole = useAuthStore((s) => s.hasRole);
   const { propertyId } = useParams<{ propertyId: string }>();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -70,15 +83,12 @@ export function useNavigation() {
   // 3. Hàm xử lý biến đổi Navigation Items (Role filtering & ID injection & Badges)
   const transformNavigation = (sections: NavigationSection[]): NavigationSection[] => {
     return sections
-      .filter(
-        (section) =>
-          !section.roles || (user?.role ? section.roles.includes(user.role) : false),
-      )
+      .filter((section) => matchesNavRoles(user, section.roles))
       .map((section) => ({
         ...section,
         path: section.path?.replace(':propertyId', propertyId ?? ''),
         items: section.items
-          .filter((item) => !item.roles || (user?.role && item.roles.includes(user.role)))
+          .filter((item) => matchesNavRoles(user, item.roles))
           .map((item) => ({
             ...item,
             path: item.path.replace(':propertyId', propertyId ?? ''),
@@ -101,7 +111,7 @@ export function useNavigation() {
     scopeLabel = 'Phạm vi tổ chức';
   } else if (isPropertyScope) {
     let propertySections = transformNavigation(PROPERTY_NAVIGATION);
-    if (user?.role === 'Staff') {
+    if (hasRole(['Staff'])) {
       const staffSectionOrder = [
         'staff_today',
         'service_metering',

@@ -4,7 +4,7 @@ import type { RouteObject } from 'react-router-dom';
 const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard'));
 const InvoicesPage = lazy(() => import('./pages/InvoicesPage'));
 
-/** Dùng trong OrgFinanceConsoleLayout (shell tối, không qua OrgScopeLayout). */
+/** /org/dashboard, /org/finance — cùng OrgScopeLayout (Org Console). */
 export const orgFinanceConsoleRoutes: RouteObject[] = [
   {
     path: 'dashboard',

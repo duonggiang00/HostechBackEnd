@@ -25,23 +25,7 @@ class HandoverStoreRequest extends FormRequest
         return [
             'contract_id' => ['required', 'uuid', 'exists:contracts,id'],
             'room_id' => ['required', 'uuid', 'exists:rooms,id'],
-            'type' => ['required', 'string', 'in:OUT'],
             'note' => ['nullable', 'string', 'max:1000'],
         ];
-    }
-
-    protected function prepareForValidation(): void
-    {
-        $type = strtoupper((string) $this->input('type', ''));
-        $normalized = match ($type) {
-            'IN' => 'OUT',
-            'CHECKIN' => 'OUT',
-            'CHECKOUT' => 'OUT',
-            default => $type,
-        };
-
-        if ($normalized !== '') {
-            $this->merge(['type' => $normalized]);
-        }
     }
 }

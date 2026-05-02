@@ -21,9 +21,31 @@ export interface DashboardData {
       occupancy_rate: number;
     };
     staff?: {
-      total_managers: number;
-      total_staff: number;
-      active_now: number;
+      /** Backend owner dashboard */
+      managers?: number;
+      staff?: number;
+      total?: number;
+      /** Legacy / admin-style */
+      total_managers?: number;
+      total_staff?: number;
+      active_now?: number;
+    };
+    invoices?: {
+      outstanding_debt: number;
+      draft_pipeline_total: number;
+      /** Tổng paid_amount các hóa đơn PAID có updated_at trong tháng hiện tại (tiền thu thực tế). */
+      revenue_this_month?: number;
+      recent_paid: Array<{
+        id: string;
+        paid_amount: number;
+        updated_at?: string | null;
+        counterparty_label: string;
+      }>;
+      revenue_last_6_months: Array<{
+        month_key: string;
+        month_short: string;
+        revenue: number;
+      }>;
     };
     contracts?: {
       total_active: number;

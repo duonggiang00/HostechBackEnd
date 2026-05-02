@@ -13,6 +13,8 @@ interface TenantLayoutProps {
 }
 
 const getPageTitle = (pathname: string) => {
+  if (pathname.includes('/transfer-requests')) return 'Yêu cầu chuyển phòng';
+  if (pathname.includes('/billing/transactions')) return 'Giao dịch & biên lai';
   if (pathname.includes('/contracts')) return 'Hợp đồng thuê';
   if (pathname.includes('/billing')) return 'Hóa đơn và thanh toán';
   if (pathname.includes('/requests')) return 'Yêu cầu hỗ trợ';
@@ -23,6 +25,10 @@ const getPageTitle = (pathname: string) => {
 };
 
 const getPageDescription = (pathname: string) => {
+  if (pathname.includes('/transfer-requests'))
+    return 'Theo dõi các đề nghị chuyển sang phòng khác trong cùng tòa nhà.';
+  if (pathname.includes('/billing/transactions'))
+    return 'Xem chứng từ đã gửi và biên lai sau khi ban quản lý xác nhận thanh toán.';
   if (pathname.includes('/contracts')) return 'Đọc nhanh điều khoản chính và ký điện tử khi sẵn sàng.';
   if (pathname.includes('/billing')) return 'Xem các khoản đến hạn và đi thẳng tới bước thanh toán.';
   if (pathname.includes('/requests')) return 'Gửi yêu cầu mới hoặc kiểm tra tiến độ xử lý.';
@@ -49,6 +55,7 @@ export default function TenantLayout({ children }: TenantLayoutProps) {
           onClose={() => setIsMobileMenuOpen(false)}
           menuSections={menuSections}
           scopeLabel={scopeLabel}
+          profilePath="/app/profile"
         />
 
         <div className="flex-1 flex flex-col min-w-0">

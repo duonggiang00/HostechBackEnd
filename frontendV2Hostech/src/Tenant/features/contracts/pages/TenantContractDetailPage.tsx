@@ -53,6 +53,19 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString('vi-VN');
 };
 
+const depositStatusLabel = (raw: unknown): string => {
+  const v = typeof raw === 'string' ? raw : (raw as { value?: string } | null)?.value ?? '';
+  const labels: Record<string, string> = {
+    UNPAID: 'Chưa đóng cọc',
+    HELD: 'Đang giữ cọc',
+    REFUND_PENDING: 'Chờ hoàn cọc',
+    REFUNDED: 'Đã hoàn trả cọc',
+    PARTIAL_REFUND: 'Hoàn cọc một phần',
+    FORFEITED: 'Cọc bị khấu trừ',
+  };
+  return labels[v] || v || '—';
+};
+
 export default function TenantContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -102,6 +115,7 @@ export default function TenantContractDetailPage() {
     () => (contract ? contractInitialInvoiceAsInvoice(contract) : null),
     [contract],
   );
+  const memberUserId = (m: ContractMember) => (m.user_id ?? m.user?.id ?? null);
 
   const handlePrintContract = async () => {
     if (!contract || !contract.id) return;
@@ -111,7 +125,8 @@ export default function TenantContractDetailPage() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const fileName = `Hop-dong-${contract?.room?.code || contract.id.substring(0,8)}.docx`;
+      const ext = String(contract?.document_type || 'DOCX').replace(/^\./, '').toLowerCase() || 'docx';
+      const fileName = `Hop-dong-${contract?.room?.code || contract.id.substring(0, 8)}.${ext}`;
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
@@ -153,14 +168,21 @@ export default function TenantContractDetailPage() {
 
   const isApprovedPrimary = !!(
     user?.id &&
-    contract.members?.some((m) => m.user_id === user.id && m.is_primary && String(m.status).toUpperCase() === 'APPROVED')
+    contract.members?.some(
+      (m) =>
+        String(memberUserId(m) ?? '') === String(user.id) &&
+        m.is_primary &&
+        String(m.status).toUpperCase() === 'APPROVED',
+    )
   );
   const currentUserMember = contract.members?.find(
     (m) =>
-      m.user_id === user?.id &&
+      String(memberUserId(m) ?? '') === String(user?.id ?? '') &&
       !m.left_at &&
       String(m.status).toUpperCase() === 'PENDING',
-  ) ?? contract.members?.find((m) => m.user_id === user?.id && !m.left_at);
+  ) ?? contract.members?.find(
+    (m) => String(memberUserId(m) ?? '') === String(user?.id ?? '') && !m.left_at,
+  );
   const currentMemberStatus = String(currentUserMember?.status || '').toUpperCase();
   const tenantAlreadySigned = Boolean(contract.meta?.tenant_signed_at || currentUserMember?.signed_at);
   const canCurrentTenantSign =
@@ -200,7 +222,8 @@ export default function TenantContractDetailPage() {
     signContract.mutate({ id: contract.id, signatureDataUrl: base64Url }, {
       onSuccess: () => {
         setIsSignatureModalOpen(false);
-        toast.success('Đã ký hợp đồng thành công. Hệ thống đang tiến hành cập nhật...');
+        toast.success('Đã ký hợp đồng thành công. Đang mở bản mềm đã ký...');
+        setIsPreviewModalOpen(true);
       },
       onError: (error: any) => {
         toast.error(error?.response?.data?.message || 'Có lỗi khi thực hiện thao tác.');
@@ -333,6 +356,26 @@ export default function TenantContractDetailPage() {
                contract.status === 'PENDING_TERMINATION' ? 'đã báo trả phòng, chờ thanh lý' :
                contract.status === 'ACTIVE' ? 'đang có hiệu lực' : 'đã kết thúc'}
             </div>
+
+            {String(contract.status).toUpperCase() === 'ENDED' &&
+              (contract.deposit_amount ?? 0) > 0 && (
+              <div className="mt-6 max-w-xl rounded-2xl border border-white/15 bg-white/5 p-4 text-left">
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Tiền cọc sau khi kết thúc hợp đồng</p>
+                <p className="mt-2 text-sm font-bold text-slate-200">
+                  Trạng thái: <span className="text-indigo-200">{depositStatusLabel(contract.deposit_status)}</span>
+                </p>
+                {(contract.refunded_amount ?? 0) > 0 && (
+                  <p className="mt-1 text-sm text-slate-300">
+                    Số tiền hoàn dự kiến / đã lập phiếu:{' '}
+                    <span className="font-mono font-bold text-white">{formatCurrencyVND(contract.refunded_amount ?? 0)}</span>
+                  </p>
+                )}
+                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                  Hiện chưa có nút xác nhận “đã nhận tiền hoàn cọc” trên ứng dụng. Khi ban quản lý chuyển khoản xong, họ cập nhật trạng thái cọc;
+                  bạn có thể theo dõi mục trên hoặc liên hệ trực tiếp BQL.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -393,8 +436,8 @@ export default function TenantContractDetailPage() {
                   sectionTitle="Chọn hình thức thanh toán hóa đơn đầu kỳ"
                   vnpayLabel="Thanh toán VNPay"
                   isVnpayPending={createVnpayPayment.isPending}
-                  vnpayDisabled={initialInvoiceOutstanding <= 0}
-                  manualDisabled={initialInvoiceOutstanding <= 0 || !initialInvoiceStub}
+                  vnpayDisabled={!!contract.initial_invoice && initialInvoiceOutstanding <= 0}
+                  manualDisabled={!!contract.initial_invoice && (initialInvoiceOutstanding <= 0 || !initialInvoiceStub)}
                   onVnpay={handlePayInitialInvoice}
                   onManualProof={() => setInitialProofModalOpen(true)}
                 />

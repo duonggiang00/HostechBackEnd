@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Save, Plus, Trash2, Zap, Droplets } from 'lucide-react';
 import { useServiceDetail, useUpdateService, useCreateService } from '../hooks/useServices';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -52,7 +53,9 @@ const PRESETS = {
 export default function ServiceFormPage() {
   const navigate = useNavigate();
   const { propertyId, serviceId } = useParams<{ propertyId: string; serviceId: string }>();
-  
+  const { hasRole } = useAuth();
+  const canManageServices = hasRole(['Owner', 'Manager', 'Admin']);
+
   const isEditMode = !!serviceId;
 
   const { data: service, isLoading } = useServiceDetail(serviceId || '');
@@ -75,6 +78,13 @@ export default function ServiceFormPage() {
       tiered_rates: [],
     },
   });
+
+  useEffect(() => {
+    if (!canManageServices && propertyId) {
+      toast.error('Bạn chỉ có quyền xem bảng giá dịch vụ, không thể thêm hoặc chỉnh sửa.');
+      navigate(`/properties/${propertyId}/services`, { replace: true });
+    }
+  }, [canManageServices, propertyId, navigate]);
 
   useEffect(() => {
     if (isEditMode && service) {
@@ -118,6 +128,14 @@ export default function ServiceFormPage() {
       });
     }
   }, [watchedTieredRates, setValue]);
+
+  if (!canManageServices) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-8 h-8 border-4 border-[#1E3A8A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const loadPreset = (type: 'electric' | 'water') => {
     if (type === 'electric') {

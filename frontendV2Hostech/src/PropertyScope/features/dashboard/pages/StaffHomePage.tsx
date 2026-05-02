@@ -6,9 +6,9 @@ import { usePropertyReadings } from '@/PropertyScope/features/metering/hooks/use
 
 export default function StaffHomePage() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const { user } = useAuthStore();
+  const hasRole = useAuthStore((s) => s.hasRole);
 
-  if (user?.role !== 'Staff') {
+  if (!hasRole(['Staff'])) {
     return <Navigate to={`/properties/${propertyId}/dashboard`} replace />;
   }
 
@@ -77,9 +77,9 @@ export default function StaffHomePage() {
             </div>
             <ClipboardList className="w-5 h-5 text-slate-300" />
           </div>
-          <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Bàn giao</p>
+          <p className="text-xs font-black uppercase text-slate-400 tracking-widest">Biên bản</p>
           <p className="text-sm font-bold text-slate-700 dark:text-slate-200 mt-1 flex items-center gap-1">
-            Giấy tờ & bàn giao <ArrowRight className="w-4 h-4" />
+            Biên bản bàn giao phòng <ArrowRight className="w-4 h-4" />
           </p>
         </Link>
       </div>

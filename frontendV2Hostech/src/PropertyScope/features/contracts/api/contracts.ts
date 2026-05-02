@@ -29,7 +29,7 @@ export const contractsApi = {
 
     const status_counts = response.data?.status_counts ?? {
       total: 0, DRAFT: 0, PENDING_SIGNATURE: 0, PENDING_PAYMENT: 0,
-      ACTIVE: 0, ENDED: 0, CANCELLED: 0, expiring: 0,
+      ACTIVE: 0, ENDED: 0, CANCELLED: 0, expiring: 0, invoice_debt: 0,
     };
 
     return { data, status_counts };

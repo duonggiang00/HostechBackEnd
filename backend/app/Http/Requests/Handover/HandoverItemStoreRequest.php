@@ -25,7 +25,7 @@ class HandoverItemStoreRequest extends FormRequest
         return [
             'room_asset_id' => ['nullable', 'uuid', 'exists:room_assets,id'],
             'name' => ['required', 'string', 'max:255'],
-            'status' => ['required', 'string', 'in:OK,MISSING,DAMAGED'],
+            'condition' => ['required', 'string', 'in:OK,MISSING,DAMAGED'],
             'note' => ['nullable', 'string', 'max:1000'],
             'sort_order' => ['nullable', 'integer'],
         ];

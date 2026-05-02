@@ -6,11 +6,13 @@ use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Services\System\UserInvitationService;
+use App\Support\OrgUserPhone;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\CreatesNewUsers;
 
 class CreateNewUser implements CreatesNewUsers
@@ -98,6 +100,17 @@ class CreateNewUser implements CreatesNewUsers
 
                 return $snapshotValue;
             };
+
+            $phoneForCheck = $fill('phone', $memberSnapshot?->phone);
+            $conflict = OrgUserPhone::findConflictingUserInOrg((string) $orgId, $phoneForCheck, $invitation->email);
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'phone' => sprintf(
+                        'Số điện thoại đã được dùng cho tài khoản khác trong tổ chức (%s). Vui lòng đăng nhập bằng email đó hoặc chỉnh lại số điện thoại.',
+                        $conflict->email
+                    ),
+                ]);
+            }
 
             // 3. Create the User
             $user = User::create([

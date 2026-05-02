@@ -78,6 +78,14 @@ class MeterReading extends Model implements HasMedia
         return $query->whereIn('status', self::FINALIZED_STATUSES);
     }
 
+    /**
+     * SUBMITTED + APPROVED + LOCKED — mốc chuỗi chỉ số (kể cả chờ duyệt) cho kỳ tiếp theo và tiêu thụ.
+     */
+    public function scopeSealedOrSubmitted(Builder $query): Builder
+    {
+        return $query->whereIn('status', ['SUBMITTED', 'APPROVED', 'LOCKED']);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('reading_proofs')

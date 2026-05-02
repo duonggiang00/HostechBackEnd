@@ -140,6 +140,7 @@ export interface VnpayVerifyResponse {
 
 export interface PaymentReceipt {
   id: string;
+  kind?: string;
   url: string;
   path: string;
 }
@@ -153,7 +154,7 @@ export interface PaymentAllocationItem {
 }
 
 export type PaymentStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'QR' | 'WALLET';
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'VNPAY' | 'TRANSFER' | 'QR' | 'WALLET';
 
 export interface Payment {
   id: string;
@@ -162,11 +163,13 @@ export interface Payment {
   payer_user_id: string | null;
   status: PaymentStatus;
   method: PaymentMethod;
+  method_label?: string;
   amount: number;
   reference: string | null;
   note: string | null;
   meta: Record<string, any> | null;
   receipt?: PaymentReceipt | null;
+  proof_receipt?: PaymentReceipt | null;
   allocations?: PaymentAllocationItem[];
   payer?: { id: string; name: string; email?: string } | null;
   property?: { id: string; name: string } | null;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Zap, Calendar, AlertCircle, Loader2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useGenerateMonthly } from '../hooks/usePropertyInvoices';
 
@@ -6,6 +6,8 @@ interface GenerateMonthlyModalProps {
   propertyId: string;
   isOpen: boolean;
   onClose: () => void;
+  /** yyyy-MM-dd — ngày đầu tháng kỳ trên checklist (đồng bộ với duyệt chốt số) */
+  billingMonthStart?: string;
 }
 
 interface GenerateResult {
@@ -19,9 +21,16 @@ export function GenerateMonthlyModal({
   propertyId,
   isOpen,
   onClose,
+  billingMonthStart,
 }: GenerateMonthlyModalProps) {
   const today = new Date().toISOString().slice(0, 10);
-  const [billingDate, setBillingDate] = useState(today);
+  const [billingDate, setBillingDate] = useState(billingMonthStart?.trim() || today);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const anchor = billingMonthStart?.trim();
+    if (anchor) setBillingDate(anchor);
+  }, [isOpen, billingMonthStart]);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);
 

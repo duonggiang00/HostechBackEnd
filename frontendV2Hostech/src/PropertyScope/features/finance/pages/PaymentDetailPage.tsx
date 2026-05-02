@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { usePayment } from '../hooks/useFinance';
+import { paymentMethodLabelVi } from '@/shared/utils/paymentMethodLabelVi';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
@@ -73,7 +74,10 @@ export default function PaymentDetailPage() {
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <InfoCard label="Số tiền" value={fmtVND(payment.amount)} />
-          <InfoCard label="Phương thức" value={payment.method} />
+          <InfoCard
+            label="Phương thức"
+            value={payment.method_label ?? paymentMethodLabelVi(payment.method)}
+          />
           <InfoCard label="Ngày nhận" value={fmtDate(payment.received_at)} />
           <InfoCard label="Tham chiếu" value={payment.reference || '—'} />
         </div>
@@ -103,9 +107,13 @@ export default function PaymentDetailPage() {
                   <tr key={alloc.id} className="border-b border-slate-50 dark:border-slate-700/50">
                     <td className="py-2 font-mono text-xs">#{alloc.invoice_id.slice(0, 8).toUpperCase()}</td>
                     <td className="py-2 text-slate-600 dark:text-slate-300">
-                      {alloc.invoice ? `${alloc.invoice.period_start} → ${alloc.invoice.period_end}` : '—'}
+                      {alloc.invoice?.period_start && alloc.invoice?.period_end
+                        ? `${alloc.invoice.period_start} → ${alloc.invoice.period_end}`
+                        : '—'}
                     </td>
-                    <td className="py-2 text-slate-600 dark:text-slate-300">{alloc.invoice?.status ?? '—'}</td>
+                    <td className="py-2 text-slate-600 dark:text-slate-300">
+                      {alloc.invoice?.status ?? alloc.invoice_status ?? '—'}
+                    </td>
                     <td className="py-2 text-right font-bold">{fmtVND(alloc.amount)}</td>
                   </tr>
                 ))}

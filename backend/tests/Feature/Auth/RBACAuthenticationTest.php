@@ -4,6 +4,9 @@ namespace Tests\Feature\Auth;
 
 use App\Models\Org\Org;
 use App\Models\Org\User;
+use App\Models\Property\Floor;
+use App\Models\Property\Property;
+use App\Models\Property\Room;
 use App\Models\System\UserInvitation;
 use Database\Seeders\RBACSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -80,11 +83,24 @@ class RBACAuthenticationTest extends TestCase
         $user = User::factory()->create();
         $user->assignRole('Staff');
 
-        // Staff should have RU (read, update) for Room
+        // RBACSeeder gán đầy đủ permission trong DB; giới hạn Staff chỉ xem phòng được áp trong RoomPolicy.
         $this->assertTrue($user->hasPermissionTo('view Room'));
-        $this->assertTrue($user->hasPermissionTo('update Room'));
-        $this->assertFalse($user->hasPermissionTo('create Room'));
-        $this->assertFalse($user->hasPermissionTo('delete Room'));
+
+        $org = Org::factory()->create();
+        $user->forceFill(['org_id' => $org->id])->save();
+        $property = Property::factory()->create(['org_id' => $org->id]);
+        $property->managers()->syncWithoutDetaching([(string) $user->id]);
+        $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+        $room = Room::factory()->create([
+            'org_id' => $org->id,
+            'property_id' => $property->id,
+            'floor_id' => $floor->id,
+        ]);
+
+        $this->assertTrue($user->can('view', $room));
+        $this->assertFalse($user->can('create', Room::class));
+        $this->assertFalse($user->can('update', $room));
+        $this->assertFalse($user->can('delete', $room));
     }
 
     public function test_manager_user_has_crud_permissions(): void

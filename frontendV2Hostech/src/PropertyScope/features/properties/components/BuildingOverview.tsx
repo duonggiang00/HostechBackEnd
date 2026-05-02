@@ -70,13 +70,14 @@ export function BuildingOverview({
     const roomSequence = floor.rooms.length + 1;
     const roomSuffix = roomSequence < 10 ? `0${roomSequence}` : `${roomSequence}`;
     const roomTempId = `temp-room-${Date.now()}`;
-    
+    const codePrefix = floorNumber === 0 ? 'G' : `${floorNumber}`;
+
     const template = templates.find(t => t.id === selectedTemplate);
-    
+
     const newRoom: BuildingRoom = {
       id: roomTempId,
       temp_id: roomTempId,
-      code: `${floorNumber}${roomSuffix}`, // E.g., 101, 102, 201...
+      code: `${codePrefix}${roomSuffix}`, // G01 | 101, 401…
       floor_id: floorId,
       status: 'available' as RoomStatus,
       area: template?.area || 25,
@@ -106,7 +107,8 @@ export function BuildingOverview({
     });
 
     if (roomToDelete && roomToDelete.status === 'occupied') {
-      alert(`Không thể xóa phòng "${roomToDelete.code}" vì đang có người ở (Occupied).`);
+      const label = roomToDelete.name?.trim() ? roomToDelete.name : roomToDelete.code;
+      alert(`Không thể xóa phòng "${label}" vì đang có người ở (Occupied).`);
       return;
     }
 
@@ -290,7 +292,7 @@ export function BuildingOverview({
                             onClick={() => onRoomSelect?.(room)}
                           >
                             <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover/room:opacity-100 transition-opacity rounded-lg pointer-events-none" />
-                            <span className="text-base font-bold leading-none z-10">{room.code}</span>
+                            <span className="text-base font-bold leading-none z-10">{room.name?.trim() ? room.name : room.code}</span>
                             <span className="text-[9px] mt-1 opacity-60 font-semibold uppercase tracking-tighter leading-none z-10">
                               {room.isDraft ? 'Draft' :
                                 room.status === 'occupied' ? 'Đã thuê' :

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Meter\TenantMeterController;
 use App\Http\Controllers\Api\Tenant\TenantBuildingOverviewController;
 use App\Http\Controllers\Api\Tenant\TenantPaymentController;
+use App\Http\Controllers\Api\Tenant\TenantRefundReceiptController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -22,5 +23,11 @@ Route::prefix('app')->group(function () {
         Route::get('/', [TenantPaymentController::class, 'index']);
         Route::post('submit-proof', [TenantPaymentController::class, 'submitProof'])
             ->middleware('throttle:payment-proof-submit');
+    });
+
+    // Biên lai hoàn cọc (chỉ phiếu đã có PDF)
+    Route::prefix('refund-receipts')->group(function () {
+        Route::get('/', [TenantRefundReceiptController::class, 'index']);
+        Route::get('{id}', [TenantRefundReceiptController::class, 'show']);
     });
 });

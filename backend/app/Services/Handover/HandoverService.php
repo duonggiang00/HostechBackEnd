@@ -2,21 +2,25 @@
 
 namespace App\Services\Handover;
 
+use App\Enums\ContractStatus;
+use App\Models\Contract\Contract;
+use App\Models\Contract\RefundReceipt;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
-use App\Models\Contract\Contract;
 use App\Models\Property\Room;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
-// For potential use or just clean
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class HandoverService
 {
+    /** Ghi chú mặc định khi lưu biên bản thanh lý (bước wizard) nếu client không gửi `note`. */
+    public const DEFAULT_TERMINATION_HANDOVER_NOTE = 'Biên bản bàn giao — thanh lý hợp đồng.';
+
     /**
      * Lấy danh sách Handover có phân trang & lọc
      */
@@ -25,11 +29,8 @@ class HandoverService
         return QueryBuilder::for(Handover::class)
             ->where('org_id', auth()->user()->org_id)
             ->allowedFilters([
-                AllowedFilter::exact('type'),
-                AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
-                // Lọc theo property_id thông qua quan hệ room (Handover không có cột property_id)
                 AllowedFilter::callback('property_id', function ($query, $value) {
                     $query->whereHas('room', fn ($q) => $q->where('property_id', $value));
                 }),
@@ -39,14 +40,14 @@ class HandoverService
                 'room.property',
                 'contract',
                 'contract.primaryMember',
-                'confirmedBy',
+                'createdBy',
             ])
             ->defaultSort('-created_at')
             ->paginate($perPage);
     }
 
     /**
-     * Lấy chi tiết Handover kèm các items, snapshots
+     * Lấy chi tiết Handover kèm các items, snapshots, và biên lai hoàn cọc mới nhất theo hợp đồng (nếu có).
      */
     public function getDetails(Handover $handover): Handover
     {
@@ -54,15 +55,25 @@ class HandoverService
             'items',
             'meterSnapshots.meter',
             'room',
-            'contract',
-            'confirmedBy',
+            'contract.members.user',
+            'createdBy',
         ]);
+
+        if ($handover->contract_id) {
+            $refund = RefundReceipt::query()
+                ->where('contract_id', $handover->contract_id)
+                ->with(['paidBy', 'contract.property', 'contract.room'])
+                ->orderByDesc('created_at')
+                ->first();
+
+            $handover->setAttribute('latest_refund_receipt', $refund);
+        }
 
         return $handover;
     }
 
     /**
-     * Tạo biên bản bàn giao nháp (DRAFT)
+     * Tạo biên bản bàn giao nháp (chỉnh được khi HĐ còn trong giai đoạn thanh lý)
      */
     public function createDraft(?string $actorOrgId, array $data): Handover
     {
@@ -90,23 +101,25 @@ class HandoverService
         }
 
         $data['org_id'] = $resolvedOrgId;
-        $data['status'] = 'DRAFT';
+        if (auth()->check() && empty($data['created_by_user_id'])) {
+            $data['created_by_user_id'] = auth()->id();
+        }
 
         return DB::transaction(function () use ($data) {
             $handover = Handover::create($data);
+            $handover->refresh();
+            $this->syncItemsFromRoomAssets($handover);
 
-            // Tương lai: Có thể auto clone danh sách từ room_assets vào handover_items ở đây
-
-            return $handover;
+            return $handover->fresh(['items']);
         });
     }
 
     /**
-     * Cập nhật biên bản (chỉ cho phép khi còn là DRAFT)
+     * Cập nhật biên bản (chỉ khi HĐ còn cho phép chỉnh biên bản)
      */
     public function updateDraft(Handover $handover, array $data): Handover
     {
-        $this->ensureIsDraft($handover);
+        $this->assertHandoverEditable($handover);
 
         $handover->update($data);
 
@@ -114,42 +127,187 @@ class HandoverService
     }
 
     /**
-     * Xóa biên bản nháp
+     * Xóa biên bản (chỉ khi HĐ còn cho phép chỉnh)
      */
     public function deleteDraft(Handover $handover): void
     {
-        $this->ensureIsDraft($handover);
+        $this->assertHandoverEditable($handover);
         $handover->delete();
     }
 
-    /**
-     * Chốt biên bản (CONFIRM). Khóa lại không cho sửa đổi.
-     */
-    public function confirm(Handover $handover, string $userId): Handover
+    public function assertHandoverEditable(Handover $handover): void
     {
-        $this->ensureIsDraft($handover);
-
-        DB::transaction(function () use ($handover, $userId) {
-            $handover->update([
-                'status' => 'CONFIRMED',
-                'confirmed_by_user_id' => $userId,
-                'confirmed_at' => now(),
-                'locked_at' => now(),
+        $handover->loadMissing('contract');
+        $contract = $handover->contract;
+        if (! $contract) {
+            throw ValidationException::withMessages([
+                'handover' => 'Không tìm thấy hợp đồng gắn với biên bản.',
             ]);
-        });
+        }
 
-        return $handover;
+        if (! in_array($contract->status, ContractStatus::allowHandoverEdit(), true)) {
+            throw ValidationException::withMessages([
+                'handover' => 'Không thể chỉnh sửa biên bản: hợp đồng không còn trong giai đoạn thanh lý.',
+            ]);
+        }
     }
 
     /**
-     * Kiểm tra trạng thái DRAFT
+     * Đồng bộ danh sách item từ tài sản phòng (khi chưa có item).
      */
-    private function ensureIsDraft(Handover $handover): void
+    public function syncItemsFromRoomAssets(Handover $handover): void
     {
-        if ($handover->status !== 'DRAFT' || $handover->locked_at !== null) {
-            throw ValidationException::withMessages([
-                'status' => 'Không thể chỉnh sửa biên bản đã xác nhận (CONFIRMED) hoặc đã khóa.',
+        if ($handover->items()->exists()) {
+            return;
+        }
+
+        $room = Room::query()->with('assets')->find($handover->room_id);
+        if (! $room) {
+            return;
+        }
+
+        foreach ($room->assets as $index => $asset) {
+            HandoverItem::create([
+                'org_id' => $handover->org_id,
+                'handover_id' => $handover->id,
+                'room_asset_id' => $asset->id,
+                'name' => $asset->name,
+                'condition' => 'OK',
+                'sort_order' => $index,
             ]);
+        }
+    }
+
+    /**
+     * Trạng thái biên bản thanh lý: đã lưu DB hoặc chỉ xem trước từ tài sản phòng (chưa INSERT handovers).
+     *
+     * @return array{persisted: bool, handover: ?Handover, items: array<int, array<string, mixed>>|Collection}
+     */
+    public function getTerminationHandoverState(Contract $contract): array
+    {
+        $contract->loadMissing('room.assets');
+
+        $handover = Handover::query()
+            ->where('contract_id', $contract->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($handover) {
+            $this->assertHandoverEditable($handover);
+            $this->syncItemsFromRoomAssets($handover);
+            $handover = $this->getDetails($handover->fresh());
+
+            return [
+                'persisted' => true,
+                'handover' => $handover,
+                'items' => $handover->items,
+            ];
+        }
+
+        if (! in_array($contract->status, ContractStatus::allowHandoverEdit(), true)) {
+            throw ValidationException::withMessages([
+                'contract' => 'Hợp đồng không ở trạng thái cho phép lập biên bản thanh lý.',
+            ]);
+        }
+
+        $previewItems = [];
+        $room = $contract->room;
+        if ($room) {
+            foreach ($room->assets as $index => $asset) {
+                $previewItems[] = [
+                    'room_asset_id' => $asset->id,
+                    'name' => $asset->name,
+                    'condition' => 'OK',
+                    'sort_order' => $index,
+                    'condition_photo_urls' => [],
+                ];
+            }
+        }
+
+        return [
+            'persisted' => false,
+            'handover' => null,
+            'items' => $previewItems,
+        ];
+    }
+
+    /**
+     * Tạo biên bản nháp trên DB (bước "Chốt số" sau khi xem trước) hoặc cập nhật bản đã có.
+     *
+     * @param  array<int, array{room_asset_id: string, condition?: string}>  $itemUpdates
+     * @param  bool  $handoverNoteProvided  true nếu client gửi khóa `note` (kể cả null / chuỗi rỗng).
+     */
+    public function commitTerminationHandover(
+        Contract $contract,
+        array $itemUpdates,
+        bool $handoverNoteProvided = false,
+        ?string $handoverNote = null,
+    ): Handover {
+        $handover = Handover::query()
+            ->where('contract_id', $contract->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if ($handover) {
+            $this->assertHandoverEditable($handover);
+            $this->syncItemsFromRoomAssets($handover);
+            $handover = $handover->fresh();
+            if ($handoverNoteProvided) {
+                $handover->update(['note' => $handoverNote ?? '']);
+            }
+            $this->applyItemUpdatesByRoomAssetId($handover->fresh(['items']), $itemUpdates);
+
+            return $this->getDetails($handover->fresh());
+        }
+
+        if (! in_array($contract->status, ContractStatus::allowHandoverEdit(), true)) {
+            throw ValidationException::withMessages([
+                'contract' => 'Hợp đồng không ở trạng thái cho phép lập biên bản thanh lý.',
+            ]);
+        }
+
+        $noteToStore = $handoverNoteProvided
+            ? ($handoverNote ?? '')
+            : self::DEFAULT_TERMINATION_HANDOVER_NOTE;
+
+        $handover = Handover::create([
+            'org_id' => $contract->org_id,
+            'contract_id' => $contract->id,
+            'room_id' => $contract->room_id,
+            'created_by_user_id' => auth()->id(),
+            'note' => $noteToStore,
+        ]);
+
+        $this->syncItemsFromRoomAssets($handover);
+        $this->applyItemUpdatesByRoomAssetId($handover->fresh(['items']), $itemUpdates);
+
+        return $this->getDetails($handover->fresh());
+    }
+
+    /**
+     * @param  array<int, array{room_asset_id: string, condition?: string}>  $itemUpdates
+     */
+    private function applyItemUpdatesByRoomAssetId(Handover $handover, array $itemUpdates): void
+    {
+        if ($itemUpdates === []) {
+            return;
+        }
+
+        $handover->loadMissing('items');
+        $byAssetId = collect($itemUpdates)->keyBy(fn ($row) => (string) $row['room_asset_id']);
+
+        foreach ($handover->items as $item) {
+            $patch = $byAssetId->get((string) $item->room_asset_id);
+            if (! $patch) {
+                continue;
+            }
+            $updates = [];
+            if (isset($patch['condition'])) {
+                $updates['condition'] = $patch['condition'];
+            }
+            if ($updates !== []) {
+                $item->update($updates);
+            }
         }
     }
 
@@ -164,7 +322,7 @@ class HandoverService
 
     public function addItem(Handover $handover, array $data): HandoverItem
     {
-        $this->ensureIsDraft($handover);
+        $this->assertHandoverEditable($handover);
 
         $data['org_id'] = $handover->org_id;
         $data['handover_id'] = $handover->id;
@@ -175,7 +333,7 @@ class HandoverService
     public function updateItem(HandoverItem $item, array $data): HandoverItem
     {
         $item->loadMissing('handover');
-        $this->ensureIsDraft($item->handover);
+        $this->assertHandoverEditable($item->handover);
 
         $item->update($data);
 
@@ -185,7 +343,7 @@ class HandoverService
     public function deleteItem(HandoverItem $item): void
     {
         $item->loadMissing('handover');
-        $this->ensureIsDraft($item->handover);
+        $this->assertHandoverEditable($item->handover);
         $item->delete();
     }
 
@@ -200,7 +358,7 @@ class HandoverService
 
     public function addSnapshot(Handover $handover, array $data): HandoverMeterSnapshot
     {
-        $this->ensureIsDraft($handover);
+        $this->assertHandoverEditable($handover);
 
         $data['org_id'] = $handover->org_id;
         $data['handover_id'] = $handover->id;
@@ -217,7 +375,32 @@ class HandoverService
     public function deleteSnapshot(HandoverMeterSnapshot $snapshot): void
     {
         $snapshot->loadMissing('handover');
-        $this->ensureIsDraft($snapshot->handover);
+        $this->assertHandoverEditable($snapshot->handover);
         $snapshot->delete();
+    }
+
+    /**
+     * Đảm bảo có handover + items trước khi pipeline thanh lý bắn HandoverSubmitted.
+     */
+    public function ensureHandoverExistsForTermination(Contract $contract, ?string $actorUserId = null): Handover
+    {
+        $handover = Handover::query()
+            ->where('contract_id', $contract->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $handover) {
+            $handover = Handover::create([
+                'org_id' => $contract->org_id,
+                'contract_id' => $contract->id,
+                'room_id' => $contract->room_id,
+                'created_by_user_id' => $actorUserId,
+                'note' => 'Tự động tạo khi thanh lý hợp đồng.',
+            ]);
+        }
+
+        $this->syncItemsFromRoomAssets($handover);
+
+        return $handover->fresh();
     }
 }

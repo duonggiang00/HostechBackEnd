@@ -23,8 +23,7 @@ class HandoverUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'note' => ['nullable', 'string', 'max:1000'],
-            'status' => ['nullable', 'string', 'in:DRAFT,CONFIRMED'],
+            'note' => ['nullable', 'string', 'max:10000'],
         ];
     }
 }

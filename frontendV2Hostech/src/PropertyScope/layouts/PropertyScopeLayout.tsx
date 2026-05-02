@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Building2,
   Bell,
-  Search,
   Menu,
+  ArrowLeft,
 } from 'lucide-react';
 import PropertySwitcher from '@/OrgScope/features/properties/components/PropertySwitcher';
 import { ThemeToggle } from '@/shared/components/ui/ThemeToggle';
@@ -14,6 +14,7 @@ import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
 import NotificationCenter from '@/shared/features/messaging/components/NotificationCenter';
 import { usePropertyFinanceRealtime } from '@/shared/features/billing/hooks/useFinanceRealtime';
 import { useSessionBootstrap } from '@/shared/features/auth/hooks/useSessionBootstrap';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 interface PropertyScopeLayoutProps {
   children: ReactNode;
@@ -25,6 +26,24 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   usePropertyFinanceRealtime(propertyId);
 
   const { menuSections, scopeLabel } = useNavigation();
+  const navigate = useNavigate();
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const isStaff = hasRole(['Staff']);
+  /** Chỉ Admin/Owner vào Org dashboard — Manager & Staff làm việc trong phạm vi tòa, không hiện nút cổng quản trị */
+  const canExitToOrg = hasRole(['Admin', 'Owner']);
+
+  const roleHeaderBadge = (() => {
+    if (hasRole(['Staff'])) {
+      return { label: 'Nhân viên', className: 'bg-slate-500/15 text-slate-600 dark:text-slate-300' };
+    }
+    if (hasRole(['Manager'])) {
+      return { label: 'Quản lý', className: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300' };
+    }
+    if (hasRole(['Admin', 'Owner'])) {
+      return { label: 'Quản trị', className: 'bg-violet-500/15 text-violet-700 dark:text-violet-300' };
+    }
+    return null;
+  })();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
@@ -41,45 +60,66 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-700/50 px-4 md:px-8 flex items-center justify-between shrink-0 sticky top-0 z-30 transition-all duration-300">
-          <div className="flex items-center gap-3 md:gap-6 min-w-0">
+        <header className="min-h-16 py-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-700/50 px-4 md:px-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 shrink-0 sticky top-0 z-30 transition-all duration-300 md:flex-nowrap">
+          <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 md:gap-4 md:min-w-[120px]">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+              className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors shrink-0"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden md:flex items-center gap-3">
-                <Building2 className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Vận Hành</h2>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <Building2 className="w-5 h-5 text-indigo-500 shrink-0" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-base md:text-lg font-bold text-slate-900 dark:text-white truncate">
+                    Vận Hành
+                  </h2>
+                  {roleHeaderBadge && (
+                    <span
+                      className={`shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${roleHeaderBadge.className}`}
+                    >
+                      {roleHeaderBadge.label}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
-            <div className="relative hidden md:block group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-              <input
-                type="text" 
-                hidden
-                placeholder="Tìm kiếm nhanh..."
-                className="pl-12 pr-6 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-100 dark:border-slate-600 rounded-2xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-700 transition-all text-sm font-bold w-48 lg:w-64 shadow-inner text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
-              />
-            </div>
-            <div 
+          <div
+            className={`flex flex-none items-center ${isStaff ? 'gap-2' : 'gap-3'}`}
+          >
+            {canExitToOrg && (
+              <button
+                type="button"
+                onClick={() => navigate('/org/dashboard')}
+                title="Quay về Cổng Quản Trị"
+                className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border border-slate-100 bg-slate-50 px-2.5 py-2 text-[11px] font-bold text-slate-600 transition-colors hover:border-indigo-200 hover:bg-white hover:text-indigo-600 dark:border-slate-600 dark:bg-slate-700/50 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-slate-700 dark:hover:text-indigo-300 sm:px-3 sm:text-xs"
+              >
+                <ArrowLeft className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Cổng Quản Trị</span>
+              </button>
+            )}
+            <button
+              type="button"
               onClick={() => setIsNotificationOpen(true)}
-              className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center text-slate-400 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer border border-slate-100 dark:border-slate-600 relative group"
+              className="relative z-10 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-400 transition-colors hover:text-indigo-600 dark:border-slate-600 dark:bg-slate-700/50 dark:text-slate-400 dark:hover:text-indigo-400"
+              aria-label="Thông báo"
             >
-              <Bell className="w-5 h-5" />
-              <div className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-800 group-hover:scale-110 transition-transform" />
-            </div>
+              <Bell className="h-5 w-5" />
+              <span className="pointer-events-none absolute right-2 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500 dark:border-slate-800" />
+            </button>
 
-            <div className="h-8 w-px bg-slate-100 dark:bg-slate-700 mx-1 hidden md:block" />
+            <div className="mx-0.5 hidden h-8 w-px shrink-0 bg-slate-100 dark:bg-slate-700 md:block" />
 
-            <div className="hidden md:block w-[180px] lg:w-[220px]">
+            <div className="hidden w-[180px] shrink-0 md:block lg:w-[220px]">
               <PropertySwitcher variant="header" />
             </div>
 
-            <ThemeToggle compact={true} />
+            <div className="shrink-0">
+              <ThemeToggle compact={true} />
+            </div>
           </div>
         </header>
 

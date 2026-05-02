@@ -25,7 +25,7 @@ class HandoverItem extends Model implements HasMedia
         'handover_id',
         'room_asset_id',
         'name',
-        'status',
+        'condition',
         'note',
         'sort_order',
     ];
@@ -35,6 +35,11 @@ class HandoverItem extends Model implements HasMedia
         return [
             'sort_order' => 'integer',
         ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('condition_photos');
     }
 
     public function org()

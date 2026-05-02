@@ -47,7 +47,7 @@ class TenantPaymentController extends Controller
      * chuyển hóa đơn sang PENDING để quản lý biết đang chờ đối soát.
      *
      * @bodyParam invoice_id  uuid required ID hóa đơn cần thanh toán
-     * @bodyParam method      string required Phương thức: CASH | TRANSFER | BANK_TRANSFER (BANK_TRANSFER lưu thành TRANSFER)
+     * @bodyParam method      string required Phương thức: CASH | BANK_TRANSFER | TRANSFER (TRANSFER → BANK_TRANSFER)
      * @bodyParam amount      numeric required Số tiền muốn trả
      * @bodyParam reference   string Số tham chiếu / mã giao dịch ngân hàng
      * @bodyParam note        string Ghi chú thêm
@@ -91,7 +91,7 @@ class TenantPaymentController extends Controller
         }
 
         $methodStored = in_array($validated['method'], ['BANK_TRANSFER', 'TRANSFER'], true)
-            ? 'TRANSFER'
+            ? 'BANK_TRANSFER'
             : 'CASH';
 
         return DB::transaction(function () use ($validated, $invoice, $user, $request, $methodStored) {

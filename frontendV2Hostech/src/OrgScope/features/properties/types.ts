@@ -16,6 +16,10 @@ export interface Property {
   floors_count?: number;
   roomCount?: number;
   staffCount?: number;
+  active_contracts_count?: number;
+  active_tenants_count?: number;
+  revenue_this_month?: number;
+  revenue_total?: number;
   status: 'active' | 'maintenance' | 'inactive';
   default_services?: any[];
   floors?: any[];

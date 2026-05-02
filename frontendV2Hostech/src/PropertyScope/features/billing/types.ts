@@ -87,7 +87,15 @@ export interface PaymentAllocation {
   invoice_code?: string;
   invoice_status?: InvoiceStatus;
   invoice_total?: number;
+  payment?: Payment;
   created_at: string;
+}
+
+export interface PaymentReceiptFile {
+  id: string;
+  kind: string;
+  url: string;
+  path: string;
 }
 
 export interface Payment {
@@ -106,6 +114,7 @@ export interface Payment {
   received_by?: InvoiceUser;
   approved_by?: InvoiceUser;
   allocations?: PaymentAllocation[];
+  receipt?: PaymentReceiptFile | null;
 }
 
 // ─── Main Model ───────────────────────────────────────────────────────────────
@@ -141,6 +150,7 @@ export interface Invoice {
   adjustments?: InvoiceAdjustment[];
   created_by?: InvoiceUser;
   issued_by?: InvoiceUser | null;
+  payment_allocations?: PaymentAllocation[];
 
   // PDF
   pdf_url?: string | null;
@@ -202,6 +212,7 @@ export interface CreateInvoicePayload {
 export interface InvoiceQueryParams {
   property_id?: string;
   room_id?: string;
+  contract_id?: string;
   status?: InvoiceStatus;
   is_termination?: boolean;
   search?: string;

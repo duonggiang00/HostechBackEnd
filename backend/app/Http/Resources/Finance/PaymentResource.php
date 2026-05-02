@@ -5,6 +5,7 @@ namespace App\Http\Resources\Finance;
 use App\Http\Resources\Org\UserResource;
 use App\Http\Resources\Property\PropertyResource;
 use App\Models\Finance\Payment;
+use App\Support\PaymentMethod;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -22,6 +23,7 @@ class PaymentResource extends JsonResource
             'payer_user_id' => $this->payer_user_id,
             'status' => $this->status,
             'method' => $this->method,
+            'method_label' => PaymentMethod::labelVi($this->method),
             'amount' => (float) $this->amount,
             'reference' => $this->reference,
             'note' => $this->note,

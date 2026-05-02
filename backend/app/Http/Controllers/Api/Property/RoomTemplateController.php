@@ -60,6 +60,7 @@ class RoomTemplateController extends Controller
                         'name' => $asset['name'],
                         'condition' => $asset['condition'] ?? 'new',
                         'note' => $asset['note'] ?? '',
+                        'quantity' => $asset['quantity'] ?? 1,
                     ]);
                 }
             }
@@ -106,6 +107,7 @@ class RoomTemplateController extends Controller
                         'name' => $asset['name'],
                         'condition' => $asset['condition'] ?? 'new',
                         'note' => $asset['note'] ?? '',
+                        'quantity' => $asset['quantity'] ?? 1,
                     ]);
                 }
             }

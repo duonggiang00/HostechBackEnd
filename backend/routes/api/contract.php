@@ -15,6 +15,8 @@ Route::get('contracts/{contract}/available-rooms', [ContractController::class, '
 Route::post('contracts/{contract}/room-transfer-request', [ContractController::class, 'roomTransferRequest']);
 Route::post('contracts/{contract}/confirm-payment', [ContractController::class, 'confirmPayment']);
 Route::get('contracts/{contract}/termination/liquidation-preview', [ContractController::class, 'liquidationPreview']);
+Route::get('contracts/{contract}/termination-handover', [ContractController::class, 'terminationHandover']);
+Route::post('contracts/{contract}/termination-handover', [ContractController::class, 'commitTerminationHandover']);
 Route::post('contracts/{contract}/terminate', [ContractController::class, 'terminate']);
 Route::post('contracts/{contract}/execute-transfer', [ContractController::class, 'executeTransfer']);
 Route::post('contracts/{contract}/request-termination', [ContractController::class, 'requestTermination']);   // Tenant báo dời đi

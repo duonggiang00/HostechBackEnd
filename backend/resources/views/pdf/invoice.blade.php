@@ -19,7 +19,7 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
-            border-bottom: 2px solid #10b981;
+            border-bottom: 1px solid #e5e7eb;
             padding-bottom: 15px;
         }
         .header h1 {
@@ -113,7 +113,14 @@
     <div class="container">
         <div class="header">
             <h1>HÓA ĐƠN DỊCH VỤ</h1>
-            <p>Mã HĐ: {{ $invoice->id }} | Ngày phát hành: {{ $invoice->issue_date?->format('d/m/Y') ?? 'Dự thảo' }}</p>
+            @php
+                $issueDisplay = $invoice->issue_date
+                    ?? ($invoice->issued_at ? \Illuminate\Support\Carbon::parse($invoice->issued_at) : null);
+                if ($issueDisplay === null && ! in_array($invoice->status, ['DRAFT', 'CANCELLED'], true)) {
+                    $issueDisplay = $invoice->created_at;
+                }
+            @endphp
+            <p>Mã HĐ: {{ $invoice->id }} | Ngày phát hành: {{ $issueDisplay?->format('d/m/Y') ?? '—' }}</p>
         </div>
 
         <div class="info-section">

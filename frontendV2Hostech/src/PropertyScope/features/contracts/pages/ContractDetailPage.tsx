@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { 
   FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
-  AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft, IdCard
+  AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft, IdCard,
+  CircleDollarSign
 } from 'lucide-react';
-import { useContract, useContractActions, useContractStatusHistories } from '../hooks/useContracts';
-import { TerminateContractModal } from '../components/TerminateContractModal';
+import { useContract, useContractActions } from '../hooks/useContracts';
 import { ExecuteRoomTransferModal } from '../components/ExecuteRoomTransferModal';
-import { ContractStatusTimeline } from '../components/ContractStatusTimeline';
+import { ContractRentDebtPanel } from '../components/ContractRentDebtPanel';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -16,9 +16,10 @@ import SignatureModal from '../components/SignatureModal';
 import { AddMemberModal } from '../components/AddMemberModal';
 import { MemberIdentityViewDialog } from '../components/MemberIdentityViewDialog';
 import type { ContractMember } from '../types';
-import { PenTool, UserPlus, LogOut } from 'lucide-react';
+import { PenTool, UserPlus, LogOut, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { useHandover } from '@/shared/features/operations/hooks/useHandover';
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -45,11 +46,22 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 export default function ContractDetailPage() {
   const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const { data: contract, isLoading, error } = useContract(contractId);
+  const { useHandovers } = useHandover();
+  const endedWithHandoverStatuses = ['ENDED', 'TERMINATED', 'EXPIRED'];
+  const { data: handoverForContractRes } = useHandovers(
+    { filter: { contract_id: contractId }, per_page: 1 },
+    {
+      enabled:
+        !!contractId &&
+        !!contract &&
+        endedWithHandoverStatuses.includes(String(contract.status)),
+      staleTime: 30_000,
+    },
+  );
+  const terminationHandoverId = (handoverForContractRes as { data?: { id: string }[] } | undefined)?.data?.[0]?.id;
   const { generateDocument, downloadDocument } = useContractActions();
-  const { data: histories, isLoading: isLoadingHistories } = useContractStatusHistories(contractId);
-  const [isTerminateModalOpen, setIsTerminateModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -59,12 +71,9 @@ export default function ContractDetailPage() {
   const { user, hasPermission, hasRole } = useAuth();
 
   useEffect(() => {
-    if (searchParams.get('openTerminate') !== '1' || !contract) return;
-    setIsTerminateModalOpen(true);
-    const next = new URLSearchParams(searchParams);
-    next.delete('openTerminate');
-    setSearchParams(next, { replace: true });
-  }, [contract, searchParams, setSearchParams]);
+    if (searchParams.get('openTerminate') !== '1' || !propertyId || !contractId) return;
+    navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`, { replace: true });
+  }, [searchParams, propertyId, contractId, navigate]);
   
   const isManager = hasPermission('update Contracts');
   const canLandlordSign =
@@ -141,8 +150,7 @@ export default function ContractDetailPage() {
   };
   
   const handleEdit = () => {
-    // Navigate to edit page if implemented
-    console.log('Edit contract', contractId);
+    navigate(`/properties/${propertyId}/contracts/${contractId}/edit`);
   };
 
   if (isLoading) {
@@ -188,6 +196,11 @@ export default function ContractDetailPage() {
               <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color}`}>
                 {statusInfo.label}
               </div>
+              {contract.has_invoice_debt && (
+                <div className="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/25">
+                  Có hóa đơn nợ
+                </div>
+              )}
               {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
                 <div className="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
                   Sắp trả phòng
@@ -203,7 +216,16 @@ export default function ContractDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {propertyId && terminationHandoverId && endedWithHandoverStatuses.includes(String(contract.status)) && (
+            <Link
+              to={`/properties/${propertyId}/handovers/${terminationHandoverId}`}
+              className="flex items-center gap-2 px-5 py-3.5 bg-teal-50/90 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/25 rounded-2xl text-teal-800 dark:text-teal-300 font-bold text-sm hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all shadow-sm"
+            >
+              <ClipboardCheck className="w-4 h-4" />
+              <span>Biên bản bàn giao</span>
+            </Link>
+          )}
           <button 
             onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/view`)}
             className="flex items-center gap-2 px-5 py-3.5 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all shadow-sm"
@@ -247,7 +269,7 @@ export default function ContractDetailPage() {
                 <span>Chuyển phòng</span>
               </button>
               <button 
-                onClick={() => setIsTerminateModalOpen(true)}
+                onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`)}
                 className="flex items-center gap-2 px-6 py-3.5 bg-rose-600 dark:bg-rose-500 text-white rounded-2xl font-bold text-sm hover:bg-rose-700 dark:hover:bg-rose-600 transition-all shadow-lg shadow-rose-100 dark:shadow-none ring-4 ring-rose-50 dark:ring-rose-500/20"
               >
                 <AlertCircle className="w-4 h-4" />
@@ -290,6 +312,11 @@ export default function ContractDetailPage() {
               <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1 transition-colors">Tiền đặt cọc</p>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums transition-colors">
                 {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-bold">đ</span>
+                {Number(contract.deposit_months) > 0 && (
+                  <span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    ({contract.deposit_months} tháng)
+                  </span>
+                )}
               </h3>
             </motion.div>
 
@@ -627,7 +654,7 @@ export default function ContractDetailPage() {
 
             {['ACTIVE', 'PENDING_TERMINATION', 'EXPIRED'].includes(contract.status as string) && (
               <button
-                onClick={() => setIsTerminateModalOpen(true)}
+                onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`)}
                 className="w-full bg-red-600 text-white py-4 rounded-2xl font-bold uppercase text-xs hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200 dark:shadow-none"
               >
                 <XCircle className="w-4 h-4" />
@@ -636,11 +663,15 @@ export default function ContractDetailPage() {
             )}
 
             <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-3 mb-6 transition-colors">
-                <History className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                Timeline Trạng thái
+              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-3 mb-4 transition-colors">
+                <CircleDollarSign className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                Hóa đơn đang nợ
               </h4>
-              <ContractStatusTimeline histories={histories || []} isLoading={isLoadingHistories} />
+              <ContractRentDebtPanel
+                propertyId={propertyId ?? ''}
+                invoiceDebt={contract.invoice_debt}
+                isLoading={isLoading}
+              />
             </div>
           </motion.div>
         </div>
@@ -657,11 +688,6 @@ export default function ContractDetailPage() {
           window.location.reload();
         }}
       />
-      <TerminateContractModal
-        isOpen={isTerminateModalOpen}
-        onClose={() => setIsTerminateModalOpen(false)}
-        contract={contract}
-      />
       <SignatureModal
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}
@@ -672,6 +698,9 @@ export default function ContractDetailPage() {
             onSuccess: () => {
               toast.success('Đã ký hợp đồng thành công!');
               setIsSignatureModalOpen(false);
+              if (propertyId && contractId) {
+                navigate(`/properties/${propertyId}/contracts/${contractId}/view`);
+              }
             },
             onError: (err: any) => {
               toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi tải chữ ký.');

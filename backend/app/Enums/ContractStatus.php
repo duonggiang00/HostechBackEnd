@@ -56,6 +56,14 @@ enum ContractStatus: string
     }
 
     /**
+     * Hợp đồng ở trạng thái này thì biên bản bàn giao (items, note, ảnh) còn được chỉnh.
+     */
+    public static function allowHandoverEdit(): array
+    {
+        return self::allowTerminate();
+    }
+
+    /**
      * Trạng thái cuối (đã đóng, không thay đổi được).
      */
     public static function isClosed(): bool

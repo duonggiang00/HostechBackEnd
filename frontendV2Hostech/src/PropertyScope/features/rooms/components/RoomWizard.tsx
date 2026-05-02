@@ -396,7 +396,7 @@ export default function RoomWizard({ initialData, onSuccess, onCancel, propertyI
                         <p className="text-2xl font-black text-slate-900 tabular-nums">{formatNumber(areaLimits.buildingArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
                       </div>
                       <div className="p-6 bg-white/60 rounded-[28px] border border-white/80 shadow-sm transition-all hover:bg-white">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Diện tích chung</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Diện tích lối đi chung</p>
                         <p className="text-2xl font-black text-slate-900 tabular-nums">{formatNumber(areaLimits.sharedArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
                       </div>
                       <div className="p-6 bg-white/60 rounded-[28px] border border-white/80 shadow-sm transition-all hover:bg-white">

@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Plus, ChevronRight, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, ChevronRight, Loader2, X } from 'lucide-react';
 import { useTickets } from '../hooks/useTickets';
 import TicketStatusBadge from './TicketStatusBadge';
 import TicketDetailPanel from './TicketDetailPanel';
@@ -20,114 +19,115 @@ export default function RoomTicketsTab({ propertyId, roomId }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const { data, isLoading, refetch } = useTickets({ property_id: propertyId, room_id: roomId, per_page: 5 });
+  const { data, isLoading, refetch } = useTickets({
+    property_id: propertyId,
+    room_id: roomId,
+    per_page: 5,
+    sort: '-created_at',
+  });
 
   const tickets = data?.data ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-          Sự cố & Yêu cầu ({data?.meta.total || 0})
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+          Sự cố gần đây
+          <span className="ml-2 font-normal text-slate-500 dark:text-slate-400">({data?.meta.total ?? 0})</span>
         </h3>
         <PermissionGate role={['Owner', 'Manager', 'Staff', 'Tenant']}>
           <button
+            type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 rounded-xl text-xs font-bold transition-all"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
           >
-            <Plus className="w-3.5 h-3.5" /> Tạo phiếu
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Tạo phiếu
           </button>
         </PermissionGate>
       </div>
 
-      <div className="bg-white/50 dark:bg-slate-800/20 backdrop-blur-md rounded-2xl border border-slate-100 dark:border-slate-800/50 overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
         {isLoading ? (
-          <div className="flex justify-center p-8">
-            <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" aria-label="Đang tải" />
           </div>
         ) : tickets.length === 0 ? (
-          <div className="text-center p-8 text-slate-500 dark:text-slate-400 text-sm">
-            Chưa có sự cố nào cho phòng này.
-          </div>
+          <p className="px-4 py-8 text-center text-sm text-slate-600 dark:text-slate-400">Chưa có sự cố nào cho phòng này.</p>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
-            {tickets.map((ticket, i) => (
-              <motion.button
-                key={ticket.id}
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() => setSelectedId(ticket.id)}
-                className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
-              >
-                <div className={`w-1 h-8 rounded-full shrink-0 ${
-                  ticket.priority === 'URGENT' ? 'bg-rose-500' :
-                  ticket.priority === 'HIGH' ? 'bg-amber-500' :
-                  ticket.priority === 'MEDIUM' ? 'bg-blue-500' :
-                  'bg-slate-300 dark:bg-slate-600'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <TicketStatusBadge status={ticket.status} size="sm" />
-                    {ticket.category && (
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full truncate max-w-[100px]">
-                        {ticket.category}
-                      </span>
-                    )}
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+            {tickets.map(ticket => (
+              <li key={ticket.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(ticket.id)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
+                  <div
+                    className={`h-8 w-1 shrink-0 rounded-full ${
+                      ticket.priority === 'URGENT'
+                        ? 'bg-rose-500'
+                        : ticket.priority === 'HIGH'
+                          ? 'bg-amber-500'
+                          : ticket.priority === 'MEDIUM'
+                            ? 'bg-blue-500'
+                            : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{formatDate(ticket.created_at)}</p>
+                    <div className="mb-0.5 mt-1 flex flex-wrap items-center gap-1.5">
+                      <TicketStatusBadge status={ticket.status} size="sm" />
+                      {ticket.category && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          {ticket.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-xs font-medium text-slate-900 dark:text-slate-100">{ticket.description}</p>
                   </div>
-                  <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{ticket.description}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(ticket.created_at)}</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
-              </motion.button>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </div>
 
-      <AnimatePresence>
-        {selectedId && (
-          <TicketDetailPanel
-            ticketId={selectedId}
-            onClose={() => setSelectedId(null)}
-          />
-        )}
-      </AnimatePresence>
+      {selectedId && <TicketDetailPanel ticketId={selectedId} onClose={() => setSelectedId(null)} />}
 
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-            onClick={() => setShowCreate(false)}
+      {showCreate && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true">
+          <button type="button" className="absolute inset-0 bg-slate-900/50" aria-label="Đóng" onClick={() => setShowCreate(false)} />
+          <div
+            className="relative z-10 max-h-[90vh] w-full max-w-md overflow-hidden rounded-t-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:rounded-xl"
+            onClick={e => e.stopPropagation()}
           >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden"
-            >
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900 dark:text-white">Báo cáo sự cố</h3>
-                <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                  ✕
-                </button>
-              </div>
-              <div className="p-6">
-                <TicketForm
-                  propertyId={propertyId}
-                  roomId={roomId}
-                  onSuccess={() => { setShowCreate(false); refetch(); }}
-                  onCancel={() => setShowCreate(false)}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Báo cáo sự cố</h3>
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="rounded-md p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Đóng"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4">
+              <TicketForm
+                propertyId={propertyId}
+                roomId={roomId}
+                onSuccess={() => {
+                  setShowCreate(false);
+                  refetch();
+                }}
+                onCancel={() => setShowCreate(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

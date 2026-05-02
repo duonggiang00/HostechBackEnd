@@ -17,6 +17,7 @@ class ContractMemberResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'user_id' => $this->user_id,
             'contract_id' => $this->contract_id,
             'user' => new UserResource($this->whenLoaded('user')),
             'email' => $this->email,

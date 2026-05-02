@@ -95,15 +95,6 @@
             color: #999;
             text-align: center;
         }
-        .signature-section {
-            margin-top: 40px;
-            width: 100%;
-        }
-        .signature-col {
-            width: 48%;
-            display: inline-block;
-            text-align: center;
-        }
     </style>
 </head>
 <body>
@@ -117,12 +108,17 @@
             <div class="info-col">
                 <div class="section-title">Đơn vị thu tiền</div>
                 <strong>{{ $payment->property->name ?? 'Dịch vụ Hostech' }}</strong><br>
-                <span>Địa chỉ: {{ $payment->property->address ?? 'Hệ thống quản lý thông minh' }}</span><br>
-                <span>Mã số: {{ $payment->org_id }}</span>
+                <span>Địa chỉ: {{ $payment->property->address ?? 'Hệ thống quản lý thông minh' }}</span>
             </div>
             <div class="info-col" style="margin-left: 20px;">
                 <div class="section-title">Thông tin khách hàng</div>
-                <strong>{{ $payment->payer->name ?? 'Khách lẻ' }}</strong><br>
+                @php
+                    $payer = $payment->payer;
+                    $payerName = $payer
+                        ? trim((string) (($payer->full_name ?? '') ?: ($payer->email ?? '')))
+                        : '';
+                @endphp
+                <strong>{{ $payerName !== '' ? $payerName : 'Khách lẻ' }}</strong><br>
                 <span>Email: {{ $payment->payer->email ?? 'N/A' }}</span><br>
                 <span>Số điện thoại: {{ $payment->payer->phone ?? 'N/A' }}</span>
             </div>
@@ -131,13 +127,19 @@
         <div class="info-section">
             <div class="info-col">
                 <div class="section-title">Chi tiết thanh toán</div>
-                <span>Phương thức: <strong>{{ $payment->method }}</strong></span><br>
+                <span>Phương thức: <strong>{{ \App\Support\PaymentMethod::labelVi($payment->method) }}</strong></span><br>
                 <span>Thời gian: {{ $payment->received_at?->format('d/m/Y H:i') }}</span><br>
                 <span>Mã tham chiếu: {{ $payment->reference ?? '---' }}</span>
             </div>
             <div class="info-col" style="margin-left: 20px;">
                 <div class="section-title">Người lập phiếu</div>
-                <span>{{ $payment->receivedBy->name ?? 'Hệ thống tự động' }}</span>
+                @php
+                    $issuer = $payment->approvedBy ?? $payment->receivedBy;
+                    $issuerLabel = $issuer
+                        ? trim((string) (($issuer->full_name ?? '') ?: ($issuer->email ?? '')))
+                        : '';
+                @endphp
+                <span>{{ $issuerLabel !== '' ? $issuerLabel : 'Hệ thống tự động' }}</span>
             </div>
         </div>
 
@@ -150,10 +152,22 @@
             </thead>
             <tbody>
                 @foreach($payment->allocations as $allocation)
+                @php
+                    $inv = $allocation->invoice;
+                    // Khớp mã hiển thị với UI: INV- + 8 ký tự đầu của UUID (bảng invoices không có cột `code`)
+                    $invoiceCode = $inv
+                        ? 'INV-' . strtoupper(substr(str_replace('-', '', (string) $inv->id), 0, 8))
+                        : '—';
+                    $periodLine = ($inv && $inv->period_start && $inv->period_end)
+                        ? $inv->period_start->format('d/m/Y') . ' – ' . $inv->period_end->format('d/m/Y')
+                        : null;
+                @endphp
                 <tr>
                     <td>
-                        Thanh toán cho hóa đơn: <strong>{{ $allocation->invoice->code }}</strong><br>
-                        <small>{{ $allocation->invoice->title }}</small>
+                        Thanh toán cho hóa đơn: <strong>{{ $invoiceCode }}</strong>
+                        @if($periodLine)
+                            <br><small style="color:#555;">Kỳ: {{ $periodLine }}</small>
+                        @endif
                     </td>
                     <td class="amount-col">{{ number_format($allocation->amount, 0, '.', ',') }}</td>
                 </tr>
@@ -174,19 +188,8 @@
             </div>
         </div>
 
-        <div class="signature-section">
-            <div class="signature-col">
-                <strong>Người nộp tiền</strong><br>
-                <small>(Ký và ghi rõ họ tên)</small>
-            </div>
-            <div class="signature-col">
-                <strong>Người lập phiếu</strong><br>
-                <small>(Ký và ghi rõ họ tên)</small>
-            </div>
-        </div>
-
         <div class="footer">
-            <p>Biên lai điện tử được sinh từ hệ thống Hostech. Mã băm kiểm tra: {{ hash('crc32', $payment->id) }}</p>
+            <p>Biên lai điện tử được sinh từ hệ thống Hostech.</p>
             <p>Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!</p>
         </div>
     </div>

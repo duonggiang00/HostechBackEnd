@@ -8,6 +8,7 @@ use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
 use App\Services\Invoice\InvoiceService;
 use App\Services\OrgContextResolver;
+use App\Support\PaymentMethod;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
@@ -30,7 +31,7 @@ class PaymentService
      * @queryParam page int Trang hiện tại. Example: 1
      * @queryParam filter[property_id] uuid Lọc theo tòa nhà.
      * @queryParam filter[status] string Lọc theo trạng thái (PENDING, APPROVED, REJECTED).
-     * @queryParam filter[method] string Lọc theo phương thức (CASH, TRANSFER, WALLET, QR).
+     * @queryParam filter[method] string Lọc theo phương thức (CASH, BANK_TRANSFER gộp TRANSFER, VNPAY, …).
      * @queryParam search string Tìm kiếm theo reference hoặc note.
      * @queryParam sort string Sắp xếp. Example: -received_at
      */
@@ -43,7 +44,14 @@ class PaymentService
             ->allowedFilters([
                 AllowedFilter::exact('property_id'),
                 AllowedFilter::exact('status'),
-                AllowedFilter::exact('method'),
+                // Lọc "Chuyển khoản" gộp cả legacy TRANSFER + BANK_TRANSFER
+                AllowedFilter::callback('method', function ($query, $value): void {
+                    if ($value === 'BANK_TRANSFER') {
+                        $query->whereIn('method', ['BANK_TRANSFER', 'TRANSFER']);
+                    } elseif ($value !== null && $value !== '') {
+                        $query->where('method', $value);
+                    }
+                }),
                 AllowedFilter::exact('payer_user_id'),
             ])
             ->allowedSorts(['received_at', 'amount', 'created_at', 'status'])
@@ -123,13 +131,15 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($data, $allocations, $user) {
+            $method = PaymentMethod::normalize((string) ($data['method'] ?? ''));
+
             // 1. Tạo Payment
             $payment = Payment::create([
                 'org_id' => $data['org_id'],
                 'property_id' => $data['property_id'] ?? null,
                 'payer_user_id' => $data['payer_user_id'] ?? null,
                 'received_by_user_id' => $user->id,
-                'method' => $data['method'],
+                'method' => $method,
                 'amount' => $data['amount'],
                 'reference' => $data['reference'] ?? null,
                 'received_at' => $data['received_at'] ?? now(),
@@ -192,13 +202,15 @@ class PaymentService
         }
 
         return DB::transaction(function () use ($data, $allocations, $user) {
+            $method = PaymentMethod::normalize((string) ($data['method'] ?? ''));
+
             // 1. Tạo Payment với status PENDING
             $payment = Payment::create([
                 'org_id' => $data['org_id'],
                 'property_id' => $data['property_id'] ?? null,
                 'payer_user_id' => $data['payer_user_id'] ?? null,
                 'received_by_user_id' => $user->id,
-                'method' => $data['method'],
+                'method' => $method,
                 'amount' => $data['amount'],
                 'reference' => $data['reference'] ?? null,
                 'received_at' => null,   // Sẽ cập nhật khi IPN về

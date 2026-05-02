@@ -51,7 +51,6 @@ export default function HandoverForm({
       const payload = {
         room_id: roomId,
         contract_id: contractId,
-        type,
         note: note.trim() || null,
       };
       const created = await createHandover.mutateAsync(payload);
@@ -119,10 +118,7 @@ export default function HandoverForm({
                 Biên bản đã được tạo
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Trạng thái: <span className="font-bold text-amber-600 dark:text-amber-400">Chờ xác nhận (Bản nháp)</span>
-              </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                Quản lý sẽ xem xét và xác nhận biên bản bàn giao.
+                Biên bản đã được lưu. Chỉnh sửa được khi hợp đồng còn trong giai đoạn thanh lý.
               </p>
             </div>
             {note && (
@@ -200,7 +196,7 @@ export default function HandoverForm({
             <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20 rounded-[8px]">
               <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">
-                Biên bản sẽ được tạo ở trạng thái <strong>Bản nháp</strong> và cần Quản lý xác nhận trước khi hoàn tất thanh lý hợp đồng.
+                Sau khi hợp đồng kết thúc, biên bản chỉ còn xem — không chỉnh sửa được.
               </p>
             </div>
           </>
@@ -227,7 +223,7 @@ export default function HandoverForm({
               {createHandover.isPending
                 ? <Loader2 className="w-4 h-4 animate-spin" />
                 : <Save className="w-4 h-4" />}
-              {createHandover.isPending ? 'Đang lưu...' : 'Tạo biên bản Nháp'}
+              {createHandover.isPending ? 'Đang lưu...' : 'Tạo biên bản'}
             </button>
           )}
         </div>

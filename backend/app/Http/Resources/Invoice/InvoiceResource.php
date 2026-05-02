@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Invoice;
 
 use App\Http\Resources\Contract\ContractResource;
+use App\Http\Resources\Finance\PaymentAllocationResource;
 use App\Http\Resources\Org\UserResource;
 use App\Http\Resources\Property\PropertyResource;
 use App\Http\Resources\Property\RoomResource;
@@ -13,9 +14,21 @@ class InvoiceResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Tên khách "đại diện" hợp đồng (primary member) — phục vụ trang Sổ cái tab "Tiền nợ".
+        $tenantName = null;
+        if ($this->relationLoaded('contract') && $this->contract) {
+            $contract = $this->contract;
+            if ($contract->relationLoaded('primaryMember') && $contract->primaryMember) {
+                $member = $contract->primaryMember;
+                $user = $member->relationLoaded('user') ? $member->user : null;
+                $tenantName = $user?->full_name ?? $member->full_name ?? null;
+            }
+        }
+
         return [
             'id' => $this->id,
             'org_id' => $this->org_id,
+            'contract_id' => $this->contract_id,
             'status' => $this->status,
 
             // Kỳ thanh toán
@@ -28,12 +41,14 @@ class InvoiceResource extends JsonResource
             'total_amount' => (float) $this->total_amount,
             'paid_amount' => (float) $this->paid_amount,
             'debt' => (float) ($this->total_amount - $this->paid_amount),
+            'tenant_name' => $tenantName,
 
             // Relationships (chỉ trả khi được eager load)
             'property' => new PropertyResource($this->whenLoaded('property')),
             'room' => new RoomResource($this->whenLoaded('room')),
             'contract' => new ContractResource($this->whenLoaded('contract')),
             'items' => InvoiceItemResource::collection($this->whenLoaded('items')),
+            'payment_allocations' => PaymentAllocationResource::collection($this->whenLoaded('paymentAllocations')),
 
             // Lịch sử thay đổi trạng thái
             'status_histories' => InvoiceStatusHistoryResource::collection($this->whenLoaded('statusHistories')),

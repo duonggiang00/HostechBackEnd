@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Ticket, Plus, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { Ticket, Plus, Search, ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { useTickets } from '../hooks/useTickets';
 import TicketStatusBadge from '../components/TicketStatusBadge';
@@ -28,7 +27,12 @@ function formatDate(iso: string) {
 export default function TicketListPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
 
-  const [params, setParams] = useState<TicketQueryParams>({ property_id: propertyId, page: 1, per_page: 15 });
+  const [params, setParams] = useState<TicketQueryParams>({
+    property_id: propertyId,
+    page: 1,
+    per_page: 15,
+    sort: '-created_at',
+  });
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -43,184 +47,240 @@ export default function TicketListPage() {
   };
 
   return (
-    <div className="min-h-screen pb-20">
-      {/* Page Header */}
-      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3.5 bg-linear-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg shadow-amber-200 dark:shadow-none">
-            <Ticket className="w-7 h-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white">Sự cố & Yêu cầu</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              {meta ? `${meta.total} phiếu` : 'Quản lý phiếu sự cố'}
-            </p>
-          </div>
+    <div className="min-h-screen pb-12">
+      <header className="mb-6 flex flex-col gap-4 border-b border-slate-200 dark:border-slate-800 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
+            Danh sách sự cố
+          </h1>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+            {meta != null
+              ? `${meta.total} phiếu · sắp xếp theo ngày tạo (mới nhất trước)`
+              : 'Theo dõi và xử lý báo cáo từ khách thuê · mới nhất trước'}
+          </p>
         </div>
         <PermissionGate permission={PERMISSIONS.createTicket} role={['Owner', 'Manager', 'Staff']}>
           <button
+            type="button"
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm shadow-lg shadow-indigo-200 dark:shadow-none transition-all"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
           >
-            <Plus className="w-4 h-4" /> Tạo phiếu mới
+            <Plus className="h-4 w-4" aria-hidden />
+            Tạo phiếu
           </button>
         </PermissionGate>
-      </div>
+      </header>
 
-      {/* Filters */}
-      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white dark:border-slate-800/50 shadow-xl p-5 mb-6">
-        {/* Search */}
+      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900/80">
         <div className="relative mb-4">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             value={search}
-            onChange={e => { setSearch(e.target.value); setParams(p => ({ ...p, page: 1 })); }}
-            placeholder="Tìm kiếm phiếu sự cố..."
-            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            onChange={e => {
+              setSearch(e.target.value);
+              setParams(p => ({ ...p, page: 1 }));
+            }}
+            placeholder="Tìm theo mô tả, phòng, người báo cáo…"
+            className="w-full rounded-md border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500"
           />
         </div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {STATUS_FILTERS.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setStatus(f.value)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                (params.status ?? 'ALL') === f.value
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Lọc trạng thái">
+          {STATUS_FILTERS.map(f => {
+            const active = (params.status ?? 'ALL') === f.value;
+            return (
+              <button
+                key={f.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setStatus(f.value)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  active
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
         </div>
-      </div>
+      </section>
 
-      {/* Ticket List */}
-      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white dark:border-slate-800/50 shadow-xl overflow-hidden">
+      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/80">
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-7 w-7 animate-spin text-indigo-600" aria-label="Đang tải" />
           </div>
         ) : tickets.length === 0 ? (
-          <div className="text-center py-20">
-            <Ticket className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-            <p className="text-slate-500 font-medium">Không có phiếu nào.</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <Ticket className="mb-3 h-10 w-10 text-slate-300 dark:text-slate-600" aria-hidden />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Không có phiếu nào khớp bộ lọc.</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {tickets.map((ticket, i) => (
-              <motion.button
-                key={ticket.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-                onClick={() => setSelectedId(ticket.id)}
-                className="w-full flex items-start gap-4 px-6 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group"
-              >
-                {/* Left accent */}
-                <div className={`mt-1.5 w-1 h-10 rounded-full shrink-0 ${
-                  ticket.priority === 'URGENT' ? 'bg-rose-500' :
-                  ticket.priority === 'HIGH' ? 'bg-amber-500' :
-                  ticket.priority === 'MEDIUM' ? 'bg-blue-500' :
-                  'bg-slate-300 dark:bg-slate-600'
-                }`} />
+          <>
+            {/* Desktop: bảng */}
+            <div className="hidden md:block">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/80 text-xs font-medium uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/40 dark:text-slate-400">
+                    <th className="whitespace-nowrap px-4 py-3">Phòng</th>
+                    <th className="whitespace-nowrap px-4 py-3">Ngày tạo</th>
+                    <th className="whitespace-nowrap px-4 py-3">Trạng thái</th>
+                    <th className="whitespace-nowrap px-4 py-3">Mức độ</th>
+                    <th className="min-w-[200px] px-4 py-3">Nội dung</th>
+                    <th className="whitespace-nowrap px-4 py-3">Báo cáo</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {tickets.map(ticket => (
+                    <tr
+                      key={ticket.id}
+                      className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      onClick={() => setSelectedId(ticket.id)}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                        {ticket.room?.code ?? '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-600 dark:text-slate-400">{formatDate(ticket.created_at)}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <TicketStatusBadge status={ticket.status} size="sm" />
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <TicketPriorityBadge priority={ticket.priority} size="sm" />
+                      </td>
+                      <td className="max-w-md px-4 py-3">
+                        <p className="line-clamp-2 font-medium text-slate-900 dark:text-slate-100">{ticket.description}</p>
+                        {ticket.category && (
+                          <span className="mt-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                            {ticket.category}
+                          </span>
+                        )}
+                      </td>
+                      <td className="max-w-[140px] truncate px-4 py-3 text-slate-600 dark:text-slate-400" title={ticket.created_by?.full_name}>
+                        {ticket.created_by?.full_name ?? '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                {/* Main Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <TicketStatusBadge status={ticket.status} size="sm" />
-                    <TicketPriorityBadge priority={ticket.priority} size="sm" />
-                    {ticket.category && (
-                      <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-full">
-                        {ticket.category}
-                      </span>
-                    )}
+            {/* Mobile: danh sách dạng dòng */}
+            <div className="divide-y divide-slate-100 dark:divide-slate-800 md:hidden">
+              {tickets.map(ticket => (
+                <button
+                  key={ticket.id}
+                  type="button"
+                  onClick={() => setSelectedId(ticket.id)}
+                  className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
+                  <div
+                    className={`mt-1 h-9 w-1 shrink-0 rounded-full ${
+                      ticket.priority === 'URGENT'
+                        ? 'bg-rose-500'
+                        : ticket.priority === 'HIGH'
+                          ? 'bg-amber-500'
+                          : ticket.priority === 'MEDIUM'
+                            ? 'bg-blue-500'
+                            : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
+                      Phòng <span className="text-slate-900 dark:text-white">{ticket.room?.code ?? '—'}</span>
+                      <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>
+                      {formatDate(ticket.created_at)}
+                    </p>
+                    <div className="mb-1 mt-2 flex flex-wrap items-center gap-1.5">
+                      <TicketStatusBadge status={ticket.status} size="sm" />
+                      <TicketPriorityBadge priority={ticket.priority} size="sm" />
+                      {ticket.category && (
+                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                          {ticket.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{ticket.description}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{ticket.created_by?.full_name ?? '—'}</p>
                   </div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{ticket.description}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {ticket.room?.code} · {ticket.created_by?.full_name} · {formatDate(ticket.created_at)}
-                  </p>
-                </div>
-
-                {/* Arrow */}
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 mt-2 transition-colors shrink-0" />
-              </motion.button>
-            ))}
-          </div>
+                  <ChevronRight className="mt-2 h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                </button>
+              ))}
+            </div>
+          </>
         )}
 
-        {/* Pagination */}
         {meta && meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Trang {meta.current_page} / {meta.last_page} · {meta.total} phiếu
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               <button
+                type="button"
                 disabled={meta.current_page <= 1}
                 onClick={() => setParams(p => ({ ...p, page: (p.page ?? 1) - 1 }))}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-all"
+                className="rounded-md border border-slate-200 p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                aria-label="Trang trước"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4" />
               </button>
               <button
+                type="button"
                 disabled={meta.current_page >= meta.last_page}
                 onClick={() => setParams(p => ({ ...p, page: (p.page ?? 1) + 1 }))}
-                className="p-2 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition-all"
+                className="rounded-md border border-slate-200 p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                aria-label="Trang sau"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Ticket Detail Slide-over */}
-      <AnimatePresence>
-        {selectedId && (
-          <TicketDetailPanel
-            key={selectedId}
-            ticketId={selectedId}
-            onClose={() => setSelectedId(null)}
+      {selectedId && <TicketDetailPanel ticketId={selectedId} onClose={() => setSelectedId(null)} />}
+
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="ticket-create-title">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/50"
+            aria-label="Đóng"
+            onClick={() => setShowCreate(false)}
           />
-        )}
-      </AnimatePresence>
-
-      {/* Create Ticket Modal */}
-      <AnimatePresence>
-        {showCreate && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={(e) => { if (e.target === e.currentTarget) setShowCreate(false); }}
+          <div
+            className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900 sm:rounded-xl"
+            onClick={e => e.stopPropagation()}
           >
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCreate(false)} />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="relative z-10 bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg border border-slate-200 dark:border-slate-800 overflow-hidden"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800">
-                <h2 className="text-lg font-black text-slate-900 dark:text-white">Tạo phiếu sự cố mới</h2>
-              </div>
-              <div className="p-6">
-                <TicketForm
-                  propertyId={propertyId!}
-                  onSuccess={() => { setShowCreate(false); refetch(); }}
-                  onCancel={() => setShowCreate(false)}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <h2 id="ticket-create-title" className="text-base font-semibold text-slate-900 dark:text-white">
+                Tạo phiếu sự cố
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowCreate(false)}
+                className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                aria-label="Đóng"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4">
+              <TicketForm
+                propertyId={propertyId!}
+                onSuccess={() => {
+                  setShowCreate(false);
+                  refetch();
+                }}
+                onCancel={() => setShowCreate(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

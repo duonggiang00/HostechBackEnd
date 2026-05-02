@@ -150,10 +150,11 @@ class MeterReadingService
                 return $this->update($existing, $data);
             }
 
-            // Get previous approved reading
+            // Mốc chỉ số không được thấp hơn: gồm cả SUBMITTED (chờ duyệt) để cho phép kỳ sau
             $prev = MeterReading::where('meter_id', $meterId)
-                ->finalized()
+                ->sealedOrSubmitted()
                 ->orderBy('period_end', 'desc')
+                ->orderBy('id', 'desc')
                 ->first();
 
             $meter = Meter::find($meterId);
@@ -249,8 +250,9 @@ class MeterReadingService
             }
 
             $prev = MeterReading::where('meter_id', $meterId)
-                ->finalized()
+                ->sealedOrSubmitted()
                 ->orderBy('period_end', 'desc')
+                ->orderBy('id', 'desc')
                 ->first();
 
             $meter = Meter::find($meterId);
@@ -333,28 +335,88 @@ class MeterReadingService
     public function bulkApprove(array $readingIds): array
     {
         return DB::transaction(function () use ($readingIds) {
+            // 1. Single query — eager-load meter to avoid N+1 in consumption calc & cache invalidation.
             $readings = MeterReading::whereIn('id', $readingIds)
                 ->where('status', 'SUBMITTED')
+                ->with(['meter'])
                 ->get();
 
-            $results = [];
-            $approvedIds = [];
-            $propertyId = null;
-
-            foreach ($readings as $reading) {
-                // Pass false to update to skip single MeterReadingApproved event
-                $results[] = $this->update($reading, ['status' => 'APPROVED'], false);
-                $approvedIds[] = $reading->id;
-                if (! $propertyId) {
-                    $propertyId = $reading->meter->property_id;
-                }
+            if ($readings->isEmpty()) {
+                return [];
             }
 
+            $approvedIds = [];
+            $propertyId = null;
+            $now = now();
+            $actorId = Auth::id();
+
+            // 2. Pre-load all previous finalized readings for all affected meters in ONE query
+            //    so consumption calculation does not trigger N individual DB calls.
+            $meterIds = $readings->pluck('meter_id')->unique()->values();
+
+            $prevByMeter = MeterReading::whereIn('meter_id', $meterIds)
+                ->whereNotIn('id', $readingIds)
+                ->whereIn('status', MeterReading::FINALIZED_STATUSES)
+                ->orderBy('period_end', 'desc')
+                ->get()
+                ->groupBy('meter_id');
+
+            // 3. Bypass Eloquent Observer entirely for the bulk path:
+            //    - Observer@saving  would run calculateConsumption() for each row (N+1 queries).
+            //    - Observer@updated would fire MeterReadingApproved → SynchronizeMeterMetadata
+            //      (synchronous, 2 queries per reading) for each row.
+            //    We handle both concerns manually below.
+            MeterReading::withoutEvents(function () use (
+                $readings, $prevByMeter, $now, $actorId, &$approvedIds, &$propertyId
+            ) {
+                foreach ($readings as $reading) {
+                    $meter = $reading->getRelation('meter');
+
+                    // --- Consumption calculation (inline, no extra query) ---
+                    $prevList = $prevByMeter->get($reading->meter_id, collect());
+                    // Find the most-recent finalized reading strictly before this period.
+                    $prev = $prevList->first(
+                        fn ($r) => $r->period_end <= $reading->period_start
+                    );
+                    $initialReading = $meter?->meta['initial_reading'] ?? $meter?->base_reading ?? 0;
+                    $prevValue = $prev ? $prev->reading_value : $initialReading;
+                    $consumption = $reading->reading_value - $prevValue;
+
+                    // updateQuietly → no Observer, no extra SELECT, one UPDATE per reading.
+                    $reading->updateQuietly([
+                        'status' => 'APPROVED',
+                        'consumption' => $consumption,
+                        'approved_at' => $now,
+                        'approved_by_user_id' => $actorId,
+                    ]);
+
+                    $approvedIds[] = $reading->id;
+                    if (! $propertyId) {
+                        $propertyId = $meter?->property_id;
+                    }
+                }
+            });
+
+            // 4. Sync base_reading once per unique meter (replaces N SynchronizeMeterMetadata calls).
+            $readings
+                ->unique('meter_id')
+                ->each(function ($reading) {
+                    $meter = $reading->getRelation('meter');
+                    if ($meter) {
+                        $this->syncMeterBaseReading($meter);
+                    }
+                });
+
+            // 5. Fire ONE bulk event → DispatchMeterNotifications queued, BulkMeterReadingsApproved broadcast.
             if (! empty($approvedIds)) {
                 event(new BulkMeterReadingsApproved($approvedIds, $propertyId));
             }
 
-            return $results;
+            // 6. Return all results in a SINGLE batch load (replaces N fresh()->load() calls).
+            return MeterReading::whereIn('id', $approvedIds)
+                ->with(['meter', 'submittedBy', 'approvedBy'])
+                ->get()
+                ->all();
         });
     }
 
@@ -473,8 +535,9 @@ class MeterReadingService
         $prev = MeterReading::where('meter_id', $reading->meter_id)
             ->where('id', '!=', $reading->id)
             ->where('period_end', '<=', $reading->period_start)
-            ->finalized()
+            ->sealedOrSubmitted()
             ->orderBy('period_end', 'desc')
+            ->orderBy('id', 'desc')
             ->first();
 
         $meter = $reading->meter;

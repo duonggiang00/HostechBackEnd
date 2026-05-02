@@ -1,6 +1,6 @@
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
+import PropertyScopeIndexRedirect from './PropertyScopeIndexRedirect';
 import { billingRoutes } from './features/billing/routes';
 import { contractsRoutes } from './features/contracts/routes';
 import { dashboardRoutes } from './features/dashboard/routes';
@@ -19,7 +19,7 @@ const ProfilePage = lazy(() => import('@/shared/features/profile/pages/ProfilePa
 export const propertyScopeRoutes: RouteObject[] = [
   {
     index: true,
-    element: <Navigate to="dashboard" replace />,
+    element: <PropertyScopeIndexRedirect />,
   },
   ...propertyRoutes,
 

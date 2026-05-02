@@ -32,7 +32,7 @@ class ContractFactory extends Factory
             'status' => $this->faker->randomElement(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']),
             'start_date' => $startDate,
             'end_date' => $this->faker->boolean(80) ? $endDate : null,
-            'billing_cycle' => 'MONTHLY',
+            'billing_cycle' => '1',
             'due_day' => 5,
             'cutoff_day' => 30,
             'rent_price' => $this->faker->randomFloat(2, 2000000, 10000000),

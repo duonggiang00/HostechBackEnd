@@ -2,8 +2,10 @@
 
 namespace App\Services\Finance;
 
+use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
+use App\Models\Contract\RefundReceipt;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,11 +15,11 @@ use Illuminate\Support\Facades\Log;
 /**
  * Sổ cái kế toán kép: mỗi payment tạo 2 dòng (CASH_BANK debit, A/R credit).
  *
- * KPI tài chính (ledger/summary), không phải lợi nhuận:
+ * KPI tài chính (ledger/summary) — match thiết kế trang Sổ cái 5 tab:
  * - total_collected: tổng debit nhánh CASH_BANK, ref_type=payment (tiền vào quỹ từ thu hợp lệ).
- * - total_refunded: tổng credit nhánh CASH_BANK, ref_type=payment_reversal (xuất quỹ khi void payment).
- * - total_deposit_held: tổng (deposit_amount - refunded_amount) trên hợp đồng có cọc chưa trả hết cho khách
- *   (HELD, REFUND_PENDING, PARTIAL_REFUND, FORFEITED); không lấy từ ledger.
+ * - total_refunded: tổng `RefundReceipt.amount` đã chi (paid_at IS NOT NULL) — match tab "Tiền hoàn trả".
+ * - total_deposit_held: tổng `deposit_amount` của hợp đồng đang ACTIVE (mỗi khi HĐ kết thúc tự động trừ).
+ * - total_payment_reversal: (giữ tương thích) tổng credit nhánh CASH_BANK, ref_type=payment_reversal.
  */
 class LedgerService
 {
@@ -193,15 +195,19 @@ class LedgerService
             ->where('ref_type', 'payment')
             ->sum('debit');
 
-        $totalRefunded = (float) $this->ledgerCashKpiBaseQuery($orgId, $propertyId, $from, $to)
+        // Giữ thông tin payment_reversal để tương thích nơi khác có thể cần (dashboards/audit).
+        $totalPaymentReversal = (float) $this->ledgerCashKpiBaseQuery($orgId, $propertyId, $from, $to)
             ->where('ref_type', 'payment_reversal')
             ->sum('credit');
 
-        $totalDepositHeld = $this->sumDepositHeldRemaining($orgId, $propertyId);
+        $totalRefunded = $this->sumPaidRefundReceipts($orgId, $propertyId, $from, $to);
+
+        $totalDepositHeld = $this->sumDepositOfActiveContracts($orgId, $propertyId);
 
         return [
             'total_collected' => $totalCollected,
             'total_refunded' => $totalRefunded,
+            'total_payment_reversal' => $totalPaymentReversal,
             'total_deposit_held' => $totalDepositHeld,
             'period' => [
                 'from' => $from,
@@ -209,6 +215,49 @@ class LedgerService
             ],
             'property_id' => $propertyId ?: null,
         ];
+    }
+
+    /**
+     * Tổng RefundReceipt đã chi (paid_at != null) — match tab "Tiền hoàn trả".
+     */
+    public function sumPaidRefundReceipts(
+        string $orgId,
+        ?string $propertyId = null,
+        ?string $from = null,
+        ?string $to = null,
+    ): float {
+        $q = RefundReceipt::withoutGlobalScope('org_id')
+            ->where('org_id', $orgId)
+            ->whereNotNull('paid_at');
+
+        if ($propertyId !== null && $propertyId !== '') {
+            $q->whereHas('contract', fn ($c) => $c->where('property_id', $propertyId));
+        }
+        if ($from) {
+            $q->where('paid_at', '>=', $from.' 00:00:00');
+        }
+        if ($to) {
+            $q->where('paid_at', '<=', $to.' 23:59:59');
+        }
+
+        return (float) $q->sum('amount');
+    }
+
+    /**
+     * Tổng tiền cọc đang giữ — chỉ tính HĐ ACTIVE (kết thúc HĐ → không còn trong sum).
+     */
+    public function sumDepositOfActiveContracts(string $orgId, ?string $propertyId = null): float
+    {
+        $q = Contract::withoutGlobalScope('org_id')
+            ->where('org_id', $orgId)
+            ->where('status', ContractStatus::ACTIVE->value)
+            ->where('deposit_amount', '>', 0);
+
+        if ($propertyId !== null && $propertyId !== '') {
+            $q->where('property_id', $propertyId);
+        }
+
+        return (float) $q->sum('deposit_amount');
     }
 
     /**

@@ -10,7 +10,7 @@ interface StatCardProps {
     value: number;
     isUp: boolean;
   };
-  color: 'blue' | 'emerald' | 'amber' | 'rose' | 'gray';
+  color: 'blue' | 'emerald' | 'amber' | 'rose' | 'gray' | 'violet';
   testId?: string;
 }
 
@@ -20,6 +20,7 @@ const colorMap = {
   amber: 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/50',
   rose: 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800/50',
   gray: 'bg-gray-50 text-gray-600 border-gray-100 dark:bg-gray-900/20 dark:text-gray-400 dark:border-gray-800/50',
+  violet: 'bg-violet-50 text-violet-700 border-violet-100 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800/50',
 };
 
 export const StatCard = ({ label, value, icon: Icon, trend, color, testId }: StatCardProps) => {

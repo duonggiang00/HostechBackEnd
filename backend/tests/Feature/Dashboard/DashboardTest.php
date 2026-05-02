@@ -6,6 +6,8 @@ uses(RefreshDatabase::class);
 
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Finance\Payment;
+use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceItem;
 use App\Models\Org\Org;
@@ -102,6 +104,25 @@ beforeEach(function () {
         'invoice_id' => $this->paidInvoice->id,
         'type' => 'SERVICE',
         'amount' => 1000000,
+    ]);
+
+    // Thu tiền thực tế (dashboard doanh thu theo tháng dùng payment_allocations + payments.received_at)
+    $this->paidInvoicePayment = Payment::query()->create([
+        'org_id' => $this->org->id,
+        'property_id' => $this->property->id,
+        'payer_user_id' => $this->tenant->id,
+        'received_by_user_id' => $this->owner->id,
+        'method' => 'CASH',
+        'amount' => 6000000,
+        'received_at' => now(),
+        'status' => 'APPROVED',
+    ]);
+
+    PaymentAllocation::query()->create([
+        'org_id' => $this->org->id,
+        'payment_id' => $this->paidInvoicePayment->id,
+        'invoice_id' => $this->paidInvoice->id,
+        'amount' => 6000000,
     ]);
 
     // Overdue invoice (different period to avoid unique constraint)
@@ -311,8 +332,10 @@ test('owner dashboard shows staff counts', function () {
 });
 
 test('owner dashboard shows contract stats', function () {
+    $from = now()->subDays(30)->format('Y-m-d');
+    $to = now()->format('Y-m-d');
     $response = actingAs($this->owner)
-        ->getJson('/api/dashboard/owner')
+        ->getJson("/api/dashboard/owner?from={$from}&to={$to}")
         ->assertSuccessful();
 
     $contracts = $response->json('data.contracts');
@@ -320,6 +343,22 @@ test('owner dashboard shows contract stats', function () {
     expect($contracts['total_active'])->toBe(1);
     expect($contracts['expiring_in_30_days'])->toBe(1); // end_date = now+15 days
     expect($contracts['new_in_range'])->toBe(1); // signed_at = now-5 days
+
+    expect($response->json('data.invoices'))->toHaveKeys([
+        'outstanding_debt',
+        'draft_pipeline_total',
+        'recent_paid',
+        'revenue_last_6_months',
+        'revenue_this_month',
+    ]);
+
+    $months = $response->json('data.invoices.revenue_last_6_months');
+    expect($months)->toBeArray();
+    $currentKey = now()->format('Y-m');
+    $currentBucket = collect($months)->firstWhere('month_key', $currentKey);
+    expect($currentBucket)->not->toBeNull();
+    expect((float) $currentBucket['revenue'])->toBeGreaterThan(0);
+    expect((float) $response->json('data.invoices.revenue_this_month'))->toBeGreaterThan(0);
 });
 
 test('owner cannot see other org data', function () {
@@ -350,8 +389,10 @@ test('tenant cannot access manager dashboard', function () {
 });
 
 test('manager dashboard shows tenant stats', function () {
+    $from = now()->subDays(30)->format('Y-m-d');
+    $to = now()->format('Y-m-d');
     $response = actingAs($this->manager)
-        ->getJson('/api/dashboard/manager')
+        ->getJson("/api/dashboard/manager?from={$from}&to={$to}")
         ->assertSuccessful();
 
     $tenants = $response->json('data.tenants');

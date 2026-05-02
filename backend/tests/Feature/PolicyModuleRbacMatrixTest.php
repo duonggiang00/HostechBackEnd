@@ -3,6 +3,7 @@
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Finance\Payment;
+use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
 use App\Models\Org\User;
@@ -148,4 +149,46 @@ test('staff can view room on assigned property tenant cannot update property', f
     putJson("/api/properties/{$s['property']->id}", [
         'name' => 'Renamed by tenant attempt',
     ])->assertForbidden();
+});
+
+test('invoice show includes payment_allocations with payment receipt', function () {
+    $s = rbacMatrixScenario();
+
+    $invoice = Invoice::factory()->issued()->create([
+        'org_id' => $s['org']->id,
+        'property_id' => $s['property']->id,
+        'room_id' => $s['room']->id,
+        'contract_id' => $s['contract']->id,
+        'total_amount' => 1_500_000,
+        'paid_amount' => 1_500_000,
+    ]);
+
+    $payment = Payment::create([
+        'org_id' => $s['org']->id,
+        'property_id' => $s['property']->id,
+        'payer_user_id' => $s['tenant']->id,
+        'received_by_user_id' => $s['staff']->id,
+        'method' => 'CASH',
+        'amount' => 1_500_000,
+        'reference' => 'INV-ALLOC-TEST',
+        'received_at' => now(),
+        'status' => 'APPROVED',
+    ]);
+
+    PaymentAllocation::create([
+        'org_id' => $s['org']->id,
+        'payment_id' => $payment->id,
+        'invoice_id' => $invoice->id,
+        'amount' => 1_500_000,
+    ]);
+
+    actingAs($s['staff']);
+    $response = getJson("/api/invoices/{$invoice->id}", ['X-Org-Id' => $s['org']->id]);
+    $response
+        ->assertOk()
+        ->assertJsonPath('data.payment_allocations.0.payment.id', (string) $payment->id)
+        ->assertJsonPath('data.payment_allocations.0.amount', 1_500_000);
+
+    $url = $response->json('data.payment_allocations.0.payment.receipt.url');
+    expect($url)->toBeString()->not->toBeEmpty();
 });

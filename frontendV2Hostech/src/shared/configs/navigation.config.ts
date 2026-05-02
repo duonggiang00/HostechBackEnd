@@ -23,6 +23,7 @@ import {
   FileSignature,
   LayoutList,
   ClipboardCheck,
+  ArrowLeftRight,
   Sun,
   Shield,
   Settings,
@@ -64,6 +65,7 @@ export const ORG_NAVIGATION: NavigationSection[] = [
     id: 'operations',
     label: 'Điều hành',
     items: [
+      { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: '/org/rooms', exact: true, roles: ['Admin', 'Owner', 'Manager'] },
       { id: 'staff', icon: Users, label: 'Nhân sự hệ hệ thống', path: '/org/staff', roles: ['Admin', 'Owner', 'Manager'] },
       { id: 'invoices', icon: Receipt, label: 'Quản lý hóa đơn', path: '/org/invoices', roles: ['Admin', 'Owner', 'Manager'] },
     ],
@@ -114,7 +116,14 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
     icon: Building2,
     defaultOpen: true,
     items: [
-      { id: 'dashboard', icon: LayoutDashboard, label: 'Bảng điều khiển', path: '/properties/:propertyId/dashboard', exact: true },
+      {
+        id: 'dashboard',
+        icon: LayoutDashboard,
+        label: 'Bảng điều khiển',
+        path: '/properties/:propertyId/dashboard',
+        exact: true,
+        roles: ['Admin', 'Owner', 'Manager'],
+      },
       { id: 'building_info', icon: Info, label: 'Thông tin chi tiết', path: '/properties/:propertyId/building-info', exact: true },
       { id: 'floorplan', icon: Layers, label: 'Mặt bằng tòa nhà', path: '/properties/:propertyId/building-view' },
       { id: 'rooms', icon: DoorOpen, label: 'Danh sách phòng', path: '/properties/:propertyId/rooms' },
@@ -151,7 +160,7 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
       {
         id: 'handovers',
         icon: ClipboardCheck,
-        label: 'Giấy tờ & Bàn giao',
+        label: 'Biên bản bàn giao phòng',
         path: '/properties/:propertyId/handovers',
       },
     ],
@@ -205,12 +214,13 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         path: '/properties/:propertyId/finance/ledger',
         roles: ['Owner', 'Manager'],
       },
-      { 
-        id: 'invoices', 
-        icon: Receipt, 
-        label: 'Hóa đơn', 
+      {
+        id: 'invoices',
+        icon: Receipt,
+        label: 'Hóa đơn',
         path: '/properties/:propertyId/billing',
-        badgeKey: 'issuedInvoices'
+        activeExcludePathIncludes: ['/billing/payment-verifications'],
+        badgeKey: 'issuedInvoices',
       },
 
       {
@@ -218,7 +228,7 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         icon: Wallet,
         label: 'Biên lai',
         path: '/properties/:propertyId/finance/payments',
-        roles: ['Owner', 'Manager'],
+        roles: ['Owner', 'Manager', 'Staff'],
       },
       {
         id: 'payment-verifications',
@@ -251,7 +261,25 @@ export const TENANT_NAVIGATION: NavigationSection[] = [
     id: 'services',
     label: 'Tài chính và hỗ trợ',
     items: [
-      { id: 'billing', icon: CreditCard, label: 'Hóa đơn', path: '/app/billing' },
+      {
+        id: 'billing',
+        icon: CreditCard,
+        label: 'Hóa đơn',
+        path: '/app/billing',
+        activeExcludePathIncludes: ['/billing/transactions'],
+      },
+      {
+        id: 'billing-transactions',
+        icon: ScrollText,
+        label: 'Giao dịch & biên lai',
+        path: '/app/billing/transactions',
+      },
+      {
+        id: 'transfer-requests',
+        icon: ArrowLeftRight,
+        label: 'Yêu cầu chuyển phòng',
+        path: '/app/transfer-requests',
+      },
       { id: 'requests', icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
     ],
   },
@@ -265,6 +293,7 @@ export const getBreadcrumbLabel = (path: string): string => {
     '/app': 'Cư dân',
     '/org/dashboard': 'Bảng điều khiển',
     '/org/properties': 'Danh sách cơ sở',
+    '/org/rooms': 'Danh sách phòng',
     '/org/compliance': 'Tuân thủ & nhật ký',
     '/org/organization-settings': 'Cấu hình tổ chức',
   };

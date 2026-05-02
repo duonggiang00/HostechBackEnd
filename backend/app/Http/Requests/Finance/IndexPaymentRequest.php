@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam page int Trang hiện tại. Example: 1
  * @queryParam filter[property_id] uuid Lọc theo tòa nhà.
  * @queryParam filter[status] string Lọc theo trạng thái: PENDING, APPROVED, REJECTED.
- * @queryParam filter[method] string Lọc theo PTTT: CASH, TRANSFER, WALLET, QR.
+ * @queryParam filter[method] string Lọc theo PTTT: CASH, BANK_TRANSFER (gộp legacy TRANSFER), VNPAY, WALLET, QR.
  * @queryParam filter[received_between] string Lọc theo khoảng thời gian nhận tiền (ISO 8601, phân cách bằng dấu phẩy). Example: 2024-03-01,2024-03-31
  * @queryParam search string Tìm theo mã tham chiếu hoặc ghi chú.
  * @queryParam sort string Sắp xếp. Example: -received_at
@@ -29,7 +29,7 @@ class IndexPaymentRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.status' => ['nullable', 'string', 'in:PENDING,APPROVED,REJECTED'],
-            'filter.method' => ['nullable', 'string', 'in:CASH,TRANSFER,WALLET,QR'],
+            'filter.method' => ['nullable', 'string', 'in:CASH,BANK_TRANSFER,VNPAY,TRANSFER,WALLET,QR'],
             'filter.payer_user_id' => ['nullable', 'uuid'],
             'filter.received_between' => ['nullable', 'string', 'regex:/^\d{4}-\d{2}-\d{2},\d{4}-\d{2}-\d{2}$/'],
             'sort' => ['nullable', 'string', 'in:received_at,amount,created_at,status,-received_at,-amount,-created_at,-status'],

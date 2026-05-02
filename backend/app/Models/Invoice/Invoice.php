@@ -4,6 +4,7 @@ namespace App\Models\Invoice;
 
 use App\Models\Concerns\MultiTenant;
 use App\Models\Contract\Contract;
+use App\Models\Finance\PaymentAllocation;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Property;
@@ -118,5 +119,20 @@ class Invoice extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function paymentAllocations()
+    {
+        return $this->hasMany(PaymentAllocation::class);
+    }
+
+    /**
+     * Trạng thái hóa đơn được coi là còn dư nợ có thể thu (khớp dashboard / hợp đồng).
+     *
+     * @return list<string>
+     */
+    public static function outstandingDebtStatuses(): array
+    {
+        return ['ISSUED', 'OVERDUE', 'PARTIAL', 'PENDING', 'LATE'];
     }
 }

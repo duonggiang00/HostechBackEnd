@@ -3,8 +3,8 @@
 namespace App\Listeners\Contract\Termination;
 
 use App\Events\Contract\Termination\TerminationInitiated;
-use App\Models\Handover\Handover;
 use App\Models\Meter\Meter;
+use App\Services\Handover\HandoverService;
 use Illuminate\Support\Facades\DB;
 
 class TerminationInitiatedCreateHandoverAndLockMeters
@@ -14,16 +14,10 @@ class TerminationInitiatedCreateHandoverAndLockMeters
         DB::transaction(function () use ($event) {
             $contract = $event->contract->fresh();
 
-            if (! Handover::query()->where('contract_id', $contract->id)->exists()) {
-                Handover::query()->create([
-                    'org_id' => $contract->org_id,
-                    'contract_id' => $contract->id,
-                    'room_id' => $contract->room_id,
-                    'type' => 'OUT',
-                    'status' => 'DRAFT',
-                    'note' => 'Tự động tạo khi khởi tạo thanh lý (EDA).',
-                ]);
-            }
+            app(HandoverService::class)->ensureHandoverExistsForTermination(
+                $contract,
+                auth()->check() ? auth()->id() : null
+            );
 
             Meter::query()
                 ->where('room_id', $contract->room_id)

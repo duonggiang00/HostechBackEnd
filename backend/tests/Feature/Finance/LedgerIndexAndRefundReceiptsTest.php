@@ -176,5 +176,11 @@ class LedgerIndexAndRefundReceiptsTest extends TestCase
         $this->assertSame((string) $propertyA->id, $filtered->json('data.0.property_id'));
         $this->assertSame('P.101', $filtered->json('data.0.room_name'));
         $this->assertSame('REFUND_PENDING', $filtered->json('data.0.deposit_status'));
+
+        $byContract = $this->actingAs($owner)->getJson('/api/finance/refund-receipts?per_page=50&filter[contract_id]='.$contractB->id);
+        $byContract->assertOk();
+        $this->assertSame(1, $byContract->json('meta.total'));
+        $this->assertSame((string) $contractB->id, $byContract->json('data.0.contract_id'));
+        $this->assertSame(2_000_000.0, (float) $byContract->json('data.0.amount'));
     }
 }

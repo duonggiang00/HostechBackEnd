@@ -47,6 +47,7 @@ class RoomResource extends JsonResource
             'is_draft' => $this->status === 'draft',
             'floor_name' => $this->floor_name ?? $this->floor?->name,
             'property_name' => $this->property_name ?? $this->property?->name,
+            'primary_tenant' => $this->resolvePrimaryTenant(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
 
@@ -61,6 +62,7 @@ class RoomResource extends JsonResource
                     'name' => $asset->name,
                     'serial' => $asset->serial,
                     'condition' => $asset->condition,
+                    'note' => $asset->note,
                 ]);
             }),
             'price_histories' => $this->whenLoaded('prices', function () {
@@ -178,6 +180,33 @@ class RoomResource extends JsonResource
                     ];
                 });
             }),
+        ];
+    }
+
+    /**
+     * Tóm tắt khách thuê chính (ưu tiên is_primary, fallback role TENANT, fallback first member).
+     * Trả null nếu không có activeContract đã eager-load hoặc không có thành viên.
+     */
+    private function resolvePrimaryTenant(): ?array
+    {
+        $contract = $this->activeContract;
+        if (! $contract || ! $contract->relationLoaded('members')) {
+            return null;
+        }
+
+        $member = $contract->members->firstWhere('is_primary', true)
+            ?? $contract->members->firstWhere('role', 'TENANT')
+            ?? $contract->members->first();
+
+        if (! $member) {
+            return null;
+        }
+
+        return [
+            'id' => $member->id,
+            'user_id' => $member->user_id,
+            'full_name' => $member->full_name ?? $member->user?->full_name,
+            'phone' => $member->phone ?? $member->user?->phone,
         ];
     }
 }

@@ -5,7 +5,7 @@ import { TicketSummary } from '../components/TicketSummary';
 import { 
   Users, 
   DoorOpen, 
-  Receipt, 
+  FileText, 
   TrendingUp,
   CalendarCheck
 } from 'lucide-react';
@@ -19,12 +19,15 @@ interface PropertyDashboardViewProps {
   dashboard: PropertyDashboardData;
   isGenerating: boolean;
   onGenerateBilling: () => Promise<void>;
+  /** Khi có — nút «Quản lý tòa nhà» mở mặt bằng tòa nhà (building-view). */
+  propertyId?: string | null;
 }
 
 export function PropertyDashboardView({ 
   dashboard, 
   isGenerating, 
-  onGenerateBilling 
+  onGenerateBilling,
+  propertyId,
 }: PropertyDashboardViewProps) {
   const { fontSize } = useTheme();
   const navigate = useNavigate();
@@ -76,12 +79,11 @@ export function PropertyDashboardView({
           testId="stat-rooms"
         />
         <StatCard 
-          label="Hóa đơn chưa thanh toán" 
-          value={stats.unpaidInvoices} 
-          icon={Receipt} 
-          color="amber"
-          trend={{ value: 5, isUp: false }}
-          testId="stat-unpaid"
+          label="Hợp đồng hiệu lực" 
+          value={(stats.activeContracts ?? 0).toLocaleString('vi-VN')} 
+          icon={FileText} 
+          color="violet"
+          testId="stat-active-contracts"
         />
         <StatCard 
           label="Doanh thu tháng này" 
@@ -146,7 +148,12 @@ export function PropertyDashboardView({
               </div>
               
               <button
-                onClick={() => navigate('/org/properties')}
+                type="button"
+                onClick={() =>
+                  propertyId
+                    ? navigate(`/properties/${propertyId}/building-view`)
+                    : navigate('/org/properties')
+                }
                 className="px-5 py-2.5 flex items-center justify-center bg-white text-blue-900 text-sm font-bold rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
               >
                 Quản lý tòa nhà

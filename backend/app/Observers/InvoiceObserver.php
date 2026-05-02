@@ -24,7 +24,18 @@ class InvoiceObserver
     public function updating(Invoice $invoice): void
     {
         if ($invoice->isDirty('status') && $invoice->status === 'ISSUED') {
-            $invoice->snapshot = $this->buildSnapshot($invoice);
+            $newSnapshot = $this->buildSnapshot($invoice);
+
+            // Preserve is_initial flag so activateContractIfInitialInvoice() can detect initial invoices.
+            // getOriginal() may return a raw JSON string (before cast) or a decoded array depending on
+            // Laravel version, so handle both cases.
+            $oldRaw = $invoice->getOriginal('snapshot');
+            $oldSnapshot = is_array($oldRaw) ? $oldRaw : (is_string($oldRaw) ? (json_decode($oldRaw, true) ?? []) : []);
+            if (! empty($oldSnapshot['is_initial'])) {
+                $newSnapshot['is_initial'] = true;
+            }
+
+            $invoice->snapshot = $newSnapshot;
         }
     }
 

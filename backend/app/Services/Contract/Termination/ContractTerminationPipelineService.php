@@ -5,15 +5,16 @@ namespace App\Services\Contract\Termination;
 use App\Events\Contract\Termination\HandoverSubmitted;
 use App\Events\Contract\Termination\TerminationInitiated;
 use App\Models\Contract\Contract;
-use App\Models\Handover\Handover;
 use App\Models\Invoice\Invoice;
 use App\Services\Contract\ContractService;
+use App\Services\Handover\HandoverService;
 use Illuminate\Support\Facades\DB;
 
 class ContractTerminationPipelineService
 {
     public function __construct(
         protected ContractService $contractService,
+        protected HandoverService $handoverService,
     ) {}
 
     /**
@@ -55,16 +56,10 @@ class ContractTerminationPipelineService
                 'termination_date' => $terminationDate,
             ])));
 
-            $handover = Handover::query()
-                ->where('contract_id', $contract->id)
-                ->where('status', 'CONFIRMED')
-                ->orderByDesc('confirmed_at')
-                ->orderByDesc('created_at')
-                ->first();
-
-            if (! $handover) {
-                throw new \RuntimeException('Không tìm thấy biên bản bàn giao đã xác nhận cho hợp đồng này.');
-            }
+            $handover = $this->handoverService->ensureHandoverExistsForTermination(
+                $contract->fresh(),
+                auth()->check() ? auth()->id() : null
+            );
 
             event(new HandoverSubmitted(
                 $handover,

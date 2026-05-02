@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Sanctum\HasApiTokens;
@@ -51,6 +52,7 @@ class User extends Authenticatable implements HasMedia
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -61,6 +63,7 @@ class User extends Authenticatable implements HasMedia
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'phone_verified_at' => 'datetime',
             'two_factor_confirmed_at' => 'datetime',
             'mfa_enabled' => 'boolean',
@@ -73,6 +76,14 @@ class User extends Authenticatable implements HasMedia
     public function org()
     {
         return $this->belongsTo(Org::class, 'org_id');
+    }
+
+    /**
+     * Ghi nhận phiên đăng nhập API thành công (Fortify + Sanctum).
+     */
+    public function recordLoginAt(?Carbon $at = null): void
+    {
+        $this->forceFill(['last_login_at' => $at ?? now()])->saveQuietly();
     }
 
     /**

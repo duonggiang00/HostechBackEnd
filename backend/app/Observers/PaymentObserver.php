@@ -2,6 +2,8 @@
 
 namespace App\Observers;
 
+use App\Events\Finance\PaymentProofSubmitted;
+use App\Events\Finance\PaymentRejected;
 use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Events\Finance\PaymentVoided;
 use App\Models\Finance\Payment;
@@ -20,6 +22,12 @@ class PaymentObserver
 
         if ($payment->status === 'APPROVED') {
             PaymentSuccessfullyVerified::dispatch($payment);
+        } elseif (
+            $payment->status === 'PENDING'
+            && ($payment->meta['submitted_by_tenant'] ?? false) === true
+        ) {
+            // Tenant vừa gửi bằng chứng → notify manager để refresh danh sách xét duyệt.
+            PaymentProofSubmitted::dispatch($payment);
         }
 
         $this->clearFinancialCaches($payment);
@@ -35,6 +43,8 @@ class PaymentObserver
 
             if ($payment->status === 'APPROVED') {
                 PaymentSuccessfullyVerified::dispatch($payment);
+            } elseif ($payment->status === 'REJECTED' && $payment->getOriginal('status') === 'PENDING') {
+                PaymentRejected::dispatch($payment);
             } elseif ($payment->status === 'VOIDED' && $payment->getOriginal('status') === 'APPROVED') {
                 // Đảo ngược sổ cái nếu thanh toán đã duyệt bị hủy
                 PaymentVoided::dispatch($payment);

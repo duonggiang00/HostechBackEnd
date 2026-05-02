@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Contract\RefundReceipt;
 use App\Models\Document\DocumentTemplate;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
@@ -25,19 +27,23 @@ use App\Models\Property\RoomPrice;
 use App\Models\Property\RoomTemplate;
 use App\Models\Service\Service;
 use App\Services\Contract\ContractDocumentService;
+use App\Services\Contract\ContractService;
+use App\Services\Contract\Termination\TerminationReconciliationService;
 use App\Services\Finance\LedgerService;
 use App\Services\Finance\ReceiptService;
 use App\Services\Identity\IdCardImageRenderService;
 use App\Services\Invoice\InvoicePdfService;
+use App\Services\Invoice\InvoiceService;
 use App\Services\Meter\MeterReadingService;
 use App\Services\Property\RoomService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
-use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class OrgSeeder extends Seeder
@@ -45,6 +51,98 @@ class OrgSeeder extends Seeder
     private static $testTenantCounter = 1;
 
     private static $freeTenantCounter = 1;
+
+    /**
+     * 7 khách demo (org "test"): 6 người đầu — HĐ ACTIVE trên 6 phòng đầu (sort theo code);
+     * người cuối (Đỗ Minh Đức) — HĐ ENDED trên phòng 501. Chỉ primary tenant (không roommate).
+     */
+    private const PRIMARY_DEMO_TENANTS = [
+        [
+            'full_name' => 'Dương Trường Giang',
+            'phone' => '0986526273',
+            'email' => 'duongtruonggiang31072000@gmail.com',
+            'identity_number' => '001200029362',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2000-07-31',
+            'address' => 'Hà Nội',
+            'seed_billing_cycle_months' => 3,
+        ],
+        [
+            'full_name' => 'Đồng Huy Giáp',
+            'phone' => '0986506074',
+            'email' => 'donghuygiap@gmail.com',
+            'identity_number' => '001200029360',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2003-07-31',
+            'address' => 'Hà Nội',
+        ],
+        [
+            'full_name' => 'Lê Công Tuấn',
+            'phone' => '0986546479',
+            'email' => 'lecongtuan@gmail.com',
+            'identity_number' => '001200029361',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2002-07-31',
+            'address' => 'Hà Nội',
+        ],
+        [
+            'full_name' => 'Vũ Minh Hiếu',
+            'phone' => '0986576790',
+            'email' => 'vuminhhieu@gmail.com',
+            'identity_number' => '001200029367',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2001-07-31',
+            'address' => 'Hà Nội',
+            /** Số kỳ hóa đơn gần nhất (cuối timeline seed) giữ trạng thái chưa thanh toán */
+            'seed_unpaid_rent_months' => 1,
+        ],
+        [
+            'full_name' => 'Phùng Xuân Quý',
+            'phone' => '0986576798',
+            'email' => 'phungxuanquy@gmail.com',
+            'identity_number' => '001200029364',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2003-07-31',
+            'address' => 'Hà Nội',
+            'seed_billing_cycle_months' => 6,
+        ],
+        [
+            'full_name' => 'Nguyễn Đình Tuấn',
+            'phone' => '0986576211',
+            'email' => 'nguyendinhtuan@gmail.com',
+            'identity_number' => '001200028111',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2002-07-31',
+            'address' => 'Hà Nội',
+            /** Các tháng (period_start) giữ hóa đơn chưa thanh toán — khớp kỳ seed tới 3/2026 */
+            'seed_unpaid_period_starts' => ['2026-02-01', '2026-03-01'],
+        ],
+        [
+            'full_name' => 'Đỗ Minh Đức',
+            'phone' => '0986576791',
+            'email' => 'dominhduc@gmail.com',
+            'identity_number' => '001200024231',
+            'identity_issued_place' => 'Bộ công an',
+            'identity_issued_date' => '2025-07-31',
+            'date_of_birth' => '2002-07-31',
+            'address' => 'Hà Nội',
+            /**
+             * HĐ TERMINATED phòng 501: bám sát pipeline thanh lý EDA thật.
+             * - Handover trả phòng (OUT) + snapshot chỉ số đồng hồ tháng cuối (lấy từ MeterReading thực tế).
+             * - Hóa đơn các kỳ tới trước tháng kết thúc đã thanh toán (Payment + Receipt PDF).
+             * - Hóa đơn thanh lý (is_termination) qua TerminationReconciliationService → cấn trừ cọc tăng paid_amount
+             *   (KHÔNG sinh Payment cho phần cấn trừ — đúng pipeline thực tế); nếu dư cọc → RefundReceipt.
+             * - Demo tự bấm mark-paid + sinh PDF hoàn cọc để có sẵn artifact UI.
+             */
+            'seed_deposit_refund_demo' => true,
+        ],
+    ];
 
     public function run(): void
     {
@@ -54,6 +152,8 @@ class OrgSeeder extends Seeder
         $this->command->info("\n================================");
         $this->command->info('📊 BẮT ĐẦU SEED DỮ LIỆU');
         $this->command->info("================================\n");
+
+        $this->purgeSeedFinanceAndContractFiles();
 
         // Create system-wide Admin (Single System Administrator)
         $this->command->info('👤 Tạo tài khoản Administrator toàn quyền hệ thống...');
@@ -74,9 +174,8 @@ class OrgSeeder extends Seeder
             'test',
         ];
         $orgCount = count($orgNames);
-        $usersPerOrg = 5;
+        $usersPerOrg = 3;
         $propertiesPerOrg = 1;
-        $floorsPerProperty = rand(3, 4);
 
         $this->command->info('📍 Tạo tổ chức (Organizations)...');
 
@@ -105,32 +204,22 @@ class OrgSeeder extends Seeder
                     ],
                 ],
             ]);
-            // Create staff users for this org (Owners, Managers, Staff)
-            $usersPerOrg = 5;
+            // Owner / Manager / Staff — email cố định, mật khẩu 12345678
             $this->command->info("\n👥 Tạo đội ngũ quản lý cho tổ chức: <fg=yellow>{$org->name}</>");
-            $this->command->line("└─ Số lượng: <fg=cyan>$usersPerOrg</>");
+            $this->command->line('└─ Owner / Manager / Staff (mật khẩu: <fg=cyan>12345678</>)');
 
-            for ($index = 0; $index < $usersPerOrg; $index++) {
-                $orgSlug = Str::slug($org->name);
-                $email = '';
-                $role = '';
+            $orgStaffAccounts = [
+                ['role' => 'Owner', 'email' => 'hostech_owner@example.com', 'full_name' => 'Chủ nhà Hostech'],
+                ['role' => 'Manager', 'email' => 'hostech_manager@example.com', 'full_name' => 'Quản lý Hostech'],
+                ['role' => 'Staff', 'email' => 'hostech_staff@example.com', 'full_name' => 'Nhân viên Hostech'],
+            ];
 
-                if ($index < 1) {
-                    $role = 'Owner';
-                    $email = "{$orgSlug}_owner_".($index + 1).'@example.com';
-                } elseif ($index < 3) {
-                    $role = 'Manager';
-                    $email = "{$orgSlug}_manager_".($index).'@example.com';
-                } else {
-                    $role = 'Staff';
-                    $email = "{$orgSlug}_staff_".($index - 2).'@example.com';
-                }
-
+            foreach ($orgStaffAccounts as $acct) {
                 $user = User::updateOrCreate(
-                    ['email' => $email],
+                    ['email' => $acct['email']],
                     [
                         'org_id' => $org->id,
-                        'full_name' => fake('vi_VN')->name(),
+                        'full_name' => $acct['full_name'],
                         'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
                         'identity_number' => fake()->numerify('0############'),
                         'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
@@ -143,8 +232,9 @@ class OrgSeeder extends Seeder
                         'is_active' => true,
                     ]
                 );
-                $user->syncRoles([$role]);
+                $user->syncRoles([$acct['role']]);
             }
+            $this->command->line('   • hostech_owner@example.com / hostech_manager@example.com / hostech_staff@example.com');
 
             // ---------------------------------------------------------
             // 1.5 CREATE DEFAULT DOCUMENT TEMPLATE FOR CONTRACT (HTML/PDF)
@@ -167,7 +257,7 @@ class OrgSeeder extends Seeder
                             <h2 style="text-align: center; margin-top: 30px; font-size: 20px;">HỢP ĐỒNG THUÊ NHÀ</h2>
                             <p style="text-align: center;">Mã hợp đồng: ${contract_id}</p>
 
-                            <p>Hôm nay, ngày ${created_at} tại tòa nhà ${property_name}</p>
+                            <p>${contract_created_at_vn}, tại tòa nhà ${property_name}.</p>
                             <p>Địa chỉ: ${property_address}</p>
                             <p>Chúng tôi gồm:</p>
 
@@ -201,7 +291,13 @@ class OrgSeeder extends Seeder
 
                             <h4 style="margin-bottom: 5px;">ĐIỀU 2: GIÁ THUÊ VÀ THANH TOÁN</h4>
                             <p>2.1. Giá thuê: <strong>${contract_rent_price} VNĐ/tháng</strong>.</p>
-                            <p>2.2. Tiền cọc: <strong>${contract_deposit_amount} VNĐ</strong> (${contract_deposit_months} tháng).</p>
+                            <p>2.2. Tiền đặt cọc:</p>
+                            <ul style="margin-top: 0;">
+                                <li>Số tháng cọc: <strong>${contract_deposit_months} tháng</strong>.</li>
+                                <li>Công thức: (Tiền thuê phòng + Tổng phí dịch vụ cố định) × Số tháng cọc.</li>
+                                <li>= (${contract_rent_price} + ${contract_fixed_services_fee}) × ${contract_deposit_months} = <strong>${contract_deposit_amount} VNĐ</strong>.</li>
+                                <li>Tiền cọc sẽ được hoàn trả sau khi thanh lý hợp đồng, trừ các khoản nợ còn lại. Bên B đơn phương chấm dứt hợp đồng trước thời hạn thì tiền cọc sẽ không được hoàn trả.</li>
+                            </ul>
                             <p>2.3. Chi phí dịch vụ khác:<br/>${room_service_list}</p>
                             <p>2.4. Thanh toán: ${payment_range}.</p>
                             <p>2.5. Tài khoản ngân hàng (Tòa nhà):<br/>${property_bank_info}</p>
@@ -220,16 +316,19 @@ class OrgSeeder extends Seeder
                             <div style="margin-top: 50px;">
                                 <table style="width: 100%; text-align: center;">
                                     <tr>
-                                        <td style="width: 50%;">
-                                            <strong>BÊN CHO THUÊ (BÊN A)</strong><br/><br/><br/><br/>
+                                        <td style="width: 50%; vertical-align: top;">
+                                            <strong>BÊN CHO THUÊ (BÊN A)</strong><br/><br/>
+                                            ${signature_landlord}<br/><br/>
                                             ${rep_full_name}
                                         </td>
-                                        <td style="width: 50%;">
-                                            <strong>BÊN THUÊ (BÊN B)</strong><br/><br/><br/><br/>
+                                        <td style="width: 50%; vertical-align: top;">
+                                            <strong>BÊN THUÊ (BÊN B)</strong><br/><br/>
+                                            ${signature_tenant}<br/><br/>
                                             ${tenant_full_name}
                                         </td>
                                     </tr>
                                 </table>
+                                <p style="margin-top: 24px; text-align: center;"><strong>${contract_created_at_vn}</strong></p>
                             </div>
                         </div>
                     ',
@@ -324,6 +423,9 @@ class OrgSeeder extends Seeder
             Property::factory(1)
                 ->state([
                     'org_id' => $org->id,
+                    'name' => 'Nhà Trọ Hostech',
+                    'area' => 60,
+                    'shared_area' => 5,
                     'bank_accounts' => [
                         [
                             'bank_name' => 'VPBank',
@@ -333,86 +435,69 @@ class OrgSeeder extends Seeder
                     ],
                     'house_rules' => "- Sử dụng đúng mục đích thuê nhà để ở, có trách nhiệm bảo quản tốt các tài sản thiết bị trong nhà.\n- Tuyệt đối không được khoan tường đóng đinh, dán giấy lên tường nhà khi chưa được sự đồng ý của chủ nhà.\n- Tuyệt đối không vứt giấy vệ sinh, tóc và các vật lạ vào bồn cầu, đường ống thoát nước.\n- Giữ gìn vệ sinh chung, không được để rác trước cửa phòng và hành lang.\n- Không làm ồn sau 10h30 đêm để tránh ảnh hưởng đến các phòng xung quanh.\n- Không tự ý sang nhượng cho người khác. Nếu muốn thêm người ở phải báo với chủ nhà.\n- Trước khi dọn đi phải quét dọn sạch sẽ như lúc đến.",
                 ])
-                ->sequence(fn ($sequence) => [
-                    'area' => rand(70, 200),
-                    'shared_area' => rand(7, 20), // ~10% shared area
-                ])
                 ->create()
                 ->each(function (Property $property, $index) use ($org, $serviceIds) {
-                    $floorsCount = rand(3, 4);
+                    $floorsCount = 5;
+                    $templateCount = 2;
+                    $roomsPerOccupiedFloor = 2;
+
                     // Get all managers and staff for this org
                     $managers = User::where('org_id', $org->id)->role('Manager')->get();
                     $staffs = User::where('org_id', $org->id)->role('Staff')->get();
 
-                    // Assign 1 Manager and 2 Staff per property (round-robin if needed)
-                    // If we have 3 managers and 5 properties, some managers will have 2 buildings.
-                    $manager = $managers[$index % $managers->count()];
-                    $staff1 = $staffs[($index * 2) % $staffs->count()];
-                    $staff2 = $staffs[($index * 2 + 1) % $staffs->count()];
+                    $manager = $managers->first()
+                        ?? User::where('org_id', $org->id)->role('Owner')->firstOrFail();
+                    $staff1 = $staffs->first() ?? $manager;
+                    $staff2 = $staffs->get(1) ?? $staff1;
 
-                    if ($manager) {
-                        $property->managers()->attach($manager->id);
-                    }
-                    if ($staff1) {
-                        $property->managers()->attach($staff1->id);
-                    }
-                    if ($staff2) {
-                        $property->managers()->attach($staff2->id);
+                    $propertyUserIds = collect([$manager?->id, $staff1?->id, $staff2?->id])
+                        ->filter()
+                        ->unique()
+                        ->values()
+                        ->all();
+                    if ($propertyUserIds !== []) {
+                        $property->managers()->sync($propertyUserIds);
                     }
 
                     $this->command->info("\n  📐 Bất động sản: <fg=yellow>{$property->name}</> (Mã: {$property->code})");
 
-                    // Create exactly 4 Room templates for this property
-                    $templateCount = 4;
-                    // Available area per floor (this will be distributed among the 4 templates)
-                    $availableAreaPerFloor = $property->area - ($property->shared_area ?? 10);
-                    $baseArea = $availableAreaPerFloor / $templateCount;
+                    $assetGood = ['condition' => 'Tốt', 'quantity' => 1];
 
-                    $templates = [];
-                    $totalAllocatedArea = 0;
-
-                    for ($t = 0; $t < $templateCount; $t++) {
-                        // Area variance: +/- 3-5m2
-                        $variance = rand(-5, 5);
-                        $templateArea = round($baseArea + $variance, 1);
-
-                        // Ensure it's within bounds and sum doesn't exceed total
-                        if ($t === $templateCount - 1) {
-                            $templateArea = round($availableAreaPerFloor - $totalAllocatedArea, 1);
-                        }
-
-                        if ($templateArea < 10) {
-                            $templateArea = 10;
-                        }
-                        $totalAllocatedArea += $templateArea;
-
-                        // Capacity logic:
-                        // < 10-20m2: 2 người
-                        // 20-30m2: 3 người
-                        // 30-60m2: 4-5 người
-                        // trên 60m2 không quá 6 người
-                        if ($templateArea < 20) {
-                            $capacity = 2;
-                        } elseif ($templateArea < 30) {
-                            $capacity = 3;
-                        } elseif ($templateArea < 60) {
-                            $capacity = rand(4, 5);
-                        } else {
-                            $capacity = 6;
-                        }
-
-                        $templateName = 'Mẫu phòng '.$templateArea.' m2 cho '.$capacity.' người ở';
-
-                        $templates[] = RoomTemplate::factory()->create([
+                    $templates = [
+                        RoomTemplate::factory()->create([
                             'org_id' => $org->id,
                             'property_id' => $property->id,
-                            'name' => $templateName,
-                            'area' => $templateArea,
-                            'capacity' => $capacity,
-                        ]);
-                    }
+                            'name' => 'Mẫu phòng 25m² (tối đa 3 người)',
+                            'area' => 25,
+                            'capacity' => 3,
+                            'base_price' => 3_000_000,
+                            'description' => 'Phòng mẫu 1 — giá niêm yết 3.000.000đ/tháng.',
+                        ]),
+                        RoomTemplate::factory()->create([
+                            'org_id' => $org->id,
+                            'property_id' => $property->id,
+                            'name' => 'Mẫu phòng 30m² (tối đa 3 người)',
+                            'area' => 30,
+                            'capacity' => 3,
+                            'base_price' => 3_500_000,
+                            'description' => 'Phòng mẫu 2 — giá niêm yết 3.500.000đ/tháng.',
+                        ]),
+                    ];
 
-                    // Attach seeded room images to templates (phong 1 anh 1, phong 2 anh 2, ...)
+                    $templates[0]->assets()->createMany([
+                        array_merge($assetGood, ['name' => 'Giường 2x1.8m²']),
+                        array_merge($assetGood, ['name' => 'Điều hòa Panasonic']),
+                        array_merge($assetGood, ['name' => 'Bình nóng lạnh Ferroli']),
+                    ]);
+
+                    $templates[1]->assets()->createMany([
+                        array_merge($assetGood, ['name' => 'Giường 2x2m²']),
+                        array_merge($assetGood, ['name' => 'Tủ lạnh Toshiba']),
+                        array_merge($assetGood, ['name' => 'Điều hòa Panasonic']),
+                        array_merge($assetGood, ['name' => 'Bình nóng lạnh Ferroli']),
+                    ]);
+
+                    // Attach seeded room images to templates
                     $templateImageGroups = $this->resolveRoomTemplateImageGroups();
                     foreach ($templates as $idx => $template) {
                         $groupIndex = $idx + 1;
@@ -424,26 +509,17 @@ class OrgSeeder extends Seeder
                         }
                     }
 
-                    // Attach mandatory services (DIEN, NUOC) and some assets to every template
                     foreach ($templates as $template) {
                         $template->services()->attach([
                             $serviceIds['DIEN'],
                             $serviceIds['NUOC'],
                             $serviceIds['INTERNET'],
                         ]);
-
-                        // Add some default assets
-                        $template->assets()->createMany([
-                            ['name' => 'Giường 1m6'],
-                            ['name' => 'Tủ quần áo'],
-                            ['name' => 'Máy lạnh'],
-                        ]);
                     }
 
-                    $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</>");
+                    $this->command->line("  ├─ Tạo room templates: <fg=cyan>$templateCount</> (25m² / 30m², capacity 3)");
 
-                    // Create floors
-                    $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</>");
+                    $this->command->line("  └─ Tạo tầng: <fg=cyan>$floorsCount</> (tầng 1 không có phòng; mỗi tầng còn lại <fg=cyan>$roomsPerOccupiedFloor</> phòng)");
 
                     $roomService = app(RoomService::class);
 
@@ -457,26 +533,21 @@ class OrgSeeder extends Seeder
                             'sort_order' => $i,
                         ]);
 
-                        $roomsOnFloor = $templateCount; // 4 rooms per floor
-
-                        // Skip room creation for Floor 1 as requested
                         if ($i === 1) {
                             $this->command->line("     • {$floor->name} - <fg=gray>Tầng 1 không có phòng (Khu vực lễ tân/chung)</>");
 
                             continue;
                         }
 
-                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsOnFloor</> phòng (Diện tích tối đa: {$availableAreaPerFloor}m2)");
+                        $this->command->line("     • {$floor->name} - Tạo <fg=cyan>$roomsPerOccupiedFloor</> phòng (2 mẫu: 25m² + 30m²)");
 
-                        for ($j = 0; $j < $roomsOnFloor; $j++) {
-                            // Map room to template (one room per template type on each floor)
+                        for ($j = 0; $j < $roomsPerOccupiedFloor; $j++) {
                             $template = $templates[$j];
-
-                            $roomNumber = ($i * 100) + ($j + 2);
+                            $roomNumber = ($i * 100) + ($j + 1);
                             $roomService->createFromTemplate($template->id, [
                                 'floor_id' => $floor->id,
                                 'name' => (string) $roomNumber,
-                                'code' => 'R'.$roomNumber,
+                                'code' => (string) $roomNumber,
                                 'floor_number' => $i,
                             ], $manager);
                         }
@@ -525,10 +596,23 @@ class OrgSeeder extends Seeder
                 $propertyMonthlyUsage = []; // [month_string][type] => sum_usage
                 $initialMeterSum = ['ELECTRIC' => 0, 'WATER' => 0];
 
-                $roomsInProperty = Room::where('property_id', $property->id)->get();
-                $occupancyRate = rand(50, 80) / 100;
-                $numOccupiedRooms = round($roomsInProperty->count() * $occupancyRate);
-                $occupiedRoomIds = $roomsInProperty->random($numOccupiedRooms)->pluck('id', 'id')->toArray();
+                $roomsInProperty = Room::where('property_id', $property->id)->orderBy('code')->get();
+                $roomToDemoTenantIndex = [];
+                if ($org->name === 'test') {
+                    $demoActiveTenantCount = count(self::PRIMARY_DEMO_TENANTS) - 1;
+                    if ($roomsInProperty->count() < $demoActiveTenantCount) {
+                        $this->command->warn("  ⚠ Demo tenant ACTIVE: cần {$demoActiveTenantCount} phòng nhưng chỉ {$roomsInProperty->count()} phòng.");
+                    }
+                    $fixedDemoRoomIds = $roomsInProperty->take($demoActiveTenantCount)->pluck('id')->all();
+                    foreach ($fixedDemoRoomIds as $idx => $rid) {
+                        $roomToDemoTenantIndex[$rid] = $idx;
+                    }
+                    $occupiedRoomIds = collect($fixedDemoRoomIds)->mapWithKeys(fn ($id) => [$id => $id])->all();
+                } else {
+                    $occupancyRate = rand(50, 80) / 100;
+                    $numOccupiedRooms = round($roomsInProperty->count() * $occupancyRate);
+                    $occupiedRoomIds = $roomsInProperty->random($numOccupiedRooms)->pluck('id', 'id')->toArray();
+                }
 
                 foreach ($roomsInProperty as $room) {
                     // A. Assign Room Services & Meters (Ensure every room has meters)
@@ -593,10 +677,42 @@ class OrgSeeder extends Seeder
                     }
 
                     // B. Sequential Contracts
-                    $currentDate = Carbon::parse('2026-01-01');
+                    $currentDate = Carbon::parse('2025-10-01');
                     $cutoffDate = Carbon::parse('2026-03-31');
-                    $numEndedContracts = rand(1, 2);
                     $isActiveRoom = in_array($room->id, $occupiedRoomIds);
+
+                    // Phòng 501: HĐ ENDED 10/2025 → 3/2026 cho Đỗ Minh Đức (profile cuối PRIMARY_DEMO_TENANTS), có bàn giao trả phòng
+                    $isEndedDemoRoom501 = $org->name === 'test' && (string) $room->code === '501';
+
+                    if ($isEndedDemoRoom501) {
+                        $endedProfile = self::PRIMARY_DEMO_TENANTS[count(self::PRIMARY_DEMO_TENANTS) - 1];
+                        $this->createContractWithInvoices(
+                            $org,
+                            $room,
+                            $ownerId,
+                            Carbon::parse('2025-10-01')->startOfMonth(),
+                            Carbon::parse('2026-03-31')->endOfMonth(),
+                            'ENDED',
+                            $meters,
+                            $propertyStaffId,
+                            $propertyMonthlyUsage,
+                            $endedProfile
+                        );
+                        $room->update(['status' => 'available']);
+
+                        continue;
+                    }
+
+                    // Phòng 502: không HĐ (phòng trống demo)
+                    if ($org->name === 'test' && (string) $room->code === '502') {
+                        $room->update(['status' => 'available']);
+
+                        continue;
+                    }
+
+                    $numEndedContracts = ($org->name === 'test' && $isActiveRoom)
+                        ? 0
+                        : rand(1, 2);
 
                     // 1. Ended Contracts
                     for ($k = 0; $k < $numEndedContracts; $k++) {
@@ -616,8 +732,11 @@ class OrgSeeder extends Seeder
 
                     // 2. Active Contract
                     if ($isActiveRoom && $currentDate->lt($cutoffDate)) {
+                        $fixedPrimary = ($org->name === 'test' && isset($roomToDemoTenantIndex[$room->id]))
+                            ? self::PRIMARY_DEMO_TENANTS[$roomToDemoTenantIndex[$room->id]]
+                            : null;
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage
+                            $org, $room, $ownerId, $currentDate, $currentDate->copy()->addMonths(12)->endOfMonth(), 'ACTIVE', $meters, $propertyStaffId, $propertyMonthlyUsage, $fixedPrimary
                         );
                         /** @var Room $room */
                         $room->update(['status' => 'occupied']);
@@ -662,7 +781,34 @@ class OrgSeeder extends Seeder
         $this->command->line('✅ Bàn giao (Handovers): <fg=cyan>'.Handover::count()."</>\n");
     }
 
-    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $propertyStaffId, &$propertyMonthlyUsage)
+    /**
+     * Xóa file bản mềm do seed/laravel tạo (hóa đơn PDF, biên lai PDF, hợp đồng PDF/DOCX, chữ ký tạm)
+     * để mỗi lần chạy OrgSeeder không tích lũy file cũ trong storage (và symlink public/storage).
+     */
+    private function purgeSeedFinanceAndContractFiles(): void
+    {
+        $this->command->info('🧹 Dọn file hóa đơn / biên lai / hợp đồng cũ trong storage...');
+
+        try {
+            foreach (['invoices', 'receipts'] as $dir) {
+                if (Storage::disk('public')->exists($dir)) {
+                    Storage::disk('public')->deleteDirectory($dir);
+                }
+            }
+
+            foreach (['contracts/documents', 'contracts/signatures'] as $dir) {
+                if (Storage::disk('local')->exists($dir)) {
+                    Storage::disk('local')->deleteDirectory($dir);
+                }
+            }
+
+            $this->command->line('   └─ <fg=green>Đã xóa thư mục:</> public disk: invoices, receipts — local disk: contracts/documents, contracts/signatures');
+        } catch (\Throwable $e) {
+            $this->command->warn('   ⚠ Không dọn hết storage: '.$e->getMessage());
+        }
+    }
+
+    private function createContractWithInvoices($org, $room, $ownerId, $startDate, $endDate, $status, &$meters, $propertyStaffId, &$propertyMonthlyUsage, ?array $fixedPrimaryTenant = null)
     {
         $cutoffLimit = Carbon::parse('2026-03-31');
         $readingService = app(MeterReadingService::class);
@@ -677,35 +823,65 @@ class OrgSeeder extends Seeder
 
         $baseRent = $room->base_price ?: 5000000;
         $property = $room->property;
-        $depositAmount = $baseRent * ($property->default_deposit_months ?? 1);
+        $totalRentForDeposit = $baseRent + $fixedServicesFee;
+        $depositAmount = $totalRentForDeposit * ($property->default_deposit_months ?? 1);
+
+        $billingCycleMonths = 1;
+        if ($fixedPrimaryTenant !== null && isset($fixedPrimaryTenant['seed_billing_cycle_months'])) {
+            $billingCycleMonths = max(1, min(12, (int) $fixedPrimaryTenant['seed_billing_cycle_months']));
+        } else {
+            $raw = $property->default_billing_cycle ?? 'MONTHLY';
+            $billingCycleMonths = match (strtoupper((string) $raw)) {
+                'QUARTERLY' => 3,
+                'SEMI_ANNUALLY' => 6,
+                'YEARLY' => 12,
+                default => ctype_digit((string) $raw) ? max(1, (int) $raw) : 1,
+            };
+        }
+        $billingCycleNormalized = (string) $billingCycleMonths;
+
+        // HĐ demo (Đỗ Minh Đức) đi qua pipeline thanh lý EDA thật → status cuối là TERMINATED.
+        // HĐ ENDED không-demo giữ trạng thái 'ENDED' (lịch sử kết thúc tự nhiên trước seed pipeline).
+        $isDemoTermination = $status === 'ENDED' && ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false);
+        $effectiveStatus = $isDemoTermination ? ContractStatus::TERMINATED->value : $status;
+        $isEndedLike = in_array($effectiveStatus, ['ENDED', ContractStatus::TERMINATED->value], true);
 
         $contract = Contract::factory()->create([
             'org_id' => $room->org_id,
             'property_id' => $room->property_id,
             'room_id' => $room->id,
-            'status' => $status,
+            'status' => $effectiveStatus,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'terminated_at' => $status === 'ENDED' ? $endDate : null,
+            'terminated_at' => $isEndedLike ? $endDate : null,
             'created_by_user_id' => $ownerId,
             'rent_price' => $baseRent,
             'base_rent' => $baseRent,
             'fixed_services_fee' => $fixedServicesFee,
-            'total_rent' => $baseRent + $fixedServicesFee,
+            'total_rent' => $totalRentForDeposit,
             'deposit_amount' => $depositAmount,
-            'deposit_status' => $status === 'ACTIVE' ? DepositStatus::HELD : DepositStatus::REFUNDED,
-            'billing_cycle' => $property->default_billing_cycle ?? 'MONTHLY',
+            'deposit_status' => match (true) {
+                $effectiveStatus === 'ACTIVE' => DepositStatus::HELD,
+                $isDemoTermination => DepositStatus::HELD,
+                $isEndedLike => DepositStatus::REFUNDED,
+                default => DepositStatus::HELD,
+            },
+            'billing_cycle' => $billingCycleNormalized,
             'due_day' => $property->default_due_day ?? 5,
             'cutoff_day' => $property->default_cutoff_day ?? 30,
             'cycle_months' => $startDate->diffInMonths($endDate) ?: 6,
+            'next_billing_date' => $startDate->copy()->addMonths($billingCycleMonths)->format('Y-m-d'),
         ]);
 
-        // Create OUT Handover if ENDED
-        if ($status === 'ENDED') {
+        // OUT handover: HĐ demo thì hoãn snapshot meter cho tới sau khi seed reading tháng cuối (xem dưới).
+        if ($isEndedLike && ! $isDemoTermination) {
             $this->createHandoverForContract($contract, 'OUT', $endDate);
+        } elseif ($isDemoTermination) {
+            $this->createHandoverForContract($contract, 'OUT', $endDate, withMeterSnapshots: false);
         }
 
-        $numMembers = rand(2, 3);
+        $useFixedPrimary = $fixedPrimaryTenant !== null && ($effectiveStatus === 'ACTIVE' || $isEndedLike);
+        $numMembers = $useFixedPrimary ? 1 : rand(2, 3);
         $cccdFront = $this->resolveCccdTemplateFrontPath();
         $cccdBack = $this->resolveCccdTemplateBackPath();
         $idCardRender = app(IdCardImageRenderService::class);
@@ -717,30 +893,57 @@ class OrgSeeder extends Seeder
         }
 
         for ($i = 0; $i < $numMembers; $i++) {
-            // Dynamically create a tenant user for each contract member
-            $fullName = fake('vi_VN')->name();
+            if ($useFixedPrimary && $i === 0) {
+                $fullName = $fixedPrimaryTenant['full_name'];
+                $email = $fixedPrimaryTenant['email'];
+                $gender = 'Nam';
 
-            $emailName = Str::slug($fullName, '.');
-            $email = $emailName.fake()->numberBetween(10, 99).'@gmail.com';
-            $gender = fake()->randomElement(['Nam', 'Nữ']);
+                $u = User::updateOrCreate(
+                    ['email' => $email],
+                    [
+                        'org_id' => $org->id,
+                        'full_name' => $fullName,
+                        'password_hash' => Hash::make('12345678'),
+                        'email_verified_at' => now(),
+                        'is_active' => true,
+                        'phone' => $fixedPrimaryTenant['phone'],
+                        'identity_number' => $fixedPrimaryTenant['identity_number'],
+                        'identity_issued_place' => $fixedPrimaryTenant['identity_issued_place'],
+                        'identity_issued_date' => $fixedPrimaryTenant['identity_issued_date'],
+                        'date_of_birth' => $fixedPrimaryTenant['date_of_birth'],
+                        'address' => $fixedPrimaryTenant['address'],
+                        'license_plate' => fake()->bothify('??-? ####'),
+                    ]
+                );
+                if (! $u->hasRole('Tenant')) {
+                    $u->assignRole('Tenant');
+                }
+            } else {
+                // Dynamically create a tenant user for each contract member
+                $fullName = fake('vi_VN')->name();
 
-            $u = User::create([
-                'id' => Str::uuid()->toString(),
-                'org_id' => $org->id,
-                'full_name' => $fullName,
-                'email' => $email,
-                'password_hash' => Hash::make('12345678'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-                'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
-                'identity_number' => fake()->numerify('0############'),
-                'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
-                'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
-                'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
-                'address' => fake('vi_VN')->address(),
-                'license_plate' => fake()->bothify('??-? ####'),
-            ]);
-            $u->assignRole('Tenant');
+                $emailName = Str::slug($fullName, '.');
+                $email = $emailName.fake()->numberBetween(10, 99).'@gmail.com';
+                $gender = fake()->randomElement(['Nam', 'Nữ']);
+
+                $u = User::create([
+                    'id' => Str::uuid()->toString(),
+                    'org_id' => $org->id,
+                    'full_name' => $fullName,
+                    'email' => $email,
+                    'password_hash' => Hash::make('12345678'),
+                    'email_verified_at' => now(),
+                    'is_active' => true,
+                    'phone' => '0'.fake()->numberBetween(3, 9).fake()->numerify('########'),
+                    'identity_number' => fake()->numerify('0############'),
+                    'identity_issued_place' => 'Cục Cảnh sát Quản lý hành chính về trật tự xã hội',
+                    'identity_issued_date' => fake()->dateTimeBetween('-5 years', 'now')->format('Y-m-d'),
+                    'date_of_birth' => fake()->dateTimeBetween('-40 years', '-18 years')->format('Y-m-d'),
+                    'address' => fake('vi_VN')->address(),
+                    'license_plate' => fake()->bothify('??-? ####'),
+                ]);
+                $u->assignRole('Tenant');
+            }
 
             $member = ContractMember::create([
                 'id' => Str::uuid()->toString(),
@@ -755,9 +958,10 @@ class OrgSeeder extends Seeder
                 'gender' => $gender,
                 'nationality' => 'Việt Nam',
                 'license_plate' => $u->license_plate,
+                'permanent_address' => $u->address,
                 'role' => $i === 0 ? 'TENANT' : 'ROOMMATE',
                 'is_primary' => $i === 0,
-                'left_at' => $status === 'ENDED' ? $endDate : null,
+                'left_at' => $isEndedLike ? $endDate : null,
             ]);
 
             if ($cccdFront && $cccdBack && $idCardRender->canRender()) {
@@ -795,8 +999,13 @@ class OrgSeeder extends Seeder
         // --- Invoicing Logic ---
         $tempDate = $startDate->copy();
         $isFirstInvoice = true;
+        $skipFinalCalendarMonthForTerminationRefundDemo = $isDemoTermination;
 
         while ($tempDate->lte($endDate) && $tempDate->lte($cutoffLimit)) {
+            if ($skipFinalCalendarMonthForTerminationRefundDemo && $tempDate->gte($endDate->copy()->startOfMonth())) {
+                break;
+            }
+
             $invoiceDate = $tempDate->copy()->addDays(rand(0, 5));
             if ($invoiceDate->gt($cutoffLimit)) {
                 break;
@@ -808,7 +1017,7 @@ class OrgSeeder extends Seeder
                 'property_id' => $room->property_id,
                 'contract_id' => $contract->id,
                 'room_id' => $room->id,
-                'status' => ($status === 'ENDED' || $tempDate->lt(now()->subMonth())) ? 'PAID' : 'ISSUED',
+                'status' => 'ISSUED',  // Luôn bắt đầu ISSUED — Payment+Receipt mới set PAID
                 'issue_date' => $invoiceDate,
                 'due_date' => $invoiceDate->copy()->addDays(7),
                 'period_start' => $tempDate->copy()->startOfMonth(),
@@ -816,6 +1025,7 @@ class OrgSeeder extends Seeder
                 'total_amount' => 0,
                 'paid_amount' => 0,
                 'created_by_user_id' => $ownerId,
+                'snapshot' => $isFirstInvoice ? ['is_initial' => true] : null,
             ]);
             if ($isFirstInvoice) {
                 // First Invoice: Rent + Deposit
@@ -865,9 +1075,15 @@ class OrgSeeder extends Seeder
                 $usage = 0;
 
                 if ($m['config']['type'] === 'ELECTRIC') {
-                    $usage = [1 => 150, 2 => 130, 3 => 140][$month] ?? 100;
+                    $usage = [
+                        10 => 145, 11 => 155, 12 => 148,
+                        1 => 150, 2 => 130, 3 => 140,
+                    ][$month] ?? 100;
                 } else {
-                    $usage = [1 => 12, 2 => 13, 3 => 14][$month] ?? 10;
+                    $usage = [
+                        10 => 11, 11 => 12, 12 => 11,
+                        1 => 12, 2 => 13, 3 => 14,
+                    ][$month] ?? 10;
                 }
 
                 $newValue = $m['last_value'] + $usage;
@@ -921,7 +1137,7 @@ class OrgSeeder extends Seeder
             $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
             $invoice->update([
                 'total_amount' => $total,
-                'paid_amount' => $invoice->status === 'PAID' ? $total : 0,
+                'paid_amount'  => 0,
             ]);
 
             // --- Generate Physical Invoice PDF ---
@@ -931,52 +1147,415 @@ class OrgSeeder extends Seeder
                 $this->command->warn('  - Could not generate invoice PDF: '.$e->getMessage());
             }
 
-            // --- Payment + sổ cái kép + biên lai (PAID) — khớp EDA: PaymentObserver → PaymentSuccessfullyVerified → RecordPaymentLedger (có thể queue) ---
-            if ($invoice->status === 'PAID') {
-                try {
-                    $tenantMember = $contract->members()->where('role', 'TENANT')->first();
-                    $payment = Payment::create([
-                        'id' => (string) Str::uuid(),
-                        'org_id' => $org->id,
-                        'property_id' => $invoice->property_id,
-                        'payer_user_id' => $tenantMember ? $tenantMember->user_id : $ownerId,
-                        'received_by_user_id' => $ownerId,
-                        'method' => 'CASH',
-                        'amount' => $total,
-                        'reference' => 'SEED-'.Str::substr((string) $invoice->id, 0, 8),
-                        'note' => 'OrgSeeder — thanh toán demo theo hóa đơn',
-                        'received_at' => $invoice->issue_date,
-                        'status' => 'APPROVED',
-                        'approved_by_user_id' => $ownerId,
-                        'approved_at' => $invoice->issue_date,
-                    ]);
+            // --- Quyết định trạng thái cuối theo đúng luồng nghiệp vụ ---
+            // Tháng cũ (trước tháng hiện tại) hoặc HĐ kết thúc → tạo Payment + Receipt → rồi mới PAID
+            // Tháng hiện tại quá due_date mà chưa trả → OVERDUE
+            // Tháng hiện tại chưa đến hạn → giữ ISSUED
+            $tenantMember = $contract->members()->where('role', 'TENANT')->first();
+            $payerUserId  = $tenantMember?->user_id ?? $ownerId;
 
-                    PaymentAllocation::create([
-                        'id' => (string) Str::uuid(),
-                        'org_id' => $org->id,
-                        'payment_id' => $payment->id,
-                        'invoice_id' => $invoice->id,
-                        'amount' => $total,
-                    ]);
+            $due       = $invoice->due_date ? Carbon::parse($invoice->due_date) : null;
+            $isPastDue = $due && $due->isPast();
 
-                    // Listener chạy async: đảm bảo vẫn có bút toán CASH_BANK + A/R trong seed
-                    $this->seedLedgerForPaymentIfMissing($payment);
-
-                    app(ReceiptService::class)->generateForPayment($payment);
-                } catch (\Exception $e) {
-                    $this->command->warn('  - Could not generate payment/receipt/ledger: '.$e->getMessage());
-                }
+            if ($isEndedLike || $tempDate->lt(now()->startOfMonth())) {
+                // Tháng cũ hoặc HĐ kết thúc: Payment + Receipt → PAID
+                $this->seedPaymentAndReceipt($invoice, $org, $ownerId, $payerUserId);
+            } elseif ($isPastDue) {
+                // Tháng hiện tại nhưng đã qua due_date → OVERDUE
+                $invoice->update(['status' => 'OVERDUE']);
             }
+            // else: giữ nguyên ISSUED (tháng hiện tại, chưa đến hạn)
 
             $tempDate->addMonths(1);
+        }
+
+        if ($skipFinalCalendarMonthForTerminationRefundDemo) {
+            $this->seedFinalMonthMeterReadingsForTerminationDemo(
+                $org,
+                $meters,
+                $propertyStaffId,
+                $endDate,
+                $propertyMonthlyUsage,
+                $readingService
+            );
+
+            // Sau khi $meters[*]['last_value'] được cập nhật theo MeterReading thật của tháng kết thúc,
+            // mới tạo HandoverMeterSnapshot cho OUT handover — số liệu khớp pipeline thật.
+            $this->attachOutHandoverMeterSnapshotsFromCurrent($contract, $meters);
+        }
+
+        $this->applySeedUnpaidRentTail($contract, $fixedPrimaryTenant, $status, $org, $ownerId);
+
+        if ($isDemoTermination) {
+            $this->seedTerminationFinalInvoiceAndReconcile($contract, $ownerId, $endDate);
+        } else {
+            $this->seedDepositRefundReceiptIfDemo($contract, $fixedPrimaryTenant, $status, $org);
         }
 
         return $contract;
     }
 
     /**
+     * Chỉ số đồng hồ tháng kết thúc (tháng chứa end_date) — dùng cho hóa đơn thanh lý, tránh trùng hóa đơn kỳ thường.
+     */
+    private function seedFinalMonthMeterReadingsForTerminationDemo(
+        Org $org,
+        array &$meters,
+        string $propertyStaffId,
+        Carbon $endDate,
+        array &$propertyMonthlyUsage,
+        MeterReadingService $readingService,
+    ): void {
+        $tempDate = $endDate->copy()->startOfMonth();
+        $pStart = $tempDate->copy()->startOfMonth();
+        $pEnd = $tempDate->copy()->endOfMonth();
+        $month = (int) $tempDate->month;
+
+        foreach ($meters as &$m) {
+            if ($m['config']['type'] === 'ELECTRIC') {
+                $usage = [
+                    10 => 145, 11 => 155, 12 => 148,
+                    1 => 150, 2 => 130, 3 => 140,
+                ][$month] ?? 100;
+            } else {
+                $usage = [
+                    10 => 11, 11 => 12, 12 => 11,
+                    1 => 12, 2 => 13, 3 => 14,
+                ][$month] ?? 10;
+            }
+
+            $newValue = $m['last_value'] + $usage;
+
+            $reading = $readingService->create([
+                'org_id' => $org->id,
+                'meter_id' => $m['id'],
+                'period_start' => $pStart->toDateString(),
+                'period_end' => $pEnd->toDateString(),
+                'reading_value' => $newValue,
+                'consumption' => $usage,
+                'status' => 'APPROVED',
+                'submitted_by_user_id' => $propertyStaffId,
+                'submitted_at' => $pEnd->copy()->addDay(),
+                'approved_at' => $pEnd->copy()->addDay(),
+            ]);
+
+            $typeLower = strtolower($m['config']['type']);
+            $imgPath = database_path("data/meters/{$typeLower}_month_{$month}.png");
+            if (file_exists($imgPath)) {
+                $reading->addMedia($imgPath)
+                    ->preservingOriginal()
+                    ->toMediaCollection('reading_proofs');
+            }
+
+            $m['last_value'] = $newValue;
+
+            $readingService->update($reading, ['status' => 'LOCKED'], false);
+
+            $monthKey = $tempDate->toDateString();
+            $propertyMonthlyUsage[$monthKey][$m['config']['type']] = ($propertyMonthlyUsage[$monthKey][$m['config']['type']] ?? 0) + $usage;
+        }
+        unset($m);
+    }
+
+    /**
+     * Hóa đơn quyết toán thanh lý (is_termination) + FIFO cấn trừ cọc — sinh RefundReceipt như luồng EDA thật.
+     */
+    private function seedTerminationFinalInvoiceAndReconcile(Contract $contract, string $ownerId, Carbon $endDate): void
+    {
+        try {
+            if (Invoice::query()
+                ->where('contract_id', $contract->id)
+                ->where('is_termination', true)
+                ->exists()) {
+                return;
+            }
+
+            $contractService = app(ContractService::class);
+            $invoiceService = app(InvoiceService::class);
+            $terminationDate = $endDate->toDateString();
+
+            $items = $contractService->buildTerminationPipelineInvoiceItems(
+                $contract->fresh(),
+                $terminationDate,
+                [
+                    'penalty_amount' => 0,
+                    'damage_fee_total' => 0,
+                ]
+            );
+
+            $invoice = $invoiceService->create([
+                'org_id' => $contract->org_id,
+                'property_id' => $contract->property_id,
+                'room_id' => $contract->room_id,
+                'contract_id' => $contract->id,
+                'status' => 'DRAFT',
+                'issue_date' => $terminationDate,
+                'due_date' => $terminationDate,
+                'period_start' => $terminationDate,
+                'period_end' => $terminationDate,
+                'is_termination' => true,
+                'snapshot' => [
+                    'is_termination' => true,
+                    'pipeline' => 'org_seed_demo',
+                    'seed_demo' => true,
+                ],
+                'created_by_user_id' => $ownerId,
+            ], $items);
+
+            $invoiceService->issueInvoice(
+                $invoice->fresh(),
+                $ownerId,
+                'OrgSeeder — phát hành hóa đơn quyết toán thanh lý (demo Đỗ Minh Đức).'
+            );
+
+            try {
+                app(InvoicePdfService::class)->generate($invoice->fresh());
+            } catch (\Throwable $e) {
+                $this->command->warn('  - PDF hóa đơn thanh lý demo: '.$e->getMessage());
+            }
+
+            app(TerminationReconciliationService::class)->reconcile($contract->fresh(), $invoice->fresh());
+
+            $settled = $contract->fresh();
+            $meta = $settled->meta ?? [];
+            $termination = is_array($meta['termination_settlement'] ?? null) ? $meta['termination_settlement'] : [];
+            $meta['termination_settlement'] = array_merge($termination, ['seed_demo' => true]);
+            $settled->update(['meta' => $meta]);
+
+            // Đúng pipeline EDA: hóa đơn thanh lý PAID nhờ applyDepositCreditTowardInvoice (paid_amount tăng) —
+            // KHÔNG tạo Payment / Receipt PDF cho phần cấn trừ cọc. Tab "Biên lai" của BQL chỉ thấy biên lai cho các kỳ thường đã có Payment.
+            $contractForReceipts = $settled->fresh();
+            $this->seedDemoTerminationRefundReceiptPaidWithPdf($contractForReceipts, $ownerId, $endDate);
+
+            $this->command->line('  └─ <fg=green>Đã seed hóa đơn thanh lý + quyết toán cọc (EDA)</> (HĐ demo kết thúc).');
+        } catch (\Throwable $e) {
+            $this->command->warn('  - seedTerminationFinalInvoiceAndReconcile: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Demo: sau khi có RefundReceipt từ reconcile — mô phỏng BQL đã chi hoàn cọc (paid_at + PDF) để tenant / BQL có file ngay sau seed.
+     */
+    private function seedDemoTerminationRefundReceiptPaidWithPdf(Contract $contract, string $ownerId, Carbon $endDate): void
+    {
+        $refund = RefundReceipt::query()->where('contract_id', $contract->id)->first();
+        if (! $refund || $refund->paid_at) {
+            return;
+        }
+
+        try {
+            $refund->forceFill([
+                'paid_at' => $endDate->copy()->endOfDay(),
+                'paid_by_user_id' => $ownerId,
+                'payout_method' => RefundReceipt::PAYOUT_METHOD_TRANSFER,
+                'payout_reference' => 'SEED-DEMO-HOAN-COC',
+            ])->save();
+
+            $contract->forceFill([
+                'deposit_status' => DepositStatus::REFUNDED,
+                'refunded_amount' => (float) $refund->amount,
+            ])->save();
+
+            app(ReceiptService::class)->generateForRefundReceipt($refund->fresh());
+
+            $this->command->line('  └─ <fg=green>Đã seed biên lai PDF hoàn cọc + deposit_status REFUNDED (demo)</>.');
+        } catch (\Throwable $e) {
+            $this->command->warn('  - seedDemoTerminationRefundReceiptPaidWithPdf: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Fallback: RefundReceipt tay (không qua reconcile). HĐ demo Đỗ Minh Đức dùng seedTerminationFinalInvoiceAndReconcile thay cho method này.
+     */
+    private function seedDepositRefundReceiptIfDemo(
+        Contract $contract,
+        ?array $fixedPrimaryTenant,
+        string $status,
+        Org $org,
+    ): void {
+        if ($status !== 'ENDED' || ! ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false)) {
+            return;
+        }
+
+        $amount = (float) $contract->deposit_amount;
+        if ($amount <= 0) {
+            return;
+        }
+
+        if (RefundReceipt::query()->where('contract_id', $contract->id)->exists()) {
+            return;
+        }
+
+        $receipt = RefundReceipt::create([
+            'org_id' => $org->id,
+            'contract_id' => $contract->id,
+            'amount' => $amount,
+            'meta' => [
+                'note' => 'OrgSeeder — phiếu hoàn cọc sau kết thúc hợp đồng (demo).',
+            ],
+        ]);
+
+        $meta = $contract->meta ?? [];
+        $termination = is_array($meta['termination_settlement'] ?? null) ? $meta['termination_settlement'] : [];
+        $meta['termination_settlement'] = array_merge($termination, [
+            'scenario' => 'A',
+            'refund_receipt_id' => $receipt->id,
+            'refund_amount' => (string) $amount,
+            'seed_demo' => true,
+        ]);
+
+        $contract->update([
+            'refunded_amount' => $amount,
+            'deposit_status' => DepositStatus::REFUND_PENDING,
+            'meta' => $meta,
+        ]);
+    }
+
+    /**
+     * Demo: tenant nợ có chủ đích — hoặc N kỳ cuối (seed_unpaid_rent_months),
+     * hoặc đúng các tháng period_start (seed_unpaid_period_starts, ví dụ 2026-02-01).
+     */
+    private function applySeedUnpaidRentTail(
+        Contract $contract,
+        ?array $fixedPrimaryTenant,
+        string $status,
+        Org $org,
+        string $ownerId,
+    ): void {
+        if (! $fixedPrimaryTenant || $status !== 'ACTIVE') {
+            return;
+        }
+
+        $periodStarts = $fixedPrimaryTenant['seed_unpaid_period_starts'] ?? null;
+        $tail = (int) ($fixedPrimaryTenant['seed_unpaid_rent_months'] ?? 0);
+        $useExactPeriods = is_array($periodStarts) && count($periodStarts) > 0;
+
+        if (! $useExactPeriods && $tail < 1) {
+            return;
+        }
+
+        $invoices = Invoice::where('contract_id', $contract->id)
+            ->orderBy('period_start')
+            ->get();
+
+        if ($invoices->isEmpty()) {
+            return;
+        }
+
+        if ($useExactPeriods) {
+            $monthKeys = [];
+            foreach ($periodStarts as $p) {
+                $monthKeys[Carbon::parse((string) $p)->format('Y-m')] = true;
+            }
+            $unpayInvoices = $invoices->filter(function ($inv) use ($monthKeys) {
+                if (! $inv->period_start) {
+                    return false;
+                }
+                $key = Carbon::parse($inv->period_start)->format('Y-m');
+
+                return isset($monthKeys[$key]);
+            })->values();
+            $unpayIds = $unpayInvoices->pluck('id')->all();
+            $payInvoices = $invoices->filter(fn ($inv) => ! in_array($inv->id, $unpayIds, true))->values();
+        } else {
+            $tail = min($tail, $invoices->count());
+            $unpayInvoices = $invoices->slice(-$tail)->values();
+            $payInvoices = $invoices->slice(0, -$tail)->values();
+        }
+
+        // Hóa đơn nợ: xóa bỏ Payment/Allocation đã được tạo từ main loop (tháng cũ → PAID),
+        // rồi đặt lại trạng thái OVERDUE hoặc ISSUED tùy due_date.
+        foreach ($unpayInvoices as $inv) {
+            // Xóa allocation + payment nếu đã được tạo từ main loop
+            foreach (PaymentAllocation::where('invoice_id', $inv->id)->get() as $alloc) {
+                $pid = $alloc->payment_id;
+                $alloc->delete();
+                // Xóa payment nếu không còn allocation nào khác
+                if ($pid && PaymentAllocation::where('payment_id', $pid)->doesntExist()) {
+                    Payment::where('id', $pid)->delete();
+                }
+            }
+
+            $due       = $inv->due_date ? Carbon::parse($inv->due_date) : null;
+            $newStatus = ($due && $due->isPast()) ? 'OVERDUE' : 'ISSUED';
+            $inv->update(['status' => $newStatus, 'paid_amount' => 0]);
+        }
+
+        // Hóa đơn đã thanh toán: đảm bảo có Payment + Receipt (phòng hờ edge case)
+        $tenantMember = $contract->members()->where('role', 'TENANT')->first();
+        $payerUserId  = $tenantMember?->user_id ?? $ownerId;
+
+        foreach ($payInvoices as $inv) {
+            if ($inv->status !== 'PAID') {
+                $this->seedPaymentAndReceipt($inv, $org, $ownerId, $payerUserId);
+            }
+        }
+    }
+
+    /**
      * Create Handover, Items and Meter Snapshots for a contract
      */
+    /**
+     * Tạo Payment (APPROVED) + PaymentAllocation + Ledger + Receipt,
+     * sau đó mới cập nhật Invoice sang PAID.
+     * Đây là thứ tự đúng nghiệp vụ: Payment/Receipt phải tồn tại trước khi Invoice = PAID.
+     */
+    private function seedPaymentAndReceipt(
+        Invoice $invoice,
+        Org $org,
+        string $ownerId,
+        ?string $payerUserId = null
+    ): void {
+        $total = (float) $invoice->total_amount;
+        if ($total <= 0) {
+            return;
+        }
+        // Guard: đã có allocation → đã PAID rồi, bỏ qua
+        if (PaymentAllocation::where('invoice_id', $invoice->id)->exists()) {
+            return;
+        }
+
+        try {
+            $payment = Payment::create([
+                'id'                   => (string) Str::uuid(),
+                'org_id'               => $org->id,
+                'property_id'          => $invoice->property_id,
+                'payer_user_id'        => $payerUserId ?? $ownerId,
+                'received_by_user_id'  => $ownerId,
+                'method'               => 'CASH',
+                'amount'               => $total,
+                'reference'            => 'SEED-'.Str::substr((string) $invoice->id, 0, 8),
+                'note'                 => 'OrgSeeder — thanh toán demo theo hóa đơn',
+                'received_at'          => $invoice->issue_date,
+                'status'               => 'APPROVED',
+                'approved_by_user_id'  => $ownerId,
+                'approved_at'          => $invoice->issue_date,
+            ]);
+
+            PaymentAllocation::create([
+                'id'         => (string) Str::uuid(),
+                'org_id'     => $org->id,
+                'payment_id' => $payment->id,
+                'invoice_id' => $invoice->id,
+                'amount'     => $total,
+            ]);
+
+            // Sổ cái kép (giống RecordPaymentLedger listener)
+            $this->seedLedgerForPaymentIfMissing($payment);
+
+            // Biên lai PDF
+            app(ReceiptService::class)->generateForPayment($payment);
+
+            // CHỈ sau khi Receipt đã tồn tại mới cập nhật Invoice → PAID
+            $invoice->update([
+                'status'      => 'PAID',
+                'paid_amount' => $total,
+            ]);
+        } catch (\Exception $e) {
+            $this->command->warn('  - seedPaymentAndReceipt: '.$e->getMessage());
+        }
+    }
+
     /**
      * Ghi sổ cái kép giống RecordPaymentLedger khi queue chưa chạy (database/redis).
      */
@@ -996,18 +1575,21 @@ class OrgSeeder extends Seeder
         }
     }
 
-    private function createHandoverForContract($contract, $type, $date)
+    /**
+     * Tạo Handover (IN/OUT) + items từ RoomAsset.
+     *
+     * @param  bool  $withMeterSnapshots  Khi false, KHÔNG tạo HandoverMeterSnapshot ngay — caller cần gọi
+     *                                    `attachOutHandoverMeterSnapshotsFromCurrent()` sau khi đã có MeterReading
+     *                                    tháng cuối để snapshot khớp số đồng hồ thật (HĐ demo Đỗ Minh Đức).
+     */
+    private function createHandoverForContract($contract, $type, $date, bool $withMeterSnapshots = true)
     {
         $handover = Handover::create([
             'id' => Str::uuid()->toString(),
             'org_id' => $contract->org_id,
             'contract_id' => $contract->id,
             'room_id' => $contract->room_id,
-            'type' => $type,
-            'status' => 'COMPLETED',
-            'confirmed_at' => $date,
-            'confirmed_by_user_id' => $contract->created_by_user_id,
-            'locked_at' => $date,
+            'created_by_user_id' => $contract->created_by_user_id,
             'note' => $type === 'IN' ? 'Bàn giao nhận phòng' : 'Bàn giao trả phòng',
         ]);
 
@@ -1020,12 +1602,16 @@ class OrgSeeder extends Seeder
                 'handover_id' => $handover->id,
                 'room_asset_id' => $asset->id,
                 'name' => $asset->name,
-                'status' => 'GOOD',
+                'condition' => 'OK',
                 'sort_order' => $index,
             ]);
         }
 
-        // Create Handover Meter Snapshots from Room Meters
+        if (! $withMeterSnapshots) {
+            return;
+        }
+
+        // Create Handover Meter Snapshots from Room Meters (mock — dùng cho HĐ ENDED không-demo)
         $meters = $contract->room->meters;
         foreach ($meters as $meter) {
             $baseReading = 100; // Mock base
@@ -1037,6 +1623,44 @@ class OrgSeeder extends Seeder
                 'handover_id' => $handover->id,
                 'meter_id' => $meter->id,
                 'reading_value' => $readingValue,
+            ]);
+        }
+    }
+
+    /**
+     * Gắn HandoverMeterSnapshot cho OUT handover của HĐ thanh lý demo, dùng `last_value` thực tế của
+     * `$meters` (sau khi `seedFinalMonthMeterReadingsForTerminationDemo` đã chạy và cập nhật last_value).
+     * Nhờ vậy snapshot khớp đúng MeterReading được dùng để tính utility trong hóa đơn thanh lý.
+     *
+     * @param  array<int, array{id: string, last_value: float|int|string, ...}>  $meters
+     */
+    private function attachOutHandoverMeterSnapshotsFromCurrent(Contract $contract, array $meters): void
+    {
+        $handover = Handover::query()
+            ->where('contract_id', $contract->id)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $handover) {
+            return;
+        }
+
+        if (HandoverMeterSnapshot::query()->where('handover_id', $handover->id)->exists()) {
+            return;
+        }
+
+        foreach ($meters as $meter) {
+            $meterId = $meter['id'] ?? null;
+            if (! $meterId) {
+                continue;
+            }
+
+            HandoverMeterSnapshot::create([
+                'id' => Str::uuid()->toString(),
+                'org_id' => $contract->org_id,
+                'handover_id' => $handover->id,
+                'meter_id' => $meterId,
+                'reading_value' => (float) ($meter['last_value'] ?? 0),
             ]);
         }
     }

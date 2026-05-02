@@ -8,6 +8,7 @@ use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\System\TemporaryUpload;
 use App\Support\ContractMemberAge;
+use App\Support\OrgUserPhone;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,7 @@ class ContractStoreRequest extends FormRequest
             'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'rent_price' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit_months' => ['nullable', 'integer', 'min:1', 'max:24'],
 
             // Member validation — 3 paths:
             // A) user_id provided → link existing account
@@ -217,6 +219,33 @@ class ContractStoreRequest extends FormRequest
                 }
             }
 
+            if ($propertyId) {
+                $orgId = Property::query()->whereKey($propertyId)->value('org_id');
+                if ($orgId) {
+                    foreach ($members as $index => $member) {
+                        if (! is_array($member) || ! empty($member['user_id'])) {
+                            continue;
+                        }
+                        $phone = isset($member['phone']) ? (string) $member['phone'] : '';
+                        if (trim($phone) === '') {
+                            continue;
+                        }
+                        $email = isset($member['email']) ? (string) $member['email'] : null;
+                        $conflict = OrgUserPhone::findConflictingUserInOrg((string) $orgId, $phone, $email);
+                        if ($conflict) {
+                            $validator->errors()->add(
+                                "members.$index.phone",
+                                sprintf(
+                                    'Số điện thoại đã gắn với tài khoản %s (%s). Vui lòng dùng đúng email hoặc chọn người dùng trong danh sách.',
+                                    $conflict->full_name ?: '—',
+                                    $conflict->email
+                                )
+                            );
+                        }
+                    }
+                }
+            }
+
             if (! $propertyId) {
                 return;
             }
@@ -273,6 +302,7 @@ class ContractStoreRequest extends FormRequest
             'end_date' => 'Ngày kết thúc',
             'rent_price' => 'Giá thuê',
             'deposit_amount' => 'Tiền cọc',
+            'deposit_months' => 'Số tháng cọc',
             'members' => 'Thành viên',
             'members.*.identity_front_media_id' => 'Ảnh CCCD mặt trước (thành viên)',
             'members.*.identity_back_media_id' => 'Ảnh CCCD mặt sau (thành viên)',

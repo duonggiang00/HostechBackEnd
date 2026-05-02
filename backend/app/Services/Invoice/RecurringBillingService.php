@@ -4,6 +4,7 @@ namespace App\Services\Invoice;
 
 use App\Enums\InvoiceItemType;
 use App\Models\Contract\Contract;
+use App\Support\MeterInvoiceDescription;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Meter\Meter;
@@ -35,7 +36,10 @@ class RecurringBillingService
                     ->orWhere('end_date', '>=', $periodMonth->copy()->startOfMonth());
             })
             ->with('room:id,name,code,property_id')
-            ->get();
+            ->orderByDesc('start_date')
+            ->get()
+            ->unique('room_id')
+            ->values();
 
         $results = [
             'total' => $contracts->count(),
@@ -67,6 +71,8 @@ class RecurringBillingService
      *
      * Runs synchronously (same contract loop as organization-level billing) so the API
      * can return per-contract success/failure and validation errors immediately.
+     *
+     * Chỉ một hợp đồng ACTIVE cho mỗi phòng (nếu có trùng dữ liệu, giữ bản có start_date mới nhất).
      */
     public function generateMonthlyInvoicesForProperty(string $propertyId, Carbon $periodMonth): array
     {
@@ -78,7 +84,10 @@ class RecurringBillingService
                     ->orWhere('end_date', '>=', $periodMonth->copy()->startOfMonth());
             })
             ->with('room:id,name,code,property_id')
-            ->get();
+            ->orderByDesc('start_date')
+            ->get()
+            ->unique('room_id')
+            ->values();
 
         $results = [
             'total' => $contracts->count(),
@@ -226,13 +235,18 @@ class RecurringBillingService
                 ->get();
 
             $missingMeterTypes = [];
+            $missingServiceMeterTypes = [];
 
             foreach ($meters as $meter) {
                 /** @var Meter $meter */
                 $usageData = $this->calculateMeterUsage($meter, $periodStart, $periodEnd, $contract->room_id, $contract->org_id);
 
-                if (! $usageData) {
-                    $missingMeterTypes[] = $meter->type;
+                if (isset($usageData['_error'])) {
+                    if ($usageData['_error'] === 'no_reading') {
+                        $missingMeterTypes[] = $meter->type;
+                    } else {
+                        $missingServiceMeterTypes[] = $meter->type;
+                    }
 
                     continue;
                 }
@@ -240,7 +254,11 @@ class RecurringBillingService
                 $usedReadingIds[] = $usageData['reading_id'];
                 $items[] = [
                     'type' => InvoiceItemType::SERVICE->value,
-                    'description' => "Tiền {$usageData['service_name']} ({$usageData['usage']} {$meter->type})",
+                    'description' => MeterInvoiceDescription::forUsage(
+                        (string) $usageData['service_name'],
+                        $meter->type,
+                        $usageData['usage']
+                    ),
                     'quantity' => $usageData['usage'],
                     'unit_price' => $usageData['average_price'],
                     'amount' => $usageData['total_amount'],
@@ -253,20 +271,31 @@ class RecurringBillingService
                 ];
             }
 
-            // ── Strict Validation: Nếu có bất kỳ đồng hồ nào active mà chưa chốt số → Chặn phát hành ──
+            // ── Strict Validation: thiếu chỉ số đã chốt / thiếu dịch vụ gắn phòng ──
+            $meterNames = [
+                'ELECTRIC' => 'Điện',
+                'WATER' => 'Nước',
+                'GAS' => 'Ga',
+            ];
+
+            if (! empty($missingServiceMeterTypes)) {
+                $labels = array_map(fn ($type) => $meterNames[$type] ?? $type, $missingServiceMeterTypes);
+                $contract->loadMissing('room');
+                $who = $this->contractRoomLabel($contract);
+                $joined = implode(' và ', $labels);
+                throw ValidationException::withMessages([
+                    'meters' => "{$who} — Kỳ {$periodStart->format('d/m/Y')}–{$periodEnd->format('d/m/Y')}: đồng hồ {$joined} đã có chỉ số chốt nhưng chưa gắn dịch vụ đúng loại trên phòng (room_services). Vui lòng cấu hình dịch vụ phòng rồi chạy lại.",
+                ]);
+            }
+
             if (! empty($missingMeterTypes)) {
-                $meterNames = [
-                    'ELECTRIC' => 'Điện',
-                    'WATER' => 'Nước',
-                    'GAS' => 'Ga',
-                ];
                 $labels = array_map(fn ($type) => $meterNames[$type] ?? $type, $missingMeterTypes);
 
                 $contract->loadMissing('room');
                 $who = $this->contractRoomLabel($contract);
                 $joined = implode(' và ', $labels);
                 throw ValidationException::withMessages([
-                    'meters' => "{$who} — Kỳ {$periodStart->format('d/m/Y')}–{$periodEnd->format('d/m/Y')}: chưa có chỉ số {$joined} đã duyệt. Vui lòng chốt số đồng hồ rồi chạy lại chốt tháng.",
+                    'meters' => "{$who} — Kỳ {$periodStart->format('d/m/Y')}–{$periodEnd->format('d/m/Y')}: chưa có chỉ số {$joined} đã duyệt/chốt. Vui lòng chốt số đồng hồ (period_end trong tháng này) rồi chạy lại chốt tháng.",
                 ]);
             }
 
@@ -331,24 +360,26 @@ class RecurringBillingService
     /**
      * Calculate usage and cost for a meter during a period.
      * Dynamic Linking: Tra cứu dịch vụ qua room_services + type.
+     *
+     * @return array<string, mixed>|array{_error: 'no_reading'|'no_service'}
      */
     public function calculateMeterUsage(Meter $meter, Carbon $periodStart, Carbon $periodEnd, ?string $roomId = null, ?string $orgId = null)
     {
         // Find the reading for this period
         $currentReading = MeterReading::where('meter_id', $meter->id)
             ->whereBetween('period_end', [$periodStart, $periodEnd])
-            ->where('status', 'APPROVED')
+            ->whereIn('status', MeterReading::FINALIZED_STATUSES)
             ->orderBy('period_end', 'desc')
             ->first();
 
         if (! $currentReading) {
-            return null;
+            return ['_error' => 'no_reading'];
         }
 
         // Find the previous reading
         $previousReading = MeterReading::where('meter_id', $meter->id)
             ->where('period_end', '<', $currentReading->period_end)
-            ->where('status', 'APPROVED')
+            ->whereIn('status', MeterReading::FINALIZED_STATUSES)
             ->orderBy('period_end', 'desc')
             ->first();
 
@@ -365,7 +396,7 @@ class RecurringBillingService
         $service = $this->resolveServiceForMeter($meter, $roomId, $orgId);
 
         if (! $service) {
-            return null; // Không tìm thấy dịch vụ phù hợp cho loại đồng hồ này
+            return ['_error' => 'no_service'];
         }
 
         $currentRate = $service->currentRate;

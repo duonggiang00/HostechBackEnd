@@ -3,11 +3,12 @@
 namespace App\Listeners\Property;
 
 use App\Events\Property\RoomUpdated;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\HttpFoundation\Request;
 
-class ClearBuildingOverviewCache implements ShouldQueue
+class ClearBuildingOverviewCache implements ShouldQueueAfterCommit
 {
     use InteractsWithQueue;
 
@@ -41,8 +42,35 @@ class ClearBuildingOverviewCache implements ShouldQueue
             }
         }
 
-        // --- CLEAR CACHE ---
+        if (! $this->shouldBustBuildingOverviewNow($propertyId)) {
+            return;
+        }
+
         Cache::forget("building_overview_{$propertyId}");
+    }
+
+    /**
+     * Trong một HTTP request (QUEUE_CONNECTION=sync), nhiều RoomCreated có thể bust cùng một key — chỉ forget một lần.
+     * Trong queue worker (database/redis), luôn bust để tránh bỏ sót giữa các request.
+     */
+    private function shouldBustBuildingOverviewNow(string $propertyId): bool
+    {
+        if (app()->runningInConsole()) {
+            return true;
+        }
+
+        $request = request();
+        if (! $request instanceof Request) {
+            return true;
+        }
+
+        $flag = '_building_overview_bust_'.$propertyId;
+        if ($request->attributes->get($flag)) {
+            return false;
+        }
+        $request->attributes->set($flag, true);
+
+        return true;
     }
 
     /**

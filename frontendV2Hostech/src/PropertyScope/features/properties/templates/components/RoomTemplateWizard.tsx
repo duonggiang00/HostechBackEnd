@@ -224,12 +224,15 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
   const handleFileDrop = async (files: File[]) => {
     for (const file of files) {
       const response = await uploadFile(file, 'room-templates');
-      if (response) {
-        setPendingMediaIds(prev => [...prev, response.id]);
-        setUploadedImages(prev => [
-          ...prev,
-          { uuid: response.id, url: response.url, thumb_url: response.url, name: response.name }
-        ]);
+      if (response?.id) {
+        setPendingMediaIds(prev => Array.from(new Set([...prev, response.id])));
+        setUploadedImages(prev => {
+          if (prev.some(img => img.uuid === response.id)) return prev;
+          return [
+            ...prev,
+            { uuid: response.id, url: response.url, thumb_url: response.url, name: response.name }
+          ];
+        });
       }
     }
   };
@@ -257,7 +260,7 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
       assets: assets
         .filter(a => a.name.trim())
         .map(a => ({ name: a.name, condition: a.condition, note: a.note, quantity: a.quantity ?? 1 })),
-      ...(pendingMediaIds.length > 0 ? { media_ids: pendingMediaIds } : {}),
+      ...(pendingMediaIds.length > 0 ? { media_ids: Array.from(new Set(pendingMediaIds)) } : {}),
     };
 
     try {
@@ -335,11 +338,11 @@ export function RoomTemplateWizard({ initialData, onSuccess, onCancel, propertyI
                         <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatNumber(areaStats.buildingArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
                       </div>
                       <div className="p-6 bg-white/60 dark:bg-slate-800/40 rounded-[28px] border border-white/80 dark:border-slate-700/30 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Diện tích chung</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Diện tích lối đi chung</p>
                         <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatNumber(areaStats.buildingSharedArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
                       </div>
                       <div className="p-6 bg-white/60 dark:bg-slate-800/40 rounded-[28px] border border-white/80 dark:border-slate-700/30 shadow-sm transition-all hover:bg-white dark:hover:bg-slate-800">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">DT phòng ({areaStats.sampleFloorName})</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">DT khả dụng của 1 tầng</p>
                         <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">{formatNumber(areaStats.roomsInSampleFloorArea)}<span className="text-sm font-bold text-slate-400 ml-1">m²</span></p>
                       </div>
                     </div>

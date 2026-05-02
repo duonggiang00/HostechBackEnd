@@ -5,6 +5,7 @@ import { useRoomTemplates, useRoomTemplateActions } from '../hooks/useTemplates'
 import { RoomTemplateWizard } from './RoomTemplateWizard';
 import { Button } from '@/shared/components/ui/button';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import type { RoomTemplate } from '../types';
 
 interface RoomTemplateListProps {
@@ -14,6 +15,7 @@ interface RoomTemplateListProps {
 export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
   const { data: templates = [], isLoading } = useRoomTemplates(propertyId);
   const { deleteTemplate } = useRoomTemplateActions(propertyId);
+  const canAddTemplate = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
   const [showWizard, setShowWizard] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RoomTemplate | null>(null);
   const navigate = useNavigate();
@@ -82,13 +84,15 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
             </p>
           </div>
         </div>
-        <Button
-          onClick={handleCreate}
-          className="bg-blue-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl h-12 px-8 gap-3 shadow-xl shadow-blue-900/10 transition-all active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          Thêm mẫu phòng
-        </Button>
+        {canAddTemplate && (
+          <Button
+            onClick={handleCreate}
+            className="bg-blue-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl h-12 px-8 gap-3 shadow-xl shadow-blue-900/10 transition-all active:scale-95"
+          >
+            <Plus className="w-5 h-5" />
+            Thêm mẫu phòng
+          </Button>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden border-t-4 border-t-blue-900">
@@ -161,12 +165,14 @@ export function RoomTemplateList({ propertyId }: RoomTemplateListProps) {
               <Plus className="w-10 h-10 text-gray-200" />
             </div>
             <p className="text-gray-400 font-black uppercase tracking-widest mb-6">Chưa có mẫu thiết kế nào</p>
-            <Button
-              onClick={handleCreate}
-              className="bg-blue-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl h-12 px-8 shadow-lg shadow-blue-900/10"
-            >
-              + Tạo mẫu đầu tiên
-            </Button>
+            {canAddTemplate && (
+              <Button
+                onClick={handleCreate}
+                className="bg-blue-900 hover:bg-black text-white font-black uppercase tracking-widest rounded-xl h-12 px-8 shadow-lg shadow-blue-900/10"
+              >
+                + Tạo mẫu đầu tiên
+              </Button>
+            )}
           </div>
         )}
       </div>

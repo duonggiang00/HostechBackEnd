@@ -9,13 +9,13 @@ interface PropertyCardProps {
   onClick: () => void;
 }
 
-export default function PropertyCard({ 
-  name, 
-  address, 
-  roomCount, 
-  staffCount, 
+export default function PropertyCard({
+  name,
+  address,
+  roomCount,
+  staffCount,
   status,
-  onClick 
+  onClick,
 }: PropertyCardProps) {
   const statusLabels: Record<string, string> = {
     active: 'Đang hoạt động',
@@ -24,63 +24,59 @@ export default function PropertyCard({
   };
 
   const statusStyles: Record<string, string> = {
-    active: 'bg-green-100 text-green-700 border-green-200',
-    inactive: 'bg-slate-100 text-slate-700 border-slate-200',
-    maintenance: 'bg-amber-100 text-amber-700 border-amber-200',
+    active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    inactive: 'bg-white/10 text-slate-400 border-white/15',
+    maintenance: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className="group bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-200 transition-all cursor-pointer relative overflow-hidden"
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 transition-all hover:border-emerald-500/35 hover:bg-white/[0.07]"
     >
-      {/* Decorative Gradient Blob */}
-      <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-50 rounded-full blur-2xl group-hover:bg-indigo-100 transition-colors" />
-      
+      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl transition-opacity group-hover:opacity-100" />
+
       <div className="relative">
-        <div className="flex justify-between items-start mb-4">
-          <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all">
-            <Building2 className="w-6 h-6" />
+        <div className="mb-4 flex items-start justify-between">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 transition-colors group-hover:bg-emerald-500/25">
+            <Building2 className="h-6 w-6" />
           </div>
-          <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-full border ${statusStyles[status]}`}>
+          <span className={`rounded-full border px-2 py-1 text-xs font-bold uppercase tracking-wider ${statusStyles[status]}`}>
             {statusLabels[status] || status}
           </span>
         </div>
 
-        <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
-          {name}
-        </h3>
-        <p className="text-sm text-slate-500 flex items-center gap-1.5 mb-6">
-          <MapPin className="w-3.5 h-3.5" />
+        <h3 className="mb-1 text-lg font-bold text-white transition-colors group-hover:text-emerald-300">{name}</h3>
+        <p className="mb-6 flex items-center gap-1.5 text-sm text-slate-500">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-500" />
           {address}
         </p>
 
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+        <div className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-              <DoorOpen className="w-4 h-4" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400">
+              <DoorOpen className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">{roomCount}</p>
-              <p className="text-xs text-slate-500 uppercase font-medium text-nowrap">Phòng ngủ</p>
+              <p className="text-xs font-bold text-white">{roomCount}</p>
+              <p className="text-xs font-medium uppercase text-slate-500 text-nowrap">Phòng ngủ</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-              <Users className="w-4 h-4" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400">
+              <Users className="h-4 w-4" />
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-900">{staffCount}</p>
-              <p className="text-xs text-slate-500 uppercase font-medium text-nowrap">Nhân sự</p>
+              <p className="text-xs font-bold text-white">{staffCount}</p>
+              <p className="text-xs font-medium uppercase text-slate-500 text-nowrap">Nhân sự</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
-        <ChevronRight className="w-5 h-5 text-indigo-600" />
+      <div className="absolute bottom-6 right-6 translate-x-1 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100">
+        <ChevronRight className="h-5 w-5 text-emerald-400" />
       </div>
     </div>
   );
 }
-

@@ -51,10 +51,15 @@ class BuildingOverviewController extends Controller
 
         $this->authorize('update', $property);
 
+        $validated = $request->validated();
+        $idempotencyKey = $validated['idempotency_key'] ?? null;
+        unset($validated['idempotency_key']);
+
         $layout = $this->service->syncLayout(
             $property,
-            $request->validated(),
-            $request->user()
+            $validated,
+            $request->user(),
+            $idempotencyKey
         );
 
         return new BuildingOverviewResource($layout);

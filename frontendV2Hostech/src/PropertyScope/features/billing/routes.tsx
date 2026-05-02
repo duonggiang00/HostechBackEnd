@@ -28,7 +28,7 @@ export const billingRoutes: RouteObject[] = [
   {
     path: 'billing/payment-verifications',
     element: (
-      <PropertyManagerFeatureRoute>
+      <PropertyManagerFeatureRoute extraRoles={['Staff']}>
         <PaymentVerificationPage />
       </PropertyManagerFeatureRoute>
     ),

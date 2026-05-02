@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Send, RefreshCw, Search, Loader2, Zap, Droplets, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -12,6 +12,7 @@ import {
   getMissingApprovedMeterLabels,
   isRoomReadyForQuickInvoiceSubmit,
 } from '@/PropertyScope/features/billing/utils/roomMeterReadiness';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,7 @@ interface MeterItem {
 export default function CreateQuickInvoicePage() {
   const { propertyId, roomId } = useParams<{ propertyId: string; roomId?: string }>();
   const navigate = useNavigate();
+  const canIssueInvoices = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
 
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(roomId || null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -274,6 +276,10 @@ export default function CreateQuickInvoicePage() {
   const property = roomDetail?.property;
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  if (propertyId && !canIssueInvoices) {
+    return <Navigate to={`/properties/${propertyId}/billing`} replace />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
 

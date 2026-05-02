@@ -2,8 +2,11 @@
 
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\ResolveTenant;
+use App\Support\FriendlySqlDuplicateMessage;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -62,6 +65,28 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'The requested resource was not found.',
                 ], 404);
             }
+        });
+
+        $exceptions->renderable(function (UniqueConstraintViolationException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => FriendlySqlDuplicateMessage::fromQueryException($e),
+                ], 422);
+            }
+        });
+
+        $exceptions->renderable(function (QueryException $e, $request) {
+            if (! $request->expectsJson() || $e instanceof UniqueConstraintViolationException) {
+                return null;
+            }
+            $state = $e->errorInfo[0] ?? '';
+            if ($state !== '23000' && ! str_contains($e->getMessage(), '1062')) {
+                return null;
+            }
+
+            return response()->json([
+                'message' => FriendlySqlDuplicateMessage::fromQueryException($e),
+            ], 422);
         });
     })
     ->create();

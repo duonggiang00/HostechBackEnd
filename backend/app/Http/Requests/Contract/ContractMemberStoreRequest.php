@@ -6,6 +6,7 @@ use App\Models\Contract\Contract;
 use App\Models\Org\User;
 use App\Models\System\TemporaryUpload;
 use App\Support\ContractMemberAge;
+use App\Support\OrgUserPhone;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -77,6 +78,23 @@ class ContractMemberStoreRequest extends FormRequest
                             "Phòng chỉ giới hạn {$capacity} người. Không thể thêm thành viên mới."
                         );
                     }
+                }
+            }
+
+            $orgId = $contract->org_id;
+            $phone = isset($d['phone']) ? (string) $d['phone'] : '';
+            if ($orgId && trim($phone) !== '' && empty($d['user_id'])) {
+                $email = isset($d['email']) ? (string) $d['email'] : null;
+                $conflict = OrgUserPhone::findConflictingUserInOrg((string) $orgId, $phone, $email);
+                if ($conflict) {
+                    $v->errors()->add(
+                        'phone',
+                        sprintf(
+                            'Số điện thoại đã gắn với tài khoản %s (%s). Vui lòng dùng đúng email hoặc chọn tài khoản.',
+                            $conflict->full_name ?: '—',
+                            $conflict->email
+                        )
+                    );
                 }
             }
 

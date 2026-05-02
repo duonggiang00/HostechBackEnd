@@ -55,6 +55,7 @@ export interface BuildingOverviewResponse {
 export interface SyncRoomEntry {
   id?: string;       // uuid — phòng cũ
   temp_id?: string;  // string tạm — phòng mới
+  name?: string;     // nhãn hiển thị (không unique); code mới là unique theo property
   code?: string;
   template_id?: string;
   x: number;         // column_index
@@ -72,6 +73,8 @@ export interface SyncFloorEntry {
 }
 
 export interface SyncBuildingOverviewPayload {
+  /** Cùng một lần lưu (kể cả retry sau lỗi mạng): tránh tạo trùng phòng / job khi server đã commit */
+  idempotency_key?: string;
   template_id?: string;         // template dùng cho TẤT CẢ phòng mới (nếu không override riêng)
   sync_data: SyncFloorEntry[];
   deleted_room_ids?: string[];

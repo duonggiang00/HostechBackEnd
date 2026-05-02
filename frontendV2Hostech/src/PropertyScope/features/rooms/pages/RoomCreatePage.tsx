@@ -1,12 +1,18 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import RoomWizard from '@/PropertyScope/features/rooms/components/RoomWizard';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export default function RoomCreatePage() {
   const { propertyId, floorId } = useParams();
   const navigate = useNavigate();
+  const isStaff = useAuthStore((s) => s.hasRole(['Staff']));
 
   if (!propertyId) return null;
+
+  if (isStaff) {
+    return <Navigate to={`/properties/${propertyId}/rooms`} replace />;
+  }
 
   return (
     <div className="space-y-12 pb-20 max-w-6xl mx-auto">

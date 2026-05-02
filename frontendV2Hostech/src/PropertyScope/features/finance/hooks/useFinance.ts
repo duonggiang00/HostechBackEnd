@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../api/financeApi';
-import type { PaymentQueryParams, LedgerQueryParams, LedgerSummaryParams, RefundReceiptQueryParams } from '../types';
+import type {
+  PaymentQueryParams,
+  LedgerQueryParams,
+  LedgerSummaryParams,
+  RefundReceiptQueryParams,
+  MarkRefundPaidPayload,
+  CashflowFeedQueryParams,
+} from '../types';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
@@ -12,6 +19,9 @@ export const financeKeys = {
   balance: () => ['finance', 'ledger', 'balance'] as const,
   ledgerSummary: (params?: LedgerSummaryParams) => ['finance', 'ledger', 'summary', params] as const,
   refundReceipts: (params?: RefundReceiptQueryParams) => ['finance', 'refund-receipts', params] as const,
+  cashflowFeed: (params?: CashflowFeedQueryParams) => ['finance', 'cashflow-feed', params] as const,
+  outstandingInvoices: (propertyId: string, params?: { page?: number; per_page?: number; sort?: string }) =>
+    ['finance', 'outstanding-invoices', propertyId, params] as const,
 };
 
 // ─── Payments Hooks ───────────────────────────────────────────────────────────
@@ -19,11 +29,12 @@ export const financeKeys = {
 /**
  * Danh sách biên lai (phân trang + filter)
  */
-export function usePayments(params?: PaymentQueryParams) {
+export function usePayments(params?: PaymentQueryParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: financeKeys.payments(params),
     queryFn: () => financeApi.getPayments(params),
     staleTime: 30_000,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -102,5 +113,52 @@ export function useRefundReceipts(params?: RefundReceiptQueryParams, options?: {
     queryFn: () => financeApi.getRefundReceipts(params),
     staleTime: 30_000,
     enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * BQL xác nhận đã chi hoàn cọc + sinh PDF → invalidate cache phiếu + ledger summary.
+ */
+export function useMarkRefundPaid() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: MarkRefundPaidPayload }) =>
+      financeApi.markRefundPaid(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance', 'refund-receipts'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'ledger'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'cashflow-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+  });
+}
+
+// ─── Cashflow Feed (tab "Dòng tiền tất cả") ───────────────────────────────────
+
+/**
+ * Dòng tiền thực tế hợp nhất Payment(IN) + RefundReceipt(OUT) — sort desc.
+ */
+export function useCashflowFeed(params?: CashflowFeedQueryParams, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: financeKeys.cashflowFeed(params),
+    queryFn: () => financeApi.getCashflowFeed(params),
+    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Hóa đơn còn nợ (tab "Tiền nợ") theo property — chỉ outstanding > 0, status ≠ PAID/CANCELLED.
+ */
+export function useOutstandingInvoices(
+  propertyId: string,
+  params?: { page?: number; per_page?: number; sort?: string },
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: financeKeys.outstandingInvoices(propertyId, params),
+    queryFn: () => financeApi.getOutstandingInvoices(propertyId, params),
+    staleTime: 30_000,
+    enabled: (options?.enabled ?? true) && !!propertyId,
   });
 }

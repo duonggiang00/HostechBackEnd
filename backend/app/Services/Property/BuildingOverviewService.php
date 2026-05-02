@@ -3,17 +3,25 @@
 namespace App\Services\Property;
 
 use App\Events\Property\BuildingOverviewUpdated;
+use App\Jobs\Property\ApplyTemplateAssetsAfterOverviewSyncJob;
+use App\Jobs\Property\CopyTemplateGalleryAfterOverviewSyncJob;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomFloorPlanNode;
 use App\Models\Property\RoomTemplate;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class BuildingOverviewService
 {
+    /** @var array<string, Floor|null> Tránh N lần Floor::find khi tạo nhiều phòng cùng tầng trong một lần sync. */
+    private array $floorAllocationCache = [];
+
     public function __construct(
         protected RoomService $roomService,
     ) {}
@@ -34,13 +42,49 @@ class BuildingOverviewService
     /**
      * Batch sync layout: tạo tầng mới, tạo phòng mới, cập nhật vị trí, xóa đối tượng.
      * Toàn bộ trong 1 transaction để đảm bảo tính toàn vẹn.
+     *
+     * @param  string|null  $idempotencyKey  Cùng key + cùng property: lần sau chỉ trả layout hiện tại, không tạo phòng trùng.
      */
-    public function syncLayout(Property $property, array $payload, User $user): array
+    public function syncLayout(Property $property, array $payload, User $user, ?string $idempotencyKey = null): array
     {
+        if ($idempotencyKey) {
+            return Cache::lock("building_overview_sync:{$property->id}:{$idempotencyKey}", 120)->block(30, function () use ($property, $payload, $user, $idempotencyKey) {
+                return $this->runSyncLayoutTransaction($property, $payload, $user, $idempotencyKey);
+            });
+        }
+
+        return $this->runSyncLayoutTransaction($property, $payload, $user, null);
+    }
+
+    /**
+     * @param  string|null  $idempotencyKey  Đã ghi trong DB cùng transaction khi sync thành công.
+     */
+    private function runSyncLayoutTransaction(Property $property, array $payload, User $user, ?string $idempotencyKey): array
+    {
+        $payloadHash = $idempotencyKey ? $this->syncPayloadFingerprint($payload) : null;
+
+        if ($idempotencyKey) {
+            $existing = $this->findBuildingOverviewSyncIdempotency($property->id, $idempotencyKey);
+            if ($existing) {
+                if (! hash_equals((string) $existing->payload_hash, (string) $payloadHash)) {
+                    throw ValidationException::withMessages([
+                        'idempotency_key' => 'Mã idempotency đã gắn với bản lưu khác. Hãy lưu lại để tạo mã mới, hoặc tải lại trang.',
+                    ]);
+                }
+
+                return $this->buildLayoutData($property);
+            }
+        }
+
+        $this->floorAllocationCache = [];
+
         // 0. Pre-flight validation
         $this->validateSync($property, $payload);
 
-        return DB::transaction(function () use ($property, $payload, $user) {
+        /** @var list<array{room_id: string, template_id: string}> */
+        $galleryCopyPairs = [];
+
+        $layout = DB::transaction(function () use ($property, $payload, $user, &$galleryCopyPairs, $idempotencyKey, $payloadHash) {
             $summary = [
                 'floors_added' => 0,
                 'rooms_added' => 0,
@@ -48,6 +92,16 @@ class BuildingOverviewService
                 'rooms_deleted' => 0,
                 'floors_deleted' => 0,
             ];
+
+            $roomCodesScratch = Room::withTrashed()
+                ->where('property_id', $property->id)
+                ->pluck('code')
+                ->map(fn ($c) => (string) $c)
+                ->values()
+                ->all();
+
+            /** @var array<string, RoomTemplate> */
+            $roomTemplateCache = [];
 
             // 1. Xóa tầng bị xóa trước (cascade xóa phòng bên trong qua Observer)
             if (! empty($payload['deleted_floor_ids'])) {
@@ -86,14 +140,26 @@ class BuildingOverviewService
 
                 // 4. Xử lý các phòng trong tầng
                 foreach ($floorData['rooms'] as $roomData) {
-                    $roomId = $this->resolveRoomId($roomData, $property, $floorId, $payload['template_id'] ?? null, $user, $summary);
+                    $freshRoom = null;
+                    $roomId = $this->resolveRoomId(
+                        $roomData,
+                        $property,
+                        $floorId,
+                        $payload['template_id'] ?? null,
+                        $user,
+                        $summary,
+                        $roomCodesScratch,
+                        $roomTemplateCache,
+                        $galleryCopyPairs,
+                        $freshRoom,
+                    );
 
                     if (! $roomId) {
                         continue;
                     }
 
                     // 5. Override vị trí Grid (x, y, width, height)
-                    $room = Room::find($roomId);
+                    $room = $freshRoom ?? Room::find($roomId);
                     if ($room) {
                         RoomFloorPlanNode::updateOrCreate(
                             ['room_id' => $roomId],                 // search key
@@ -111,54 +177,158 @@ class BuildingOverviewService
                 }
             }
 
+            if ($idempotencyKey && $payloadHash) {
+                $this->recordBuildingOverviewSyncIdempotency($property->id, $idempotencyKey, $payloadHash);
+            }
+
             // 6. Phát event để clear cache và trigger các side-effects
             BuildingOverviewUpdated::dispatch($property->id, $user->id, $summary);
 
             return $this->buildLayoutData($property);
+        });
+
+        $this->queueDeferredTemplateCloneAfterOverviewSync($galleryCopyPairs);
+
+        return $layout;
+    }
+
+    private function findBuildingOverviewSyncIdempotency(string $propertyId, string $idempotencyKey): ?object
+    {
+        return DB::table('building_overview_sync_idempotencies')
+            ->where('property_id', $propertyId)
+            ->where('idempotency_key', $idempotencyKey)
+            ->first();
+    }
+
+    /**
+     * @return non-falsy-string
+     */
+    private function syncPayloadFingerprint(array $payload): string
+    {
+        return hash('sha256', json_encode(Arr::sortRecursive($payload), JSON_UNESCAPED_UNICODE));
+    }
+
+    private function recordBuildingOverviewSyncIdempotency(string $propertyId, string $idempotencyKey, string $payloadHash): void
+    {
+        DB::table('building_overview_sync_idempotencies')->insert([
+            'id' => (string) Str::uuid(),
+            'property_id' => $propertyId,
+            'idempotency_key' => $idempotencyKey,
+            'payload_hash' => $payloadHash,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Tách khỏi XHR: (1) clone room_assets từ template, (2) copy gallery — mỗi phần một job khi queue ≠ sync.
+     */
+    private function queueDeferredTemplateCloneAfterOverviewSync(array $templateClonePairs): void
+    {
+        if ($templateClonePairs === []) {
+            return;
+        }
+
+        if (config('queue.default') !== 'sync') {
+            ApplyTemplateAssetsAfterOverviewSyncJob::dispatch($templateClonePairs);
+            CopyTemplateGalleryAfterOverviewSyncJob::dispatch($templateClonePairs);
+
+            return;
+        }
+
+        $roomService = $this->roomService;
+        register_shutdown_function(static function () use ($templateClonePairs, $roomService): void {
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            }
+            $roomService->applyTemplateAssetsForOverviewPairs($templateClonePairs);
+            $roomService->copyTemplateGalleryForOverviewPairs($templateClonePairs);
         });
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────
 
     /**
-     * Sinh tên phòng tự động bằng cách tìm slot trống nhỏ nhất trong tầng.
+     * Sinh mã phòng: tầng trệt G{STT:2}, các tầng khác {số_tầng}{STT:2} (vd. 101, 401, 1201).
      *
-     * Quy tắc đặt tên: {floor_number}{sequence:02d}
-     *   Tầng 1, slot 1  → "101" | Tầng 4, slot 3  → "403"
-     *   Tầng trệt (0)   → "G01", "G02" ...
+     * Ràng buộc DB: (property_id, code) là unique — kể cả phòng soft-deleted vẫn chiếm mã.
      *
-     * Ví dụ: tầng 1 hiện có 104, 107, 105
-     *   → usedSlots = {4, 5, 7}  → slot trống = 1 → trả về "101"
-     *   Phòng tiếp theo → slot 2 → "102", rồi "103", "106"...
-     *
-     * Tên phòng hiện có KHÔNG BAO GIỜ bị đổi.
+     * @param  list<string>  $roomCodesScratch  Mã phòng hiện có + mã vừa gán trong cùng request (tránh N query).
      */
-    private function generateRoomName(string $floorId): string
+    private function allocateNextRoomCodeByFloorPattern(string $floorId, array &$roomCodesScratch): string
     {
-        $floor = Floor::find($floorId);
+        if (! array_key_exists($floorId, $this->floorAllocationCache)) {
+            $this->floorAllocationCache[$floorId] = Floor::find($floorId);
+        }
+        $floor = $this->floorAllocationCache[$floorId];
         $floorNumber = $floor ? (int) $floor->floor_number : 0;
         $prefix = $floorNumber === 0 ? 'G' : (string) $floorNumber;
 
-        // Tập hợp các slot đang được dùng trong tầng này
-        $existingNames = Room::where('floor_id', $floorId)->pluck('name')->toArray();
-        $usedSlots = [];
-        foreach ($existingNames as $name) {
-            // Parse tên theo pattern: prefix + số (ví dụ "104" → prefix "1", slot 4)
-            if (str_starts_with((string) $name, $prefix)) {
-                $suffix = ltrim(substr((string) $name, strlen($prefix)), '0');
-                if (is_numeric($suffix)) {
-                    $usedSlots[] = (int) $suffix;
-                }
+        $usedSequences = [];
+        foreach ($roomCodesScratch as $c) {
+            if ($c === '' || ! str_starts_with($c, $prefix)) {
+                continue;
+            }
+            $suffix = substr($c, strlen($prefix));
+            if (preg_match('/^(\d{2})$/', $suffix, $m)) {
+                $usedSequences[(int) $m[1]] = true;
             }
         }
 
-        // Tìm slot trống nhỏ nhất bắt đầu từ 1
         $sequence = 1;
-        while (in_array($sequence, $usedSlots, true)) {
+        while (isset($usedSequences[$sequence])) {
             $sequence++;
         }
 
-        return $prefix.str_pad($sequence, 2, '0', STR_PAD_LEFT);
+        $label = $prefix.str_pad((string) $sequence, 2, '0', STR_PAD_LEFT);
+        $roomCodesScratch[] = $label;
+
+        return $label;
+    }
+
+    /**
+     * Mã phòng (unique theo property): ưu tiên code client nếu chưa trùng (kể cả soft-delete),
+     * không thì fallback auto theo tầng. Chỉ scratch/kiểm tra trùng trên code.
+     *
+     * @param  list<string>  $roomCodesScratch
+     */
+    private function resolveRoomCodeFromClientOrAuto(array $roomData, string $floorId, array &$roomCodesScratch): string
+    {
+        $clientCode = isset($roomData['code']) ? trim((string) $roomData['code']) : '';
+        if ($clientCode !== '' && ! $this->isRoomCodeTakenInScratch($clientCode, $roomCodesScratch)) {
+            $roomCodesScratch[] = $clientCode;
+
+            return $clientCode;
+        }
+
+        return $this->allocateNextRoomCodeByFloorPattern($floorId, $roomCodesScratch);
+    }
+
+    /**
+     * Tên hiển thị — không bắt unique; mặc định theo code đã resolve nếu client không gửi name.
+     */
+    private function resolveRoomDisplayName(array $roomData, string $resolvedCode): string
+    {
+        $name = isset($roomData['name']) ? trim((string) $roomData['name']) : '';
+
+        return $name !== '' ? $name : $resolvedCode;
+    }
+
+    /**
+     * So sánh không phân biệt hoa thường để khớp unique index trên DB collation mặc định.
+     *
+     * @param  list<string>  $roomCodesScratch
+     */
+    private function isRoomCodeTakenInScratch(string $candidate, array $roomCodesScratch): bool
+    {
+        $candidateLower = mb_strtolower($candidate);
+        foreach ($roomCodesScratch as $existing) {
+            if (mb_strtolower((string) $existing) === $candidateLower) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -200,8 +370,14 @@ class BuildingOverviewService
         string $floorId,
         ?string $globalTemplateId,
         User $user,
-        array &$summary
+        array &$summary,
+        array &$roomCodesScratch,
+        array &$roomTemplateCache,
+        array &$galleryCopyPairs,
+        ?Room &$freshRoom,
     ): ?string {
+        $freshRoom = null;
+
         // Phòng CŨ — đã có ID thực, chỉ cập nhật vị trí
         if (! empty($roomData['id'])) {
             return $roomData['id'];
@@ -211,29 +387,46 @@ class BuildingOverviewService
         if (! empty($roomData['temp_id'])) {
             $templateId = $roomData['template_id'] ?? $globalTemplateId;
 
-            // Auto-generate tên phòng theo floor_number + thứ tự
-            $autoName = $this->generateRoomName($floorId);
+            // Chỉ (property_id, code) là unique — name là nhãn hiển thị, gửi riêng từ client.
+            $roomCode = $this->resolveRoomCodeFromClientOrAuto($roomData, $floorId, $roomCodesScratch);
+            $roomName = $this->resolveRoomDisplayName($roomData, $roomCode);
 
             if ($templateId) {
-                // Tạo từ Template — Observer sẽ tạo FloorPlanNode, Template tạo Meters
-                $room = $this->roomService->createFromTemplate($templateId, [
-                    'property_id' => $property->id,
-                    'floor_id' => $floorId,
-                    'name' => $autoName,
-                    'code' => $roomData['code'] ?? $autoName,
-                    'status' => 'available',
-                ], $user);
+                if (! isset($roomTemplateCache[$templateId])) {
+                    $roomTemplateCache[$templateId] = RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
+                }
+
+                // Không copy gallery từ template (rất chậm khi tạo nhiều ô trên sơ đồ); API tạo phòng đơn lẻ vẫn copy đầy đủ.
+                $room = $this->roomService->createFromTemplate(
+                    $templateId,
+                    [
+                        'property_id' => $property->id,
+                        'floor_id' => $floorId,
+                        'name' => $roomName,
+                        'code' => $roomCode,
+                        'status' => 'available',
+                    ],
+                    $user,
+                    false,
+                    $roomTemplateCache[$templateId],
+                    true,
+                    true,
+                    true,
+                );
+
+                $galleryCopyPairs[] = ['room_id' => $room->id, 'template_id' => $templateId];
             } else {
                 // Tạo nhanh không dùng template — Observer tạo FloorPlanNode + 2 Meters mặc định
                 $room = $this->roomService->quickCreate([
                     'property_id' => $property->id,
                     'floor_id' => $floorId,
-                    'name' => $autoName,
-                    'code' => $roomData['code'] ?? $autoName,
+                    'name' => $roomName,
+                    'code' => $roomCode,
                 ], $user);
             }
 
             $summary['rooms_added']++;
+            $freshRoom = $room;
 
             return $room->id;
         }
@@ -273,6 +466,22 @@ class BuildingOverviewService
         // 3. Chặn đè phòng (Overlap) & Kiểm tra Diện tích (Area Capacity) per floor
         $roomTemplates = RoomTemplate::where('property_id', $property->id)->get()->keyBy('id');
 
+        $syncRoomIds = [];
+        foreach ($payload['sync_data'] ?? [] as $floorData) {
+            foreach ($floorData['rooms'] ?? [] as $roomData) {
+                if (! empty($roomData['id'])) {
+                    $syncRoomIds[] = (string) $roomData['id'];
+                }
+            }
+        }
+        $syncRoomIds = array_values(array_unique($syncRoomIds));
+        $roomsByIdForValidation = $syncRoomIds === []
+            ? collect()
+            : Room::whereIn('id', $syncRoomIds)
+                ->where('property_id', $property->id)
+                ->get()
+                ->keyBy(fn (Room $r) => (string) $r->id);
+
         foreach ($payload['sync_data'] as $floorData) {
             $floorId = $floorData['floor_id'] ?? null;
             $floor = $floorId ? Floor::find($floorId) : null;
@@ -292,7 +501,7 @@ class BuildingOverviewService
                     if (! ($x2 <= $r['x1'] || $x1 >= $r['x2'] || $y2 <= $r['y1'] || $y1 >= $r['y2'])) {
                         $code = $roomData['code'] ?? null;
                         if (! $code && ! empty($roomData['id'])) {
-                            $room = Room::find($roomData['id']);
+                            $room = $roomsByIdForValidation->get((string) $roomData['id']);
                             $code = $room ? $room->code : $roomData['id'];
                         }
                         $roomIdStr = $code ?? 'Không xác định';
@@ -307,7 +516,7 @@ class BuildingOverviewService
                 if ($templateId && isset($roomTemplates[$templateId])) {
                     $totalRoomArea += $roomTemplates[$templateId]->area;
                 } elseif (! empty($roomData['id'])) {
-                    $existingRoom = Room::find($roomData['id']);
+                    $existingRoom = $roomsByIdForValidation->get((string) $roomData['id']);
                     if ($existingRoom) {
                         $totalRoomArea += $existingRoom->area;
                     }

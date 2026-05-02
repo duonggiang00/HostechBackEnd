@@ -21,6 +21,7 @@ import type { MeterReading } from '@/PropertyScope/features/metering/types';
 import toast from 'react-hot-toast';
 import { roomsApi } from '@/PropertyScope/features/rooms/api/rooms';
 import { isRoomReadyForQuickInvoiceSubmit } from '@/PropertyScope/features/billing/utils/roomMeterReadiness';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 interface RoomUtilityTabProps {
   propertyId: string;
@@ -37,6 +38,7 @@ const formatDate = (dateStr?: string | null) => {
 
 export default function RoomUtilityTab({ propertyId, roomId, meters: initialMeters, isReadOnly }: RoomUtilityTabProps) {
   const navigate = useNavigate();
+  const canIssueInvoices = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
 
   const { data: roomInvoiceSnapshot, isFetching: invoiceReadinessLoading } = useQuery({
     queryKey: ['room-utility-invoice-readiness', roomId],
@@ -76,7 +78,7 @@ export default function RoomUtilityTab({ propertyId, roomId, meters: initialMete
 
   return (
     <div className="flex flex-col gap-6">
-      {!isReadOnly && (
+      {!isReadOnly && canIssueInvoices && (
         <div className="flex justify-end">
           <button
             onClick={() => {

@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * @bodyParam property_id uuid ID tòa nhà (tùy chọn). Example: 9b9eb2ee-1234-5678-abcd-1234567890ab
  * @bodyParam payer_user_id uuid ID người nộp tiền. Example: 9b9eb2ee-...
- * @bodyParam method string Required. Phương thức thanh toán: CASH, TRANSFER, WALLET, QR. Example: TRANSFER
+ * @bodyParam method string Required. Phương thức: CASH, BANK_TRANSFER, VNPAY (TRANSFER legacy → lưu BANK_TRANSFER). Example: BANK_TRANSFER
  * @bodyParam amount decimal Required. Tổng tiền thu. Example: 5500000.00
  * @bodyParam received_at string Thời gian nhận tiền (ISO 8601). Example: 2024-03-16T15:00:00Z
  * @bodyParam reference string Mã tham chiếu (số CK, mã QR...). Example: CK_PHONG_A101_THANG_3
@@ -30,7 +30,7 @@ class StorePaymentRequest extends FormRequest
             'property_id' => ['nullable', 'uuid', 'exists:properties,id'],
 
             'payer_user_id' => ['nullable', 'uuid', 'exists:users,id'],
-            'method' => ['required', 'string', 'in:CASH,TRANSFER,WALLET,QR,VNPAY'],
+            'method' => ['required', 'string', 'in:CASH,BANK_TRANSFER,VNPAY,TRANSFER,WALLET,QR'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'received_at' => ['nullable', 'date'],
             'reference' => ['nullable', 'string', 'max:255'],

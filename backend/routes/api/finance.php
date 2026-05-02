@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Finance\CashflowController;
+use App\Http\Controllers\Api\Finance\CashflowFeedController;
 use App\Http\Controllers\Api\Finance\LedgerController;
 use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Finance\PaymentVerificationController;
@@ -38,7 +39,12 @@ Route::prefix('finance')->group(function () {
     Route::get('ledger/summary', [LedgerController::class, 'summary']);
     Route::get('ledger/balance', [LedgerController::class, 'balance']);
 
+    // ── Cashflow Feed (dòng tiền hợp nhất Payment IN + RefundReceipt OUT) ─
+    Route::get('cashflow-feed', [CashflowFeedController::class, 'index']);
+
     Route::get('refund-receipts', [RefundReceiptController::class, 'index']);
+    Route::get('refund-receipts/{id}', [RefundReceiptController::class, 'show']);
+    Route::post('refund-receipts/{id}/mark-paid', [RefundReceiptController::class, 'markPaid']);
 
     // ── Cashflow (Dòng tiền thực tế In/Out) ───────────────────
     Route::get('cashflow', [CashflowController::class, 'index']);

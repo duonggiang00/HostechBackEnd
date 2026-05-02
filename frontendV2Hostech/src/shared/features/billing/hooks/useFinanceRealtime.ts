@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { echo } from '@/shared/utils/echo';
 import {
   PAYMENT_VERIFICATIONS_QUERY_KEY,
   TENANT_PAYMENTS_QUERY_KEY,
 } from '@/shared/features/billing/hooks/usePaymentVerification';
 import { INVOICES_QUERY_KEY } from '@/shared/features/billing/hooks/useInvoice';
+import { CONTRACT_KEY, MY_CONTRACTS_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
 
 /**
  * Kênh private `property.{id}` — đồng bộ khi staff duyệt thanh toán / hóa đơn chuyển PAID (broadcast Laravel).
@@ -35,11 +37,22 @@ export function usePropertyFinanceRealtime(propertyId: string | undefined) {
     };
 
     channel.listen('.payment.successfully_verified', invalidate);
+    channel.listen('.payment.proof_submitted', invalidate);
+    channel.listen('.payment.rejected', invalidate);
     channel.listen('.invoice.paid', onInvoicePaid);
+    channel.listen('.contract.activated', () => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['property-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['property-rooms-simple', propertyId] });
+    });
 
     return () => {
       channel.stopListening('.payment.successfully_verified');
+      channel.stopListening('.payment.proof_submitted');
+      channel.stopListening('.payment.rejected');
       channel.stopListening('.invoice.paid');
+      channel.stopListening('.contract.activated');
     };
   }, [propertyId, queryClient]);
 }
@@ -80,7 +93,9 @@ export function useOrgFinanceRealtime(orgId: string | null | undefined) {
 }
 
 /**
- * Kênh private `user.{id}` — tenant nhận `invoice.paid` khi là payer (theo backend InvoicePaidEvent).
+ * Kênh private `user.{id}` — tenant nhận:
+ *  - `invoice.paid`     khi payment được duyệt
+ *  - `payment.rejected` khi bằng chứng bị từ chối → hiển thị toast + reload data
  */
 export function useTenantFinanceRealtime(userId: string | undefined) {
   const queryClient = useQueryClient();
@@ -96,12 +111,46 @@ export function useTenantFinanceRealtime(userId: string | undefined) {
       if (payload?.invoice_id) {
         queryClient.invalidateQueries({ queryKey: ['invoice', payload.invoice_id] });
       }
+      const id = payload?.invoice_id;
+      toast.success(
+        id
+          ? `Thanh toán đã được xác nhận (hóa đơn đã cập nhật).`
+          : 'Thanh toán đã được xác nhận.',
+        { id: id ? `invoice-paid-${id}` : 'invoice-paid', duration: 5000 },
+      );
+    };
+
+    const onPaymentRejected = (payload?: { reject_reason?: string; amount?: number }) => {
+      queryClient.invalidateQueries({ queryKey: [INVOICES_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [TENANT_PAYMENTS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['invoice'] });
+
+      const reason = payload?.reject_reason ? `: ${payload.reject_reason}` : '';
+      toast.error(`Bằng chứng thanh toán của bạn đã bị từ chối${reason}. Vui lòng kiểm tra lại hóa đơn.`, {
+        duration: 8000,
+        id: 'payment-rejected',
+      });
     };
 
     channel.listen('.invoice.paid', onInvoicePaid);
+    channel.listen('.payment.rejected', onPaymentRejected);
+
+    // Listen for contract.activated on the user's model channel (broadcast by ContractActivated event)
+    const modelChannel = echo.private(`App.Models.Org.User.${userId}`);
+    const onContractActivated = (payload?: { contract?: { id?: string } }) => {
+      queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
+      if (payload?.contract?.id) {
+        queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, payload.contract.id] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY] });
+      }
+    };
+    modelChannel.listen('.contract.activated', onContractActivated);
 
     return () => {
       channel.stopListening('.invoice.paid');
+      channel.stopListening('.payment.rejected');
+      modelChannel.stopListening('.contract.activated');
     };
   }, [userId, queryClient]);
 }

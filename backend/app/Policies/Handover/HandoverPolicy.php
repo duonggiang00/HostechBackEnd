@@ -3,6 +3,7 @@
 namespace App\Policies\Handover;
 
 use App\Contracts\RbacModuleProvider;
+use App\Enums\ContractStatus;
 use App\Models\Contract\ContractMember;
 use App\Models\Handover\Handover;
 use App\Models\Org\User;
@@ -46,8 +47,7 @@ class HandoverPolicy implements RbacModuleProvider
         }
 
         if ($user->hasAnyRole(['tenant', 'Tenant'])) {
-            // Chỉ thấy biên bản đã Confirm gắn với hợp đồng thuê của họ
-            return $handover->status === 'CONFIRMED' && ContractMember::where('user_id', $user->id)->where('contract_id', $handover->contract_id)->exists();
+            return ContractMember::where('user_id', $user->id)->where('contract_id', $handover->contract_id)->exists();
         }
 
         return false;
@@ -60,11 +60,12 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function update(User $user, Handover $handover): bool
     {
-        if ($handover->status === 'CONFIRMED') {
+        if (! $user->hasPermissionTo('update Handover')) {
             return false;
         }
 
-        if (! $user->hasPermissionTo('update Handover')) {
+        $handover->loadMissing('contract');
+        if (! $handover->contract || ! in_array($handover->contract->status, ContractStatus::allowHandoverEdit(), true)) {
             return false;
         }
 
@@ -73,11 +74,12 @@ class HandoverPolicy implements RbacModuleProvider
 
     public function delete(User $user, Handover $handover): bool
     {
-        if ($handover->status === 'CONFIRMED') {
+        if (! $user->hasPermissionTo('delete Handover')) {
             return false;
         }
 
-        if (! $user->hasPermissionTo('delete Handover')) {
+        $handover->loadMissing('contract');
+        if (! $handover->contract || ! in_array($handover->contract->status, ContractStatus::allowHandoverEdit(), true)) {
             return false;
         }
 

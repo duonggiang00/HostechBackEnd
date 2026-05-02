@@ -10,7 +10,6 @@ use App\Enums\PenaltyRuleType;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Finance\PenaltyRule;
-use App\Models\Handover\Handover;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Meter\Meter;
@@ -22,17 +21,20 @@ use App\Models\Service\Service;
 use App\Notifications\Contract\ContractSignatureRequested;
 use App\Services\Contract\Termination\ContractTerminationPipelineService;
 use App\Services\Invoice\InvoiceService;
+use App\Support\MeterInvoiceDescription;
 use App\Services\Service\ServiceService;
 use App\Services\System\UserInvitationService;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\AllowedSort;
 use Spatie\QueryBuilder\QueryBuilder;
 
 class ContractService
@@ -69,6 +71,8 @@ class ContractService
 
         $now = now()->toDateString();
         $in30 = now()->addDays(30)->toDateString();
+        $outstandingStatuses = Invoice::outstandingDebtStatuses();
+        $outstandingIn = implode(',', array_fill(0, count($outstandingStatuses), '?'));
 
         // Single query: all status counts + expiring (conditional aggregate)
         $row = $query
@@ -80,6 +84,13 @@ class ContractService
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as ended_count', [ContractStatus::ENDED])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled_count', [ContractStatus::CANCELLED])
             ->selectRaw('SUM(CASE WHEN status = ? AND end_date IS NOT NULL AND end_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as expiring_count', [ContractStatus::ACTIVE, $now, $in30])
+            ->selectRaw("SUM(CASE WHEN EXISTS (
+                SELECT 1 FROM invoices
+                WHERE invoices.contract_id = contracts.id
+                AND invoices.deleted_at IS NULL
+                AND invoices.status IN ({$outstandingIn})
+                AND (invoices.total_amount - COALESCE(invoices.paid_amount, 0)) > 0.009
+            ) THEN 1 ELSE 0 END) as invoice_debt_count", $outstandingStatuses)
             ->first();
 
         return [
@@ -91,11 +102,19 @@ class ContractService
             'ENDED' => (int) ($row->ended_count ?? 0),
             'CANCELLED' => (int) ($row->cancelled_count ?? 0),
             'expiring' => (int) ($row->expiring_count ?? 0),
+            'invoice_debt' => (int) ($row->invoice_debt_count ?? 0),
         ];
     }
 
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?User $user = null): LengthAwarePaginator
     {
+        // Phải truyền instance AllowedSort vào defaultSort — chuỗi 'room_order' bị Spatie coi là sort theo cột DB (contracts.room_order không tồn tại).
+        $sortByRoomOrder = AllowedSort::callback('room_order', function ($query, bool $descending): void {
+            $dir = $descending ? 'desc' : 'asc';
+            $query->orderByRaw("(select floor_number from rooms where rooms.id = contracts.room_id limit 1) {$dir}")
+                ->orderByRaw("(select code from rooms where rooms.id = contracts.room_id limit 1) {$dir}");
+        });
+
         $query = QueryBuilder::for(Contract::class)
             ->allowedFilters(array_merge($allowedFilters, [
                 AllowedFilter::exact('org_id'),
@@ -103,9 +122,21 @@ class ContractService
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('status'),
             ]))
-            ->allowedSorts(['start_date', 'end_date', 'created_at', 'status', 'rent_price'])
-            ->defaultSort('-created_at')
-            ->with(['room', 'property', 'members.user']);
+            ->allowedSorts([
+                'start_date',
+                'end_date',
+                'created_at',
+                'status',
+                'rent_price',
+                $sortByRoomOrder,
+            ])
+            ->defaultSort($sortByRoomOrder)
+            ->with([
+                'room',
+                'property',
+                'members.user',
+                'outstandingInvoices',
+            ]);
 
         // Role-based scoping
         if ($user) {
@@ -266,12 +297,6 @@ class ContractService
                 if (empty($contractData['rent_price'])) {
                     $contractData['rent_price'] = $room->base_price ?? 0;
                 }
-
-                // If deposit_amount not provided, calculate based on property's default months
-                if (empty($contractData['deposit_amount'])) {
-                    $months = $property->default_deposit_months ?? 1;
-                    $contractData['deposit_amount'] = (float) $contractData['rent_price'] * $months;
-                }
             }
             // -------------------------------
 
@@ -314,6 +339,18 @@ class ContractService
 
             $contractData['fixed_services_fee'] = $fixedServicesFee;
             $contractData['total_rent'] = $rentPrice + $fixedServicesFee;
+
+            // Số tháng cọc — luôn lưu rõ trên cột mới `deposit_months`. Ưu tiên giá trị FE gửi,
+            // fallback về `property.default_deposit_months`, clamp 1..24 để chống dữ liệu bẩn.
+            $depositMonths = (int) ($contractData['deposit_months']
+                ?? ($property?->default_deposit_months ?? 1));
+            $depositMonths = max(1, min(24, $depositMonths));
+            $contractData['deposit_months'] = $depositMonths;
+
+            // Lưu ý: empty(0) === true, nên cọc = 0đ vẫn rơi vào auto-calc — giữ behavior cũ.
+            if (empty($contractData['deposit_amount'])) {
+                $contractData['deposit_amount'] = (float) $contractData['total_rent'] * $depositMonths;
+            }
 
             // Calculate next_billing_date for the first time
             $startDate = Carbon::parse($contractData['start_date']);
@@ -408,6 +445,18 @@ class ContractService
     }
 
     /**
+     * Hợp đồng đang hiệu lực không được xóa mềm / xóa cứng qua API.
+     */
+    private function assertContractNotActiveForDeletion(Contract $contract): void
+    {
+        if ($contract->status === ContractStatus::ACTIVE) {
+            throw ValidationException::withMessages([
+                'contract' => 'Không thể xóa hợp đồng đang hiệu lực. Vui lòng thanh lý hợp đồng (kết thúc đúng hạn hoặc thanh lý sớm) trước, sau đó mới có thể đưa vào thùng rác hoặc xóa vĩnh viễn.',
+            ]);
+        }
+    }
+
+    /**
      * Xóa mềm hợp đồng.
      *
      * Nếu contract đang ở PENDING_PAYMENT → auto-cancel Initial Invoice.
@@ -418,6 +467,8 @@ class ContractService
         if (! $contract) {
             return false;
         }
+
+        $this->assertContractNotActiveForDeletion($contract);
 
         return DB::transaction(function () use ($contract) {
             // Auto-cancel initial invoice nếu contract đang chờ thanh toán
@@ -442,11 +493,13 @@ class ContractService
     public function forceDelete(string $id): bool
     {
         $contract = $this->findWithTrashed($id);
-        if ($contract) {
-            return $contract->forceDelete();
+        if (! $contract) {
+            return false;
         }
 
-        return false;
+        $this->assertContractNotActiveForDeletion($contract);
+
+        return $contract->forceDelete();
     }
 
     /**
@@ -528,14 +581,22 @@ class ContractService
             $imageName = 'signature_'.$rolePrefix.'_'.$contract->id.'-'.$user->id.'.'.$type;
             $storageFilePath = 'contracts/signatures/'.$imageName;
             Storage::disk('local')->put($storageFilePath, base64_decode($base64Data));
-            $imagePath = Storage::disk('local')->path($storageFilePath);
 
-            // Re-generate contract document to include the freshly uploaded signature image.
-            // Pass it explicitly to avoid any stale file-discovery mismatch.
+            // Build extra data for document generation:
+            // always include current signer's signature AND the other party's existing signature if present.
+            $extraData = [$signatureKey => $storageFilePath];
+
+            $otherRole = $isManager ? 'tenant' : 'manager';
+            $otherKey = $isManager ? 'signature_tenant' : 'signature_landlord';
+            foreach (Storage::disk('local')->files('contracts/signatures') as $file) {
+                if (str_starts_with(basename($file), 'signature_'.$otherRole.'_'.$contract->id.'-')) {
+                    $extraData[$otherKey] = $file;
+                    break;
+                }
+            }
+
             $contractDocService = app(ContractDocumentService::class);
-            $docPath = $contractDocService->generateDocument($contract, [
-                $signatureKey => $storageFilePath,
-            ]);
+            $docPath = $contractDocService->generateDocument($contract, $extraData);
 
             $ext = pathinfo($docPath, PATHINFO_EXTENSION);
             // Cập nhật Meta để lưu thời điểm ký (Kích hoạt Observer)
@@ -834,6 +895,9 @@ class ContractService
             );
         }
 
+        // Regenerate soft copy if a document has already been generated.
+        $this->regenerateDocumentIfExists($contract);
+
         return $member->fresh(['user', 'media']);
     }
 
@@ -872,6 +936,12 @@ class ContractService
 
         if ($identityFrontMediaUuid || $identityBackMediaUuid) {
             $this->syncMemberIdentityFromTemporaryMedia($member, $identityFrontMediaUuid, $identityBackMediaUuid);
+        }
+
+        // Regenerate soft copy if a document has already been generated.
+        $contract = $member->contract;
+        if ($contract) {
+            $this->regenerateDocumentIfExists($contract);
         }
 
         return $member->refresh();
@@ -1130,14 +1200,6 @@ class ContractService
 
         $skipMeterReadinessGuard = (bool) ($data['skip_meter_readiness_guard'] ?? false);
 
-        $hasConfirmedHandover = Handover::where('contract_id', $contract->id)
-            ->where('status', 'CONFIRMED')
-            ->exists();
-
-        if (! $hasConfirmedHandover) {
-            throw new \Exception('Chưa có Biên bản Bàn giao phòng (CONFIRMED). Vui lòng lập và chốt biên bản bàn giao trước khi thanh lý hợp đồng.');
-        }
-
         if (! $skipMeterReadinessGuard) {
             $terminationDateCheck = $data['termination_date'] ?? now()->toDateString();
             $unreadMeters = $this->getMetersWithoutApprovedReading($contract->room_id, $terminationDateCheck);
@@ -1394,21 +1456,6 @@ class ContractService
 
             if ($unpaidBalance >= $depositAmount) {
                 DB::transaction(function () use ($contract, $unpaidBalance) {
-                    if (! Handover::query()
-                        ->where('contract_id', $contract->id)
-                        ->where('status', 'CONFIRMED')
-                        ->exists()) {
-                        Handover::query()->create([
-                            'org_id' => $contract->org_id,
-                            'contract_id' => $contract->id,
-                            'room_id' => $contract->room_id,
-                            'type' => 'OUT',
-                            'status' => 'CONFIRMED',
-                            'confirmed_at' => now(),
-                            'note' => 'Tự động tạo khi hệ thống thanh lý do dư nợ vượt quá tiền cọc.',
-                        ]);
-                    }
-
                     $this->terminate($contract, [
                         'termination_date' => now()->toDateString(),
                         'cancellation_party' => ContractCancellationParty::SYSTEM->value,
@@ -1477,9 +1524,11 @@ class ContractService
 
             $items[] = [
                 'type' => InvoiceItemType::SERVICE->value,
-                'description' => "Tiền {$usageData['service_name']} tháng cuối"
-                    ." ({$usageData['usage']} {$meter->type})"
-                    ." — kỳ {$usageData['period_start']} → {$usageData['period_end']}",
+                'description' => MeterInvoiceDescription::forUsage(
+                    (string) $usageData['service_name'],
+                    $meter->type,
+                    $usageData['usage'],
+                )." tháng cuối — kỳ {$usageData['period_start']} → {$usageData['period_end']}",
                 'quantity' => $usageData['usage'],
                 'unit_price' => $usageData['average_price'],
                 'amount' => $usageData['total_amount'],
@@ -1499,7 +1548,7 @@ class ContractService
         if ($damageFee > 0) {
             $items[] = [
                 'type' => InvoiceItemType::PENALTY->value,
-                'description' => 'Phí hư hỏng / bồi thường tài sản (biên bản bàn giao)',
+                'description' => 'Phí hư hỏng / bồi thường tài sản (khi thanh lý)',
                 'quantity' => 1,
                 'unit_price' => $damageFee,
                 'amount' => $damageFee,
@@ -1721,6 +1770,39 @@ class ContractService
             ->whereNull('left_at')
             ->where('status', '!=', 'APPROVED')
             ->exists();
+    }
+
+    /**
+     * Silently regenerate the contract document if one already exists.
+     * Used after member add/update so the soft copy stays in sync.
+     */
+    /**
+     * Tạo lại file bản mềm khi đã có document_path (CLI, chỉnh sửa hợp đồng, v.v.).
+     */
+    public function regenerateDocumentIfExists(Contract $contract): void
+    {
+        if (! $contract->document_path) {
+            return;
+        }
+
+        try {
+            $fresh = $contract->fresh(['room', 'property', 'members.user', 'org', 'createdBy']);
+            if (! $fresh) {
+                return;
+            }
+            $docService = app(ContractDocumentService::class);
+            $newPath = $docService->generateDocument($fresh);
+            $ext = pathinfo($newPath, PATHINFO_EXTENSION);
+            $contract->update([
+                'document_path' => $newPath,
+                'document_type' => $ext ? strtoupper($ext) : $contract->document_type,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('contract_document_regeneration_failed', [
+                'contract_id' => $contract->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     private function hasInitialInvoice(Contract $contract): bool

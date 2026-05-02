@@ -9,6 +9,8 @@ use App\Events\Contract\Termination\FinalInvoiceGenerated;
 use App\Events\Contract\Termination\HandoverSubmitted;
 use App\Events\Contract\Termination\SettlementResolved;
 use App\Events\Contract\Termination\TerminationInitiated;
+use App\Events\Finance\PaymentProofSubmitted;
+use App\Events\Finance\PaymentRejected;
 use App\Events\Finance\PaymentSuccessfullyVerified;
 use App\Events\Finance\PaymentVoided;
 use App\Events\Finance\ReceiptGenerated;
@@ -190,6 +192,9 @@ class AppServiceProvider extends ServiceProvider
         // When a Payment is VOIDED:
         //   1. Record reversal credit entry in ledger
         //   2. Log activity for audit trail
+        Event::listen(PaymentRejected::class, LogPaymentActivity::class.'@handleRejected');
+        Event::listen(PaymentProofSubmitted::class, LogPaymentActivity::class.'@handleProofSubmitted');
+
         Event::listen(PaymentVoided::class, ReversePaymentLedger::class);
         Event::listen(PaymentVoided::class, LogPaymentActivity::class.'@handleVoided');
 

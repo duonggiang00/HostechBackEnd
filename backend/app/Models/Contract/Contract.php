@@ -45,6 +45,7 @@ class Contract extends Model implements HasMedia
         'next_billing_date',
         'rent_price',
         'deposit_amount',
+        'deposit_months',
         'deposit_status',
         'refunded_amount',
         'forfeited_amount',
@@ -89,6 +90,7 @@ class Contract extends Model implements HasMedia
             'notice_days' => 'integer',
             'rent_price' => 'decimal:2',
             'deposit_amount' => 'decimal:2',
+            'deposit_months' => 'integer',
             'refunded_amount' => 'decimal:2',
             'forfeited_amount' => 'decimal:2',
             'rent_token_balance' => 'integer',
@@ -108,9 +110,20 @@ class Contract extends Model implements HasMedia
         return $this->hasMany(ContractMember::class);
     }
 
+    /**
+     * Khách thuê chính — khớp dữ liệu thực tế: role thường là TENANT (không phải PRIMARY),
+     * hoặc cờ is_primary. Giữ PRIMARY cho dữ liệu/tách test cũ.
+     */
     public function primaryMember(): HasOne
     {
-        return $this->hasOne(ContractMember::class)->where('role', 'PRIMARY');
+        return $this->hasOne(ContractMember::class)
+            ->where(function ($query) {
+                $query->whereIn('role', ['PRIMARY', 'TENANT'])
+                    ->orWhere('is_primary', true);
+            })
+            ->orderByRaw("CASE WHEN role = 'PRIMARY' THEN 0 WHEN role = 'TENANT' THEN 1 ELSE 2 END")
+            ->orderByDesc('is_primary')
+            ->orderBy('created_at');
     }
 
     public function room(): BelongsTo
@@ -136,6 +149,16 @@ class Contract extends Model implements HasMedia
     public function invoices(): HasMany
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * Hóa đơn đang có dư nợ (dùng cho badge / phân bổ nợ phòng vs dịch vụ).
+     */
+    public function outstandingInvoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class)
+            ->whereIn('status', Invoice::outstandingDebtStatuses())
+            ->whereRaw('(total_amount - COALESCE(paid_amount, 0)) > 0.009');
     }
 
     public function statusHistories(): HasMany

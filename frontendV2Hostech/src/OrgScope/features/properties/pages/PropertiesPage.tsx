@@ -1,137 +1,290 @@
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import PropertyCard from '@/OrgScope/features/properties/components/PropertyCard';
-import { Plus, Search, Filter, Loader2, DollarSign, Users, Activity, LogIn } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  Filter,
+  Loader2,
+  Building2,
+  ArrowRight,
+  Pencil,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { useProperties } from '@/OrgScope/features/properties/hooks/useProperties';
-import { useDashboard } from '@/shared/hooks/useDashboard';
-import { motion } from 'framer-motion';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import type { Property } from '@/OrgScope/features/properties/types';
+
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Đang hoạt động',
+  inactive: 'Ngừng hoạt động',
+  maintenance: 'Bảo trì',
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  inactive: 'bg-white/10 text-slate-400 border-white/15',
+  maintenance: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+};
+
+function formatVnd(n: number) {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(n) ? n : 0);
+}
+
+type SortKey = 'name' | 'rooms' | 'contracts' | 'tenants' | 'revenue_month' | 'revenue_total';
 
 export default function PropertiesPage() {
   const { user } = useAuthStore();
   const { orgId: orgIdParam } = useParams<{ orgId: string }>();
   const orgId = orgIdParam || user?.org_id;
-  
-  const navigate = useNavigate();
-  const { data: properties, isLoading: isPropsLoading, error: propsError } = useProperties({ 'filter[org_id]': orgId });
-  const { data: dashboard, isLoading: isDashLoading } = useDashboard();
 
-  if (isPropsLoading || isDashLoading) {
+  const navigate = useNavigate();
+  const { data: properties, isLoading: isPropsLoading, error: propsError } = useProperties({
+    'filter[org_id]': orgId,
+  });
+
+  const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const filteredProperties = useMemo(() => {
+    const list: Property[] = (properties as Property[] | undefined) ?? [];
+    const s = search.trim().toLowerCase();
+    const filtered = s
+      ? list.filter(
+          (p) =>
+            p.name?.toLowerCase().includes(s) ||
+            p.address?.toLowerCase().includes(s) ||
+            p.code?.toLowerCase().includes(s),
+        )
+      : list;
+
+    const direction = sortDir === 'asc' ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'rooms':
+          return ((a.rooms_count ?? 0) - (b.rooms_count ?? 0)) * direction;
+        case 'contracts':
+          return ((a.active_contracts_count ?? 0) - (b.active_contracts_count ?? 0)) * direction;
+        case 'tenants':
+          return ((a.active_tenants_count ?? 0) - (b.active_tenants_count ?? 0)) * direction;
+        case 'revenue_month':
+          return ((a.revenue_this_month ?? 0) - (b.revenue_this_month ?? 0)) * direction;
+        case 'revenue_total':
+          return ((a.revenue_total ?? 0) - (b.revenue_total ?? 0)) * direction;
+        case 'name':
+        default:
+          return (a.name ?? '').localeCompare(b.name ?? '') * direction;
+      }
+    });
+  }, [properties, search, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'name' ? 'asc' : 'desc');
+    }
+  };
+
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) return null;
+    return sortDir === 'asc' ? (
+      <ChevronUp className="ml-1 inline h-3 w-3 text-emerald-400" />
+    ) : (
+      <ChevronDown className="ml-1 inline h-3 w-3 text-emerald-400" />
+    );
+  };
+
+  if (isPropsLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
       </div>
     );
   }
 
   if (propsError) {
-    return (
-      <div className="p-8 text-center text-red-500">
-        Lỗi tải danh sách cơ sở. Vui lòng thử lại.
-      </div>
-    );
+    return <div className="p-8 text-center text-rose-400">Lỗi tải danh sách cơ sở. Vui lòng thử lại.</div>;
   }
-
-  const dashData = dashboard?.data;
-  const role = dashboard?.role;
-
-  // Extract stats for the overview cards
-  let totalRevenue = 0;
-  let occupancy = 0;
-  let activeContracts = 0;
-  let totalRooms = 0;
-
-  if (dashData) {
-    if ('revenue' in dashData && (role === 'owner' || role === 'manager')) {
-      totalRevenue = (dashData as any).revenue.current_period || (dashData as any).revenue.total || 0;
-    }
-    if (dashData.properties) {
-      occupancy = dashData.properties.occupancy_rate || 0;
-      totalRooms = dashData.properties.total_rooms || 0;
-    }
-    if (dashData.contracts) {
-      activeContracts = dashData.contracts.total_active || 0;
-    }
-  }
-
-  const stats = [
-    { label: 'Doanh thu (Tháng)', value: new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(totalRevenue), icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    { label: 'Tỉ lệ lấp đầy', value: `${occupancy}%`, icon: Activity, color: 'text-blue-500', bg: 'bg-blue-50' },
-    { label: 'Hợp đồng hoạt động', value: activeContracts, icon: Users, color: 'text-purple-500', bg: 'bg-purple-50' },
-    { label: 'Tổng số phòng', value: totalRooms, icon: LogIn, color: 'text-indigo-500', bg: 'bg-indigo-50' },
-  ];
 
   return (
     <div className="space-y-8 pb-8">
-      {/* Dashboard KPI Mini Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <motion.div 
-            key={i}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`p-4 rounded-3xl border border-slate-100 bg-white shadow-sm flex items-center gap-4`}
-          >
-            <div className={`w-10 h-10 rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-              <stat.icon className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-slate-400 tracking-widest">{stat.label}</p>
-              <h3 className="text-lg font-bold text-slate-900 leading-tight">{stat.value}</h3>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Cơ sở vận hành</h1>
-          <p className="text-slate-500 mt-1">Quản lý tất cả tài sản và khu vực lưu trú của bạn.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-white">Cơ sở vận hành</h1>
+          <p className="mt-1 text-slate-500">Quản lý tất cả tài sản và khu vực lưu trú của bạn.</p>
         </div>
-        <button 
+        <button
           onClick={() => navigate('/org/properties/add')}
-          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
+          className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 font-bold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-400 active:scale-95"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="h-5 w-5" />
           Thêm cơ sở
         </button>
       </div>
 
-      <div className="flex items-center gap-4 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="flex-1 flex items-center gap-3 px-4 py-2 border border-slate-100 rounded-xl bg-slate-50">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
+      <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-white/5 p-2">
+        <div className="flex flex-1 items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2">
+          <Search className="h-4 w-4 text-slate-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm kiếm cơ sở theo tên hoặc địa chỉ..."
-            className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400"
+            className="w-full border-none bg-transparent text-sm text-white placeholder:text-slate-500 focus:ring-0"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2.5 text-slate-600 font-bold text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50">
-          <Filter className="w-4 h-4" />
+        <button className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-slate-300 transition-colors hover:bg-white/10">
+          <Filter className="h-4 w-4" />
           Bộ lọc
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {properties?.map((prop: any) => (
-          <PropertyCard 
-            key={prop.id}
-            {...prop}
-            roomCount={prop.roomCount || 0}
-            staffCount={prop.staffCount || 0}
-            onClick={() => navigate(`/properties/${prop.id}/dashboard`)}
-          />
-        ))}
+      {/* Bảng danh sách cơ sở */}
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead className="border-b border-white/10 bg-white/[0.03]">
+              <tr>
+                <th
+                  onClick={() => toggleSort('name')}
+                  className="cursor-pointer select-none px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  Cơ sở {renderSortIcon('name')}
+                </th>
+                <th
+                  onClick={() => toggleSort('rooms')}
+                  className="cursor-pointer select-none px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  Phòng {renderSortIcon('rooms')}
+                </th>
+                <th
+                  onClick={() => toggleSort('contracts')}
+                  className="cursor-pointer select-none px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  HĐ hiệu lực {renderSortIcon('contracts')}
+                </th>
+                <th
+                  onClick={() => toggleSort('tenants')}
+                  className="cursor-pointer select-none px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  Người thuê {renderSortIcon('tenants')}
+                </th>
+                <th
+                  onClick={() => toggleSort('revenue_month')}
+                  className="cursor-pointer select-none px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  Thu tháng này {renderSortIcon('revenue_month')}
+                </th>
+                <th
+                  onClick={() => toggleSort('revenue_total')}
+                  className="cursor-pointer select-none px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-300"
+                >
+                  Thu lũy kế {renderSortIcon('revenue_total')}
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-500">
+                  Hành động
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/10">
+              {filteredProperties.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-sm text-slate-500">
+                    {search ? 'Không có cơ sở nào khớp tìm kiếm.' : 'Chưa có cơ sở. Hãy thêm cơ sở đầu tiên.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredProperties.map((prop) => {
+                  const occ = prop.stats?.occupied_rooms ?? 0;
+                  const total = prop.stats?.total_rooms ?? prop.rooms_count ?? 0;
+                  const status = prop.status || 'active';
+                  return (
+                    <tr key={prop.id} className="group transition-colors hover:bg-white/[0.04]">
+                      <td className="px-6 py-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 transition-colors group-hover:bg-emerald-500/25">
+                            <Building2 className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm font-bold text-white">{prop.name}</p>
+                              <span
+                                className={`rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[status]}`}
+                              >
+                                {STATUS_LABELS[status] || status}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                              <span className="font-bold uppercase tracking-wider text-slate-400">{prop.code}</span>
+                              {prop.address ? <span> · {prop.address}</span> : null}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className="text-sm font-bold text-white">{total}</p>
+                        <p className="text-[11px] font-medium text-slate-500">
+                          Lấp đầy {occ}/{total}
+                        </p>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-white">{prop.active_contracts_count ?? 0}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-white">{prop.active_tenants_count ?? 0}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-black text-emerald-400">
+                          {formatVnd(prop.revenue_this_month ?? 0)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className="text-sm font-bold text-white">{formatVnd(prop.revenue_total ?? 0)}</span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => navigate(`/org/properties/${prop.id}/edit`)}
+                            title="Sửa thông tin cơ sở"
+                            className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-emerald-400"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => navigate(`/properties/${prop.id}/dashboard`)}
+                            className="flex items-center gap-2 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow shadow-emerald-500/25 transition-all hover:bg-emerald-400 active:scale-95"
+                          >
+                            Quản lý
+                            <ArrowRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Empty State / Add New Placeholder */}
-        <div 
-          onClick={() => navigate('/org/properties/add')}
-          className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3 py-10 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group cursor-pointer"
-        >
-          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-            <Plus className="w-6 h-6 text-slate-400 group-hover:text-indigo-600" />
-          </div>
-          <p className="text-sm font-bold text-slate-600">Đăng ký cơ sở mới</p>
+        <div className="flex items-center justify-between border-t border-white/10 bg-white/[0.02] px-6 py-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+            Hiển thị {filteredProperties.length} / {properties?.length ?? 0} cơ sở
+          </p>
+          <button
+            onClick={() => navigate('/org/properties/add')}
+            className="flex items-center gap-2 rounded-xl border border-dashed border-white/15 px-4 py-2 text-xs font-bold text-slate-400 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-300"
+          >
+            <Plus className="h-4 w-4" />
+            Đăng ký cơ sở mới
+          </button>
         </div>
       </div>
     </div>

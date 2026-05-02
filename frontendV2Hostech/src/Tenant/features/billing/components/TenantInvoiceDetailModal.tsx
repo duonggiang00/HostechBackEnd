@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle2, AlertCircle, Clock, ExternalLink } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, Clock, ExternalLink, FileText } from 'lucide-react';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { toast } from 'react-hot-toast';
@@ -149,16 +149,7 @@ export const TenantInvoiceDetailModal: React.FC<Props> = ({ invoiceId, onClose }
                       <span>Hạn nộp: {formatDate(invoice.due_date ?? undefined)}</span>
                     </p>
                     <div className="mt-3">
-                      {invoice.pdf_url ? (
-                        <button
-                          type="button"
-                          onClick={() => window.open(invoice.pdf_url!, '_blank', 'noopener,noreferrer')}
-                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                          Xem bản mềm hóa đơn
-                        </button>
-                      ) : (
+                      {!invoice.pdf_url && (
                         <span className="text-xs font-medium text-slate-400">Chưa có bản mềm hóa đơn</span>
                       )}
                     </div>
@@ -210,6 +201,39 @@ export const TenantInvoiceDetailModal: React.FC<Props> = ({ invoiceId, onClose }
                         )}
                       </div>
                     </div>
+
+                    {/* Bản mềm hóa đơn */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3 mt-6 px-1">
+                        <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest">Bản mềm hóa đơn</h3>
+                        {invoice.pdf_url && (
+                          <a
+                            href={invoice.pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            Mở tab mới
+                          </a>
+                        )}
+                      </div>
+                      {invoice.pdf_url ? (
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900" style={{ height: '480px' }}>
+                          <iframe
+                            src={`${invoice.pdf_url}#toolbar=0`}
+                            className="w-full h-full border-0"
+                            title="Bản mềm hóa đơn"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center dark:border-slate-700 dark:bg-slate-900">
+                          <FileText className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                          <p className="text-sm font-bold text-slate-400 dark:text-slate-500">Bản mềm hóa đơn chưa được tạo.</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-600">PDF sẽ tự động được tạo khi phát hành hóa đơn.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -222,7 +246,7 @@ export const TenantInvoiceDetailModal: React.FC<Props> = ({ invoiceId, onClose }
                     sectionTitle="Chọn hình thức thanh toán"
                     vnpayLabel="Thanh Toán Bằng VNPay"
                     vnpayPendingLabel="Đang chuyển hướng sang VNPay..."
-                    manualLabel="Đã trả tiền mặt / chuyển khoản"
+                    manualLabel="Trả tiền mặt / chuyển khoản"
                     isVnpayPending={isPaying}
                     onVnpay={handlePay}
                     onManualProof={() => setShowProofModal(true)}

@@ -136,7 +136,7 @@ export function PropertyEditForm({ property, onSuccess }: PropertyEditFormProps)
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Diện tích dùng chung (m²)</label>
+                <label className="text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Diện tích lối đi chung (m²)</label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Users className="w-4 h-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />

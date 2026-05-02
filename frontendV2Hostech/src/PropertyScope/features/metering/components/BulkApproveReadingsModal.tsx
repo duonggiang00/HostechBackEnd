@@ -1,14 +1,57 @@
 import { useState, useMemo } from 'react';
-import { X, CheckCircle2, XCircle, Loader2, Zap, Droplet, AlertCircle, CheckSquare, Square, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { X, CheckCircle2, XCircle, Loader2, Zap, Droplet, AlertCircle, CheckSquare, Square, ClipboardList, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import apiClient from '@/shared/api/client';
 import { usePropertyReadings, useBulkApproveReadings } from '../hooks/useMeters';
+import { meteringApi } from '../api/metering';
+import { computeMeterPeriodGaps, type ContractOccupancySlice } from '../utils/meterPeriodGaps';
 import type { Meter, MeterReading } from '../types';
+
+async function fetchPropertyContractsOccupancy(propertyId: string): Promise<ContractOccupancySlice[]> {
+  const out: ContractOccupancySlice[] = [];
+  let page = 1;
+  let lastPage = 1;
+  const perPage = 100;
+  do {
+    const res = await apiClient.get<{ data?: unknown[]; meta?: { last_page?: number } }>('/contracts', {
+      params: {
+        'filter[property_id]': propertyId,
+        page,
+        per_page: perPage,
+      },
+    });
+    const payload = res.data as { data?: unknown[]; meta?: { last_page?: number } };
+    const list = (payload?.data ?? []) as Array<{
+      room_id?: string;
+      start_date?: string | null;
+      end_date?: string | null;
+      status: string;
+    }>;
+    lastPage = payload?.meta?.last_page ?? 1;
+    for (const c of list) {
+      if (!c.room_id || !c.start_date) continue;
+      out.push({
+        room_id: c.room_id,
+        start_date: c.start_date,
+        end_date: c.end_date ?? null,
+        status: c.status,
+      });
+    }
+    page++;
+  } while (page <= lastPage);
+  return out;
+}
 
 interface Props {
   propertyId: string;
   isOpen: boolean;
   onClose: () => void;
+  /** yyyy-MM-dd — phải trùng kỳ với “Tạo hóa đơn tháng”; mặc định tháng hiện tại */
+  periodStart?: string;
+  periodEnd?: string;
 }
 
 type ReadingWithMeter = Omit<MeterReading, 'meter'> & {
@@ -17,12 +60,63 @@ type ReadingWithMeter = Omit<MeterReading, 'meter'> & {
   };
 };
 
-export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props) {
-  const thisMonthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const thisMonthEnd   = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+export function BulkApproveReadingsModal({
+  propertyId,
+  isOpen,
+  onClose,
+  periodStart: periodStartProp,
+  periodEnd: periodEndProp,
+}: Props) {
+  const navigate = useNavigate();
+  const thisMonthStart = periodStartProp ?? format(startOfMonth(new Date()), 'yyyy-MM-dd');
+  const thisMonthEnd = periodEndProp ?? format(endOfMonth(new Date()), 'yyyy-MM-dd');
+  const headerMonthLabel = format(parseISO(thisMonthStart), 'MM/yyyy');
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<'PENDING' | 'APPROVED'>('PENDING');
+
+  const { data: periodGaps = [], isLoading: gapsLoading } = useQuery({
+    queryKey: ['meter-period-gaps', propertyId],
+    queryFn: async () => {
+      const meters: Meter[] = [];
+      let mPage = 1;
+      let mLast = 1;
+      const mPer = 100;
+      do {
+        const res = await meteringApi.getMeters(propertyId, { is_active: true }, undefined, mPage, mPer);
+        meters.push(...(res.data ?? []));
+        mLast = res.pagination?.last_page ?? 1;
+        mPage++;
+      } while (mPage <= mLast);
+
+      const readings: MeterReading[] = [];
+      let rPage = 1;
+      let rLast = 1;
+      const rPer = 100;
+      do {
+        const res = await meteringApi.getGlobalReadings({
+          property_id: propertyId,
+          page: rPage,
+          per_page: rPer,
+          include: 'meter,meter.room',
+        });
+        readings.push(...(res.data ?? []));
+        rLast = res.meta?.last_page ?? 1;
+        rPage++;
+      } while (rPage <= rLast);
+
+      let occupancy: ContractOccupancySlice[] | undefined;
+      try {
+        occupancy = await fetchPropertyContractsOccupancy(propertyId);
+      } catch {
+        occupancy = undefined;
+      }
+
+      return computeMeterPeriodGaps(meters, readings, new Date(), occupancy);
+    },
+    enabled: isOpen && !!propertyId,
+    staleTime: 30_000,
+  });
 
   const { data: pendingData, isLoading: loadingPending } = usePropertyReadings(propertyId, {
     status: 'SUBMITTED',
@@ -118,7 +212,7 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
             <div>
               <h3 className="text-base font-black text-slate-900 dark:text-white">Duyệt chốt số</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Tháng {format(new Date(), 'MM/yyyy')} — {pendingReadings.length} chờ duyệt · {approvedReadings.length} đã duyệt
+                Tháng {headerMonthLabel} — {pendingReadings.length} chờ duyệt · {approvedReadings.length} đã duyệt
               </p>
             </div>
           </div>
@@ -227,11 +321,52 @@ export function BulkApproveReadingsModal({ propertyId, isOpen, onClose }: Props)
                     <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
                   </div>
                 ) : pendingReadings.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                  gapsLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+                      <Loader2 className="w-10 h-10 animate-spin text-amber-500 mb-3" />
+                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Đang kiểm tra các kỳ chốt số…</p>
+                    </div>
+                  ) : periodGaps.length > 0 ? (
+                    <div className="px-6 py-8">
+                      <div className="rounded-2xl border border-amber-200/80 dark:border-amber-500/25 bg-amber-50/90 dark:bg-amber-950/25 p-5">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle className="w-6 h-6 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0 space-y-3 text-left">
+                            <p className="text-xs font-black text-amber-900 dark:text-amber-100 uppercase tracking-widest">
+                              Còn kỳ chưa chốt số — chỉ phòng có hợp đồng hiệu lực trong kỳ; neo đầu kỳ theo chỉ số đóng đầu tiên; không tính tháng hiện tại (tối đa 24 tháng)
+                            </p>
+                            <ul className="space-y-1.5 text-sm text-amber-950 dark:text-amber-50/95">
+                              {periodGaps.map((g) => (
+                                <li key={g.monthKey}>
+                                  <span className="font-bold">Kỳ {g.monthLabel} chưa chốt số:</span>{' '}
+                                  {g.roomLabels.join(', ')}
+                                </li>
+                              ))}
+                            </ul>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigate(`/properties/${propertyId}/meters`);
+                                onClose();
+                              }}
+                              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-500 text-white text-sm font-black shadow-sm transition-colors"
+                            >
+                              Đến trang chỉ số đồng hồ
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-6">
+                        Không còn chốt số nào đang chờ duyệt trong tháng {headerMonthLabel}.
+                      </p>
+                    </div>
+                  ) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-center px-6">
                     <CheckCircle2 className="w-16 h-16 text-emerald-400 mb-4" />
                     <p className="text-lg font-black text-slate-900 dark:text-white">Tất cả đã được duyệt!</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Không còn chốt số nào đang chờ duyệt trong tháng này.</p>
                   </div>
+                  )
                 ) : (
                   <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {Object.entries(groupedPending).map(([roomName, readings]) => (

@@ -10,11 +10,7 @@ export interface TerminationWizardState {
   /** Phí hư hỏng / bồi thường ước tính (VND) — gửi kèm API thanh lý EDA */
   damageFeeTotal?: number;
 
-  // ── Step 2 — Bàn giao phòng ────────────────────────────────────────────
-  /** ID của Handover record đã tạo (DRAFT), sau khi staff submit biên bản */
-  handoverId?: string;
-
-  // ── Step 3 (populated after readings submitted) ─────────────────────────
+  /** Sau bước chốt số điện/nước */
   approvedReadings: SubmittedMeterReading[];
 }
 

@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/useProperties';
 import { useDashboard, useGenerateMonthlyBilling } from '../../dashboard/hooks/useDashboard';
@@ -6,12 +6,17 @@ import { PropertyDashboardView } from '../../dashboard/components/PropertyDashbo
 import { Skeleton } from '@/shared/components/ui/skeleton';
 import { LayoutDashboard } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export default function PropertyDetailPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const isStaff = hasRole(['Staff']);
 
   const { data: property, isLoading: isPropertyLoading } = usePropertyDetail(propertyId);
-  const { data: dashboard, isLoading: isDashboardLoading, refetch: refetchDashboard } = useDashboard(propertyId);
+  const { data: dashboard, isLoading: isDashboardLoading, refetch: refetchDashboard } = useDashboard(propertyId, {
+    enabled: !isStaff,
+  });
   
   const generateMonthlyMutation = useGenerateMonthlyBilling();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -59,10 +64,14 @@ export default function PropertyDetailPage() {
         dashboard={dashboard}
         isGenerating={isGenerating}
         onGenerateBilling={handleGenerateBilling}
+        propertyId={propertyId}
       />
     );
   }, [dashboard, isGenerating, propertyId]);
 
+  if (isStaff && propertyId) {
+    return <Navigate to={`/properties/${propertyId}/staff-home`} replace />;
+  }
 
   if (isLoading && !property) {
     return (

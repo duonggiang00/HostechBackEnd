@@ -14,7 +14,7 @@ export const financeRoutes: RouteObject[] = [
   {
     path: 'finance/payments',
     element: (
-      <PropertyManagerFeatureRoute>
+      <PropertyManagerFeatureRoute extraRoles={['Staff']}>
         <PaymentsPage />
       </PropertyManagerFeatureRoute>
     ),
@@ -22,7 +22,7 @@ export const financeRoutes: RouteObject[] = [
   {
     path: 'finance/payments/:paymentId',
     element: (
-      <PropertyManagerFeatureRoute>
+      <PropertyManagerFeatureRoute extraRoles={['Staff']}>
         <PaymentDetailPage />
       </PropertyManagerFeatureRoute>
     ),

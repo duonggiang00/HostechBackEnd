@@ -19,7 +19,7 @@ class HandoverItemResource extends JsonResource
             'handover_id' => $this->handover_id,
             'room_asset_id' => $this->room_asset_id,
             'name' => $this->name,
-            'status' => $this->status,
+            'condition' => $this->condition,
             'note' => $this->note,
             'sort_order' => $this->sort_order,
             'condition_photo_urls' => $this->getMedia('condition_photos')->map->getUrl(),

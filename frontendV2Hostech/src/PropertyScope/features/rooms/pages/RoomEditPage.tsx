@@ -1,16 +1,22 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { Navigate, useParams, useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle } from 'lucide-react';
 import RoomWizard from '@/PropertyScope/features/rooms/components/RoomWizard';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import { useRoom } from '@/PropertyScope/features/rooms/hooks/useRooms';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export default function RoomEditPage() {
   const { propertyId, roomId } = useParams();
   const navigate = useNavigate();
+  const isStaff = useAuthStore((s) => s.hasRole(['Staff']));
 
   const { data: room, isLoading, error } = useRoom(roomId);
 
   if (!propertyId || !roomId) return null;
+
+  if (isStaff) {
+    return <Navigate to={`/properties/${propertyId}/rooms/${roomId}`} replace />;
+  }
 
   if (isLoading) {
     return (

@@ -7,6 +7,23 @@ export type ContractMemberStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'LEFT';
 
 export type ContractCancellationParty = 'LANDLORD' | 'TENANT' | 'MUTUAL';
 
+export interface ContractOutstandingInvoice {
+  id: string;
+  status: string;
+  period_start: string | null;
+  period_end: string | null;
+  due_date: string | null;
+  debt: number;
+  is_overdue: boolean;
+}
+
+export interface ContractInvoiceDebt {
+  has_debt: boolean;
+  total_outstanding: number;
+  overdue_count: number;
+  invoices: ContractOutstandingInvoice[];
+}
+
 export interface ContractStatusHistory {
   id: string;
   contract_id: string;
@@ -30,6 +47,8 @@ export interface RoomContract {
   total_rent: number;
   rent_price: number;
   deposit_amount: number;
+  /** Số tháng cọc — backend lưu cột `deposit_months`. */
+  deposit_months?: number;
   due_day?: number;
   tenant_full_name?: string;
   members?: Array<{ 
@@ -76,6 +95,8 @@ export interface Contract {
   property_id: string;
   room_id: string;
   status: ContractStatus;
+  /** Còn ít nhất một hóa đơn chưa thanh toán đủ */
+  has_invoice_debt?: boolean;
   start_date: string | null;
   end_date: string | null;
   billing_cycle: string;
@@ -84,6 +105,8 @@ export interface Contract {
   cutoff_day: number | null;
   rent_price: number | null;
   deposit_amount: number | null;
+  /** Số tháng cọc — minh bạch hoá công thức cọc = (rent + fixed_services_fee) × deposit_months. */
+  deposit_months?: number | null;
   deposit_status?: 'PENDING' | 'HELD' | 'REFUND_PENDING' | 'REFUNDED' | 'PARTIAL_REFUND' | 'FORFEITED';
   refunded_amount?: number;
   forfeited_amount?: number;
@@ -121,6 +144,8 @@ export interface Contract {
     debt?: number;
     due_date: string | null;
   } | null;
+  /** Các hóa đơn đang nợ (khi API load invoices) */
+  invoice_debt?: ContractInvoiceDebt | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -168,6 +193,8 @@ export interface StatusCounts {
   CANCELLED: number;
   EXPIRED: number;
   expiring: number;
+  /** Số hợp đồng còn hóa đơn chưa thanh toán đủ */
+  invoice_debt?: number;
 }
 
 export interface ContractListResponse {
@@ -203,6 +230,8 @@ export interface CreateContractPayload {
   end_date?: string;
   rent_price?: number;
   deposit_amount?: number;
+  /** Số tháng cọc (1..24) — backend lưu cột `deposit_months` minh bạch hoá công thức cọc. */
+  deposit_months?: number;
   billing_cycle?: number;
   due_day?: number;
   cutoff_day?: number;

@@ -67,7 +67,15 @@ class Meter extends Model implements HasMedia
     {
         return $this->hasOne(MeterReading::class)
             ->latestOfMany('period_end')
-            ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
+            ->select([
+                'meter_readings.id',
+                'meter_readings.meter_id',
+                'meter_readings.reading_value',
+                'meter_readings.period_start',
+                'meter_readings.period_end',
+                'meter_readings.consumption',
+                'meter_readings.status',
+            ]);
     }
 
     /**
@@ -82,7 +90,14 @@ class Meter extends Model implements HasMedia
             ], function ($query) {
                 $query->whereIn('status', MeterReading::FINALIZED_STATUSES);
             })
-            ->select(['meter_readings.id', 'meter_readings.meter_id', 'meter_readings.reading_value', 'meter_readings.period_end', 'meter_readings.consumption']);
+            ->select([
+                'meter_readings.id',
+                'meter_readings.meter_id',
+                'meter_readings.reading_value',
+                'meter_readings.period_start',
+                'meter_readings.period_end',
+                'meter_readings.consumption',
+            ]);
     }
 
     /**

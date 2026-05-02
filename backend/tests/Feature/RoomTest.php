@@ -4,6 +4,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+use App\Models\Contract\Contract;
+use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Models\Property\Floor;
@@ -112,6 +114,37 @@ test('owner can crud room within org', function () {
     deleteJson("/api/rooms/{$id}")->assertStatus(200);
 });
 
+test('staff cannot create update or delete room', function () {
+    $org = Org::factory()->create();
+    $staff = User::factory()->create(['org_id' => $org->id]);
+    $staff->assignRole(Role::firstOrCreate(['name' => 'Staff']));
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $property->managers()->syncWithoutDetaching([(string) $staff->id]);
+    $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+    $room = Room::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'floor_id' => $floor->id,
+    ]);
+
+    actingAs($staff);
+
+    postJson('/api/rooms', [
+        'property_id' => $property->id,
+        'floor_id' => $floor->id,
+        'code' => 'STAFF-BLOCK',
+        'name' => 'Staff cannot create',
+        'base_price' => 100,
+        'area' => 20,
+        'capacity' => 2,
+        'status' => 'available',
+    ])->assertStatus(403);
+
+    putJson("/api/rooms/{$room->id}", ['name' => 'Should not apply'])->assertStatus(403);
+
+    deleteJson("/api/rooms/{$room->id}")->assertStatus(403);
+});
+
 test('owner cannot access other org room', function () {
     $org1 = Org::factory()->create();
     $owner = User::factory()->create(['org_id' => $org1->id]);
@@ -182,6 +215,57 @@ test('publish transitions draft room to available', function () {
     // Không thể publish lần 2
     postJson("/api/rooms/{$id}/publish", ['base_price' => 1000])
         ->assertStatus(422);
+});
+
+test('owner room index returns primary_tenant when active contract exists', function () {
+    $org = Org::factory()->create();
+    $owner = User::factory()->create(['org_id' => $org->id]);
+    $owner->assignRole(Role::firstOrCreate(['name' => 'Owner']));
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $floor = Floor::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    $occupiedRoom = Room::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'floor_id' => $floor->id,
+        'status' => 'occupied',
+    ]);
+    $vacantRoom = Room::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'floor_id' => $floor->id,
+        'status' => 'available',
+    ]);
+
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $occupiedRoom->id,
+        'status' => 'ACTIVE',
+    ]);
+    ContractMember::factory()->create([
+        'org_id' => $org->id,
+        'contract_id' => $contract->id,
+        'full_name' => 'Nguyễn Văn A',
+        'phone' => '0900000000',
+        'role' => 'TENANT',
+        'is_primary' => true,
+    ]);
+
+    actingAs($owner);
+
+    $response = getJson('/api/rooms?per_page=20')->assertSuccessful();
+    $rooms = collect($response->json('data'));
+
+    $occupiedPayload = $rooms->firstWhere('id', $occupiedRoom->id);
+    expect($occupiedPayload)->not->toBeNull();
+    expect($occupiedPayload['primary_tenant'])->not->toBeNull();
+    expect($occupiedPayload['primary_tenant']['full_name'])->toBe('Nguyễn Văn A');
+
+    $vacantPayload = $rooms->firstWhere('id', $vacantRoom->id);
+    expect($vacantPayload)->not->toBeNull();
+    expect($vacantPayload['primary_tenant'])->toBeNull();
 });
 
 test('floor plan node can be set and removed', function () {

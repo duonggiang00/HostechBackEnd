@@ -2,16 +2,16 @@
 
 namespace App\Listeners\Property;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Listener to refresh property stats reactively when rooms change.
- * Implementation implements ShouldQueue for background processing.
+ * Queued after DB commit; use a real queue driver for fast HTTP.
  */
-class RefreshPropertyStats implements ShouldQueue
+class RefreshPropertyStats implements ShouldQueueAfterCommit
 {
     use InteractsWithQueue;
 
@@ -48,7 +48,7 @@ class RefreshPropertyStats implements ShouldQueue
             Cache::forget("floor_detail_{$floorId}");
         }
 
-        Log::info("Busted cache for Property {$property->id} due to system update.");
+        Log::debug("Busted cache for Property {$property->id} due to system update.");
         // --------------------------------
     }
 }

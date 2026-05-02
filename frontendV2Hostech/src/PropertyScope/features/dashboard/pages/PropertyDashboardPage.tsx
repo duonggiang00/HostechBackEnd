@@ -1,9 +1,10 @@
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, LayoutDashboard } from 'lucide-react';
 import { useDashboard, useGenerateMonthlyBilling } from '../hooks/useDashboard';
 import { PropertyDashboardView } from '../components/PropertyDashboardView';
 import { toast } from 'react-hot-toast';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -84,8 +85,14 @@ function DashboardError({ onRetry }: { onRetry: () => void }) {
 
 export default function PropertyDashboardPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
-  const { data, isLoading, isError, refetch } = useDashboard(propertyId);
+  const hasRole = useAuthStore((s) => s.hasRole);
+  const isStaff = hasRole(['Staff']);
+  const { data, isLoading, isError, refetch } = useDashboard(propertyId, { enabled: !isStaff });
   const generateBilling = useGenerateMonthlyBilling();
+
+  if (isStaff && propertyId) {
+    return <Navigate to={`/properties/${propertyId}/staff-home`} replace />;
+  }
 
   const handleGenerateBilling = async () => {
     if (!propertyId) return;
@@ -130,6 +137,7 @@ export default function PropertyDashboardPage() {
           dashboard={data}
           isGenerating={generateBilling.isPending}
           onGenerateBilling={handleGenerateBilling}
+          propertyId={propertyId}
         />
       )}
     </div>

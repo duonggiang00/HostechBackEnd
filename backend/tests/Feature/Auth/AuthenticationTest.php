@@ -200,6 +200,9 @@ class AuthenticationTest extends TestCase
 
         // Token should be present (Sanctum returns it in response)
         $this->assertNotNull($response->json('token'));
+
+        $user->refresh();
+        $this->assertNotNull($user->last_login_at);
     }
 
     /**

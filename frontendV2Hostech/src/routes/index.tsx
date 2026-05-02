@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 
 // Layouts
 import OrgScopeLayout from '@/OrgScope/layouts/OrgScopeLayout';
-import OrgFinanceConsoleLayout from '@/OrgScope/layouts/OrgFinanceConsoleLayout';
 import PropertyScopeLayout from '@/PropertyScope/layouts/PropertyScopeLayout';
 import TenantLayout from '@/Tenant/layouts/TenantLayout';
 import SelectionLayout from '@/shared/layouts/SelectionLayout';
@@ -130,7 +129,7 @@ export default function AppRoutes() {
           } 
         />
 
-        {/* 2. Organization: console tài chính (shell tối) vs phần còn lại (OrgScopeLayout sáng) */}
+        {/* 2. Organization: một shell Org Console (tối, emerald) cho toàn bộ /org/* */}
         <Route
           path="/org"
           element={
@@ -140,12 +139,10 @@ export default function AppRoutes() {
           }
         >
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route element={<OrgFinanceConsoleLayout />}>
+          <Route element={<OrgScopeLayout />}>
             {orgFinanceConsoleRoutes.map((route, idx) => (
               <Route key={`org-fin-${idx}`} path={route.path} element={route.element} />
             ))}
-          </Route>
-          <Route element={<OrgScopeLayout />}>
             {orgScopeRoutes.map((route, idx) => {
               const children = route.children?.map((child, cIdx) =>
                 child.index ? (

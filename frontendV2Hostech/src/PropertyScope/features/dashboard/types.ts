@@ -6,7 +6,9 @@ export interface DashboardStats {
   occupancyRate: number;
   pendingTickets: number;
   unresolvedTickets: number;
-  unpaidInvoices: number;
+  /** Giữ trong API; không hiển thị trên card dashboard tòa nhà */
+  unpaidInvoices?: number;
+  activeContracts: number;
   thisMonthRevenue: number;
 }
 

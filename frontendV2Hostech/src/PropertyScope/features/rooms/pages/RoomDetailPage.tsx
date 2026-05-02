@@ -27,6 +27,7 @@ import {
 import { useRoomDetail, useRoomActions } from '../hooks/useRooms';
 import { isRoomReadyForQuickInvoiceSubmit } from '@/PropertyScope/features/billing/utils/roomMeterReadiness';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 
 import RoomImageGallery from '../components/RoomImageGallery';
@@ -92,6 +93,7 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
 
   const { data: room, isLoading, error } = useRoomDetail(roomId);
   const { deleteRoom, restoreRoom } = useRoomActions();
+  const canManageRooms = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
 
   const [activeTab, setActiveTab] = useState<TabId>(location.state?.activeTab || 'info');
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -225,28 +227,48 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
               </span>
 
               {!isTenantPortal && (
-                <PermissionGate role={['Owner', 'Manager', 'Staff']}>
-                  <div className="flex items-center gap-2">
-                    {room.deleted_at ? (
-                      <button
-                        onClick={() => restoreRoom.mutate(room.id)}
-                        disabled={restoreRoom.isPending}
-                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
-                      >
-                        <RefreshCw className={`w-4 h-4 ${restoreRoom.isPending ? 'animate-spin' : ''}`} />
-                        Khôi phục
-                      </button>
-                    ) : (
-                      <>
+                <div className="flex flex-wrap items-center gap-2 justify-end">
+                  {canManageRooms && (
+                    <>
+                      {room.deleted_at ? (
                         <button
-                          onClick={() => navigate(`/properties/${propertyId}/rooms/${roomId}/edit`)}
-                          className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-all"
+                          type="button"
+                          onClick={() => restoreRoom.mutate(room.id)}
+                          disabled={restoreRoom.isPending}
+                          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
                         >
-                          <FileEdit className="w-4 h-4" />
-                          Chỉnh sửa
+                          <RefreshCw className={`w-4 h-4 ${restoreRoom.isPending ? 'animate-spin' : ''}`} />
+                          Khôi phục
                         </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/properties/${propertyId}/rooms/${roomId}/edit`)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-indigo-300 hover:text-indigo-600 dark:hover:border-indigo-500/50 dark:hover:text-indigo-400 transition-all"
+                          >
+                            <FileEdit className="w-4 h-4" />
+                            Chỉnh sửa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDelete}
+                            disabled={deleteRoom.isPending}
+                            className="p-2 text-gray-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all disabled:opacity-60"
+                            title="Xóa phòng"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                  {!room.deleted_at && (
+                    <PermissionGate role={['Owner', 'Manager', 'Staff', 'Admin']}>
+                      <div className="flex flex-wrap items-center gap-2">
                         {room.status !== 'occupied' && (
                           <button
+                            type="button"
                             onClick={() => navigate(`/properties/${propertyId}/contracts/create?roomId=${room.id}`)}
                             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-400 transition-colors"
                           >
@@ -257,33 +279,29 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
                         {(room.status === 'occupied' || room.contracts?.some(c => String(c.status).toLowerCase() === 'active' || String(c.status).toLowerCase() === 'pending_termination')) && (
                           <>
                             <button
+                              type="button"
                               onClick={() => navigate(`/properties/${propertyId}/meters/room/${roomId}`)}
                               className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 dark:hover:bg-blue-400 transition-colors shadow-sm"
                             >
                               <Gauge className="w-4 h-4" />
                               Chốt số đồng hồ
                             </button>
-                            <button
-                              onClick={handleNavigateQuickInvoice}
-                              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
-                            >
-                              <Receipt className="w-4 h-4" />
-                              Chốt hóa đơn
-                            </button>
+                            {canManageRooms && (
+                              <button
+                                type="button"
+                                onClick={handleNavigateQuickInvoice}
+                                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-sm"
+                              >
+                                <Receipt className="w-4 h-4" />
+                                Chốt hóa đơn
+                              </button>
+                            )}
                           </>
                         )}
-                        <button
-                          onClick={handleDelete}
-                          disabled={deleteRoom.isPending}
-                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all disabled:opacity-60"
-                          title="Xóa phòng"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </PermissionGate>
+                      </div>
+                    </PermissionGate>
+                  )}
+                </div>
               )}
             </div>
           </div>

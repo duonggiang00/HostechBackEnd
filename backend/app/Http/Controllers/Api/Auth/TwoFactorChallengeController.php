@@ -52,7 +52,7 @@ class TwoFactorChallengeController extends Controller
         ]);
 
         $token = $request->input('challenge_token');
-        $challengeData = cache()->get('mfa_challenge_' . $token);
+        $challengeData = cache()->get('mfa_challenge_'.$token);
 
         if (! $challengeData || ! isset($challengeData['user_id'])) {
             throw ValidationException::withMessages([
@@ -90,10 +90,11 @@ class TwoFactorChallengeController extends Controller
         }
 
         // Clear challenge token from cache
-        cache()->forget('mfa_challenge_' . $token);
+        cache()->forget('mfa_challenge_'.$token);
 
         // Revoke old tokens and issue new Sanctum token
         $user->tokens()->delete();
+        $user->recordLoginAt();
         $plainToken = $user->createToken(
             name: 'auth_token',
             expiresAt: now()->addDays(7)
@@ -118,7 +119,7 @@ class TwoFactorChallengeController extends Controller
 
     protected function challengedUser(string $token): User
     {
-        $data = cache()->get('mfa_challenge_' . $token);
+        $data = cache()->get('mfa_challenge_'.$token);
 
         if (! $data || ! $user = User::find($data['user_id'] ?? null)) {
             abort(response()->json(['message' => 'Phiên xác thực không hợp lệ hoặc đã hết hạn.'], 422));
@@ -129,8 +130,8 @@ class TwoFactorChallengeController extends Controller
 
     protected function updateChallengeMethod(string $token, string $method): void
     {
-        $data = cache()->get('mfa_challenge_' . $token, []);
+        $data = cache()->get('mfa_challenge_'.$token, []);
         $data['method'] = $method;
-        cache()->put('mfa_challenge_' . $token, $data, now()->addMinutes(5));
+        cache()->put('mfa_challenge_'.$token, $data, now()->addMinutes(5));
     }
 }

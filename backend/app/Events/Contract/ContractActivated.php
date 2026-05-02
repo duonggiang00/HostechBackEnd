@@ -27,9 +27,17 @@ class ContractActivated implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        $channels = [
-            new PrivateChannel('App.Models.Org.User.'.$this->contract->created_by_user_id),
-        ];
+        $channels = [];
+
+        // Notify the manager/owner who created the contract
+        if ($this->contract->created_by_user_id) {
+            $channels[] = new PrivateChannel('App.Models.Org.User.'.$this->contract->created_by_user_id);
+        }
+
+        // Notify via property channel so all managers on the property get the update
+        if ($this->contract->property_id) {
+            $channels[] = new PrivateChannel('property.'.$this->contract->property_id);
+        }
 
         // Also notify the primary tenant if they have a user account
         $primaryTenant = $this->contract->members()
@@ -41,7 +49,7 @@ class ContractActivated implements ShouldBroadcast
             $channels[] = new PrivateChannel('App.Models.Org.User.'.$primaryTenant->user_id);
         }
 
-        return $channels;
+        return array_values(array_filter($channels));
     }
 
     /**

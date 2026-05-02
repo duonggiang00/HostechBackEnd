@@ -119,6 +119,7 @@ export interface TicketQueryParams {
   status?: TicketStatus;
   priority?: TicketPriority;
   search?: string;
+  sort?: string;
   page?: number;
   per_page?: number;
 }

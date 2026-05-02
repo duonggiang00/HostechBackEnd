@@ -17,7 +17,7 @@ export function PropertyOverview({ property }: PropertyOverviewProps) {
       lightColor: 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' 
     },
     { 
-      label: 'Diện tích chung', 
+      label: 'Diện tích lối đi chung', 
       value: `${property.shared_area} m²`, 
       icon: LayoutGrid, 
       description: 'Hành lang, thang máy, sân',

@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, FileText, ClipboardList } from 'lucide-react';
+import { Plus, Search, Filter, FileText, ClipboardList, Gauge } from 'lucide-react';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
 import { InvoiceStatusBadge } from '../components/InvoiceStatusBadge';
 import { GenerateMonthlyModal } from '../components/GenerateMonthlyModal';
@@ -12,6 +14,7 @@ import type { InvoiceStatus } from '../types';
 export default function PropertyInvoicesPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
+  const canManagePropertyBilling = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | ''>('');
   const [page, setPage] = useState(1);
@@ -19,6 +22,9 @@ export default function PropertyInvoicesPage() {
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
   const [terminationOnly, setTerminationOnly] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState(() => startOfMonth(new Date()));
+  const periodStart = format(billingPeriod, 'yyyy-MM-dd');
+  const periodEnd = format(endOfMonth(billingPeriod), 'yyyy-MM-dd');
 
   const { data, isLoading } = usePropertyInvoices(propertyId!, {
     search: search || undefined,
@@ -47,35 +53,56 @@ export default function PropertyInvoicesPage() {
           </div>
           
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/properties/${propertyId}/billing/quick-invoice`)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-400 rounded-[8px] font-black text-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all shadow-sm group"
-            >
-              <FileText className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-              Hóa đơn lẻ
-            </button>
-            <button
-              onClick={() => setIsBulkApproveOpen(true)}
-              className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
-            >
-              <ClipboardList className="w-4 h-4 text-[#1E3A8A]" />
-              Duyệt chốt số
-            </button>
-            <button 
-              onClick={() => setIsGenerateModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] font-black text-sm transition-all shadow-sm active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              Tạo hóa đơn tháng
-            </button>
+            {canManagePropertyBilling && (
+              <button
+                onClick={() => navigate(`/properties/${propertyId}/billing/quick-invoice`)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-400 rounded-[8px] font-black text-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition-all shadow-sm group"
+              >
+                <FileText className="w-4 h-4 text-indigo-600 group-hover:scale-110 transition-transform" />
+                Hóa đơn lẻ
+              </button>
+            )}
+            {canManagePropertyBilling && (
+              <button
+                type="button"
+                onClick={() =>
+                  navigate(`/properties/${propertyId}/meters/quick?billing_month=${format(billingPeriod, 'yyyy-MM')}`)
+                }
+                className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+                title={`Chốt số nhanh cho kỳ ${format(billingPeriod, 'MM/yyyy')} (khớp tạo hóa đơn tháng)`}
+              >
+                <Gauge className="w-4 h-4 text-[#1E3A8A]" />
+                Chốt số nhanh
+              </button>
+            )}
+            {canManagePropertyBilling && (
+              <button
+                onClick={() => setIsBulkApproveOpen(true)}
+                className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-[8px] font-black text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm"
+              >
+                <ClipboardList className="w-4 h-4 text-[#1E3A8A]" />
+                Duyệt chốt số
+              </button>
+            )}
+            {canManagePropertyBilling && (
+              <button 
+                onClick={() => setIsGenerateModalOpen(true)}
+                className="flex items-center gap-2 px-6 py-2.5 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-[8px] font-black text-sm transition-all shadow-sm active:scale-95"
+              >
+                <Plus className="w-4 h-4" />
+                Tạo hóa đơn tháng
+              </button>
+            )}
           </div>
         </div>
 
         {/* Billing Period Checklist */}
         <BillingPeriodChecklist
           propertyId={propertyId!}
-          onOpenBulkApprove={() => setIsBulkApproveOpen(true)}
-          onOpenGenerateModal={() => setIsGenerateModalOpen(true)}
+          billingPeriod={billingPeriod}
+          onBillingPeriodChange={setBillingPeriod}
+          onOpenBulkApprove={canManagePropertyBilling ? () => setIsBulkApproveOpen(true) : undefined}
+          onOpenGenerateModal={canManagePropertyBilling ? () => setIsGenerateModalOpen(true) : undefined}
         />
 
         {/* Toolbar */}
@@ -227,13 +254,16 @@ export default function PropertyInvoicesPage() {
         propertyId={propertyId!}
         isOpen={isGenerateModalOpen}
         onClose={() => setIsGenerateModalOpen(false)}
+        billingMonthStart={periodStart}
       />
 
-      {isBulkApproveOpen && (
+      {canManagePropertyBilling && isBulkApproveOpen && (
         <BulkApproveReadingsModal
           propertyId={propertyId!}
           isOpen={isBulkApproveOpen}
           onClose={() => setIsBulkApproveOpen(false)}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
         />
       )}
 

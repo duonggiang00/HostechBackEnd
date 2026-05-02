@@ -26,6 +26,10 @@ class PropertyResource extends JsonResource
             'default_services' => $this->whenLoaded('defaultServices'),
             'floors_count' => $this->floors_count ?? $this->whenCounted('floors'),
             'rooms_count' => $this->rooms_count ?? $this->whenCounted('rooms'),
+            'active_contracts_count' => (int) ($this->active_contracts_count ?? 0),
+            'active_tenants_count' => (int) ($this->active_tenants_count ?? 0),
+            'revenue_this_month' => (float) ($this->revenue_this_month ?? 0),
+            'revenue_total' => (float) ($this->revenue_total ?? 0),
             'stats' => [
                 'total_rooms' => (int) ($this->rooms_count ?? $this->rooms()->count()),
                 'occupied_rooms' => (int) ($this->occupied_rooms_count ?? 0),

@@ -38,6 +38,24 @@ test('creating a room dispatches RoomCreated event', function () {
     Event::assertDispatched(RoomCreated::class);
 });
 
+test('deferHeavyInitialization still initializes room when queue is sync in testing', function () {
+    config(['queue.default' => 'sync']);
+
+    $this->actingAs($this->admin);
+    $room = $this->roomService->create([
+        'property_id' => $this->property->id,
+        'name' => 'Deferred Init',
+        'code' => 'DEF-INIT-1',
+        'status' => 'available',
+        'base_price' => 1000,
+    ], $this->admin, deferHeavyInitialization: true);
+
+    $this->assertDatabaseHas('meters', [
+        'room_id' => $room->id,
+        'type' => 'ELECTRIC',
+    ]);
+});
+
 test('InitializeRoomServices listener creates default meters and history', function () {
     config(['queue.default' => 'sync']);
 

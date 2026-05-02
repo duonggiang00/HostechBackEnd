@@ -255,7 +255,8 @@ export function useBulkApproveReadings(propertyId?: string | null) {
       queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
-      
+      queryClient.invalidateQueries({ queryKey: ['meter-period-gaps', propertyId] });
+
       const count = Array.isArray(result) ? result.length : (result.count || 0);
       toast.success(`Đã duyệt thành công ${count || 'các'} chốt số!`);
     },
@@ -271,6 +272,7 @@ export function useBulkApproveReadings(propertyId?: string | null) {
       queryClient.invalidateQueries({ queryKey: ['property-readings', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['meters', propertyId] });
       queryClient.invalidateQueries({ queryKey: ['pending-readings-count', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['meter-period-gaps', propertyId] });
 
       const count = Array.isArray(result) ? result.length : (result.count || 0);
       toast.success(`Đã từ chối ${count || 'các'} chốt số.`);

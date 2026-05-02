@@ -135,6 +135,7 @@ export function RecordPaymentModal({ isOpen, onClose, invoice }: RecordPaymentMo
               >
                 <option value="BANK_TRANSFER">Chuyển khoản</option>
                 <option value="CASH">Tiền mặt</option>
+                <option value="VNPAY">VNPay</option>
               </select>
               {errors.method && <p className="text-rose-500 text-xs font-medium">{errors.method.message}</p>}
             </div>

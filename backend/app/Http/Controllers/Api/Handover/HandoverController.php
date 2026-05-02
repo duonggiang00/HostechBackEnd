@@ -17,6 +17,7 @@ use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
 use App\Services\Handover\HandoverService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class HandoverController extends Controller
@@ -71,25 +72,20 @@ class HandoverController extends Controller
         return response()->noContent();
     }
 
-    public function confirm(Request $request, Handover $handover)
-    {
-        $this->authorize('update', $handover);
-        $handover = $this->handoverService->confirm($handover, $request->user()->id);
-
-        return new HandoverResource($handover);
-    }
-
     // =========================================================================
     // Quản lý Items
     // =========================================================================
 
     public function itemsIndex(Handover $handover)
     {
+        $this->authorize('view', $handover);
+
         return HandoverItemResource::collection($this->handoverService->getItems($handover));
     }
 
     public function itemsStore(HandoverItemStoreRequest $request, Handover $handover)
     {
+        $this->authorize('update', $handover);
         $item = $this->handoverService->addItem($handover, $request->validated());
 
         return new HandoverItemResource($item);
@@ -97,6 +93,7 @@ class HandoverController extends Controller
 
     public function itemsUpdate(HandoverItemUpdateRequest $request, Handover $handover, HandoverItem $handoverItem)
     {
+        $this->authorize('update', $handover);
         $item = $this->handoverService->updateItem($handoverItem, $request->validated());
 
         return new HandoverItemResource($item);
@@ -104,9 +101,62 @@ class HandoverController extends Controller
 
     public function itemsDestroy(Handover $handover, HandoverItem $handoverItem)
     {
+        $this->authorize('update', $handover);
         $this->handoverService->deleteItem($handoverItem);
 
         return response()->noContent();
+    }
+
+    /**
+     * Ảnh minh chứng tình trạng phòng (chung), không gắn từng handover item.
+     */
+    public function documentScanStore(Request $request, Handover $handover): JsonResponse
+    {
+        $this->authorize('update', $handover);
+
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ], [
+            'image.required' => 'Vui lòng chọn ảnh.',
+            'image.image' => 'Tệp phải là ảnh.',
+            'image.max' => 'Ảnh không được vượt quá 5MB.',
+        ]);
+
+        $media = $handover
+            ->addMediaFromRequest('image')
+            ->toMediaCollection('document_scans');
+
+        return response()->json([
+            'message' => 'Đã tải ảnh lên.',
+            'url' => $media->getUrl(),
+            'id' => $media->id,
+        ], 201);
+    }
+
+    public function itemPhotoStore(Request $request, Handover $handover, HandoverItem $handoverItem): JsonResponse
+    {
+        $this->authorize('update', $handover);
+        if ($handoverItem->handover_id !== $handover->id) {
+            abort(404);
+        }
+
+        $request->validate([
+            'image' => ['required', 'image', 'max:5120'],
+        ], [
+            'image.required' => 'Vui lòng chọn ảnh.',
+            'image.image' => 'Tệp phải là ảnh.',
+            'image.max' => 'Ảnh không được vượt quá 5MB.',
+        ]);
+
+        $media = $handoverItem
+            ->addMediaFromRequest('image')
+            ->toMediaCollection('condition_photos');
+
+        return response()->json([
+            'message' => 'Đã tải ảnh lên.',
+            'url' => $media->getUrl(),
+            'id' => $media->id,
+        ], 201);
     }
 
     // =========================================================================
@@ -115,11 +165,14 @@ class HandoverController extends Controller
 
     public function snapshotsIndex(Handover $handover)
     {
+        $this->authorize('view', $handover);
+
         return HandoverMeterSnapshotResource::collection($this->handoverService->getSnapshots($handover));
     }
 
     public function snapshotsStore(HandoverMeterSnapshotRequest $request, Handover $handover)
     {
+        $this->authorize('update', $handover);
         $snapshot = $this->handoverService->addSnapshot($handover, $request->validated());
 
         return new HandoverMeterSnapshotResource($snapshot);
@@ -127,6 +180,7 @@ class HandoverController extends Controller
 
     public function snapshotsDestroy(Handover $handover, HandoverMeterSnapshot $handoverMeterSnapshot)
     {
+        $this->authorize('update', $handover);
         $this->handoverService->deleteSnapshot($handoverMeterSnapshot);
 
         return response()->noContent();

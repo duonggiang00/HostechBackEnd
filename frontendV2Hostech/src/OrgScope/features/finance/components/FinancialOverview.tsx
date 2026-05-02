@@ -1,75 +1,173 @@
-import { TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Wallet, ArrowUpRight, Loader2, CalendarDays } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useDashboard } from '@/shared/hooks/useDashboard';
+
+function formatVnd(n: number) {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(
+    Number.isFinite(n) ? n : 0,
+  );
+}
+
+function shortInvCode(id: string) {
+  if (!id) return '—';
+  return `INV-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+}
 
 export default function FinancialOverview() {
+  const { data: dashboard, isLoading } = useDashboard();
+  const dash = dashboard?.data;
+  const role = dashboard?.role;
+  const inv = dash?.invoices;
+
+  const revenueCurrent =
+    role === 'owner' && dash?.revenue
+      ? (dash.revenue as { current_period?: number }).current_period ?? 0
+      : (dash?.revenue as { total?: number } | undefined)?.total ?? 0;
+
+  const revenueChangePct =
+    role === 'owner' && dash?.revenue
+      ? (dash.revenue as { change_percent?: number }).change_percent
+      : undefined;
+
+  const outstanding = inv?.outstanding_debt ?? 0;
+  const recentPaid = inv?.recent_paid ?? [];
+  const trend = inv?.revenue_last_6_months ?? [];
+  const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const revenueThisMonth =
+    inv?.revenue_this_month ?? trend.find((m) => m.month_key === currentMonthKey)?.revenue ?? 0;
+
+  const maxTrend = Math.max(1, ...trend.map((m) => m.revenue));
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center rounded-3xl border border-white/10 bg-white/5">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
+      </div>
+    );
+  }
+
   const cards = [
-    { label: 'Tổng doanh thu', value: '$124,500.00', change: '+12.5%', icon: DollarSign, trend: 'up' },
-    { label: 'Nợ tồn đọng', value: '$8,230.15', change: '-2.4%', icon: Wallet, trend: 'down' },
-    { label: 'Doanh thu dự kiến', value: '$45,000.00', change: '+5.0%', icon: TrendingUp, trend: 'up' },
+    {
+      label: 'Tổng doanh thu',
+      value: formatVnd(revenueCurrent),
+      change:
+        revenueChangePct != null
+          ? `${revenueChangePct > 0 ? '+' : ''}${revenueChangePct.toFixed(1)}%`
+          : null,
+      trend: revenueChangePct != null ? (revenueChangePct >= 0 ? 'up' : 'down') : ('up' as const),
+      icon: DollarSign,
+    },
+    {
+      label: 'Nợ tồn đọng',
+      value: formatVnd(outstanding),
+      change: null,
+      trend: 'down' as const,
+      icon: Wallet,
+    },
+    {
+      label: 'Tiền thu tháng này',
+      value: formatVnd(revenueThisMonth),
+      change: null,
+      trend: 'up' as const,
+      icon: CalendarDays,
+    },
   ];
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {cards.map((card, i) => (
           <motion.div
-            key={i}
+            key={card.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white/5 border border-white/10 rounded-3xl p-8 hover:bg-white/10 transition-all group"
+            className="group rounded-3xl border border-white/10 bg-white/5 p-8 transition-all hover:bg-white/10"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                <card.icon className="w-6 h-6 text-emerald-500" />
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 transition-colors group-hover:bg-emerald-500/20">
+                <card.icon className="h-6 w-6 text-emerald-500" />
               </div>
-              <div className={`flex items-center gap-1 text-xs font-black ${card.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {card.trend === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {card.change}
-              </div>
+              {card.change != null ? (
+                <div
+                  className={`flex items-center gap-1 text-xs font-black ${
+                    card.trend === 'up' ? 'text-emerald-500' : 'text-rose-500'
+                  }`}
+                >
+                  {card.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                  {card.change}
+                </div>
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">
+                  {card.label === 'Tiền thu tháng này' ? 'Đã thu' : 'Kỳ lọc'}
+                </span>
+              )}
             </div>
-            <p className="text-xs font-black uppercase text-slate-500 tracking-[0.2em]">{card.label}</p>
-            <h3 className="text-3xl font-black text-white mt-2 tracking-tight">{card.value}</h3>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
+            <h3 className="mt-2 text-2xl font-black tracking-tight text-white sm:text-3xl">{card.value}</h3>
           </motion.div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/5 border border-white/10 rounded-5xl p-8">
-            <h4 className="text-xs font-black uppercase text-slate-500 tracking-widest mb-6">Thu chi gần đây</h4>
-            <div className="space-y-4">
-               {[1,2,3].map(i => (
-                 <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-white/10 transition-all">
-                    <div className="flex items-center gap-4">
-                       <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center shrink-0">
-                          <ArrowUpRight className="w-5 h-5 text-emerald-500" />
-                       </div>
-                       <div>
-                          <p className="text-sm font-bold text-white">Đã thanh toán - INV-00{i}</p>
-                          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Khách thuê A0{i}</p>
-                       </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 lg:rounded-[2rem]">
+          <h4 className="mb-6 text-xs font-black uppercase tracking-widest text-slate-500">Thu tiền gần đây</h4>
+          <div className="space-y-4">
+            {recentPaid.length === 0 ? (
+              <p className="text-sm text-slate-500">Chưa có hóa đơn đã thanh toán trong dữ liệu gần nhất.</p>
+            ) : (
+              recentPaid.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:border-white/10"
+                >
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+                      <ArrowUpRight className="h-5 w-5 text-emerald-500" />
                     </div>
-                    <span className="text-sm font-black text-emerald-500">+$1,500.00</span>
-                 </div>
-               ))}
-            </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-white">
+                        Đã thanh toán · {shortInvCode(row.id)}
+                      </p>
+                      <p className="truncate text-xs font-bold uppercase tracking-wider text-slate-500">
+                        {row.counterparty_label}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 text-sm font-black text-emerald-400">+{formatVnd(row.paid_amount)}</span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-5xl p-8">
-            <h4 className="text-xs font-black uppercase text-slate-500 tracking-widest mb-6">Tốc độ dòng tiền</h4>
-            <div className="h-64 flex items-end gap-2 px-4">
-               {[40, 70, 45, 90, 65, 80, 55].map((h, i) => (
-                 <div key={i} className="flex-1 bg-emerald-500/20 rounded-t-lg transition-all hover:bg-emerald-500/40 relative group" style={{ height: `${h}%` }}>
-                    <div className="absolute inset-x-0 bottom-0 h-1 bg-emerald-500 rounded-full" />
-                 </div>
-               ))}
-            </div>
-            <div className="flex justify-between mt-4 px-4 text-xs font-black text-slate-600 uppercase tracking-widest">
-               <span>Thứ 2</span>
-               <span>Thứ 4</span>
-               <span>Thứ 6</span>
-               <span>CN</span>
-            </div>
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 lg:rounded-[2rem]">
+          <h4 className="text-xs font-black uppercase tracking-widest text-slate-500">Doanh thu theo tháng (đã thu)</h4>
+          <p className="mb-6 mt-1 text-[11px] font-medium text-slate-600">
+            Mỗi cột = tổng tiền đã thu theo tháng cập nhật hóa đơn (thanh toán), không theo kỳ cước.
+          </p>
+          {trend.length === 0 ? (
+            <p className="text-sm text-slate-500">Chưa có dữ liệu biểu đồ.</p>
+          ) : (
+            <>
+              <div className="flex h-64 items-end gap-2 px-2">
+                {trend.map((m) => (
+                  <div key={m.month_key} className="flex flex-1 flex-col items-center gap-2">
+                    <div
+                      className="w-full rounded-t-lg bg-emerald-500/25 transition-all hover:bg-emerald-500/45"
+                      style={{ height: `${Math.max(8, (m.revenue / maxTrend) * 100)}%` }}
+                      title={`${m.month_key}: ${formatVnd(m.revenue)}`}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex justify-between px-2 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                {trend.map((m) => (
+                  <span key={m.month_key}>{m.month_short}</span>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -70,6 +70,7 @@ const formatDate = (dateStr?: string | null) => {
 
 export default function RoomMeterDetailPage() {
   const { propertyId, roomId } = useParams<{ propertyId: string; roomId: string }>();
+  const canIssueInvoices = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
 
   const { data: room, isLoading: roomLoading, error: roomError } = useQuery({
     queryKey: ['room', roomId],
@@ -129,13 +130,15 @@ export default function RoomMeterDetailPage() {
               <DoorOpen className="h-4 w-4" />
               Chi tiết phòng
             </Link>
-            <Link
-              to={`/properties/${propertyId}/billing/quick-invoice/${roomId}`}
-              className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-800 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
-            >
-              <Receipt className="h-4 w-4" />
-              Hóa đơn nhanh
-            </Link>
+            {canIssueInvoices && (
+              <Link
+                to={`/properties/${propertyId}/billing/quick-invoice/${roomId}`}
+                className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-indigo-800 shadow-sm transition hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+              >
+                <Receipt className="h-4 w-4" />
+                Hóa đơn nhanh
+              </Link>
+            )}
           </div>
         ) : null}
       </div>

@@ -16,6 +16,7 @@ import { RecordPaymentModal } from './RecordPaymentModal';
 import { CreateManualInvoiceModal } from './CreateManualInvoiceModal';
 import { useIssueInvoice } from '../hooks/usePropertyInvoices';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 interface InvoiceManagerProps {
   roomId: string;
@@ -27,6 +28,7 @@ interface InvoiceManagerProps {
 
 export default function InvoiceManager({ roomId, propertyId, data = [], isLoading, isReadOnly }: InvoiceManagerProps) {
   const navigate = useNavigate();
+  const canIssueInvoices = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isManualModalOpen, setIsManualModalOpen] = useState(false);
   const { mutateAsync: issueInvoice, isPending: isIssuing } = useIssueInvoice();
@@ -141,18 +143,17 @@ export default function InvoiceManager({ roomId, propertyId, data = [], isLoadin
                 Kỳ: {new Date(invoice.period_start).toLocaleDateString('vi-VN')} - {new Date(invoice.period_end).toLocaleDateString('vi-VN')}
               </div>
               <div className="flex items-center gap-3">
-                <PermissionGate role={['Manager', 'Staff', 'Owner']}>
-                  {invoice.status === 'DRAFT' && (
-                    <button 
-                      onClick={(e) => handleIssue(e, invoice.id)}
-                      disabled={isIssuing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <Zap className="w-3 h-3" />
-                      Phát hành
-                    </button>
-                  )}
-                  
+                {invoice.status === 'DRAFT' && canIssueInvoices && (
+                  <button 
+                    onClick={(e) => handleIssue(e, invoice.id)}
+                    disabled={isIssuing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <Zap className="w-3 h-3" />
+                    Phát hành
+                  </button>
+                )}
+                <PermissionGate role={['Manager', 'Staff', 'Owner', 'Admin']}>
                   {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(invoice.status) && (invoice.debt || 0) > 0 && (
                     <button 
                       onClick={(e) => {
@@ -177,7 +178,7 @@ export default function InvoiceManager({ roomId, propertyId, data = [], isLoadin
         ))}
       </div>
 
-      {!isReadOnly && (
+      {!isReadOnly && canIssueInvoices && (
         <button 
           onClick={() => setIsManualModalOpen(true)}
           className="w-full flex items-center justify-center gap-3 p-5 bg-slate-900 dark:bg-slate-700 text-white rounded-4xl font-black text-sm hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-xl shadow-slate-200 dark:shadow-none group"

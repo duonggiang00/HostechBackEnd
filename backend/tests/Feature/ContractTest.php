@@ -274,7 +274,12 @@ test('can soft delete and restore contract', function () {
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
-    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'status' => 'DRAFT',
+    ]);
 
     actingAs($admin);
 
@@ -301,7 +306,12 @@ test('can force delete contract', function () {
     $property = Property::factory()->create(['org_id' => $org->id]);
     $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
 
-    $contract = Contract::factory()->create(['org_id' => $org->id, 'property_id' => $property->id, 'room_id' => $room->id]);
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'status' => 'ENDED',
+    ]);
     $contract->delete(); // Soft deleted first
 
     actingAs($admin);
@@ -309,6 +319,57 @@ test('can force delete contract', function () {
     deleteJson("/api/contracts/{$contract->id}/force")->assertStatus(200);
 
     $this->assertDatabaseMissing('contracts', ['id' => $contract->id]);
+});
+
+test('cannot soft delete active contract', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'status' => 'ACTIVE',
+    ]);
+
+    actingAs($admin);
+
+    deleteJson("/api/contracts/{$contract->id}")
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['contract']);
+
+    assertNotSoftDeleted('contracts', ['id' => $contract->id]);
+});
+
+test('cannot force delete active contract', function () {
+    $org = Org::factory()->create();
+    $admin = User::factory()->create(['org_id' => $org->id]);
+    $role = Role::firstOrCreate(['name' => 'Admin']);
+    $admin->assignRole($role);
+
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+        'status' => 'ACTIVE',
+    ]);
+    $contract->delete();
+
+    actingAs($admin);
+
+    deleteJson("/api/contracts/{$contract->id}/force")
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['contract']);
+
+    assertSoftDeleted('contracts', ['id' => $contract->id]);
 });
 
 test('manager can create contract', function () {

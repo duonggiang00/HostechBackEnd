@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pencil, Trash2, ShieldAlert, Clock, Search, Filter, LayoutGrid, RotateCcw, ArrowDownUp, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Pencil, Trash2, ShieldAlert, Clock, Search, Filter, LayoutGrid, RotateCcw, ArrowDownUp, Eye, ClipboardCheck } from 'lucide-react';
 import type { Contract, ContractStatus } from '@/PropertyScope/features/contracts/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/components/ui/table';
@@ -90,6 +91,9 @@ const formatVND = (amount: number | null | undefined) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
 };
 
+const CANNOT_DELETE_ACTIVE_TITLE =
+  'Không thể xóa hợp đồng đang hiệu lực — cần thanh lý trước';
+
 // ─── Status Badge ─────────────────────────────────────────────────────────────
 
 const StatusBadge = ({ status }: { status: ContractStatus }) => {
@@ -106,6 +110,9 @@ const StatusBadge = ({ status }: { status: ContractStatus }) => {
 
 interface ContractTableProps {
   contracts: Contract[];
+  /** Cho nút mở biên bản bàn giao (hợp đồng đã kết thúc / thanh lý) */
+  propertyId?: string;
+  handoverIdByContractId?: Record<string, string>;
   onEdit: (contract: Contract) => void;
   onViewDetail: (contract: Contract) => void;
   onDelete: (contract: Contract) => void;
@@ -123,8 +130,12 @@ interface ContractTableProps {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+const HANDOVER_LINK_STATUSES = ['ENDED', 'TERMINATED', 'EXPIRED'] as const;
+
 export const ContractTable: React.FC<ContractTableProps> = ({
   contracts,
+  propertyId,
+  handoverIdByContractId,
   onEdit,
   onViewDetail,
   onDelete,
@@ -136,7 +147,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
   status,
   onStatusChange,
   onViewChange,
-  sort = '-created_at',
+  sort = 'room_order',
   onSortChange,
 }) => {
   const SortableHeader = ({ field, children, className = '' }: { field: string; children: React.ReactNode; className?: string }) => {
@@ -222,13 +233,15 @@ export const ContractTable: React.FC<ContractTableProps> = ({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-b border-gray-100 dark:border-white/10">
-            <TableHead className="w-[130px] h-11 px-4 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Phòng</TableHead>
+            <SortableHeader field="room_order" className="w-[130px] px-4">Phòng</SortableHeader>
             <TableHead className="h-11 px-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Người thuê</TableHead>
             <SortableHeader field="start_date">Thời hạn</SortableHeader>
             <SortableHeader field="rent_price" className="text-right">Giá thuê</SortableHeader>
             <TableHead className="h-11 px-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-right">Giá thực tế</TableHead>
             <SortableHeader field="status" className="text-center">Trạng thái</SortableHeader>
-            <TableHead className="w-[100px] h-11 px-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">Thao tác</TableHead>
+            <TableHead className="min-w-[140px] h-11 px-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide text-center">
+              Thao tác
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -245,6 +258,12 @@ export const ContractTable: React.FC<ContractTableProps> = ({
 
               const baseRent = formatVND(contract.base_rent);
               const totalRent = formatVND(contract.total_rent);
+              const handoverId = handoverIdByContractId?.[contract.id];
+              const showHandoverLink =
+                !isTrashView &&
+                !!propertyId &&
+                !!handoverId &&
+                HANDOVER_LINK_STATUSES.includes(contract.status as (typeof HANDOVER_LINK_STATUSES)[number]);
 
               return (
                 <motion.tr
@@ -257,14 +276,9 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                 >
                   {/* Room */}
                   <TableCell className="px-4 py-3">
-                    <div className="flex flex-col">
-                      <span className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-400 transition-colors">
-                        {contract.room?.name || '---'}
-                      </span>
-                      <span className="text-xs font-medium text-gray-400 dark:text-gray-500 tracking-wide mt-0.5">
-                        {contract.join_code || '---'}
-                      </span>
-                    </div>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-900 dark:group-hover:text-blue-400 transition-colors">
+                      {contract.room?.name || '---'}
+                    </span>
                   </TableCell>
 
                   {/* Tenant */}
@@ -312,6 +326,11 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                   <TableCell className="px-3 py-3 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <StatusBadge status={contract.status as ContractStatus} />
+                      {contract.has_invoice_debt && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/25">
+                          Có hóa đơn nợ
+                        </span>
+                      )}
                       {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
                         <span className="text-[10px] font-bold text-amber-800 dark:text-amber-300 leading-tight">
                           Dọn dự kiến:{' '}
@@ -342,9 +361,10 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Xóa vĩnh viễn"
+                            title={contract.status === 'ACTIVE' ? CANNOT_DELETE_ACTIVE_TITLE : 'Xóa vĩnh viễn'}
+                            disabled={contract.status === 'ACTIVE'}
                             onClick={() => onForceDelete?.(contract)}
-                            className="h-8 w-8 p-0 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300"
+                            className="h-8 w-8 p-0 rounded-lg text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-700 dark:hover:text-red-300 disabled:opacity-40 disabled:pointer-events-none"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -360,6 +380,19 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
+                          {showHandoverLink && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Biên bản bàn giao phòng"
+                              asChild
+                              className="h-8 w-8 p-0 rounded-lg text-teal-700 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10"
+                            >
+                              <Link to={`/properties/${propertyId}/handovers/${handoverId}`}>
+                                <ClipboardCheck className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
                           {!['ACTIVE', 'ENDED', 'TERMINATED'].includes(contract.status) && (
                             <Button
                               variant="ghost"
@@ -374,9 +407,10 @@ export const ContractTable: React.FC<ContractTableProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            title="Xoá"
+                            title={contract.status === 'ACTIVE' ? CANNOT_DELETE_ACTIVE_TITLE : 'Xoá'}
+                            disabled={contract.status === 'ACTIVE'}
                             onClick={() => onDelete(contract)}
-                            className="h-8 w-8 p-0 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                            className="h-8 w-8 p-0 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 disabled:pointer-events-none"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>

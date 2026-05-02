@@ -93,7 +93,18 @@ apiClient.interceptors.response.use(
     
     if (error.response) {
       const data = error.response.data as any;
-      if (data && data.message) {
+      if (error.response.status === 422) {
+        const firstValidationError =
+          data?.errors && typeof data.errors === 'object'
+            ? Object.entries(data.errors).flatMap(([, messages]) =>
+                Array.isArray(messages) ? messages : [messages]
+              )[0]
+            : null;
+        errorMessage =
+          (typeof firstValidationError === 'string' && firstValidationError) ||
+          data?.message ||
+          'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
+      } else if (data && data.message) {
         errorMessage = data.message;
       } else if (error.response.status === 401) {
         errorMessage = 'Session expired. Please log in again.';

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, CheckCircle, XCircle, DollarSign, MessageCircle, ChevronDown, Send, AlertCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useTicketDetail, useTicketMutations } from '../hooks/useTickets';
 import TicketStatusBadge from './TicketStatusBadge';
 import TicketPriorityBadge from './TicketPriorityBadge';
@@ -76,23 +75,19 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+    <div
       className="fixed inset-0 z-50 flex justify-end"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0 bg-slate-900/40"
+        aria-label="Đóng chi tiết"
+        onClick={onClose}
+      />
 
-      {/* Panel */}
-      <motion.div
-        initial={{ x: '100%' }}
-        animate={{ x: 0 }}
-        exit={{ x: '100%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="relative z-10 w-full max-w-xl h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shadow-2xl"
+      <aside
+        className="relative z-10 flex h-full w-full max-w-xl flex-col border-l border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
         onClick={e => e.stopPropagation()}
       >
         {isLoading || !ticket ? (
@@ -137,26 +132,20 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
                   >
                     Đổi trạng thái <ChevronDown className="w-3 h-3" />
                   </button>
-                  <AnimatePresence>
-                    {statusOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden min-w-[160px]"
-                      >
-                        {STATUS_FLOW.filter(s => s !== ticket.status).map(s => (
-                          <button
-                            key={s}
-                            onClick={() => handleStatusChange(s)}
-                            className="block w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
-                          >
-                            {STATUS_LABELS[s]}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {statusOpen && (
+                    <div className="absolute left-0 top-full z-20 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                      {STATUS_FLOW.filter(s => s !== ticket.status).map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => handleStatusChange(s)}
+                          className="block w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/50"
+                        >
+                          {STATUS_LABELS[s]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </PermissionGate>
 
@@ -176,16 +165,9 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
               </PermissionGate>
             </div>
 
-            {/* Cost Form */}
-            <AnimatePresence>
-              {showCostForm && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden border-b border-slate-100 dark:border-slate-800"
-                >
-                  <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+            {showCostForm && (
+              <div className="border-b border-slate-100 dark:border-slate-800">
+                <div className="space-y-3 bg-slate-50 px-6 py-4 dark:bg-slate-800/50">
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Thêm chi phí</p>
                     <div className="flex gap-2">
                       <input
@@ -217,9 +199,8 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
                       </button>
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>
+            )}
 
             {/* Tabs */}
             <div className="flex border-b border-slate-100 dark:border-slate-800">
@@ -329,7 +310,7 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
             )}
           </>
         )}
-      </motion.div>
-    </motion.div>
+      </aside>
+    </div>
   );
 }

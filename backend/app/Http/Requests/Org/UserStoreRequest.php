@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Org;
 
+use App\Support\OrgUserPhone;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UserStoreRequest extends FormRequest
 {
@@ -26,5 +28,29 @@ class UserStoreRequest extends FormRequest
             'properties_scope' => ['nullable', 'array'],
             'properties_scope.*' => ['uuid', 'exists:properties,id'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            $d = $v->getData();
+            $orgId = $d['org_id'] ?? null;
+            $phone = isset($d['phone']) ? (string) $d['phone'] : '';
+            $email = isset($d['email']) ? (string) $d['email'] : null;
+            if (! $orgId || trim($phone) === '') {
+                return;
+            }
+            $conflict = OrgUserPhone::findConflictingUserInOrg((string) $orgId, $phone, $email);
+            if ($conflict) {
+                $v->errors()->add(
+                    'phone',
+                    sprintf(
+                        'Số điện thoại đã gắn với tài khoản %s (%s). Vui lòng dùng email khác hoặc cập nhật SĐT tài khoản hiện có.',
+                        $conflict->full_name ?: '—',
+                        $conflict->email
+                    )
+                );
+            }
+        });
     }
 }

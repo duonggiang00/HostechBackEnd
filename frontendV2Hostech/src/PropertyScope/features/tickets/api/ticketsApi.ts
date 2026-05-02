@@ -21,6 +21,7 @@ export const ticketsApi = {
       'filter[status]': params?.status || undefined,
       'filter[priority]': params?.priority || undefined,
       search: params?.search || undefined,
+      sort: params?.sort ?? '-created_at',
       page: params?.page ?? 1,
       per_page: params?.per_page ?? 15,
       include: 'property,room,createdBy,assignedTo',

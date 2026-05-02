@@ -22,7 +22,8 @@ class RoomPolicy implements RbacModuleProvider
         return [
             'Owner' => 'CRUD',
             'Manager' => 'CRUD',
-            'Staff' => 'RU',
+            /** Staff: chỉ xem phòng (không tạo/sửa/xóa — khớp UI PropertyScope). */
+            'Staff' => 'R',
             'Tenant' => 'R',
         ];
     }
@@ -54,11 +55,19 @@ class RoomPolicy implements RbacModuleProvider
 
     public function create(User $user): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         return $user->hasPermissionTo('create Room');
     }
 
     public function update(User $user, Room $room): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         if (! $user->hasPermissionTo('update Room')) {
             return false;
         }
@@ -68,6 +77,10 @@ class RoomPolicy implements RbacModuleProvider
 
     public function delete(User $user, Room $room): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         if (! $user->hasPermissionTo('delete Room')) {
             return false;
         }
@@ -77,26 +90,46 @@ class RoomPolicy implements RbacModuleProvider
 
     public function deleteAny(User $user): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         return $user->hasPermissionTo('deleteAny Room');
     }
 
     public function restoreAny(User $user): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         return $user->hasPermissionTo('restoreAny Room');
     }
 
     public function forceDeleteAny(User $user): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         return $user->hasPermissionTo('forceDeleteAny Room');
     }
 
     public function updateAny(User $user): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         return $user->hasPermissionTo('updateAny Room');
     }
 
     public function publish(User $user, Room $room): bool
     {
+        if ($user->hasRole('Staff')) {
+            return false;
+        }
+
         // Chỉ Owner, Manager và Admin mới được publish phòng
         if (! $user->hasPermissionTo('update Room')) {
             return false;

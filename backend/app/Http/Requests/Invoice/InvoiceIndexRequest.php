@@ -33,6 +33,8 @@ class InvoiceIndexRequest extends FormRequest
             'filter.room_id' => ['nullable', 'uuid'],
             'filter.contract_id' => ['nullable', 'uuid'],
             'filter.status' => ['nullable', 'string', 'in:DRAFT,ISSUED,PENDING,PAID,OVERDUE,CANCELLED'],
+            'filter.is_termination' => ['nullable', 'boolean'],
+            'filter.has_outstanding' => ['nullable', 'boolean'],
 
             'sort' => ['nullable', 'string', 'in:due_date,total_amount,created_at,status,period_start,period_end,-due_date,-total_amount,-created_at,-status,-period_start,-period_end'],
         ];

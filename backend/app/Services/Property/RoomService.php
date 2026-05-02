@@ -32,7 +32,7 @@ class RoomService
         ]);
 
         $query = QueryBuilder::for(Room::class)
-            ->with(['floor', 'property'])
+            ->with(['floor', 'property', 'activeContract.members'])
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price'])
             ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'meters.latestInvoiceEligibleReading', 'invoices', 'roomServices'])
@@ -119,9 +119,9 @@ class RoomService
         return Room::withTrashed()->find($id);
     }
 
-    public function create(array $data, User $performer): Room
+    public function create(array $data, User $performer, bool $deferHeavyInitialization = false): Room
     {
-        return DB::transaction(function () use ($data, $performer) {
+        return DB::transaction(function () use ($data, $performer, $deferHeavyInitialization) {
             // Consolidated Property Check & Org Auto-assignment
             $property = Property::findOrFail($data['property_id']);
 
@@ -163,7 +163,7 @@ class RoomService
             // Sync Assets
             if (! empty($assetsData)) {
                 $assetsToInsert = array_map(function ($asset) use ($room) {
-                    return array_merge($asset, [
+                    return array_merge($this->normalizeRoomAssetAttributes($asset), [
                         'id' => Str::uuid()->toString(),
                         'org_id' => $room->org_id,
                         'room_id' => $room->id,
@@ -176,19 +176,36 @@ class RoomService
 
             // --- DECOUPLED: EVENT DISPATCH ---
             // Side effects (Meters, Price History, Status History) are now handled in Listeners
-            RoomCreated::dispatch($room, null, $performer->id);
+            RoomCreated::dispatch($room, null, $performer->id, $deferHeavyInitialization);
             // ---------------------------------
-
-            return $room;
 
             return $room;
         });
     }
 
-    public function createFromTemplate(string $templateId, array $overrides, User $performer): Room
-    {
-        return DB::transaction(function () use ($templateId, $overrides, $performer) {
-            $template = RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
+    /**
+     * @param  bool  $copyTemplateGallery  Bật copy ảnh gallery từ template (tắt khi tạo hàng loạt từ sơ đồ mặt bằng — tiết kiệm I/O).
+     * @param  RoomTemplate|null  $resolvedTemplate  Instance đã eager-load (tránh N+1 khi tạo nhiều phòng cùng template).
+     * @param  bool  $withinParentTransaction  True khi đã nằm trong transaction cha (vd. sync sơ đồ) — tránh transaction lồng.
+     * @param  bool  $deferHeavyInitialization  True khi sync sơ đồ — khởi tạo nặng chạy qua queue.
+     * @param  bool  $deferTemplateAssetClone  True khi sync sơ đồ — clone room_assets từ template chạy job nền.
+     */
+    public function createFromTemplate(
+        string $templateId,
+        array $overrides,
+        User $performer,
+        bool $copyTemplateGallery = true,
+        ?RoomTemplate $resolvedTemplate = null,
+        bool $withinParentTransaction = false,
+        bool $deferHeavyInitialization = false,
+        bool $deferTemplateAssetClone = false,
+    ): Room {
+        $callback = function () use ($templateId, $overrides, $performer, $copyTemplateGallery, $resolvedTemplate, $deferHeavyInitialization, $deferTemplateAssetClone) {
+            $template = $resolvedTemplate ?? RoomTemplate::with(['services', 'assets'])->findOrFail($templateId);
+
+            if ($resolvedTemplate !== null && (string) $resolvedTemplate->id !== (string) $templateId) {
+                throw new \InvalidArgumentException('resolvedTemplate id does not match templateId.');
+            }
 
             $roomData = array_merge([
                 'area' => $template->area,
@@ -204,28 +221,145 @@ class RoomService
                 $roomData['service_ids'] = $template->services->pluck('id')->toArray();
             }
 
-            $room = $this->create($roomData, $performer);
+            $room = $this->create($roomData, $performer, $deferHeavyInitialization);
 
             // Assets: create from template if not provided in overrides
-            if (! isset($overrides['assets']) && $template->assets->isNotEmpty()) {
+            if (! isset($overrides['assets']) && $template->assets->isNotEmpty() && ! $deferTemplateAssetClone) {
                 foreach ($template->assets as $tAsset) {
-                    $room->assets()->create([
-                        'id' => Str::uuid()->toString(),
-                        'org_id' => $room->org_id,
-                        'room_id' => $room->id,
-                        'name' => $tAsset->name,
-                    ]);
+                    $room->assets()->create(array_merge(
+                        $this->normalizeRoomAssetAttributes([
+                            'name' => $tAsset->name,
+                            'condition' => $tAsset->condition,
+                            'note' => $tAsset->note,
+                        ]),
+                        [
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $room->org_id,
+                            'room_id' => $room->id,
+                        ]
+                    ));
                 }
             }
 
-            // Media: copy gallery images from template to new room
-            $templateMedia = $template->getMedia('gallery');
-            foreach ($templateMedia as $media) {
-                $media->copy($room, 'gallery');
+            if ($copyTemplateGallery) {
+                $this->copyTemplateGalleryToRoom($room, $template);
             }
 
             return $room;
-        });
+        };
+
+        return $withinParentTransaction ? $callback() : DB::transaction($callback);
+    }
+
+    /**
+     * Copy template gallery media onto a room (sync path or queued job).
+     */
+    public function copyTemplateGalleryToRoom(Room $room, RoomTemplate $template): void
+    {
+        if ($room->getMedia('gallery')->isNotEmpty()) {
+            return;
+        }
+
+        foreach ($template->getMedia('gallery') as $media) {
+            $media->copy($room, 'gallery');
+        }
+    }
+
+    /**
+     * Resolve models then copy gallery — safe for queued retries if room/template missing.
+     */
+    public function copyTemplateGalleryToRoomByIds(string $roomId, string $templateId): void
+    {
+        $room = Room::find($roomId);
+        $template = RoomTemplate::find($templateId);
+        if (! $room || ! $template) {
+            return;
+        }
+
+        $this->copyTemplateGalleryToRoom($room, $template);
+    }
+
+    /**
+     * @param  list<array{room_id: string, template_id: string}>  $pairs
+     */
+    public function copyTemplateGalleryForOverviewPairs(array $pairs): void
+    {
+        if ($pairs === []) {
+            return;
+        }
+
+        $byTemplate = [];
+        foreach ($pairs as $pair) {
+            $byTemplate[$pair['template_id']][] = $pair['room_id'];
+        }
+
+        foreach ($byTemplate as $templateId => $roomIds) {
+            $template = RoomTemplate::find($templateId);
+            if (! $template) {
+                continue;
+            }
+
+            foreach ($roomIds as $roomId) {
+                $room = Room::find($roomId);
+                if ($room) {
+                    $this->copyTemplateGalleryToRoom($room, $template);
+                }
+            }
+        }
+    }
+
+    /**
+     * Sao chép tài sản trong phòng từ template sau sync sơ đồ (batch insert, idempotent nếu phòng đã có asset).
+     *
+     * @param  list<array{room_id: string, template_id: string}>  $pairs
+     */
+    public function applyTemplateAssetsForOverviewPairs(array $pairs): void
+    {
+        if ($pairs === []) {
+            return;
+        }
+
+        $byTemplate = [];
+        foreach ($pairs as $pair) {
+            $byTemplate[$pair['template_id']][] = $pair['room_id'];
+        }
+
+        foreach ($byTemplate as $templateId => $roomIds) {
+            $template = RoomTemplate::with('assets')->find($templateId);
+            if (! $template || $template->assets->isEmpty()) {
+                continue;
+            }
+
+            foreach ($roomIds as $roomId) {
+                $room = Room::find($roomId);
+                if (! $room || $room->assets()->exists()) {
+                    continue;
+                }
+
+                $now = now();
+                $rows = [];
+                foreach ($template->assets as $tAsset) {
+                    $rows[] = array_merge(
+                        $this->normalizeRoomAssetAttributes([
+                            'name' => $tAsset->name,
+                            'condition' => $tAsset->condition,
+                            'note' => $tAsset->note,
+                        ]),
+                        [
+                            'id' => Str::uuid()->toString(),
+                            'org_id' => $room->org_id,
+                            'room_id' => $room->id,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ]
+                    );
+                }
+
+                if ($rows !== []) {
+                    RoomAsset::insert($rows);
+                }
+            }
+        }
     }
 
     public function update(string $id, array $data, User $performer): ?Room
@@ -288,14 +422,15 @@ class RoomService
                 $updatedAssetIds = [];
 
                 foreach ($assetsData as $assetData) {
+                    $attrs = $this->normalizeRoomAssetAttributes($assetData);
                     if (isset($assetData['id']) && in_array($assetData['id'], $existingAssetIds)) {
                         $asset = RoomAsset::find($assetData['id']);
                         if ($asset) {
-                            $asset->update($assetData);
+                            $asset->update($attrs);
                             $updatedAssetIds[] = $asset->id;
                         }
                     } else {
-                        $newAsset = RoomAsset::create(array_merge($assetData, [
+                        $newAsset = RoomAsset::create(array_merge($attrs, [
                             'id' => Str::uuid()->toString(),
                             'org_id' => $room->org_id,
                             'room_id' => $room->id,
@@ -431,10 +566,18 @@ class RoomService
                 abort(403, 'Unauthorized: You cannot add rooms to a property in another organization.');
             }
 
-            // Tự sinh code unique trong property
-            do {
-                $code = 'DRAFT-'.strtoupper(Str::random(6));
-            } while (Room::where('property_id', $property->id)->where('code', $code)->exists());
+            if (! empty($data['code'])) {
+                $code = (string) $data['code'];
+                $n = 0;
+                while (Room::withTrashed()->where('property_id', $property->id)->where('code', $code)->exists()) {
+                    $n++;
+                    $code = $data['code'].'-'.$n;
+                }
+            } else {
+                do {
+                    $code = 'DRAFT-'.strtoupper(Str::random(6));
+                } while (Room::withTrashed()->where('property_id', $property->id)->where('code', $code)->exists());
+            }
 
             return Room::create([
                 'org_id' => $property->org_id,
@@ -514,11 +657,17 @@ class RoomService
                 if ($template) {
                     // Create Assets
                     foreach ($template->assets as $tAsset) {
-                        $room->assets()->create([
-                            'id' => Str::uuid()->toString(),
-                            'org_id' => $room->org_id,
-                            'name' => $tAsset->name,
-                        ]);
+                        $room->assets()->create(array_merge(
+                            $this->normalizeRoomAssetAttributes([
+                                'name' => $tAsset->name,
+                                'condition' => $tAsset->condition,
+                                'note' => $tAsset->note,
+                            ]),
+                            [
+                                'id' => Str::uuid()->toString(),
+                                'org_id' => $room->org_id,
+                            ]
+                        ));
                     }
 
                     // Copy gallery images from template to new room
@@ -605,6 +754,25 @@ class RoomService
         $node = RoomFloorPlanNode::where('room_id', $room->id)->first();
 
         return $node ? (bool) $node->delete() : false;
+    }
+
+    /**
+     * Cột DB cho tình trạng tài sản là `condition`. Alias `status` (nếu client gửi) được map vào `condition`.
+     *
+     * @return array{name: string, serial: ?string, condition: ?string, purchased_at: mixed, warranty_end: mixed, note: ?string}
+     */
+    public function normalizeRoomAssetAttributes(array $asset): array
+    {
+        $condition = $asset['condition'] ?? $asset['status'] ?? null;
+
+        return [
+            'name' => $asset['name'] ?? '',
+            'serial' => $asset['serial'] ?? null,
+            'condition' => $condition,
+            'purchased_at' => $asset['purchased_at'] ?? null,
+            'warranty_end' => $asset['warranty_end'] ?? null,
+            'note' => $asset['note'] ?? null,
+        ];
     }
 
     /**

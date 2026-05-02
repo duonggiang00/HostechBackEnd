@@ -14,6 +14,9 @@ class SyncBuildingOverviewRequest extends FormRequest
     public function rules(): array
     {
         return [
+            // Tránh lưu trùng khi client retry sau timeout / mất phản hồi (cùng payload + cùng key)
+            'idempotency_key' => ['nullable', 'uuid'],
+
             // Optional: template dùng cho TẤT CẢ phòng mới (nếu không override riêng)
             'template_id' => ['nullable', 'uuid', 'exists:room_templates,id'],
 
@@ -22,12 +25,12 @@ class SyncBuildingOverviewRequest extends FormRequest
             'sync_data.*.floor_id' => ['nullable', 'string'],        // uuid tầng cũ
             'sync_data.*.temp_id' => ['nullable', 'string'],        // id tạm tầng mới
             'sync_data.*.name' => ['nullable', 'string', 'max:100'],
-            'sync_data.*.floor_number' => ['nullable', 'integer', 'min:1'],
+            'sync_data.*.floor_number' => ['nullable', 'integer', 'min:0'],
 
-            // Phòng trong mỗi tầng
-            'sync_data.*.rooms' => ['required', 'array'],
+            'sync_data.*.rooms' => ['present', 'array'],
             'sync_data.*.rooms.*.id' => ['nullable', 'string'],     // uuid phòng cũ
             'sync_data.*.rooms.*.temp_id' => ['nullable', 'string'],     // id tạm phòng mới
+            'sync_data.*.rooms.*.name' => ['nullable', 'string', 'max:100'],
             'sync_data.*.rooms.*.code' => ['nullable', 'string', 'max:50'],
             'sync_data.*.rooms.*.template_id' => ['nullable', 'uuid', 'exists:room_templates,id'],
             'sync_data.*.rooms.*.x' => ['required', 'integer', 'min:0'], // column
@@ -47,7 +50,7 @@ class SyncBuildingOverviewRequest extends FormRequest
     {
         return [
             'sync_data.required' => 'Dữ liệu đồng bộ mặt bằng không được để trống.',
-            'sync_data.*.rooms.required' => 'Mỗi tầng phải có danh sách phòng.',
+            'sync_data.*.rooms.present' => 'Mỗi tầng phải có trường danh sách phòng (rooms).',
             'sync_data.*.rooms.*.x.required' => 'Mỗi phòng phải có vị trí cột (column_index).',
         ];
     }

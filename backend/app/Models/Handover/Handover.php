@@ -27,20 +27,13 @@ class Handover extends Model implements HasMedia
         'org_id',
         'contract_id',
         'room_id',
-        'type',
-        'status',
+        'created_by_user_id',
         'note',
-        'confirmed_by_user_id',
-        'confirmed_at',
-        'locked_at',
     ];
 
     protected function casts(): array
     {
-        return [
-            'confirmed_at' => 'datetime',
-            'locked_at' => 'datetime',
-        ];
+        return [];
     }
 
     public function org()
@@ -58,9 +51,9 @@ class Handover extends Model implements HasMedia
         return $this->belongsTo(Room::class);
     }
 
-    public function confirmedBy()
+    public function createdBy()
     {
-        return $this->belongsTo(User::class, 'confirmed_by_user_id');
+        return $this->belongsTo(User::class, 'created_by_user_id');
     }
 
     public function items()
@@ -71,5 +64,10 @@ class Handover extends Model implements HasMedia
     public function meterSnapshots()
     {
         return $this->hasMany(HandoverMeterSnapshot::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('document_scans');
     }
 }

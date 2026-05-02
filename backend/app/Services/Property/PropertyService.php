@@ -6,7 +6,9 @@ use App\Events\Property\PropertyCreated;
 use App\Events\Property\PropertyUpdated;
 use App\Models\Org\User;
 use App\Models\Property\Property;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -15,6 +17,9 @@ class PropertyService
     public function paginate(array $allowedFilters = [], int $perPage = 15, ?string $search = null, ?string $orgId = null, bool $withTrashed = false, ?User $performer = null): LengthAwarePaginator
     {
         $allowedFilters = array_merge($allowedFilters, [AllowedFilter::exact('org_id')]);
+
+        $monthStart = Carbon::now()->startOfMonth()->toDateString();
+        $monthEnd = Carbon::now()->endOfMonth()->toDateString();
 
         $query = QueryBuilder::for(Property::class)
             ->allowedFilters($allowedFilters)
@@ -29,6 +34,38 @@ class PropertyService
                 'rooms as vacant_rooms_count' => function ($q) {
                     $q->whereIn('status', ['available', 'vacant']);
                 },
+                'contracts as active_contracts_count' => function ($q) {
+                    $q->where('status', 'ACTIVE');
+                },
+            ])
+            ->addSelect([
+                // Số người thuê đang ở (contract_members.left_at IS NULL trên hợp đồng ACTIVE)
+                'active_tenants_count' => DB::table('contract_members')
+                    ->join('contracts', 'contracts.id', '=', 'contract_members.contract_id')
+                    ->whereColumn('contracts.property_id', 'properties.id')
+                    ->whereColumn('contract_members.org_id', 'properties.org_id')
+                    ->where('contracts.status', 'ACTIVE')
+                    ->whereNull('contract_members.left_at')
+                    ->whereNull('contract_members.deleted_at')
+                    ->whereNull('contracts.deleted_at')
+                    ->selectRaw('COUNT(*)'),
+
+                // Doanh thu đã thu trong tháng hiện tại (theo period_start, status = PAID)
+                'revenue_this_month' => DB::table('invoices')
+                    ->whereColumn('invoices.property_id', 'properties.id')
+                    ->whereColumn('invoices.org_id', 'properties.org_id')
+                    ->where('invoices.status', 'PAID')
+                    ->whereBetween('invoices.period_start', [$monthStart, $monthEnd])
+                    ->whereNull('invoices.deleted_at')
+                    ->selectRaw('COALESCE(SUM(invoices.paid_amount), 0)'),
+
+                // Doanh thu đã thu lũy kế (status = PAID)
+                'revenue_total' => DB::table('invoices')
+                    ->whereColumn('invoices.property_id', 'properties.id')
+                    ->whereColumn('invoices.org_id', 'properties.org_id')
+                    ->where('invoices.status', 'PAID')
+                    ->whereNull('invoices.deleted_at')
+                    ->selectRaw('COALESCE(SUM(invoices.paid_amount), 0)'),
             ]);
 
         /** @var User $user */

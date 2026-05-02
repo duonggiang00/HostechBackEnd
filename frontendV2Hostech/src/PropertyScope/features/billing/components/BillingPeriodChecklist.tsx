@@ -1,10 +1,13 @@
-import { CheckCircle2, AlertCircle, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { CheckCircle2, AlertCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { usePropertyReadings } from '../../metering/hooks/useMeters';
 import { usePropertyInvoices } from '../hooks/usePropertyInvoices';
 
 interface Props {
   propertyId: string;
+  /** Ngày đầu tháng kỳ đang chốt (đồng bộ duyệt số + tạo HĐ) */
+  billingPeriod: Date;
+  onBillingPeriodChange: (next: Date) => void;
   onOpenBulkApprove?: () => void;
   onOpenGenerateModal?: () => void;
 }
@@ -72,13 +75,19 @@ function Step({ step, title, description, status, badge, onAction, actionLabel }
   );
 }
 
-export function BillingPeriodChecklist({ propertyId, onOpenBulkApprove, onOpenGenerateModal }: Props) {
-  const thisMonth = format(new Date(), 'MM/yyyy');
-  const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-  const monthEnd   = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+export function BillingPeriodChecklist({
+  propertyId,
+  billingPeriod,
+  onBillingPeriodChange,
+  onOpenBulkApprove,
+  onOpenGenerateModal,
+}: Props) {
+  const thisMonth = format(billingPeriod, 'MM/yyyy');
+  const monthStart = format(billingPeriod, 'yyyy-MM-dd');
+  const monthEnd = format(endOfMonth(billingPeriod), 'yyyy-MM-dd');
 
-  // Pending readings
-  const { data: pendingData } = usePropertyReadings(propertyId, { status: 'PENDING', period_start: monthStart, period_end: monthEnd });
+  // Pending readings (API: SUBMITTED = chờ duyệt)
+  const { data: pendingData } = usePropertyReadings(propertyId, { status: 'SUBMITTED', period_start: monthStart, period_end: monthEnd });
   const { data: approvedData } = usePropertyReadings(propertyId, { status: 'APPROVED', period_start: monthStart, period_end: monthEnd });
 
   // Draft invoices
@@ -97,8 +106,28 @@ export function BillingPeriodChecklist({ propertyId, onOpenBulkApprove, onOpenGe
 
   return (
     <div className="bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700 rounded-[12px] p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tiến độ kỳ tháng {thisMonth}</span>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => onBillingPeriodChange(startOfMonth(subMonths(billingPeriod, 1)))}
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Tháng trước"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
+            Tiến độ kỳ tháng {thisMonth}
+          </span>
+          <button
+            type="button"
+            onClick={() => onBillingPeriodChange(startOfMonth(addMonths(billingPeriod, 1)))}
+            className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Tháng sau"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2.5">

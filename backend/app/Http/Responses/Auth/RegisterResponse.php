@@ -19,6 +19,8 @@ class RegisterResponse implements RegisterResponseContract
         /** @var User */
         $user = auth()->user();
 
+        $user->recordLoginAt();
+
         // Generate initial API token
         $plainToken = $user->createToken(
             name: 'auth_token',

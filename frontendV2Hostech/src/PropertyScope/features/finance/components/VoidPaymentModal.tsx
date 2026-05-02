@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import type { Payment } from '../types';
+import { paymentMethodLabelVi } from '@/shared/utils/paymentMethodLabelVi';
 import { useVoidPayment } from '../hooks/useFinance';
 import toast from 'react-hot-toast';
 
@@ -16,13 +17,6 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso));
 }
 
-const methodLabel: Record<string, string> = {
-  CASH:          'Tiền mặt',
-  BANK_TRANSFER: 'Chuyển khoản',
-  TRANSFER:      'Chuyển khoản',
-  WALLET:        'Ví điện tử',
-  QR:            'QR Code',
-};
 
 export function VoidPaymentModal({ payment, onClose }: VoidPaymentModalProps) {
   const { mutate: voidPayment, isPending } = useVoidPayment();
@@ -87,7 +81,7 @@ export function VoidPaymentModal({ payment, onClose }: VoidPaymentModalProps) {
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Phương thức</span>
               <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                {methodLabel[payment.method] ?? payment.method}
+                {payment.method_label ?? paymentMethodLabelVi(payment.method)}
               </span>
             </div>
             <div className="flex justify-between items-center">

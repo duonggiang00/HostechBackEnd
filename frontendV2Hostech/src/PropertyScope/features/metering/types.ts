@@ -20,6 +20,15 @@ export interface Meter {
   room?: { id: string; code: string; name: string; property?: { id: string; name: string } };
   created_at?: string;
   updated_at?: string;
+  /** Kỳ chỉ số đã duyệt/khóa gần nhất (API: latest_approved_reading) */
+  latest_approved_reading?: { period_start?: string; period_end?: string; status?: string } | null;
+  /** Bản ghi mới nhất theo period_end — có status (API: latest_period_reading) */
+  latest_period_reading?: {
+    period_start?: string;
+    period_end?: string;
+    reading_value?: number;
+    status?: string;
+  } | null;
 }
 
 export type MeterReadingStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'LOCKED';

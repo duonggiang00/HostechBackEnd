@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useHandover } from '@/shared/features/operations/hooks/useHandover';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useContracts, useTrashContracts, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { ContractTable } from '@/PropertyScope/features/contracts/components/ContractTable';
@@ -6,6 +7,7 @@ import { Button } from '@/shared/components/ui/button';
 import { 
   Plus, FileText, CheckCircle2, Clock, 
   FileSignature, XCircle, ChevronLeft, ChevronRight,
+  CircleDollarSign,
   type LucideIcon 
 } from 'lucide-react';
 import { Skeleton } from '@/shared/components/ui/skeleton';
@@ -64,6 +66,19 @@ const KPICard = ({ title, value, icon: Icon, trend, description, color }: KPICar
   );
 };
 
+const CONTRACT_ACTIVE_DELETE_MESSAGE =
+  'Không thể xóa hợp đồng đang hiệu lực. Vui lòng thanh lý hợp đồng trước, sau đó mới có thể xóa.';
+
+function toastApiError(err: unknown, fallback: string) {
+  const data = (err as { response?: { data?: { message?: string; errors?: { contract?: string[] } } } })?.response?.data;
+  const firstContractErr = data?.errors?.contract?.[0];
+  const msg =
+    (typeof data?.message === 'string' && data.message) ||
+    (typeof firstContractErr === 'string' ? firstContractErr : null) ||
+    fallback;
+  toast.error(msg);
+}
+
 // --- Main Page Component ---
 
 export default function ContractListPage() {
@@ -85,7 +100,7 @@ export default function ContractListPage() {
 
   // Filters & sort from URL
   const [status, setStatus] = useState(searchParams.get('status') || 'all');
-  const [sort, setSort] = useState(searchParams.get('sort') || '-created_at');
+  const [sort, setSort] = useState(searchParams.get('sort') || 'room_order');
   const [isTrashView, setIsTrashView] = useState(searchParams.get('view') === 'trash');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
 
@@ -108,7 +123,7 @@ export default function ContractListPage() {
     const params = new URLSearchParams();
     if (debouncedSearch) params.set('search', debouncedSearch);
     if (status !== 'all') params.set('status', status);
-    if (sort !== '-created_at') params.set('sort', sort);
+    if (sort !== 'room_order') params.set('sort', sort);
     if (page > 1) params.set('page', page.toString());
     if (isTrashView) params.set('view', 'trash');
 
@@ -141,6 +156,24 @@ export default function ContractListPage() {
     { enabled: isTrashView }
   );
 
+  const { useHandovers } = useHandover();
+  const { data: handoverListRes } = useHandovers(
+    { filter: { property_id: propertyId }, per_page: 100 },
+    { enabled: !!propertyId && !isTrashView, staleTime: 60_000 },
+  );
+
+  const handoverIdByContractId = useMemo(() => {
+    const out: Record<string, string> = {};
+    const rows = (handoverListRes as { data?: { id: string; contract_id?: string | null }[] } | undefined)?.data ?? [];
+    for (const row of rows) {
+      const cid = row.contract_id;
+      if (cid && row.id && out[cid] === undefined) {
+        out[cid] = row.id;
+      }
+    }
+    return out;
+  }, [handoverListRes]);
+
   const currentData = isTrashView ? trashContracts : activeContracts;
   const isLoading = isTrashView ? isTrashLoading : isActiveLoading;
 
@@ -162,10 +195,15 @@ export default function ContractListPage() {
       return;
     }
 
+    if (contract.status === 'ACTIVE') {
+      toast.error(CONTRACT_ACTIVE_DELETE_MESSAGE);
+      return;
+    }
+
     if (!window.confirm('Bạn có chắc chắn muốn xoá hợp đồng này vào thùng rác?')) return;
     deleteContract.mutate(contract.id, {
       onSuccess: () => toast.success('Đã chuyển hợp đồng vào thùng rác.'),
-      onError: () => toast.error('Có lỗi xảy ra khi xoá hợp đồng.'),
+      onError: (err) => toastApiError(err, 'Có lỗi xảy ra khi xoá hợp đồng.'),
     });
   };
 
@@ -177,15 +215,20 @@ export default function ContractListPage() {
   };
 
   const handleForceDelete = (contract: any) => {
+    if (contract.status === 'ACTIVE') {
+      toast.error(CONTRACT_ACTIVE_DELETE_MESSAGE);
+      return;
+    }
+
     if (!window.confirm('Hợp đồng này sẽ bị xoá vĩnh viễn. Bạn có chắc chắn?')) return;
     forceDeleteContract.mutate(contract.id, {
       onSuccess: () => toast.success('Đã xoá hợp đồng vĩnh viễn.'),
-      onError: () => toast.error('Có lỗi xảy ra khi xoá hợp đồng vĩnh viễn.'),
+      onError: (err) => toastApiError(err, 'Có lỗi xảy ra khi xoá hợp đồng vĩnh viễn.'),
     });
   };
 
   const stats = {
-    total: statusCounts?.total ?? 0,
+    invoiceDebt: statusCounts?.invoice_debt ?? 0,
     active: statusCounts?.ACTIVE ?? 0,
     pending: (statusCounts?.DRAFT ?? 0) + (statusCounts?.PENDING_SIGNATURE ?? 0) + (statusCounts?.PENDING_PAYMENT ?? 0),
     expiring: statusCounts?.expiring ?? 0,
@@ -237,10 +280,11 @@ export default function ContractListPage() {
           {!isTrashView && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <KPICard
-                title="Tổng Hợp Đồng"
-                value={stats.total.toString()}
-                icon={FileText}
-                color="indigo"
+                title="Có hóa đơn nợ"
+                value={stats.invoiceDebt.toString()}
+                icon={CircleDollarSign}
+                description="Hợp đồng còn hóa đơn chưa thanh toán đủ"
+                color="red"
               />
               <KPICard
                 title="Đang Hiệu Lực"
@@ -286,6 +330,8 @@ export default function ContractListPage() {
               <ContractTable
                 contracts={currentData}
                 isTrashView={isTrashView}
+                propertyId={propertyId}
+                handoverIdByContractId={handoverIdByContractId}
                 onEdit={handleEdit}
                 onViewDetail={handleEdit}
                 onDelete={handleDelete}

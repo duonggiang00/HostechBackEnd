@@ -11,6 +11,7 @@ use App\Http\Requests\Contract\ExecuteRoomTransferRequest;
 use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Http\Resources\Contract\ContractStatusHistoryResource;
+use App\Http\Resources\Handover\HandoverItemResource;
 use App\Jobs\Contract\ProcessContractTerminationJob;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
@@ -18,6 +19,7 @@ use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Services\Contract\ContractService;
 use App\Services\Contract\Termination\TerminationReconciliationService;
+use App\Services\Handover\HandoverService;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -326,6 +328,89 @@ class ContractController extends Controller
      * - Tenant hủy trước hạn + waive_penalty=true → Hoàn cọc (REFUND_PENDING, status TERMINATED)
      * - Chủ nhà hủy hoặc kết thúc đúng hạn → Hoàn cọc (REFUND_PENDING)
      */
+    /**
+     * Xem trạng thái biên bản thanh lý: bản đã lưu (nếu có) hoặc xem trước từ tài sản phòng — không tạo bản ghi handover mới.
+     */
+    public function terminationHandover(Contract $contract): JsonResponse
+    {
+        $this->authorize('update', $contract);
+
+        $state = app(HandoverService::class)->getTerminationHandoverState($contract);
+
+        $itemsData = $state['persisted']
+            ? HandoverItemResource::collection($state['handover']->items)->resolve()
+            : $state['items'];
+
+        $handoverPayload = $state['persisted'] && $state['handover']
+            ? [
+                'id' => $state['handover']->id,
+                'org_id' => $state['handover']->org_id,
+                'contract_id' => $state['handover']->contract_id,
+                'room_id' => $state['handover']->room_id,
+                'note' => $state['handover']->note,
+                'document_scan_urls' => $state['handover']->getMedia('document_scans')->map->getUrl()->values()->all(),
+                'created_at' => $state['handover']->created_at,
+                'updated_at' => $state['handover']->updated_at,
+            ]
+            : null;
+
+        return response()->json([
+            'message' => $state['persisted']
+                ? 'Đã tải biên bản bàn giao.'
+                : 'Xem trước danh mục phòng (chưa tạo biên bản trên hệ thống).',
+            'data' => [
+                'persisted' => $state['persisted'],
+                'handover' => $handoverPayload,
+                'default_handover_note' => $state['persisted']
+                    ? null
+                    : HandoverService::DEFAULT_TERMINATION_HANDOVER_NOTE,
+                'items' => $itemsData,
+            ],
+        ]);
+    }
+
+    /**
+     * Lưu biên bản nháp lên DB (sau khi hoàn tất bước đánh giá phòng trong wizard).
+     */
+    public function commitTerminationHandover(Request $request, Contract $contract): JsonResponse
+    {
+        $this->authorize('update', $contract);
+
+        $validated = $request->validate([
+            'items' => ['nullable', 'array'],
+            'items.*.room_asset_id' => ['required', 'uuid'],
+            'items.*.condition' => ['nullable', 'string', 'in:OK,MISSING,DAMAGED'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:10000'],
+        ]);
+
+        $handoverNoteProvided = array_key_exists('note', $validated);
+
+        $handover = app(HandoverService::class)->commitTerminationHandover(
+            $contract,
+            $validated['items'] ?? [],
+            $handoverNoteProvided,
+            $handoverNoteProvided ? ($validated['note'] ?? null) : null,
+        );
+
+        return response()->json([
+            'message' => 'Đã lưu biên bản bàn giao.',
+            'data' => [
+                'persisted' => true,
+                'handover' => [
+                    'id' => $handover->id,
+                    'org_id' => $handover->org_id,
+                    'contract_id' => $handover->contract_id,
+                    'room_id' => $handover->room_id,
+                    'note' => $handover->note,
+                    'document_scan_urls' => $handover->getMedia('document_scans')->map->getUrl()->values()->all(),
+                    'created_at' => $handover->created_at,
+                    'updated_at' => $handover->updated_at,
+                ],
+                'items' => HandoverItemResource::collection($handover->items)->resolve(),
+            ],
+        ]);
+    }
+
     /**
      * Xem trước quyết toán cọc / nợ (ledger) trước khi xác nhận thanh lý.
      */

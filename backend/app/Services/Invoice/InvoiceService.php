@@ -187,6 +187,12 @@ class InvoiceService
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('contract_id'),
                 AllowedFilter::callback('is_termination', fn ($query, $value) => $query->where('is_termination', (bool) $value)),
+                AllowedFilter::callback('has_outstanding', function ($q, $value): void {
+                    if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
+                        $q->whereRaw('(total_amount - COALESCE(paid_amount, 0)) > 0.009')
+                            ->whereNotIn('status', ['PAID', 'CANCELLED']);
+                    }
+                }),
             ])
             ->allowedSorts([
                 'due_date',
@@ -197,7 +203,7 @@ class InvoiceService
                 'created_at',
             ])
             ->defaultSort('-created_at')
-            ->with(['property', 'room', 'contract', 'items']);
+            ->with(['property', 'room', 'contract.primaryMember.user', 'items']);
 
         $user = request()->user();
         $resolved = OrgContextResolver::resolveOrgId($user);
@@ -305,6 +311,13 @@ class InvoiceService
                 'adjustments',
                 'createdBy',
                 'issuedBy',
+                'paymentAllocations' => function ($q) {
+                    $q->with([
+                        'payment' => function ($pq) {
+                            $pq->with('receipt');
+                        },
+                    ]);
+                },
             ])
             ->find($id);
     }
@@ -347,6 +360,19 @@ class InvoiceService
         $data['created_by_user_id'] = $user?->id;
 
         return DB::transaction(function () use ($data, $itemsData, $user) {
+            if (($data['status'] ?? null) === 'ISSUED') {
+                $now = now();
+                if (empty($data['issue_date'])) {
+                    $data['issue_date'] = $now->toDateString();
+                }
+                if (empty($data['issued_at'])) {
+                    $data['issued_at'] = $now;
+                }
+                if (empty($data['issued_by_user_id']) && $user?->id) {
+                    $data['issued_by_user_id'] = $user->id;
+                }
+            }
+
             if (! empty($data['contract_id']) && isset($data['period_start'], $data['period_end'])) {
                 $dup = Invoice::query()
                     ->where('contract_id', $data['contract_id'])
@@ -747,7 +773,8 @@ class InvoiceService
 
         $contract->update([
             'status' => ContractStatus::ACTIVE,
-            'signed_at' => now(),
+            'signed_at' => $contract->signed_at ?? now(),
+            'activated_at' => now(),
         ]);
 
         // CÃƒÂ¡Ã‚ÂºÃ‚Â­p nhÃƒÂ¡Ã‚ÂºÃ‚Â­t trÃƒÂ¡Ã‚ÂºÃ‚Â¡ng thÃƒÆ’Ã‚Â¡i phÃƒÆ’Ã‚Â²ng thÃƒÆ’Ã‚Â nh OCCUPIED

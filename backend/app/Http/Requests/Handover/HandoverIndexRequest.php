@@ -8,8 +8,6 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam per_page int Số lượng bản ghi trên 1 trang (1-100). Default: 15. Example: 15
  * @queryParam page int Số trang. Example: 1
  * @queryParam search string Tìm kiếm theo ghi chú.
- * @queryParam filter[type] string Lọc theo loại biên bản (CHECKIN, CHECKOUT). Example: CHECKIN
- * @queryParam filter[status] string Lọc theo trạng thái. Example: DRAFT
  * @queryParam filter[property_id] string UUID Lọc theo Property. Example: uuid
  * @queryParam filter[room_id] string UUID Lọc theo Room. Example: uuid
  * @queryParam filter[tenant_user_id] string UUID Lọc theo Tenant. Example: uuid

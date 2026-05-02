@@ -4,14 +4,16 @@ namespace App\Listeners\Property;
 
 use App\Events\Property\RoomCreated;
 use App\Events\Property\RoomUpdated;
+use App\Jobs\Property\InitializeRoomAfterCreateJob;
 use App\Models\Meter\Meter;
 use App\Models\Property\RoomFloorPlanNode;
 use App\Models\Property\RoomPrice;
-use Illuminate\Contracts\Queue\ShouldQueue;
+use App\Support\DeferOverviewRoomInitialization;
+use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Log;
 
-class InitializeRoomServices implements ShouldQueue
+class InitializeRoomServices implements ShouldQueueAfterCommit
 {
     use InteractsWithQueue;
 
@@ -25,6 +27,17 @@ class InitializeRoomServices implements ShouldQueue
 
         try {
             if ($event instanceof RoomCreated) {
+                if ($event->deferHeavyInitialization) {
+                    if (config('queue.default') !== 'sync') {
+                        InitializeRoomAfterCreateJob::dispatch($room->id, $performerId);
+                    } elseif (app()->environment('testing')) {
+                        InitializeRoomAfterCreateJob::dispatchSync($room->id, $performerId);
+                    } else {
+                        DeferOverviewRoomInitialization::push($room->id, $performerId);
+                    }
+
+                    return;
+                }
                 $this->initializeNewRoom($room, $performerId);
             }
 
@@ -38,9 +51,9 @@ class InitializeRoomServices implements ShouldQueue
     }
 
     /**
-     * Logic for brand new rooms.
+     * Logic for brand new rooms (gọi từ listener hoặc {@see InitializeRoomAfterCreateJob}).
      */
-    protected function initializeNewRoom($room, $performerId): void
+    public function initializeNewRoom($room, $performerId): void
     {
         // 1. Inherit default services from property
         $property = $room->property;

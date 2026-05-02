@@ -26,6 +26,7 @@ import { RecordPaymentModal } from '../components/RecordPaymentModal';
 import { PermissionGate } from '@/shared/features/auth/components/PermissionGate';
 import type { InvoiceItem, InvoiceItemType } from '../types';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,7 @@ function InlinePdfViewer({ url }: { url: string }) {
 
 export default function InvoiceDetailPage() {
   const { invoiceId } = useParams<{ propertyId: string; invoiceId: string }>();
+  const canIssueInvoices = useAuthStore((s) => s.hasRole(['Admin', 'Owner', 'Manager']));
 
   const { data: invoice, isLoading } = useInvoiceDetail(invoiceId ?? null);
   const { mutateAsync: issueInvoice, isPending: isIssuing } = useIssueInvoice(invoice?.property_id);
@@ -206,8 +208,8 @@ export default function InvoiceDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            <PermissionGate role={['Owner', 'Manager', 'Staff']}>
-              {invoice.status === 'DRAFT' && (
+            <PermissionGate role={['Owner', 'Manager', 'Staff', 'Admin']}>
+              {invoice.status === 'DRAFT' && canIssueInvoices && (
                 <button
                   onClick={handleIssue}
                   disabled={isIssuing}
@@ -228,7 +230,7 @@ export default function InvoiceDetailPage() {
                 </button>
               )}
 
-              {['DRAFT', 'ISSUED', 'OVERDUE'].includes(invoice.status) && (
+              {canIssueInvoices && ['DRAFT', 'ISSUED', 'OVERDUE'].includes(invoice.status) && (
                 <button
                   onClick={handleCancel}
                   disabled={isCancelling}
@@ -278,7 +280,14 @@ export default function InvoiceDetailPage() {
               />
               <InfoCard
                 label="Ngày phát hành"
-                value={invoice.issue_date ? fmtDate(invoice.issue_date) : '—'}
+                value={(() => {
+                  if (invoice.issue_date) return fmtDate(invoice.issue_date);
+                  if (invoice.issued_at) return fmtDate(invoice.issued_at);
+                  if (['ISSUED', 'PARTIAL', 'PAID', 'OVERDUE'].includes(invoice.status) && invoice.created_at) {
+                    return fmtDate(invoice.created_at);
+                  }
+                  return '—';
+                })()}
               />
               <InfoCard
                 label="Hạn thanh toán"
@@ -314,20 +323,6 @@ export default function InvoiceDetailPage() {
                   <p className="text-lg font-black text-rose-400">{fmtVND(invoice.debt)}</p>
                 </div>
               </div>
-              {invoice.total_amount > 0 && (
-                <div>
-                  <div className="flex justify-between text-[10px] font-bold text-white/50 mb-1">
-                    <span>Tiến độ thanh toán</span>
-                    <span>{Math.round((invoice.paid_amount / invoice.total_amount) * 100)}%</span>
-                  </div>
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-400 rounded-full transition-all"
-                      style={{ width: `${Math.min((invoice.paid_amount / invoice.total_amount) * 100, 100)}%` }}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>

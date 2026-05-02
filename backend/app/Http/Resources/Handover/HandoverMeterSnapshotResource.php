@@ -19,6 +19,10 @@ class HandoverMeterSnapshotResource extends JsonResource
             'handover_id' => $this->handover_id,
             'meter_id' => $this->meter_id,
             'reading_value' => $this->reading_value,
+            'meter_type' => $this->when(
+                $this->resource->relationLoaded('meter'),
+                $this->resource->meter?->type
+            ),
             'meter_photo_urls' => $this->getMedia('meter_photos')->map->getUrl(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

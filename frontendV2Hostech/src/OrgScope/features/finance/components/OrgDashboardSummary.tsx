@@ -17,7 +17,11 @@ export default function OrgDashboardSummary() {
   const occupancy = dash?.properties?.occupancy_rate;
   const totalRooms = dash?.properties?.total_rooms;
   const staffTotal =
-    dash?.staff != null ? (dash.staff.total_managers ?? 0) + (dash.staff.total_staff ?? 0) : undefined;
+    dash?.staff != null
+      ? (dash.staff.total ??
+          (dash.staff.managers ?? dash.staff.total_managers ?? 0) +
+            (dash.staff.staff ?? dash.staff.total_staff ?? 0))
+      : undefined;
 
   let revenueLine = '—';
   if (dash && role && (role === 'owner' || role === 'manager') && dash.revenue) {

@@ -21,7 +21,8 @@ export const mediaApi = {
     const result = response.data?.data || response.data;
     return {
       url: result.url,
-      id: result.temporary_upload_id || result.id,
+      // RoomTemplate expects media UUIDs (media.uuid), not temporary_upload_id
+      id: result.media_id || result.id,
       name: result.file_name || result.name,
       mediaId: result.media_id,
     };

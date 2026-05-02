@@ -23,7 +23,7 @@ class HandoverItemUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:OK,MISSING,DAMAGED'],
+            'condition' => ['required', 'string', 'in:OK,MISSING,DAMAGED'],
             'note' => ['nullable', 'string', 'max:1000'],
             'sort_order' => ['nullable', 'integer'],
         ];

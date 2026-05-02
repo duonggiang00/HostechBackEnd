@@ -48,7 +48,6 @@ class HandoverDebugTest extends TestCase
         $response = $this->actingAs($manager)->postJson('/api/handovers', [
             'room_id' => $room->id,
             'contract_id' => $contract->id,
-            'type' => 'CHECKIN',
         ]);
 
         // Dump actual status and body for diagnosis

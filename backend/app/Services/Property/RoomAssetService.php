@@ -10,6 +10,10 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class RoomAssetService
 {
+    public function __construct(
+        protected RoomService $roomService,
+    ) {}
+
     /**
      * Get paginated list of assets for a specific room.
      *
@@ -43,10 +47,12 @@ class RoomAssetService
 
         // Mặc dù MultiTenant có thể tự map org_id của User, nhưng để chắc chắn
         // tài sản luôn thuộc về cùng một cty với cái Phòng thì ta map tay.
-        $data['room_id'] = $room->id;
-        $data['org_id'] = $room->org_id;
+        $row = array_merge($this->roomService->normalizeRoomAssetAttributes($data), [
+            'room_id' => $room->id,
+            'org_id' => $room->org_id,
+        ]);
 
-        return RoomAsset::create($data);
+        return RoomAsset::create($row);
     }
 
     /**
@@ -63,7 +69,7 @@ class RoomAssetService
     public function updateAsset(string $assetId, array $data): RoomAsset
     {
         $asset = RoomAsset::findOrFail($assetId);
-        $asset->update($data);
+        $asset->update($this->roomService->normalizeRoomAssetAttributes($data));
 
         return $asset;
     }

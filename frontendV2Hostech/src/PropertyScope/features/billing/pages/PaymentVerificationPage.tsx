@@ -129,21 +129,23 @@ function PaymentCard({
 
   const invoiceCode = payment.allocations?.[0]?.invoice?.code ?? 'Không rõ';
   const payerName = payment.payer?.name ?? 'Không rõ';
+  // proof_receipt = ảnh tenant gửi trước khi duyệt; receipt = biên lai PDF chính thức sau duyệt
+  const proofUrl = payment.proof_receipt?.url ?? null;
 
   return (
     <>
       <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
 
-        {/* Receipt image (if any) */}
-        {payment.receipt?.url ? (
+        {/* Proof image uploaded by tenant */}
+        {proofUrl ? (
           <div className="relative">
             <img
-              src={payment.receipt.url}
-              alt="Bằng chứng"
+              src={proofUrl}
+              alt="Bằng chứng thanh toán"
               className="h-52 w-full object-cover"
             />
             <button
-              onClick={() => setLightboxUrl(payment.receipt!.url)}
+              onClick={() => setLightboxUrl(proofUrl)}
               className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow backdrop-blur-sm hover:bg-white dark:bg-slate-900/90 dark:text-slate-300"
             >
               <ZoomIn className="h-4 w-4" />

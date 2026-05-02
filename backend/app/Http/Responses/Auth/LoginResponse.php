@@ -23,6 +23,8 @@ class LoginResponse implements LoginResponseContract
         // Revoke previous tokens
         $user->tokens()->delete();
 
+        $user->recordLoginAt();
+
         // Generate new Sanctum token
         $plainToken = $user->createToken(
             name: 'auth_token',

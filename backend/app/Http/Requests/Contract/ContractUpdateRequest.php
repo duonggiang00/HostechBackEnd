@@ -28,6 +28,7 @@ class ContractUpdateRequest extends FormRequest
             'cutoff_day' => ['nullable', 'integer', 'min:1', 'max:31'],
             'rent_price' => ['nullable', 'numeric', 'min:0'],
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'deposit_months' => ['nullable', 'integer', 'min:1', 'max:24'],
             'meta' => ['nullable', 'array'],
         ];
     }
@@ -77,6 +78,7 @@ class ContractUpdateRequest extends FormRequest
             'end_date' => 'Ngày kết thúc',
             'rent_price' => 'Giá thuê',
             'deposit_amount' => 'Tiền cọc',
+            'deposit_months' => 'Số tháng cọc',
         ];
     }
 
