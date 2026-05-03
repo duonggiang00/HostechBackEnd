@@ -309,6 +309,78 @@ class MeterReadingService
     }
 
     /**
+     * Manager/Owner: ghi hoặc cập nhật chỉ số một kỳ và chuyển thẳng sang APPROVED.
+     * Dùng cho wizard thanh lý — hợp nhất DRAFT/SUBMITTED cùng kỳ; cho phép sửa reading_value khi đã APPROVED (chưa LOCKED).
+     *
+     * @param  array<int, array{meter_id: string, period_start: string, period_end: string, reading_value: int}>  $readings
+     * @return array<int, MeterReading>
+     */
+    public function finalizeReadingsApproved(array $readings): array
+    {
+        $results = [];
+
+        return DB::transaction(function () use ($readings, &$results) {
+            foreach ($readings as $row) {
+                $results[] = $this->finalizeSingleApprovedReading($row);
+            }
+
+            return $results;
+        });
+    }
+
+    /**
+     * @param  array{meter_id: string, period_start: string, period_end: string, reading_value: int}  $data
+     */
+    protected function finalizeSingleApprovedReading(array $data): MeterReading
+    {
+        $meterId = $data['meter_id'];
+        $periodStart = $data['period_start'];
+        $periodEnd = $data['period_end'];
+        $readingValue = (int) $data['reading_value'];
+
+        $existing = MeterReading::query()
+            ->where('meter_id', $meterId)
+            ->whereDate('period_start', $periodStart)
+            ->whereDate('period_end', $periodEnd)
+            ->first();
+
+        if ($existing === null) {
+            return $this->create(array_merge($data, [
+                'status' => 'APPROVED',
+            ]));
+        }
+
+        if ($existing->status === 'LOCKED') {
+            throw ValidationException::withMessages([
+                'reading_value' => 'Kỳ này đã khóa, không thể chỉnh chỉ số từ wizard.',
+            ]);
+        }
+
+        if ($existing->status === 'REJECTED') {
+            throw ValidationException::withMessages([
+                'reading_value' => 'Bản ghi kỳ này đang bị từ chối. Vui lòng xử lý trên trang đồng hồ trước.',
+            ]);
+        }
+
+        if (in_array($existing->status, ['DRAFT', 'SUBMITTED'], true)) {
+            return $this->update($existing, [
+                'reading_value' => $readingValue,
+                'status' => 'APPROVED',
+            ]);
+        }
+
+        if ($existing->status === 'APPROVED') {
+            return $this->update($existing, [
+                'reading_value' => $readingValue,
+            ]);
+        }
+
+        throw ValidationException::withMessages([
+            'reading_value' => 'Không thể chốt chỉ số với trạng thái hiện tại: '.$existing->status,
+        ]);
+    }
+
+    /**
      * Bulk submit DRAFT readings (DRAFT → SUBMITTED).
      * Only the owning Staff can submit their own drafts.
      */

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import {
   FileText,
   Zap,
@@ -15,6 +15,8 @@ import {
   Maximize2,
   Minimize2,
   Loader2,
+  FileSignature,
+  User,
 } from 'lucide-react';
 import {
   useInvoiceDetail,
@@ -194,11 +196,6 @@ export default function InvoiceDetailPage() {
                   Hóa đơn {periodLabel}
                 </h1>
                 <InvoiceStatusBadge status={invoice.status} size="sm" />
-                {invoice.is_termination && (
-                  <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 rounded-full text-[9px] font-black uppercase tracking-widest">
-                    Tất toán
-                  </span>
-                )}
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
                 {invoice.room?.code ?? invoice.room?.name ?? '—'} · {invoice.property?.name}
@@ -208,6 +205,18 @@ export default function InvoiceDetailPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Nút xem hợp đồng */}
+            {invoice.contract_id && (
+              <Link
+                to={`/properties/${invoice.property_id}/contracts/${invoice.contract_id}`}
+                className="flex items-center gap-1.5 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-sm font-bold transition-all"
+                title="Xem hợp đồng liên quan"
+              >
+                <FileSignature className="w-4 h-4" />
+                <span className="hidden sm:inline">Hợp đồng</span>
+              </Link>
+            )}
+
             <PermissionGate role={['Owner', 'Manager', 'Staff', 'Admin']}>
               {invoice.status === 'DRAFT' && canIssueInvoices && (
                 <button
@@ -279,6 +288,35 @@ export default function InvoiceDetailPage() {
                 }
               />
               <InfoCard
+                label="Khách thuê"
+                value={
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <User className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    <span className="truncate">{invoice.tenant_name ?? '—'}</span>
+                  </span>
+                }
+              />
+              <InfoCard
+                label="Trạng thái thanh toán"
+                value={<InvoiceStatusBadge status={invoice.status} size="md" />}
+              />
+              <InfoCard
+                label="Hợp đồng"
+                value={
+                  invoice.contract_id ? (
+                    <Link
+                      to={`/properties/${invoice.property_id}/contracts/${invoice.contract_id}`}
+                      className="inline-flex items-center gap-1.5 text-[#1E3A8A] dark:text-blue-400 hover:underline"
+                    >
+                      <FileSignature className="w-4 h-4" />
+                      Xem hợp đồng
+                    </Link>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <InfoCard
                 label="Ngày phát hành"
                 value={(() => {
                   if (invoice.issue_date) return fmtDate(invoice.issue_date);
@@ -326,22 +364,6 @@ export default function InvoiceDetailPage() {
             </div>
           </div>
         </div>
-
-        {/* ── Settlement Banner ──────────────────────────────────────────────── */}
-        {invoice.is_termination && (
-          <div className="flex items-start gap-4 p-5 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/30 rounded-2xl">
-            <div className="flex-shrink-0 w-9 h-9 bg-purple-100 dark:bg-purple-500/20 rounded-xl flex items-center justify-center">
-              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-purple-800 dark:text-purple-300">Hóa đơn Thanh lý Hợp đồng</p>
-              <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
-                Đây là hóa đơn tất toán cuối cùng, bao gồm tiền phòng tính pro-rated, điện nước tháng cuối, nợ tồn đọng và xử lý tiền cọc.
-                {invoice.status === 'DRAFT' && ' Vui lòng kiểm tra các khoản phí trước khi phát hành cho khách thuê.'}
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* ── OVERDUE Banner ─────────────────────────────────────────────────── */}
         {invoice.status === 'OVERDUE' && (

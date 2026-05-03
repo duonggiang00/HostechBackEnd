@@ -6,6 +6,7 @@ use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Contract\FinalPaymentRequest;
 use App\Models\Contract\RefundReceipt;
 use App\Models\Document\DocumentTemplate;
 use App\Models\Finance\LedgerEntry;
@@ -97,8 +98,8 @@ class OrgSeeder extends Seeder
             'identity_issued_date' => '2025-07-31',
             'date_of_birth' => '2001-07-31',
             'address' => 'Hà Nội',
-            /** Số kỳ hóa đơn gần nhất (cuối timeline seed) giữ trạng thái chưa thanh toán */
-            'seed_unpaid_rent_months' => 1,
+            /** Nợ định kỳ tháng 3/2026 (ISSUED/OVERDUE) — demo thanh lý trên HĐ ACTIVE */
+            'seed_unpaid_period_starts' => ['2026-03-01'],
         ],
         [
             'full_name' => 'Phùng Xuân Quý',
@@ -120,8 +121,8 @@ class OrgSeeder extends Seeder
             'identity_issued_date' => '2025-07-31',
             'date_of_birth' => '2002-07-31',
             'address' => 'Hà Nội',
-            /** Các tháng (period_start) giữ hóa đơn chưa thanh toán — khớp kỳ seed tới 3/2026 */
-            'seed_unpaid_period_starts' => ['2026-02-01', '2026-03-01'],
+            /** Nợ định kỳ tháng 3/2026 — demo thanh lý trên HĐ ACTIVE (cùng kỳ với Vũ Minh Hiếu) */
+            'seed_unpaid_period_starts' => ['2026-03-01'],
         ],
         [
             'full_name' => 'Đỗ Minh Đức',
@@ -133,12 +134,9 @@ class OrgSeeder extends Seeder
             'date_of_birth' => '2002-07-31',
             'address' => 'Hà Nội',
             /**
-             * HĐ TERMINATED phòng 501: bám sát pipeline thanh lý EDA thật.
-             * - Handover trả phòng (OUT) + snapshot chỉ số đồng hồ tháng cuối (lấy từ MeterReading thực tế).
-             * - Hóa đơn các kỳ tới trước tháng kết thúc đã thanh toán (Payment + Receipt PDF).
-             * - Hóa đơn thanh lý (is_termination) qua TerminationReconciliationService → cấn trừ cọc tăng paid_amount
-             *   (KHÔNG sinh Payment cho phần cấn trừ — đúng pipeline thực tế); nếu dư cọc → RefundReceipt.
-             * - Demo tự bấm mark-paid + sinh PDF hoàn cọc để có sẵn artifact UI.
+             * HĐ TERMINATED phòng 501: bàn giao + chỉ số tháng cuối (giống pipeline thật), các kỳ trước đã thanh toán.
+             * Không seed sẵn hóa đơn is_termination / reconcile — để demo thanh lý trực tiếp trên HĐ ACTIVE có nợ
+             * (Vũ Minh Hiếu, Nguyễn Đình Tuấn — nợ tháng 3/2026). Cuối seed có phiếu hoàn cọc đã chi + PDF cho HĐ này (phòng 501).
              */
             'seed_deposit_refund_demo' => true,
         ],
@@ -681,10 +679,10 @@ class OrgSeeder extends Seeder
                     $cutoffDate = Carbon::parse('2026-03-31');
                     $isActiveRoom = in_array($room->id, $occupiedRoomIds);
 
-                    // Phòng 501: HĐ ENDED 10/2025 → 3/2026 cho Đỗ Minh Đức (profile cuối PRIMARY_DEMO_TENANTS), có bàn giao trả phòng
-                    $isEndedDemoRoom501 = $org->name === 'test' && (string) $room->code === '501';
+                    // Phòng 501: HĐ TERMINATED 10/2025 → 3/2026 cho Đỗ Minh Đức (profile cuối PRIMARY_DEMO_TENANTS), có bàn giao trả phòng
+                    $isTerminatedDemoRoom501 = $org->name === 'test' && (string) $room->code === '501';
 
-                    if ($isEndedDemoRoom501) {
+                    if ($isTerminatedDemoRoom501) {
                         $endedProfile = self::PRIMARY_DEMO_TENANTS[count(self::PRIMARY_DEMO_TENANTS) - 1];
                         $this->createContractWithInvoices(
                             $org,
@@ -692,7 +690,7 @@ class OrgSeeder extends Seeder
                             $ownerId,
                             Carbon::parse('2025-10-01')->startOfMonth(),
                             Carbon::parse('2026-03-31')->endOfMonth(),
-                            'ENDED',
+                            ContractStatus::TERMINATED->value,
                             $meters,
                             $propertyStaffId,
                             $propertyMonthlyUsage,
@@ -714,7 +712,7 @@ class OrgSeeder extends Seeder
                         ? 0
                         : rand(1, 2);
 
-                    // 1. Ended Contracts
+                    // 1. Terminated Contracts
                     for ($k = 0; $k < $numEndedContracts; $k++) {
                         if ($currentDate->gt($cutoffDate->copy()->subMonths(6))) {
                             break;
@@ -724,7 +722,7 @@ class OrgSeeder extends Seeder
                         $endDate = $currentDate->copy()->addMonths($duration);
 
                         $this->createContractWithInvoices(
-                            $org, $room, $ownerId, $currentDate, $endDate, 'ENDED', $meters, $propertyStaffId, $propertyMonthlyUsage
+                            $org, $room, $ownerId, $currentDate, $endDate, ContractStatus::TERMINATED->value, $meters, $propertyStaffId, $propertyMonthlyUsage
                         );
 
                         $currentDate = $endDate->copy()->addMonths(1)->startOfMonth();
@@ -759,6 +757,8 @@ class OrgSeeder extends Seeder
                 }
             }
         }
+
+        $this->seedDomMinhDuc501TerminationRefundDemo();
 
         $this->command->info("\n================================");
         $this->command->info('📊 TỔNG HỢP DỮ LIỆU ĐÃ SEED');
@@ -824,7 +824,9 @@ class OrgSeeder extends Seeder
         $baseRent = $room->base_price ?: 5000000;
         $property = $room->property;
         $totalRentForDeposit = $baseRent + $fixedServicesFee;
-        $depositAmount = $totalRentForDeposit * ($property->default_deposit_months ?? 1);
+        $depositMonths = (int) ($property->default_deposit_months ?? 1);
+        $depositMonths = max(1, min(24, $depositMonths <= 0 ? 1 : $depositMonths));
+        $depositAmount = $totalRentForDeposit * $depositMonths;
 
         $billingCycleMonths = 1;
         if ($fixedPrimaryTenant !== null && isset($fixedPrimaryTenant['seed_billing_cycle_months'])) {
@@ -841,10 +843,9 @@ class OrgSeeder extends Seeder
         $billingCycleNormalized = (string) $billingCycleMonths;
 
         // HĐ demo (Đỗ Minh Đức) đi qua pipeline thanh lý EDA thật → status cuối là TERMINATED.
-        // HĐ ENDED không-demo giữ trạng thái 'ENDED' (lịch sử kết thúc tự nhiên trước seed pipeline).
-        $isDemoTermination = $status === 'ENDED' && ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false);
-        $effectiveStatus = $isDemoTermination ? ContractStatus::TERMINATED->value : $status;
-        $isEndedLike = in_array($effectiveStatus, ['ENDED', ContractStatus::TERMINATED->value], true);
+        $isDemoTermination = $status === ContractStatus::TERMINATED->value && ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false);
+        $effectiveStatus = $status;
+        $isEndedLike = $effectiveStatus === ContractStatus::TERMINATED->value;
 
         $contract = Contract::factory()->create([
             'org_id' => $room->org_id,
@@ -860,6 +861,7 @@ class OrgSeeder extends Seeder
             'fixed_services_fee' => $fixedServicesFee,
             'total_rent' => $totalRentForDeposit,
             'deposit_amount' => $depositAmount,
+            'deposit_months' => $depositMonths,
             'deposit_status' => match (true) {
                 $effectiveStatus === 'ACTIVE' => DepositStatus::HELD,
                 $isDemoTermination => DepositStatus::HELD,
@@ -1137,7 +1139,7 @@ class OrgSeeder extends Seeder
             $total = DB::table('invoice_items')->where('invoice_id', $invoice->id)->sum('amount');
             $invoice->update([
                 'total_amount' => $total,
-                'paid_amount'  => 0,
+                'paid_amount' => 0,
             ]);
 
             // --- Generate Physical Invoice PDF ---
@@ -1152,9 +1154,9 @@ class OrgSeeder extends Seeder
             // Tháng hiện tại quá due_date mà chưa trả → OVERDUE
             // Tháng hiện tại chưa đến hạn → giữ ISSUED
             $tenantMember = $contract->members()->where('role', 'TENANT')->first();
-            $payerUserId  = $tenantMember?->user_id ?? $ownerId;
+            $payerUserId = $tenantMember?->user_id ?? $ownerId;
 
-            $due       = $invoice->due_date ? Carbon::parse($invoice->due_date) : null;
+            $due = $invoice->due_date ? Carbon::parse($invoice->due_date) : null;
             $isPastDue = $due && $due->isPast();
 
             if ($isEndedLike || $tempDate->lt(now()->startOfMonth())) {
@@ -1186,11 +1188,13 @@ class OrgSeeder extends Seeder
 
         $this->applySeedUnpaidRentTail($contract, $fixedPrimaryTenant, $status, $org, $ownerId);
 
-        if ($isDemoTermination) {
-            $this->seedTerminationFinalInvoiceAndReconcile($contract, $ownerId, $endDate);
-        } else {
+        // HĐ demo thanh lý (501): không seedTerminationFinalInvoiceAndReconcile — tránh hóa đơn is_termination;
+        // demo thanh lý chạy tay qua UI trên HĐ ACTIVE có nợ tháng 3/2026 (Vũ Minh Hiếu, Nguyễn Đình Tuấn).
+        if (! $isDemoTermination) {
             $this->seedDepositRefundReceiptIfDemo($contract, $fixedPrimaryTenant, $status, $org);
         }
+
+        $this->seedContractTimeline($contract->fresh(), $ownerId, $startDate, $endDate, $effectiveStatus, $isDemoTermination);
 
         return $contract;
     }
@@ -1258,7 +1262,8 @@ class OrgSeeder extends Seeder
     }
 
     /**
-     * Hóa đơn quyết toán thanh lý (is_termination) + FIFO cấn trừ cọc — sinh RefundReceipt như luồng EDA thật.
+     * Hóa đơn quyết toán thanh lý (is_termination) + FIFO cấn trừ cọc — sinh RefundReceipt / FPR như luồng EDA thật.
+     * (Hiện không gọi từ seed phòng 501 — giữ method nếu cần tái bật hoặc tham chiếu.)
      */
     private function seedTerminationFinalInvoiceAndReconcile(Contract $contract, string $ownerId, Carbon $endDate): void
     {
@@ -1334,6 +1339,223 @@ class OrgSeeder extends Seeder
     }
 
     /**
+     * Backfill contract_status_histories cho mỗi hợp đồng demo: do `DatabaseSeeder` chạy với
+     * `WithoutModelEvents`, observer `ContractObserver` không kích hoạt → bảng timeline trống.
+     * Hàm này chèn thẳng các milestone (CONTRACT_CREATED, SIGNATURE, STATUS_CHANGE, …) qua DB
+     * facade, kèm timestamp rải đều giữa start_date và end_date để timeline trông tự nhiên.
+     *
+     * Đỗ Minh Đức (demo termination) sẽ có thêm chuỗi: handover → final invoice → reconcile →
+     * (kịch B: TERMINATED + SETTLEMENT_PAYMENT_REQUESTED; kịch A/C: SETTLEMENT_RESOLVED) — không còn
+     * bước STATUS PENDING_SETTLEMENT (luồng cũ đã bỏ trên bản ghi hợp đồng).
+     */
+    private function seedContractTimeline(
+        Contract $contract,
+        string $ownerId,
+        Carbon $startDate,
+        Carbon $endDate,
+        string $effectiveStatus,
+        bool $isDemoTermination,
+    ): void {
+        // Reset toàn bộ timeline cũ để tránh trùng (listener thật có thể đã chèn 1 vài dòng
+        // khi seedTerminationFinalInvoiceAndReconcile gọi event()).
+        DB::table('contract_status_histories')
+            ->where('contract_id', $contract->id)
+            ->delete();
+
+        $entries = [];
+
+        $signedAt = $startDate->copy()->subDays(7);
+
+        // Mọi hợp đồng đều bắt đầu bằng CONTRACT_CREATED → ký → kích hoạt.
+        $entries[] = [
+            'event_type' => 'CONTRACT_CREATED',
+            'from_status' => null,
+            'to_status' => 'DRAFT',
+            'notes' => 'Hợp đồng được khởi tạo trên hệ thống.',
+            'payload' => null,
+            'at' => $startDate->copy()->subDays(14),
+        ];
+
+        $entries[] = [
+            'event_type' => 'STATUS_CHANGE',
+            'from_status' => 'DRAFT',
+            'to_status' => 'PENDING_SIGNATURE',
+            'notes' => 'Hợp đồng được gửi cho khách ký.',
+            'payload' => null,
+            'at' => $startDate->copy()->subDays(10),
+        ];
+
+        $entries[] = [
+            'event_type' => 'SIGNATURE_TENANT',
+            'from_status' => 'PENDING_SIGNATURE',
+            'to_status' => 'PENDING_SIGNATURE',
+            'notes' => 'Khách thuê đã ký xác nhận hợp đồng.',
+            'payload' => ['role' => 'tenant'],
+            'at' => $signedAt,
+        ];
+
+        $entries[] = [
+            'event_type' => 'SIGNATURE_MANAGER',
+            'from_status' => 'PENDING_SIGNATURE',
+            'to_status' => 'PENDING_SIGNATURE',
+            'notes' => 'Quản lý đã ký xác nhận hợp đồng.',
+            'payload' => ['role' => 'manager'],
+            'at' => $signedAt->copy()->addHours(2),
+        ];
+
+        $entries[] = [
+            'event_type' => 'STATUS_CHANGE',
+            'from_status' => 'PENDING_SIGNATURE',
+            'to_status' => 'PENDING_PAYMENT',
+            'notes' => 'Khách đã ký xác nhận, chờ thanh toán cọc + tiền phòng.',
+            'payload' => null,
+            'at' => $signedAt->copy()->addHours(3),
+        ];
+
+        $entries[] = [
+            'event_type' => 'STATUS_CHANGE',
+            'from_status' => 'PENDING_PAYMENT',
+            'to_status' => 'ACTIVE',
+            'notes' => 'Thanh toán được xác nhận. Hợp đồng bắt đầu hiệu lực.',
+            'payload' => null,
+            'at' => $startDate->copy(),
+        ];
+
+        if ($isDemoTermination || $effectiveStatus === ContractStatus::TERMINATED->value) {
+            $finalInvoice = Invoice::query()
+                ->where('contract_id', $contract->id)
+                ->where('is_termination', true)
+                ->first();
+            $handover = Handover::query()->where('contract_id', $contract->id)->first();
+            $refund = RefundReceipt::query()->where('contract_id', $contract->id)->first();
+            $terminationMeta = is_array(($contract->meta ?? [])['termination_settlement'] ?? null)
+                ? $contract->meta['termination_settlement']
+                : [];
+            $scenario = $terminationMeta['scenario'] ?? null;
+            $fpr = FinalPaymentRequest::query()
+                ->where('contract_id', $contract->id)
+                ->orderByDesc('created_at')
+                ->first();
+            $scenarioB = $scenario === 'B'
+                || ($scenario === null && $fpr && round((float) $fpr->amount_due, 2) > 0.02);
+
+            $entries[] = [
+                'event_type' => 'STATUS_CHANGE',
+                'from_status' => 'ACTIVE',
+                'to_status' => 'PENDING_TERMINATION',
+                'notes' => 'Bắt đầu pipeline thanh lý hợp đồng theo thỏa thuận.',
+                'payload' => null,
+                'at' => $endDate->copy()->subDays(5),
+            ];
+
+            if ($handover) {
+                $entries[] = [
+                    'event_type' => 'HANDOVER_SUBMITTED',
+                    'from_status' => 'PENDING_TERMINATION',
+                    'to_status' => 'PENDING_TERMINATION',
+                    'notes' => 'Đã hoàn tất biên bản bàn giao trả phòng.',
+                    'payload' => ['handover_id' => $handover->id, 'id' => $handover->id],
+                    'at' => $endDate->copy()->subDays(3),
+                ];
+            }
+
+            if ($finalInvoice) {
+                $entries[] = [
+                    'event_type' => 'FINAL_INVOICE_GENERATED',
+                    'from_status' => 'PENDING_TERMINATION',
+                    'to_status' => 'PENDING_TERMINATION',
+                    'notes' => 'Đã phát hành hóa đơn thanh lý cuối.',
+                    'payload' => [
+                        'invoice_id' => $finalInvoice->id,
+                        'total_amount' => (string) $finalInvoice->total_amount,
+                        'id' => $finalInvoice->id,
+                    ],
+                    'at' => $endDate->copy()->subDays(2),
+                ];
+
+                $entries[] = [
+                    'event_type' => 'DEBT_RECONCILIATION',
+                    'from_status' => 'PENDING_TERMINATION',
+                    'to_status' => 'PENDING_TERMINATION',
+                    'notes' => 'Bắt đầu cấn trừ tiền cọc theo FIFO với các hóa đơn còn nợ.',
+                    'payload' => [
+                        'final_invoice_id' => $finalInvoice->id,
+                        'id' => $finalInvoice->id,
+                    ],
+                    'at' => $endDate->copy()->subDays(1),
+                ];
+            }
+
+            $entries[] = [
+                'event_type' => 'STATUS_CHANGE',
+                'from_status' => 'PENDING_TERMINATION',
+                'to_status' => ContractStatus::TERMINATED->value,
+                'notes' => $scenarioB
+                    ? 'Kết thúc hợp đồng; còn nợ quyết toán qua yêu cầu thanh toán nốt (FPR).'
+                    : 'Hoàn tất quyết toán thanh lý. Hợp đồng kết thúc.',
+                'payload' => null,
+                'at' => $endDate->copy()->subDays(1)->addHours(2),
+            ];
+
+            if ($scenarioB && $fpr) {
+                $entries[] = [
+                    'event_type' => 'SETTLEMENT_PAYMENT_REQUESTED',
+                    'from_status' => ContractStatus::TERMINATED->value,
+                    'to_status' => ContractStatus::TERMINATED->value,
+                    'notes' => 'Đã sinh yêu cầu thanh toán nốt sau khi cấn trừ cọc.',
+                    'payload' => [
+                        'final_payment_request_id' => $fpr->id,
+                        'amount_due' => (string) $fpr->amount_due,
+                        'invoice_id' => $fpr->invoice_id,
+                        'id' => $fpr->id,
+                    ],
+                    'at' => $endDate->copy()->subDays(1)->addHours(3),
+                ];
+            }
+
+            if (! $scenarioB) {
+                $entries[] = [
+                    'event_type' => 'SETTLEMENT_RESOLVED',
+                    'from_status' => ContractStatus::TERMINATED->value,
+                    'to_status' => ContractStatus::TERMINATED->value,
+                    'notes' => $refund
+                        ? 'Đã quyết toán hoàn cọc cho khách.'
+                        : 'Quyết toán thanh lý hoàn tất.',
+                    'payload' => array_filter([
+                        'refund_receipt_id' => $refund?->id,
+                        'settlement_invoice_id' => $finalInvoice?->id,
+                        'id' => $refund?->id ?? $finalInvoice?->id ?? $contract->id,
+                    ]),
+                    'at' => $endDate->copy()->subHours(2),
+                ];
+            }
+        }
+
+        $rows = [];
+        foreach ($entries as $entry) {
+            /** @var Carbon $at */
+            $at = $entry['at'];
+            $rows[] = [
+                'id' => (string) Str::uuid(),
+                'org_id' => $contract->org_id,
+                'contract_id' => $contract->id,
+                'from_status' => $entry['from_status'],
+                'to_status' => $entry['to_status'],
+                'event_type' => $entry['event_type'],
+                'changed_by_user_id' => $ownerId,
+                'notes' => $entry['notes'],
+                'payload' => $entry['payload'] ? json_encode($entry['payload'], JSON_UNESCAPED_UNICODE) : null,
+                'created_at' => $at->copy(),
+                'updated_at' => $at->copy(),
+            ];
+        }
+
+        if ($rows) {
+            DB::table('contract_status_histories')->insert($rows);
+        }
+    }
+
+    /**
      * Demo: sau khi có RefundReceipt từ reconcile — mô phỏng BQL đã chi hoàn cọc (paid_at + PDF) để tenant / BQL có file ngay sau seed.
      */
     private function seedDemoTerminationRefundReceiptPaidWithPdf(Contract $contract, string $ownerId, Carbon $endDate): void
@@ -1365,7 +1587,7 @@ class OrgSeeder extends Seeder
     }
 
     /**
-     * Fallback: RefundReceipt tay (không qua reconcile). HĐ demo Đỗ Minh Đức dùng seedTerminationFinalInvoiceAndReconcile thay cho method này.
+     * Fallback: RefundReceipt tay (không qua reconcile). HĐ demo phòng 501 không còn gọi reconcile trong seed.
      */
     private function seedDepositRefundReceiptIfDemo(
         Contract $contract,
@@ -1373,7 +1595,7 @@ class OrgSeeder extends Seeder
         string $status,
         Org $org,
     ): void {
-        if ($status !== 'ENDED' || ! ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false)) {
+        if ($status !== ContractStatus::TERMINATED->value || ! ($fixedPrimaryTenant['seed_deposit_refund_demo'] ?? false)) {
             return;
         }
 
@@ -1476,14 +1698,14 @@ class OrgSeeder extends Seeder
                 }
             }
 
-            $due       = $inv->due_date ? Carbon::parse($inv->due_date) : null;
+            $due = $inv->due_date ? Carbon::parse($inv->due_date) : null;
             $newStatus = ($due && $due->isPast()) ? 'OVERDUE' : 'ISSUED';
             $inv->update(['status' => $newStatus, 'paid_amount' => 0]);
         }
 
         // Hóa đơn đã thanh toán: đảm bảo có Payment + Receipt (phòng hờ edge case)
         $tenantMember = $contract->members()->where('role', 'TENANT')->first();
-        $payerUserId  = $tenantMember?->user_id ?? $ownerId;
+        $payerUserId = $tenantMember?->user_id ?? $ownerId;
 
         foreach ($payInvoices as $inv) {
             if ($inv->status !== 'PAID') {
@@ -1517,27 +1739,27 @@ class OrgSeeder extends Seeder
 
         try {
             $payment = Payment::create([
-                'id'                   => (string) Str::uuid(),
-                'org_id'               => $org->id,
-                'property_id'          => $invoice->property_id,
-                'payer_user_id'        => $payerUserId ?? $ownerId,
-                'received_by_user_id'  => $ownerId,
-                'method'               => 'CASH',
-                'amount'               => $total,
-                'reference'            => 'SEED-'.Str::substr((string) $invoice->id, 0, 8),
-                'note'                 => 'OrgSeeder — thanh toán demo theo hóa đơn',
-                'received_at'          => $invoice->issue_date,
-                'status'               => 'APPROVED',
-                'approved_by_user_id'  => $ownerId,
-                'approved_at'          => $invoice->issue_date,
+                'id' => (string) Str::uuid(),
+                'org_id' => $org->id,
+                'property_id' => $invoice->property_id,
+                'payer_user_id' => $payerUserId ?? $ownerId,
+                'received_by_user_id' => $ownerId,
+                'method' => 'CASH',
+                'amount' => $total,
+                'reference' => 'SEED-'.Str::substr((string) $invoice->id, 0, 8),
+                'note' => 'OrgSeeder — thanh toán demo theo hóa đơn',
+                'received_at' => $invoice->issue_date,
+                'status' => 'APPROVED',
+                'approved_by_user_id' => $ownerId,
+                'approved_at' => $invoice->issue_date,
             ]);
 
             PaymentAllocation::create([
-                'id'         => (string) Str::uuid(),
-                'org_id'     => $org->id,
+                'id' => (string) Str::uuid(),
+                'org_id' => $org->id,
                 'payment_id' => $payment->id,
                 'invoice_id' => $invoice->id,
-                'amount'     => $total,
+                'amount' => $total,
             ]);
 
             // Sổ cái kép (giống RecordPaymentLedger listener)
@@ -1548,11 +1770,128 @@ class OrgSeeder extends Seeder
 
             // CHỈ sau khi Receipt đã tồn tại mới cập nhật Invoice → PAID
             $invoice->update([
-                'status'      => 'PAID',
+                'status' => 'PAID',
                 'paid_amount' => $total,
             ]);
         } catch (\Exception $e) {
             $this->command->warn('  - seedPaymentAndReceipt: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Demo org `test`: HĐ TERMINATED phòng 501 (Đỗ Minh Đức) — phiếu hoàn cọc đã chi + PDF + meta kịch A.
+     * Bổ sung sau vòng seed phòng vì `createContractWithInvoices` bỏ qua `seedDepositRefundReceiptIfDemo` khi `isDemoTermination`.
+     */
+    private function seedDomMinhDuc501TerminationRefundDemo(): void
+    {
+        $org = Org::query()->where('name', 'test')->first();
+        if (! $org) {
+            return;
+        }
+
+        $contract = Contract::withoutGlobalScope('org_id')
+            ->where('org_id', $org->id)
+            ->where('status', ContractStatus::TERMINATED)
+            ->whereHas('room', fn ($q) => $q->where('code', '501'))
+            ->first();
+
+        if (! $contract) {
+            return;
+        }
+
+        $refund = RefundReceipt::query()->where('contract_id', $contract->id)->first();
+        if ($refund?->paid_at) {
+            return;
+        }
+
+        LedgerEntry::withoutGlobalScope('org_id')
+            ->where('org_id', $org->id)
+            ->where('ref_type', LedgerEntry::REF_TYPE_TERMINATION_DEPOSIT_FORFEIT)
+            ->where('meta->contract_id', $contract->id)
+            ->delete();
+
+        $owner = User::query()
+            ->where('org_id', $org->id)
+            ->whereHas('roles', fn ($q) => $q->where('name', 'Owner'))
+            ->orderBy('created_at')
+            ->first();
+        $ownerId = $owner?->id ?? $contract->created_by_user_id;
+        if (! $ownerId) {
+            $this->command->warn('  - seedDomMinhDuc501TerminationRefundDemo: không tìm thấy Owner để gán paid_by.');
+
+            return;
+        }
+
+        $paidAt = $contract->terminated_at ?? $contract->end_date ?? now();
+
+        if (! $refund) {
+            $amount = round(max(0.0, (float) $contract->deposit_amount), 2);
+            if ($amount <= 0.02) {
+                return;
+            }
+
+            $refund = RefundReceipt::create([
+                'org_id' => $org->id,
+                'contract_id' => $contract->id,
+                'amount' => $amount,
+                'meta' => [
+                    'note' => 'OrgSeeder — phiếu hoàn cọc sau quyết toán (demo Đỗ Minh Đức, phòng 501).',
+                    'seed_demo' => true,
+                ],
+            ]);
+
+            $meta = is_array($contract->meta ?? null) ? $contract->meta : [];
+            $termination = is_array($meta['termination_settlement'] ?? null) ? $meta['termination_settlement'] : [];
+            $meta['termination_settlement'] = array_merge($termination, [
+                'scenario' => 'A',
+                'refund_receipt_id' => $refund->id,
+                'refund_amount' => (string) $amount,
+                'seed_demo' => true,
+            ]);
+
+            $contract->forceFill([
+                'refunded_amount' => $amount,
+                'forfeited_amount' => 0,
+                'deposit_status' => DepositStatus::REFUND_PENDING,
+                'meta' => $meta,
+            ])->save();
+        }
+
+        $refund = RefundReceipt::query()->where('contract_id', $contract->id)->first();
+        if (! $refund) {
+            return;
+        }
+
+        try {
+            $refund->forceFill([
+                'paid_at' => Carbon::parse($paidAt)->endOfDay(),
+                'paid_by_user_id' => $ownerId,
+                'payout_method' => RefundReceipt::PAYOUT_METHOD_TRANSFER,
+                'payout_reference' => 'SEED-DEMO-HOAN-COC-501',
+            ])->save();
+
+            $contract->refresh();
+            $meta = is_array($contract->meta ?? null) ? $contract->meta : [];
+            $termination = is_array($meta['termination_settlement'] ?? null) ? $meta['termination_settlement'] : [];
+            $meta['termination_settlement'] = array_merge($termination, [
+                'scenario' => 'A',
+                'refund_receipt_id' => $refund->id,
+                'refund_amount' => (string) $refund->amount,
+                'seed_demo' => true,
+            ]);
+
+            $contract->forceFill([
+                'deposit_status' => DepositStatus::REFUNDED,
+                'refunded_amount' => (float) $refund->amount,
+                'forfeited_amount' => 0,
+                'meta' => $meta,
+            ])->save();
+
+            app(ReceiptService::class)->generateForRefundReceipt($refund->fresh());
+
+            $this->command->line('  └─ <fg=green>Đã seed phiếu hoàn cọc đã chi + PDF (demo Đỗ Minh Đức — phòng 501)</>.');
+        } catch (\Throwable $e) {
+            $this->command->warn('  - seedDomMinhDuc501TerminationRefundDemo: '.$e->getMessage());
         }
     }
 

@@ -42,6 +42,7 @@ import { invoiceKeys, usePropertyInvoices } from '@/PropertyScope/features/billi
 import { formatCurrency, isUuid } from '@/lib/utils';
 import type { Payment } from '@/PropertyScope/features/billing/types';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
 
 function formatHandoverDate(iso?: string | null): string {
   if (!iso) return '—';
@@ -152,12 +153,13 @@ function contractStatusLabel(status?: string | null): string {
   const map: Record<string, string> = {
     ACTIVE: 'Hiệu lực',
     PENDING_TERMINATION: 'Chờ thanh lý',
+    PENDING_SETTLEMENT: 'Chờ quyết toán nợ',
     EXPIRED: 'Hết hạn',
     TERMINATED: 'Đã thanh lý',
     ENDED: 'Đã kết thúc',
     CANCELLED: 'Đã hủy',
   };
-  return map[s] ?? status ?? '—';
+  return map[s] ?? contractStatusLabelVi(status);
 }
 
 function uniquePaymentsFromInvoice(

@@ -16,11 +16,17 @@
             width: 100%;
             padding: 20px;
         }
-        .header {
-            text-align: center;
+        .pdf-banner {
+            width: 100%;
             margin-bottom: 30px;
             border-bottom: 2px solid #3b82f6;
             padding-bottom: 15px;
+        }
+        .pdf-banner .header {
+            text-align: center;
+            margin: 0;
+            border-bottom: none;
+            padding-bottom: 0;
         }
         .header h1 {
             color: #3b82f6;
@@ -99,9 +105,18 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>BIÊN LAI THANH TOÁN</h1>
-            <p>Số: {{ $reference }} | Ngày: {{ $generated_at->format('d/m/Y') }}</p>
+        <div class="pdf-banner">
+            <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                    <td style="width:88px; vertical-align:top; padding-right:10px;">@include('pdf.partials.hostech-logo')</td>
+                    <td style="vertical-align:middle;">
+                        <div class="header">
+                            <h1>BIÊN LAI THANH TOÁN</h1>
+                            <p>Số: {{ $reference }} | Ngày: {{ $generated_at->format('d/m/Y') }}</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <div class="info-section">

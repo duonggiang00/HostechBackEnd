@@ -47,6 +47,13 @@ const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
     dot: 'bg-amber-500 dark:bg-amber-400',
     border: 'border-amber-200 dark:border-amber-500/20',
   },
+  PENDING_SETTLEMENT: {
+    label: 'Chờ quyết toán nợ',
+    bg: 'bg-rose-50 dark:bg-rose-500/10',
+    text: 'text-rose-800 dark:text-rose-300',
+    dot: 'bg-rose-500 dark:bg-rose-400',
+    border: 'border-rose-200 dark:border-rose-500/20',
+  },
   ACTIVE: {
     label: 'Hiệu lực',
     bg: 'bg-emerald-50 dark:bg-emerald-500/10',
@@ -69,7 +76,7 @@ const STATUS_CONFIG: Record<ContractStatus, StatusConfig> = {
     border: 'border-slate-200 dark:border-slate-500/20',
   },
   TERMINATED: {
-    label: 'Đã thanh lý',
+    label: 'Đã kết thúc',
     bg: 'bg-red-50 dark:bg-red-500/10',
     text: 'text-red-600 dark:text-red-400',
     dot: 'bg-red-400 dark:bg-red-500',
@@ -195,9 +202,12 @@ export const ContractTable: React.FC<ContractTableProps> = ({
             <SelectItem value="DRAFT" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Bản nháp</SelectItem>
             <SelectItem value="PENDING_SIGNATURE" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Chờ ký</SelectItem>
             <SelectItem value="PENDING_PAYMENT" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Chờ thanh toán</SelectItem>
+            <SelectItem value="PENDING_TERMINATION" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Chờ thanh lý</SelectItem>
+            <SelectItem value="PENDING_SETTLEMENT" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Chờ quyết toán nợ</SelectItem>
+            <SelectItem value="EXPIRED" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Hết hạn</SelectItem>
             <SelectItem value="ACTIVE" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Hiệu lực</SelectItem>
             <SelectItem value="ENDED" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Đã kết thúc</SelectItem>
-            <SelectItem value="TERMINATED" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Đã thanh lý</SelectItem>
+            <SelectItem value="TERMINATED" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Đã kết thúc</SelectItem>
             <SelectItem value="CANCELLED" className="rounded-md text-sm font-medium py-2 dark:text-gray-200 dark:hover:bg-gray-700">Đã huỷ</SelectItem>
           </SelectContent>
         </Select>

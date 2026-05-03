@@ -12,6 +12,7 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Traits\SystemLoggable;
+use Carbon\Carbon;
 use Database\Factories\ContractFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -126,6 +127,37 @@ class Contract extends Model implements HasMedia
             ->orderBy('created_at');
     }
 
+    /**
+     * Số tháng cọc dùng cho API/UI/tài liệu: tin cột `deposit_months` chỉ khi khớp với
+     * (total_rent × tháng); nếu lệch (seed cũ, import) thì suy từ deposit_amount / total_rent.
+     */
+    public function effectiveDepositMonths(): int
+    {
+        $deposit = (float) $this->deposit_amount;
+        $totalRent = (float) ($this->total_rent ?? 0);
+        $basis = $totalRent > 0.009
+            ? $totalRent
+            : (float) $this->rent_price + (float) ($this->fixed_services_fee ?? 0);
+
+        if ($basis <= 0.009 || $deposit <= 0.009) {
+            return max(0, (int) ($this->deposit_months ?? 0));
+        }
+
+        $stored = (int) ($this->deposit_months ?? 0);
+        $tolerance = max(5000.0, abs($deposit) * 0.0005);
+
+        if ($stored > 0) {
+            $expected = $basis * $stored;
+            if (abs($deposit - $expected) <= $tolerance) {
+                return min(24, max(1, $stored));
+            }
+        }
+
+        $inferred = (int) round($deposit / $basis);
+
+        return $inferred < 1 ? 0 : min(24, $inferred);
+    }
+
     public function room(): BelongsTo
     {
         return $this->belongsTo(Room::class);
@@ -167,14 +199,53 @@ class Contract extends Model implements HasMedia
     }
 
     /**
-     * Kiểm tra xem hợp đồng có đang kết thúc sớm không (Tenant hủy trước hạn).
+     * Ngày thanh lý có trước ngày hết hạn đã thỏa thuận hay không (chuẩn nghiệp vụ).
+     *
+     * @param  string|null  $terminationDate  Y-m-d — ngày kết thúc thực tế; null thì dùng end_date hiện tại (sau pipeline = ngày thanh lý).
+     * @param  string|null  $scheduledEndDate  Y-m-d — ngày hết hạn HĐ gốc; null thì đọc meta `scheduled_end_date` hoặc end_date (hợp đồng chưa thanh lý).
+     */
+    public function isTerminationBeforeScheduledEnd(?string $terminationDate = null, ?string $scheduledEndDate = null): bool
+    {
+        $tz = config('app.timezone');
+        $schedRaw = $scheduledEndDate
+            ?? ($this->meta['termination_details']['scheduled_end_date'] ?? null);
+
+        if ($schedRaw === null && $this->end_date) {
+            $schedRaw = $this->end_date->format('Y-m-d');
+        }
+
+        if ($schedRaw === null) {
+            return false;
+        }
+
+        $termRaw = $terminationDate ?? $this->end_date?->format('Y-m-d');
+        if ($termRaw === null) {
+            return false;
+        }
+
+        $term = Carbon::parse($termRaw, $tz)->startOfDay();
+        $scheduled = Carbon::parse($schedRaw, $tz)->startOfDay();
+
+        return $term->lt($scheduled);
+    }
+
+    /**
+     * Tương thích ngược: sau khi thanh lý có meta `scheduled_end_date`, so sánh với end_date (= ngày thanh lý).
+     * Trước khi thanh lý (chưa có meta): coi như “hôm nay vẫn trước ngày kết thúc đã lên lịch”.
      */
     public function isEarlyTermination(): bool
     {
-        if (! $this->end_date) {
-            return false; // Hướng không hạn → không phải dời sớm
+        if ($this->meta['termination_details']['scheduled_end_date'] ?? null) {
+            return $this->isTerminationBeforeScheduledEnd();
         }
 
-        return now()->lt($this->end_date);
+        if (! $this->end_date) {
+            return false;
+        }
+
+        $tz = config('app.timezone');
+
+        return now()->copy()->timezone($tz)->startOfDay()
+            ->lt($this->end_date->copy()->timezone($tz)->startOfDay());
     }
 }

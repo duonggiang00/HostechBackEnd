@@ -209,11 +209,6 @@ export default function PropertyInvoicesPage() {
                          </td>
                          <td className="py-4 px-6">
                             <InvoiceStatusBadge status={inv.status} />
-                            {inv.is_termination && (
-                              <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400">
-                                Thanh lý
-                              </span>
-                            )}
                          </td>
                       </tr>
                    ))}

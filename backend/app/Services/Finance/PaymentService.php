@@ -43,6 +43,14 @@ class PaymentService
         $query = QueryBuilder::for(Payment::class)
             ->allowedFilters([
                 AllowedFilter::exact('property_id'),
+                AllowedFilter::callback('contract_id', function ($query, $value): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $query->whereHas('allocations.invoice', function ($q) use ($value): void {
+                        $q->where('contract_id', $value);
+                    });
+                }),
                 AllowedFilter::exact('status'),
                 // Lọc "Chuyển khoản" gộp cả legacy TRANSFER + BANK_TRANSFER
                 AllowedFilter::callback('method', function ($query, $value): void {
@@ -56,7 +64,7 @@ class PaymentService
             ])
             ->allowedSorts(['received_at', 'amount', 'created_at', 'status'])
             ->defaultSort('-received_at')
-            ->with(['property', 'payer', 'receivedBy', 'allocations.invoice']);
+            ->with(['property', 'payer', 'receivedBy', 'allocations.invoice', 'receipt', 'proofReceipt']);
 
         $user = request()->user();
         $resolved = OrgContextResolver::resolveOrgId($user);
@@ -102,6 +110,7 @@ class PaymentService
             'approvedBy',
             'allocations.invoice',
             'receipt',
+            'proofReceipt',
         ])->find($id);
     }
 

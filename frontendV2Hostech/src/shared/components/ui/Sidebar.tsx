@@ -66,13 +66,21 @@ export default function Sidebar({
       >
         <div className={`flex items-center gap-3 ${isCollapsed ? 'mx-auto justify-center' : ''}`}>
           {isCollapsed ? (
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 shadow-sm transition-transform duration-200">
-              <span className="text-lg font-black tracking-tighter text-white">H</span>
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 transition-transform duration-200 ${
+                isDark ? 'ring-white/15' : 'ring-gray-200'
+              }`}
+            >
+              <img src="/hostech-logo.png" alt="Hostech" className="h-10 w-10 object-contain" width={40} height={40} />
             </div>
           ) : (
             <div className="flex items-center gap-3 px-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 shadow-lg shadow-brand-500/20">
-                <span className="text-xl font-black tracking-tighter text-white">H</span>
+              <div
+                className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-md ring-1 ${
+                  isDark ? 'ring-white/15 shadow-black/30' : 'ring-gray-200 shadow-gray-200/50'
+                }`}
+              >
+                <img src="/hostech-logo.png" alt="Hostech" className="h-14 w-14 object-contain" width={56} height={56} />
               </div>
               <div className="flex flex-col">
                 <h1

@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { AlertCircle, ArrowRight, Calendar, CheckCircle, FileSignature, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useMyContracts, MY_CONTRACTS_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import { echo } from '@/shared/utils/echo';
@@ -108,7 +109,7 @@ export default function PendingContractsPage() {
                   ) : (
                     <div className="inline-flex items-center gap-2 rounded-2xl bg-slate-100 px-3 py-1.5 text-xs font-black text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                       <AlertCircle className="h-4 w-4" />
-                      {contract.status}
+                      {contractStatusLabelVi(contract.status)}
                     </div>
                   )}
                   <h3 className="mt-3 text-lg font-black text-slate-950 dark:text-white">

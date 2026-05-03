@@ -232,7 +232,7 @@ export default function ContractListPage() {
     active: statusCounts?.ACTIVE ?? 0,
     pending: (statusCounts?.DRAFT ?? 0) + (statusCounts?.PENDING_SIGNATURE ?? 0) + (statusCounts?.PENDING_PAYMENT ?? 0),
     expiring: statusCounts?.expiring ?? 0,
-    ended: statusCounts?.ENDED ?? 0,
+    ended: (statusCounts?.ENDED ?? 0) + (statusCounts?.TERMINATED ?? 0),
   };
 
   return (

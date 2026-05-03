@@ -29,7 +29,7 @@ class ContractFactory extends Factory
             'org_id' => Org::factory(),
             'property_id' => Property::factory(),
             'room_id' => Room::factory(),
-            'status' => $this->faker->randomElement(['DRAFT', 'ACTIVE', 'ENDED', 'CANCELLED']),
+            'status' => $this->faker->randomElement(['DRAFT', 'ACTIVE', 'TERMINATED', 'CANCELLED']),
             'start_date' => $startDate,
             'end_date' => $this->faker->boolean(80) ? $endDate : null,
             'billing_cycle' => '1',

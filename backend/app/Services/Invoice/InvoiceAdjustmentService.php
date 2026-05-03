@@ -60,8 +60,8 @@ class InvoiceAdjustmentService
     public function createAdjustment(Invoice $invoice, array $data, User $user): InvoiceAdjustment
     {
         // Validate: chỉ cho phép adjustment trên hóa đơn ISSUED hoặc PENDING
-        if (! in_array($invoice->status, ['ISSUED', 'PENDING'])) {
-            abort(422, 'Chỉ có thể tạo khoản điều chỉnh cho hóa đơn ở trạng thái Đã phát hành (ISSUED) hoặc Chờ thanh toán (PENDING).');
+        if (! in_array($invoice->status, ['ISSUED', 'PENDING', 'PARTIAL', 'LATE', 'OVERDUE'], true)) {
+            abort(422, 'Chỉ có thể tạo khoản điều chỉnh cho hóa đơn ở trạng thái đang mở nợ (ISSUED, PENDING, PARTIAL, LATE, OVERDUE).');
         }
 
         return InvoiceAdjustment::create([

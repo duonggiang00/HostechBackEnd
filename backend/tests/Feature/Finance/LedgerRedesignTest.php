@@ -7,6 +7,7 @@ use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Contract\RefundReceipt;
+use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\Org;
@@ -20,7 +21,7 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Tests cho redesign Sổ cái 5 tab:
+ * Tests cho redesign Sổ cái (6 tab, gồm ghi nhận thu hồi cọc):
  * - GET /finance/cashflow-feed (UNION Payment IN + RefundReceipt OUT)
  * - GET /finance/ledger/summary (đổi semantic total_refunded + total_deposit_held)
  * - GET /finance/refund-receipts?filter[paid_only]=1
@@ -368,5 +369,44 @@ class LedgerRedesignTest extends TestCase
         $r->assertOk();
         $this->assertSame(1, $r->json('meta.total'));
         $this->assertSame(1_500_000.0, (float) $r->json('data.0.debt'));
+    }
+
+    public function test_ledger_deposit_forfeit_feed_lists_forfeit_rows(): void
+    {
+        [$org, $owner, $property, $room] = $this->setupOrgScope();
+
+        $contract = Contract::factory()->create([
+            'org_id' => $org->id,
+            'property_id' => $property->id,
+            'room_id' => $room->id,
+            'status' => ContractStatus::TERMINATED,
+            'deposit_amount' => 3_000_000,
+        ]);
+
+        LedgerEntry::create([
+            'org_id' => $org->id,
+            'ref_type' => LedgerEntry::REF_TYPE_TERMINATION_DEPOSIT_FORFEIT,
+            'ref_id' => (string) Str::uuid(),
+            'debit' => 500_000,
+            'credit' => 0,
+            'occurred_at' => now()->subDay(),
+            'meta' => [
+                'property_id' => $property->id,
+                'contract_id' => $contract->id,
+                'final_invoice_id' => (string) Str::uuid(),
+                'reference' => 'THU-HOI-COC-TEST',
+                'description' => 'Ghi nhận sổ: thu hồi cọc (test).',
+            ],
+        ]);
+
+        $response = $this->actingAs($owner)->getJson('/api/finance/ledger-deposit-forfeit-feed?per_page=10');
+        $response->assertOk();
+        $this->assertGreaterThanOrEqual(1, $response->json('meta.total'));
+        $this->assertSame(500_000.0, (float) $response->json('data.0.amount'));
+        $this->assertSame($contract->id, $response->json('data.0.contract_id'));
+
+        $filtered = $this->actingAs($owner)->getJson("/api/finance/ledger-deposit-forfeit-feed?filter[property_id]={$property->id}");
+        $filtered->assertOk();
+        $this->assertGreaterThanOrEqual(1, $filtered->json('meta.total'));
     }
 }

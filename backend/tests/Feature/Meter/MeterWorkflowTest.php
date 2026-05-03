@@ -5,11 +5,13 @@ namespace Tests\Feature\Meter;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Org\Org;
+use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Service\Service;
 use App\Services\Meter\MeterReadingService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class MeterWorkflowTest extends TestCase
@@ -116,5 +118,55 @@ class MeterWorkflowTest extends TestCase
         // Master Reading Value = 1000 + 60 = 1060
         $this->assertEquals(1060, $masterReading->reading_value, 'Master reading should re-aggregate to 1060');
         $this->assertEquals(60, $masterReading->consumption);
+    }
+
+    public function test_finalize_readings_approved_upgrades_submitted_same_period(): void
+    {
+        $org = Org::factory()->create();
+        $property = Property::factory()->create(['org_id' => $org->id]);
+        $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+        $electricService = Service::factory()->create([
+            'org_id' => $org->id,
+            'calc_mode' => 'PER_METER',
+        ]);
+
+        $roomMeter = Meter::factory()->create([
+            'room_id' => $room->id,
+            'property_id' => $property->id,
+            'org_id' => $org->id,
+            'is_master' => false,
+            'base_reading' => 100,
+            'service_id' => $electricService->id,
+            'type' => 'ELECTRIC',
+        ]);
+
+        $manager = User::factory()->create(['org_id' => $org->id]);
+        Role::firstOrCreate(['name' => 'Manager', 'guard_name' => 'web']);
+        $manager->assignRole('Manager');
+        $this->actingAs($manager);
+
+        MeterReading::factory()->create([
+            'org_id' => $org->id,
+            'meter_id' => $roomMeter->id,
+            'period_start' => '2025-06-01',
+            'period_end' => '2025-06-30',
+            'reading_value' => 200,
+            'status' => 'SUBMITTED',
+            'submitted_at' => now(),
+        ]);
+
+        $results = $this->service->finalizeReadingsApproved([
+            [
+                'meter_id' => $roomMeter->id,
+                'period_start' => '2025-06-01',
+                'period_end' => '2025-06-30',
+                'reading_value' => 220,
+            ],
+        ]);
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('APPROVED', $results[0]->fresh()->status);
+        $this->assertEquals(220, (int) $results[0]->reading_value);
     }
 }

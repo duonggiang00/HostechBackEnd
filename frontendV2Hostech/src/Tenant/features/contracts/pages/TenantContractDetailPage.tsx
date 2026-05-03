@@ -16,7 +16,9 @@ import {
   DoorOpen,
   ArrowRightLeft,
 } from 'lucide-react';
-import { useContract, useContractActions, CONTRACT_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useContract, useContractActions, useContractStatusHistories, CONTRACT_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
+import { ContractStatusTimeline } from '@/PropertyScope/features/contracts/components/ContractStatusTimeline';
 import { TenantRoomTransferModal } from '../components/TenantRoomTransferModal';
 import { TenantAddRoommateModal } from '../components/TenantAddRoommateModal';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
@@ -71,8 +73,9 @@ export default function TenantContractDetailPage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { data: contract, isLoading } = useContract(id);
+  const { data: tenantStatusHistories, isLoading: isLoadingTenantHistories } = useContractStatusHistories(id);
   const queryClient = useQueryClient();
-  const { signContract, rejectSignature, downloadDocument, requestTermination, removeContractMember } = useContractActions();
+  const { signContract, rejectSignature, downloadDocument, requestTermination, requestRenewal, removeContractMember } = useContractActions();
 
   // Listen for real-time status updates (especially PENDING_PAYMENT)
   useEffect(() => {
@@ -285,6 +288,27 @@ export default function TenantContractDetailPage() {
     setNoticeOpen(true);
   };
 
+  const handleRequestRenewal = () => {
+    const currentEnd = contract.end_date ? String(contract.end_date).slice(0, 10) : '';
+    const nextDate = window.prompt(
+      'Nhập ngày kết thúc mới (YYYY-MM-DD). Phải sau ngày kết thúc hiện tại.',
+      currentEnd || undefined,
+    );
+    if (!nextDate) return;
+
+    const reason = window.prompt('Lý do đề nghị gia hạn (không bắt buộc):') ?? undefined;
+
+    requestRenewal.mutate(
+      { id: contract.id, data: { requested_end_date: nextDate, reason: reason || undefined } },
+      {
+        onSuccess: () => toast.success('Đã gửi yêu cầu gia hạn. Ban quản lý sẽ xem xét sớm.'),
+        onError: (error: any) => {
+          toast.error(error?.response?.data?.message ?? 'Không thể gửi yêu cầu gia hạn.');
+        },
+      },
+    );
+  };
+
   const submitNoticeOfTermination = () => {
     if (!contract?.id) return;
     if (!noticeDate) {
@@ -347,6 +371,7 @@ export default function TenantContractDetailPage() {
               contract.status === 'PENDING_PAYMENT' ? 'bg-amber-500/15 text-amber-300' :
               contract.status === 'PENDING_SIGNATURE' ? 'bg-amber-500/15 text-amber-300' :
               contract.status === 'PENDING_TERMINATION' ? 'bg-amber-500/15 text-amber-300' :
+              contract.status === 'PENDING_SETTLEMENT' ? 'bg-amber-500/15 text-amber-300' :
               contract.status === 'ACTIVE' ? 'bg-emerald-500/15 text-emerald-300' :
               'bg-slate-500/15 text-slate-300'
             }`}>
@@ -354,7 +379,9 @@ export default function TenantContractDetailPage() {
               {contract.status === 'PENDING_PAYMENT' ? 'chờ thanh toán' :
                contract.status === 'PENDING_SIGNATURE' ? 'chờ ký điện tử' :
                contract.status === 'PENDING_TERMINATION' ? 'đã báo trả phòng, chờ thanh lý' :
-               contract.status === 'ACTIVE' ? 'đang có hiệu lực' : 'đã kết thúc'}
+               contract.status === 'PENDING_SETTLEMENT' ? 'chờ thanh toán nợ quyết toán' :
+               contract.status === 'ACTIVE' ? 'đang có hiệu lực' :
+               contractStatusLabelVi(contract.status).toLowerCase()}
             </div>
 
             {String(contract.status).toUpperCase() === 'ENDED' &&
@@ -385,6 +412,7 @@ export default function TenantContractDetailPage() {
             {contract.status === 'PENDING_SIGNATURE' ? 'Cần ký điện tử' :
              contract.status === 'PENDING_PAYMENT' ? 'Chờ thanh toán' :
              contract.status === 'PENDING_TERMINATION' ? 'Thông báo trả phòng' :
+             contract.status === 'PENDING_SETTLEMENT' ? 'Chờ quyết toán nợ' :
              'Thông tin chung'}
           </h2>
 
@@ -460,6 +488,14 @@ export default function TenantContractDetailPage() {
                 >
                   <ArrowRightLeft className="h-5 w-5" />
                   Đề nghị chuyển phòng
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRequestRenewal}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-200 bg-violet-50 px-5 py-3.5 text-sm font-black text-violet-800 transition-colors hover:bg-violet-100 dark:border-violet-500/30 dark:bg-violet-500/10 dark:text-violet-200 dark:hover:bg-violet-500/20"
+                >
+                  <Calendar className="h-5 w-5" />
+                  Đề nghị gia hạn hợp đồng
                 </button>
                 <button
                   type="button"
@@ -762,6 +798,27 @@ export default function TenantContractDetailPage() {
               </div>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+        <div className="flex items-center gap-3">
+          <Clock3 className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+              Tiến trình hợp đồng
+            </p>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Lịch sử trạng thái
+            </h2>
+          </div>
+        </div>
+        <div className="mt-6">
+          <ContractStatusTimeline
+            histories={tenantStatusHistories ?? []}
+            isLoading={isLoadingTenantHistories}
+            compact
+          />
         </div>
       </section>
 

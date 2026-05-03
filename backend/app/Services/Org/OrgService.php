@@ -66,11 +66,17 @@ class OrgService
     public function update(string $id, array $data): ?Org
     {
         $org = $this->find($id);
-        if ($org) {
-            $org->update($data);
+        if (! $org) {
+            return null;
         }
 
-        return $org;
+        if (array_key_exists('settings', $data) && is_array($data['settings'])) {
+            $data['settings'] = array_merge($org->settings ?? [], $data['settings']);
+        }
+
+        $org->update($data);
+
+        return $org->refresh();
     }
 
     public function delete(string $id): bool

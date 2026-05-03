@@ -116,7 +116,14 @@ class ReceiptService
         $tenantEmail = $tenantUser->email ?? $primaryMember?->email ?? null;
         $tenantPhone = $tenantUser->phone ?? $primaryMember?->phone ?? null;
 
-        $offset = max(0, round((float) $contract->deposit_amount - (float) $refund->amount, 2));
+        $meta = $refund->meta ?? [];
+        $depositPortion = isset($meta['deposit_refund_portion']) ? (float) $meta['deposit_refund_portion'] : null;
+        $goodwillPortion = isset($meta['goodwill_refund_portion']) ? (float) $meta['goodwill_refund_portion'] : null;
+        if ($depositPortion !== null || $goodwillPortion !== null) {
+            $offset = max(0.0, round((float) $contract->deposit_amount - (float) ($depositPortion ?? 0), 2));
+        } else {
+            $offset = max(0, round((float) $contract->deposit_amount - (float) $refund->amount, 2));
+        }
 
         $depositStatus = $contract->deposit_status;
         $depositLabel = $depositStatus instanceof DepositStatus
@@ -134,6 +141,8 @@ class ReceiptService
             'tenant_phone' => $tenantPhone,
             'offset_amount' => $offset,
             'deposit_status_label' => $depositLabel,
+            'deposit_refund_portion' => $depositPortion,
+            'goodwill_refund_portion' => $goodwillPortion,
         ];
 
         $pdf = Pdf::loadView('pdf.refund_receipt', $data)

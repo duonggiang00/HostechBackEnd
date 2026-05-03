@@ -2,18 +2,15 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Inbox, ArrowRightLeft, UserPlus, LogOut,
+  Inbox, ArrowRightLeft, UserPlus, LogOut, CalendarClock,
   Clock, RefreshCw, CheckCircle, ExternalLink,
   AlertCircle, Loader2, Home
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
-import { usePendingRequests, useApproveMember, PENDING_REQUESTS_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { usePendingRequests, useApproveMember, useContractActions } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import type { PendingRequest, PendingRequestType } from '@/PropertyScope/features/contracts/types';
-import { ExecuteRoomTransferModal } from '@/PropertyScope/features/contracts/components/ExecuteRoomTransferModal';
-import { useContract } from '@/PropertyScope/features/contracts/hooks/useContracts';
-import { useQueryClient } from '@tanstack/react-query';
 
 // ─── Type config mapping ───────────────────────────────────────────────────────
 const TYPE_CONFIG: Record<PendingRequestType, {
@@ -43,6 +40,13 @@ const TYPE_CONFIG: Record<PendingRequestType, {
     color: 'text-rose-600',
     bgColor: 'bg-rose-50',
     borderColor: 'border-rose-200',
+  },
+  RENEWAL: {
+    label: 'Gia hạn',
+    icon: CalendarClock,
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-50',
+    borderColor: 'border-violet-200',
   },
 };
 
@@ -112,6 +116,31 @@ function RequestRow({ req, onApprove, onViewContract }: {
     if (req.type === 'ADD_MEMBER') {
       return <span>{req.member_full_name} <span className="text-slate-400">({req.member_phone})</span></span>;
     }
+    if (req.type === 'TERMINATION') {
+      const move = req.expected_move_out_date
+        ? format(new Date(req.expected_move_out_date), 'dd/MM/yyyy', { locale: vi })
+        : null;
+      return (
+        <div className="flex flex-col gap-0.5 text-sm">
+          {move && (
+            <span className="font-semibold text-slate-800 dark:text-slate-200">
+              Dự kiến dọn: <span className="tabular-nums">{move}</span>
+            </span>
+          )}
+          {req.reason ? <span className="text-slate-500">{req.reason}</span> : !move ? <span className="text-slate-400">—</span> : null}
+        </div>
+      );
+    }
+    if (req.type === 'RENEWAL') {
+      return (
+        <div className="flex flex-col gap-0.5 text-sm">
+          <span className="font-semibold text-slate-800 dark:text-slate-200">
+            Đề nghị đến: <span className="tabular-nums">{req.requested_end_date ? format(new Date(req.requested_end_date), 'dd/MM/yyyy', { locale: vi }) : '—'}</span>
+          </span>
+          {req.reason ? <span className="text-slate-500">{req.reason}</span> : <span className="text-slate-400">Không có ghi chú</span>}
+        </div>
+      );
+    }
     return <span className="text-slate-500 ">{req.reason || 'Không có ghi chú'}</span>;
   };
 
@@ -175,7 +204,14 @@ function RequestRow({ req, onApprove, onViewContract }: {
               onClick={() => onViewContract(req.contract_id, { openTerminate: true })}
               className="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-colors"
             >
-              Xem & thanh lý
+              Giải quyết
+            </button>
+          ) : req.type === 'ROOM_TRANSFER' ? (
+            <button
+              onClick={() => onApprove(req)}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              Giải quyết
             </button>
           ) : (
             <button
@@ -191,43 +227,16 @@ function RequestRow({ req, onApprove, onViewContract }: {
   );
 }
 
-// ─── ContractFetcher helper for ExecuteRoomTransferModal ─────────────────────
-function TransferModalWrapper({ contractId, defaultTargetRoomId, onClose, onSuccess }: {
-  contractId: string;
-  defaultTargetRoomId?: string;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const { data: contract, isLoading } = useContract(contractId);
-  if (isLoading || !contract) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40">
-        <Loader2 className="w-8 h-8 animate-spin text-white" />
-      </div>
-    );
-  }
-  return (
-    <ExecuteRoomTransferModal
-      isOpen
-      onClose={onClose}
-      contract={contract}
-      defaultTargetRoomId={defaultTargetRoomId}
-      onSuccess={onSuccess}
-    />
-  );
-}
-
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function RequestListPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
 
   const [activeFilter, setActiveFilter] = useState<PendingRequestType | 'ALL'>('ALL');
-  const [transferTarget, setTransferTarget] = useState<{ contractId: string; toRoomId?: string } | null>(null);
 
   const { data, isLoading, isError, refetch } = usePendingRequests(propertyId);
   const approveMember = useApproveMember();
+  const { approveRenewal } = useContractActions();
 
   const allRequests: PendingRequest[] = data?.data ?? [];
   const meta = data?.meta;
@@ -238,7 +247,8 @@ export default function RequestListPage() {
 
   const handleApprove = async (req: PendingRequest) => {
     if (req.type === 'ROOM_TRANSFER') {
-      setTransferTarget({ contractId: req.contract_id, toRoomId: req.to_room_id });
+      const target = req.to_room_id ? `?target_room_id=${encodeURIComponent(req.to_room_id)}` : '';
+      navigate(`/properties/${propertyId}/contracts/${req.contract_id}/transfer${target}`);
       return;
     }
 
@@ -252,6 +262,23 @@ export default function RequestListPage() {
         toast.success(`Đã duyệt thêm ${req.member_full_name} thành công!`);
       } catch {
         toast.error('Có lỗi khi duyệt thành viên.');
+      }
+    }
+
+    if (req.type === 'RENEWAL') {
+      const asked = window.confirm(
+        `Duyệt gia hạn hợp đồng này đến ${req.requested_end_date ? format(new Date(req.requested_end_date), 'dd/MM/yyyy', { locale: vi }) : 'ngày đề nghị'}?\n\nLưu ý: hệ thống sẽ chặn duyệt nếu hợp đồng còn nợ hóa đơn.`
+      );
+      if (!asked) return;
+
+      try {
+        await approveRenewal.mutateAsync({
+          id: req.contract_id,
+          data: req.request_index != null ? { request_index: req.request_index } : undefined,
+        });
+        toast.success('Đã duyệt yêu cầu gia hạn hợp đồng.');
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message ?? 'Không thể duyệt gia hạn hợp đồng.');
       }
     }
   };
@@ -290,7 +317,7 @@ export default function RequestListPage() {
       </div>
 
       {/* KPI Bar */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <KpiCard
           icon={ArrowRightLeft}
           label="Chuyển phòng"
@@ -312,6 +339,13 @@ export default function RequestListPage() {
           color="bg-rose-100 text-rose-600"
           onClick={() => setActiveFilter(activeFilter === 'TERMINATION' ? 'ALL' : 'TERMINATION')}
         />
+        <KpiCard
+          icon={CalendarClock}
+          label="Gia hạn"
+          count={meta?.renewal_count ?? 0}
+          color="bg-violet-100 text-violet-600"
+          onClick={() => setActiveFilter(activeFilter === 'RENEWAL' ? 'ALL' : 'RENEWAL')}
+        />
       </div>
 
       {/* Filter Tabs */}
@@ -320,6 +354,7 @@ export default function RequestListPage() {
         <TypeFilterTab label="Chuyển phòng" count={meta?.transfer_count ?? 0} active={activeFilter === 'ROOM_TRANSFER'} onClick={() => setActiveFilter('ROOM_TRANSFER')} />
         <TypeFilterTab label="Thêm thành viên" count={meta?.add_member_count ?? 0} active={activeFilter === 'ADD_MEMBER'} onClick={() => setActiveFilter('ADD_MEMBER')} />
         <TypeFilterTab label="Báo dời đi" count={meta?.termination_count ?? 0} active={activeFilter === 'TERMINATION'} onClick={() => setActiveFilter('TERMINATION')} />
+        <TypeFilterTab label="Gia hạn" count={meta?.renewal_count ?? 0} active={activeFilter === 'RENEWAL'} onClick={() => setActiveFilter('RENEWAL')} />
       </div>
 
       {/* Table */}
@@ -369,22 +404,6 @@ export default function RequestListPage() {
           </div>
         )}
       </div>
-
-      {/* ExecuteRoomTransferModal */}
-      <AnimatePresence>
-        {transferTarget && (
-          <TransferModalWrapper
-            contractId={transferTarget.contractId}
-            defaultTargetRoomId={transferTarget.toRoomId}
-            onClose={() => setTransferTarget(null)}
-            onSuccess={() => {
-              setTransferTarget(null);
-              queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY, propertyId] });
-              toast.success('Chuyển phòng thành công!');
-            }}
-          />
-        )}
-      </AnimatePresence>
 
     </div>
   );

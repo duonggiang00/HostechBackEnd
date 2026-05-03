@@ -138,6 +138,9 @@ export interface Invoice {
   paid_amount: number;
   debt: number;
 
+  /** Khách đại diện hợp đồng (khi API eager load contract.primaryMember) */
+  tenant_name?: string | null;
+
   // Flags
   is_termination?: boolean;
 

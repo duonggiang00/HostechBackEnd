@@ -5,6 +5,7 @@ namespace App\Http\Resources\Ticket;
 use App\Http\Resources\Org\UserResource;
 use App\Http\Resources\Property\PropertyResource;
 use App\Http\Resources\Property\RoomResource;
+use App\Models\Ticket\Ticket;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -32,6 +33,12 @@ class TicketResource extends JsonResource
             'assigned_to' => new UserResource($this->whenLoaded('assignedTo')),
             'events' => TicketEventResource::collection($this->whenLoaded('events')),
             'costs' => TicketCostResource::collection($this->whenLoaded('costs')),
+            'attachments' => $this->when(
+                $this->relationLoaded('media'),
+                fn () => $this->getMedia(Ticket::MEDIA_ATTACHMENTS)
+                    ->map(fn ($media) => Ticket::formatAttachment($media))
+                    ->values()
+            ),
 
             // Timestamps
             'due_at' => $this->due_at?->toIso8601String(),

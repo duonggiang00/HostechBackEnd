@@ -144,37 +144,39 @@ export default function LoginPage() {
   const isOtpStep = step === 'OTP_TOTP' || step === 'OTP_EMAIL' || step === 'OTP';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 font-sans transition-colors">
+    <div
+      lang="vi"
+      className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 font-sans transition-colors [font-feature-settings:'kern'_1]"
+    >
       <div className="w-full max-w-lg relative">
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="bg-white dark:bg-slate-800 rounded-[40px] shadow-2xl shadow-indigo-100/50 dark:shadow-indigo-500/10 border border-slate-100 dark:border-slate-700 p-10 relative overflow-hidden backdrop-blur-sm transition-colors">
-          {/* Progress bar */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-slate-100 dark:bg-slate-700">
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: step === 'LOGIN' ? '33%' : step === 'METHOD_PICK' ? '66%' : '100%' }}
-              className="h-full bg-indigo-600 dark:bg-indigo-500"
-            />
-          </div>
-
-          <div className="mb-10 text-center">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          <div className="mb-10 flex flex-col items-center text-center gap-0">
+            <div className="flex shrink-0 items-center justify-center leading-none">
+              <img
+                src="/hostech-logo.png"
+                alt="Hostech"
+                className="h-[6.5rem] w-[6.5rem] object-contain block"
+                width={104}
+                height={104}
+              />
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
               Hostech <span className="text-indigo-600 dark:text-indigo-400">V2</span>
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">Smart Living Architecture</p>
+            {step === 'LOGIN' && (
+              <h2 className="text-xl font-bold text-slate-800 dark:text-white leading-tight">
+                Đăng nhập quản trị
+              </h2>
+            )}
           </div>
 
           <AnimatePresence mode="wait">
             {/* ── Step 1: Login ── */}
             {step === 'LOGIN' && (
               <motion.div key="login" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="space-y-6">
-                <div className="space-y-2 text-center mb-8">
-                  <h2 className="text-xl font-bold text-slate-800 dark:text-white">Administrative Login</h2>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest">Access your secure dashboard</p>
-                </div>
-
                 <div className="space-y-4">
                   <div className="relative group">
                     <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors">
@@ -184,8 +186,8 @@ export default function LoginPage() {
                       type="text"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
-                      placeholder="Email or Phone Number"
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      placeholder="Tài khoản"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-semibold text-slate-900 dark:text-white placeholder:font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-normal"
                     />
                   </div>
 
@@ -198,8 +200,8 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
-                      placeholder="Security Password"
-                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                      placeholder="Mật khẩu"
+                      className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900/50 border-2 border-slate-50 dark:border-slate-700 rounded-3xl outline-none focus:border-indigo-200 dark:focus:border-indigo-500/50 focus:bg-white dark:focus:bg-slate-800 transition-all font-semibold text-slate-900 dark:text-white placeholder:font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 leading-normal"
                     />
                   </div>
                 </div>
@@ -211,7 +213,13 @@ export default function LoginPage() {
                   disabled={isLoading}
                   className="w-full py-5 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black flex items-center justify-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-500 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Log In Securely <ArrowRight className="w-5 h-5" /></>}
+                  {isLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      Đăng nhập <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
                 </button>
               </motion.div>
             )}
@@ -327,11 +335,6 @@ export default function LoginPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        <div className="mt-12 text-center text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 space-y-1 transition-colors">
-          <p>Bank-Level Security Protocols</p>
-          <p>© 2026 Hostech Solutions Inc.</p>
         </div>
       </div>
     </div>

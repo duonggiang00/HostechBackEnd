@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import type { UseQueryOptions } from '@tanstack/react-query';
 import { contractsApi } from '../api/contracts';
-import type { Contract, ContractQueryParams, ContractListResponse, CreateContractPayload } from '../types';
+import type {
+  Contract,
+  ContractQueryParams,
+  ContractListResponse,
+  CreateContractPayload,
+  FinalizeTerminationData,
+  TerminationSyncPayload,
+} from '../types';
 import { isUuid } from '@/lib/utils';
 
 // Re-export types for backward compatibility if needed
@@ -15,6 +22,11 @@ export const TRASH_CONTRACTS_KEY = 'contracts-trash';
 export const PENDING_CONTRACTS_KEY = 'contracts-pending';
 export const MY_CONTRACTS_KEY = 'contracts-my';
 export const PENDING_REQUESTS_KEY = 'pending-requests';
+export const CONTRACT_TERMINATION_HANDOVER_KEY = 'termination-handover';
+
+/** GET …/termination/linked-final-invoice — hydrate wizard bước HĐ thanh lý */
+export const contractTerminationLinkedFinalInvoiceQueryKey = (contractId: string) =>
+  [CONTRACT_KEY, contractId, 'termination-linked-final-invoice'] as const;
 
 // ─── List Hooks ───────────────────────────────────────────────────────────────
 
@@ -66,6 +78,22 @@ export const useContract = (id?: string) => {
     enabled: isUuid(id),
     staleTime: 10 * 60 * 1000, // 10 minutes stale time for contract details
     gcTime: 15 * 60 * 1000, // 15 minutes cache time
+  });
+};
+
+/**
+ * GET /api/contracts/{id}/termination-handover — biên bản / xem trước tài sản phòng.
+ */
+export const useTerminationHandoverState = (contractId?: string) => {
+  return useQuery({
+    queryKey: [CONTRACT_KEY, contractId, CONTRACT_TERMINATION_HANDOVER_KEY],
+    queryFn: async ({ signal }) => {
+      if (!contractId) return null;
+      const res = await contractsApi.getTerminationHandover(contractId, signal);
+      return res.data;
+    },
+    enabled: isUuid(contractId),
+    staleTime: 60 * 1000,
   });
 };
 
@@ -199,9 +227,37 @@ export const useContractActions = () => {
     },
   });
 
+  /** POST /api/contracts/{id}/request-renewal */
+  const requestRenewal = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { requested_end_date: string; reason?: string } }) =>
+      contractsApi.requestRenewal(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/approve-renewal */
+  const approveRenewal = useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: { request_index?: number } }) =>
+      contractsApi.approveRenewal(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      invalidateContracts();
+    },
+  });
+
   /** POST /api/contracts/{id}/terminate — 200 (đồng bộ) hoặc 202 (queue EDA) */
   const terminateContract = useMutation({
-    mutationFn: ({ id, data }: { id: string, data: any }) => contractsApi.terminateContract(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: TerminationSyncPayload & { cancellation_reason?: string; forfeit_deposit?: boolean };
+    }) => contractsApi.terminateContract(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
       queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
@@ -212,6 +268,72 @@ export const useContractActions = () => {
       queryClient.invalidateQueries({ queryKey: ['meters'] });
       queryClient.invalidateQueries({ queryKey: ['property-dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['property-readings'] });
+    },
+  });
+
+  /** POST /api/contracts/{id}/terminate/issue-final-invoice */
+  const issueFinalInvoice = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: TerminationSyncPayload & { cancellation_reason?: string };
+    }) => contractsApi.issueFinalInvoice(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/terminate/link-final-invoice */
+  const linkTerminationFinalInvoice = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: { invoice_id: string } & TerminationSyncPayload & { cancellation_reason?: string; refund_remaining_rent?: boolean };
+    }) => contractsApi.linkTerminationFinalInvoice(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      queryClient.invalidateQueries({ queryKey: contractTerminationLinkedFinalInvoiceQueryKey(variables.id) });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/terminate/finalize */
+  const finalizeTermination = useMutation({
+    mutationFn: ({ id, data }: { id: string; data?: FinalizeTerminationData }) =>
+      contractsApi.finalizeTermination(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, 'status-histories'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['handovers'] });
+      invalidateContracts();
+    },
+  });
+
+  /** POST /api/contracts/{id}/termination-handover */
+  const commitTerminationHandover = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        items?: Array<{ room_asset_id: string; condition?: 'OK' | 'MISSING' | 'DAMAGED' | null }>;
+        note?: string | null;
+      };
+    }) => contractsApi.commitTerminationHandover(id, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY, variables.id, CONTRACT_TERMINATION_HANDOVER_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['handovers'] });
     },
   });
 
@@ -291,7 +413,13 @@ export const useContractActions = () => {
     rejectSignature,
     requestRoomTransfer,
     requestTermination,
+    requestRenewal,
+    approveRenewal,
     terminateContract,
+    issueFinalInvoice,
+    linkTerminationFinalInvoice,
+    finalizeTermination,
+    commitTerminationHandover,
     scanContract,
     generateDocument,
     downloadDocument,

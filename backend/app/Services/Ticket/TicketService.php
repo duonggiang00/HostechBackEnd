@@ -8,7 +8,9 @@ use App\Models\Ticket\TicketCost;
 use App\Models\Ticket\TicketEvent;
 use App\Services\OrgContextResolver;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -88,6 +90,7 @@ class TicketService
             'assignedTo',
             'events.actor',
             'costs.createdBy',
+            'media',
         ])->find($id);
     }
 
@@ -234,5 +237,66 @@ class TicketService
     public function delete(Ticket $ticket): bool
     {
         return (bool) $ticket->delete();
+    }
+
+    /**
+     * Đính kèm danh sách file vào ticket. Mỗi file thành một Media record và
+     * sinh 1 TicketEvent type `ATTACHMENT_ADDED` để hiển thị trên timeline.
+     *
+     * @param  array<int, UploadedFile>  $files
+     * @return array<int, Media>
+     */
+    public function attachFiles(Ticket $ticket, array $files, string $actorUserId): array
+    {
+        return DB::transaction(function () use ($ticket, $files, $actorUserId) {
+            $media = [];
+
+            foreach ($files as $file) {
+                if (! $file instanceof UploadedFile) {
+                    continue;
+                }
+
+                $item = $ticket
+                    ->addMedia($file)
+                    ->toMediaCollection(Ticket::MEDIA_ATTACHMENTS);
+
+                TicketEvent::create([
+                    'org_id' => $ticket->org_id,
+                    'ticket_id' => $ticket->id,
+                    'actor_user_id' => $actorUserId,
+                    'type' => 'ATTACHMENT_ADDED',
+                    'message' => null,
+                    'meta' => [
+                        'media_id' => $item->id,
+                        'name' => $item->file_name,
+                        'mime_type' => $item->mime_type,
+                        'size' => (int) $item->size,
+                    ],
+                ]);
+
+                $media[] = $item;
+            }
+
+            return $media;
+        });
+    }
+
+    /**
+     * Xoá 1 attachment khỏi ticket. Trả về true nếu media tồn tại và đã xoá.
+     */
+    public function deleteAttachment(Ticket $ticket, int $mediaId): bool
+    {
+        $media = $ticket->media()
+            ->where('collection_name', Ticket::MEDIA_ATTACHMENTS)
+            ->where('id', $mediaId)
+            ->first();
+
+        if (! $media) {
+            return false;
+        }
+
+        $media->delete();
+
+        return true;
     }
 }

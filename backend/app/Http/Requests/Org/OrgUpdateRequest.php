@@ -20,6 +20,8 @@ class OrgUpdateRequest extends FormRequest
             'address' => ['nullable', 'string'],
             'timezone' => ['nullable', 'string', 'max:64'],
             'currency' => ['nullable', 'string', 'max:8'],
+            'settings' => ['sometimes', 'array'],
+            'settings.termination_require_supplemental_invoice_for_outstanding' => ['sometimes', 'boolean'],
         ];
     }
 }

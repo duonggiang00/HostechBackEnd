@@ -1,9 +1,8 @@
 import { Navigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { AlertCircle, RefreshCw, LayoutDashboard } from 'lucide-react';
-import { useDashboard, useGenerateMonthlyBilling } from '../hooks/useDashboard';
+import { useDashboard } from '../hooks/useDashboard';
 import { PropertyDashboardView } from '../components/PropertyDashboardView';
-import { toast } from 'react-hot-toast';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -88,31 +87,10 @@ export default function PropertyDashboardPage() {
   const hasRole = useAuthStore((s) => s.hasRole);
   const isStaff = hasRole(['Staff']);
   const { data, isLoading, isError, refetch } = useDashboard(propertyId, { enabled: !isStaff });
-  const generateBilling = useGenerateMonthlyBilling();
 
   if (isStaff && propertyId) {
     return <Navigate to={`/properties/${propertyId}/staff-home`} replace />;
   }
-
-  const handleGenerateBilling = async () => {
-    if (!propertyId) return;
-    try {
-      const res = await generateBilling.mutateAsync({ propertyId });
-      const failed = Number((res as any)?.failed ?? 0);
-      const ok = Number((res as any)?.count ?? (res as any)?.success ?? 0);
-      if (failed > 0) {
-        toast(
-          `Chốt tháng: đã tạo ${ok} hóa đơn. ${failed} phòng chưa tạo mới (thường do đã có hóa đơn cùng kỳ hoặc chưa chốt số điện/nước).`,
-          { duration: 7000, style: { maxWidth: 440 } },
-        );
-      } else {
-        toast.success((res as any)?.message || 'Đã tạo hóa đơn tháng này thành công!');
-      }
-      refetch();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Có lỗi khi tạo hóa đơn.');
-    }
-  };
 
   return (
     <div className="max-w-[1600px] mx-auto w-full p-6">
@@ -133,12 +111,7 @@ export default function PropertyDashboardPage() {
       {isLoading && <DashboardSkeleton />}
       {isError && <DashboardError onRetry={refetch} />}
       {data && (
-        <PropertyDashboardView
-          dashboard={data}
-          isGenerating={generateBilling.isPending}
-          onGenerateBilling={handleGenerateBilling}
-          propertyId={propertyId}
-        />
+        <PropertyDashboardView dashboard={data} propertyId={propertyId} />
       )}
     </div>
   );

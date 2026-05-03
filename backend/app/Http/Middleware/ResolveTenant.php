@@ -26,7 +26,11 @@ class ResolveTenant
         }
 
         // 2. Resolve Property ID
-        $propertyId = $request->header('X-Property-Id') ?: $request->get('property_id');
+        $propertyId = $request->header('X-Property-Id')
+            ?: $request->get('property_id')
+            ?: $request->input('filter.property_id')
+            ?: $request->route('property_id')
+            ?: $request->route('propertyId');
         if ($propertyId) {
             TenantManager::setPropertyId($propertyId);
         }

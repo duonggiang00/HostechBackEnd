@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Api\Contract;
 
+use App\Enums\ContractStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Contract\ApproveContractRenewalRequest;
 use App\Http\Requests\Contract\ContractIndexRequest;
+use App\Http\Requests\Contract\ContractRequestRenewalRequest;
 use App\Http\Requests\Contract\ContractRequestTerminationRequest;
 use App\Http\Requests\Contract\ContractStoreRequest;
 use App\Http\Requests\Contract\ContractUpdateRequest;
 use App\Http\Requests\Contract\ExecuteRoomTransferRequest;
+use App\Http\Requests\Contract\RoomTransferPreviewRequest;
 use App\Http\Requests\Contract\RoomTransferRequest;
 use App\Http\Resources\Contract\ContractResource;
 use App\Http\Resources\Contract\ContractStatusHistoryResource;
@@ -15,9 +19,12 @@ use App\Http\Resources\Handover\HandoverItemResource;
 use App\Jobs\Contract\ProcessContractTerminationJob;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
 use App\Models\Property\Room;
 use App\Services\Contract\ContractService;
+use App\Services\Contract\Termination\ContractTerminationFinalInvoiceLinkService;
+use App\Services\Contract\Termination\ContractTerminationPipelineService;
 use App\Services\Contract\Termination\TerminationReconciliationService;
 use App\Services\Handover\HandoverService;
 use Dedoc\Scramble\Attributes\Group;
@@ -304,6 +311,54 @@ class ContractController extends Controller
     }
 
     /**
+     * Tenant gửi yêu cầu gia hạn hợp đồng.
+     */
+    public function requestRenewal(ContractRequestRenewalRequest $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+        $this->authorize('view', $contract);
+
+        $success = $this->service->requestRenewal($contract, $request->user(), $request->validated());
+        if (! $success) {
+            abort(422, 'Không thể gửi yêu cầu gia hạn.');
+        }
+
+        return response()->json([
+            'message' => 'Đã gửi yêu cầu gia hạn hợp đồng. Ban quản lý sẽ xem xét trong thời gian sớm nhất.',
+            'contract' => [
+                'id' => $contract->id,
+            ],
+        ]);
+    }
+
+    /**
+     * BQL duyệt yêu cầu gia hạn (Owner/Manager/Staff), bắt buộc hợp đồng không có hóa đơn nợ.
+     */
+    public function approveRenewal(ApproveContractRenewalRequest $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+        $this->authorize('view', $contract);
+
+        if (! $request->user()->hasRole(['Owner', 'Manager', 'Staff', 'Admin'])) {
+            abort(403, 'Bạn không có quyền duyệt gia hạn hợp đồng.');
+        }
+
+        $updated = $this->service->approveRenewalRequest(
+            $contract,
+            $request->user(),
+            $request->validated()['request_index'] ?? null,
+        );
+
+        return response()->json([
+            'message' => 'Đã duyệt gia hạn hợp đồng thành công.',
+            'data' => [
+                'contract_id' => $updated->id,
+                'end_date' => $updated->end_date?->toDateString(),
+            ],
+        ]);
+    }
+
+    /**
      * Xác nhận thanh toán & Kích hoạt hợp đồng (Admin)
      *
      * Luồng: Contract (PENDING_PAYMENT) -> Confirm -> ACTIVE.
@@ -420,16 +475,25 @@ class ContractController extends Controller
 
         $this->authorize('view', $contract);
 
+        if ($request->has('waive_penalty')) {
+            $request->merge([
+                'waive_penalty' => filter_var($request->waive_penalty, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false,
+            ]);
+        }
+
         $validated = $request->validate([
             'termination_date' => 'nullable|date',
             'damage_fee_total' => 'nullable|numeric|min:0',
             'waive_penalty' => 'nullable|boolean',
             'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
+            'billing_mode' => 'nullable|string|in:combined,split',
+            'mid_month_rent_credit' => 'nullable|numeric|min:0',
         ], [
             'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
             'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
             'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
             'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
+            'billing_mode.in' => 'billing_mode chỉ nhận combined hoặc split.',
         ]);
 
         $terminationDate = $validated['termination_date'] ?? now()->toDateString();
@@ -446,6 +510,122 @@ class ContractController extends Controller
         ]);
     }
 
+    /**
+     * Hóa đơn thanh lý đã gắn với hợp đồng (nếu có) — dùng wizard sau reload / tab mới.
+     */
+    public function terminationLinkedFinalInvoice(Contract $contract): JsonResponse
+    {
+        $this->authorize('view', $contract);
+
+        $invoice = Invoice::query()
+            ->where('contract_id', $contract->id)
+            ->where('is_termination', true)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'Chưa có hóa đơn thanh lý.',
+                'data' => null,
+            ]);
+        }
+
+        $invoice->loadMissing('items');
+        $billingMode = ($invoice->snapshot['billing_mode'] ?? 'combined') === 'split' ? 'split' : 'combined';
+        $linkedFromBilling = (bool) ($invoice->snapshot['linked_from_billing'] ?? false);
+
+        return response()->json([
+            'message' => 'Đã có hóa đơn thanh lý gắn với hợp đồng.',
+            'data' => [
+                'invoice_id' => $invoice->id,
+                'invoice_no' => $invoice->invoice_no,
+                'total_amount' => (float) $invoice->total_amount,
+                'status' => $invoice->status,
+                'billing_mode' => $billingMode,
+                'linked_from_billing' => $linkedFromBilling,
+                'items' => $invoice->items->map(fn ($it) => [
+                    'type' => $it->type,
+                    'description' => $it->description,
+                    'quantity' => (float) $it->quantity,
+                    'unit_price' => (float) $it->unit_price,
+                    'amount' => (float) $it->amount,
+                ])->values()->all(),
+            ],
+        ]);
+    }
+
+    /**
+     * Gắn hóa đơn billing (ISSUED) làm hóa đơn thanh lý cuối — luồng linh hoạt thay cho pipeline tự sinh dòng.
+     *
+     * Đồng bộ: {@see issueFinalInvoice} hoặc async {@see terminate}.
+     */
+    public function linkTerminationFinalInvoice(Request $request, Contract $contract): JsonResponse
+    {
+        $this->authorize('update', $contract);
+
+        $validated = $request->validate([
+            'invoice_id' => 'required|uuid|exists:invoices,id',
+            'termination_date' => 'nullable|date',
+            'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
+            'cancellation_reason' => 'nullable|string|max:1000',
+            'waive_penalty' => 'nullable|boolean',
+            'damage_fee_total' => 'nullable|numeric|min:0',
+            'billing_mode' => 'nullable|string|in:combined,split',
+            'mid_month_rent_credit' => 'nullable|numeric|min:0',
+            'refund_remaining_rent' => 'nullable|boolean',
+        ], [
+            'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
+            'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
+            'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
+            'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
+            'billing_mode.in' => 'billing_mode chỉ nhận combined hoặc split.',
+        ]);
+
+        $lockName = ProcessContractTerminationJob::terminationLockName($contract->id);
+        $lock = Cache::lock($lockName, 120);
+
+        if (! $lock->get()) {
+            return response()->json([
+                'message' => 'Hợp đồng đang được xử lý thanh lý. Vui lòng đợi vài phút hoặc làm mới trang.',
+            ], 409);
+        }
+
+        try {
+            $invoiceId = $validated['invoice_id'];
+            $payload = $validated;
+            unset($payload['invoice_id']);
+
+            $invoice = app(ContractTerminationFinalInvoiceLinkService::class)->link(
+                $contract->fresh(),
+                $invoiceId,
+                $payload
+            );
+        } finally {
+            $lock->release();
+        }
+
+        $invoice->loadMissing('items');
+
+        return response()->json([
+            'message' => 'Đã gắn hóa đơn làm bản thanh lý cuối.',
+            'data' => [
+                'invoice_id' => $invoice->id,
+                'invoice_no' => $invoice->invoice_no,
+                'total_amount' => (float) $invoice->total_amount,
+                'status' => $invoice->status,
+                'billing_mode' => $validated['billing_mode'] ?? 'combined',
+                'linked_from_billing' => true,
+                'items' => $invoice->items->map(fn ($it) => [
+                    'type' => $it->type,
+                    'description' => $it->description,
+                    'quantity' => (float) $it->quantity,
+                    'unit_price' => (float) $it->unit_price,
+                    'amount' => (float) $it->amount,
+                ])->values()->all(),
+            ],
+        ]);
+    }
+
     public function terminate(Request $request, string $id): JsonResponse
     {
         $contract = Contract::findOrFail($id);
@@ -457,14 +637,16 @@ class ContractController extends Controller
             'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
             'cancellation_reason' => 'nullable|string|max:1000',
             'waive_penalty' => 'nullable|boolean',
-            'refund_remaining_rent' => 'nullable|boolean',
             'forfeit_deposit' => 'nullable|boolean',
             'damage_fee_total' => 'nullable|numeric|min:0',
+            'billing_mode' => 'nullable|string|in:combined,split',
+            'mid_month_rent_credit' => 'nullable|numeric|min:0',
         ], [
             'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
             'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
             'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
             'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
+            'billing_mode.in' => 'billing_mode chỉ nhận combined hoặc split.',
         ]);
 
         $lockName = ProcessContractTerminationJob::terminationLockName($contract->id);
@@ -496,6 +678,145 @@ class ContractController extends Controller
             'property_id' => $contract->property_id,
             'processing_mode' => 'async_eda',
         ], 202);
+    }
+
+    /**
+     * Phát hành hóa đơn thanh lý cuối (đồng bộ) — luồng legacy: pipeline tự sinh dòng + merge additional_invoice_lines.
+     *
+     * Luồng linh hoạt (soạn HĐ qua billing rồi gắn): {@see linkTerminationFinalInvoice}.
+     * Async EDA toàn pipeline: {@see terminate}.
+     *
+     * Bước HĐ thanh lý của wizard (pipeline tự sinh dòng). Chưa cấn trừ cọc — quyết toán ở {@see finalizeTermination}.
+     */
+    public function issueFinalInvoice(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+        $this->authorize('update', $contract);
+
+        $validated = $request->validate([
+            'termination_date' => 'nullable|date',
+            'cancellation_party' => 'nullable|string|in:LANDLORD,TENANT,MUTUAL,SYSTEM',
+            'cancellation_reason' => 'nullable|string|max:1000',
+            'waive_penalty' => 'nullable|boolean',
+            'damage_fee_total' => 'nullable|numeric|min:0',
+            'billing_mode' => 'nullable|string|in:combined,split',
+            'mid_month_rent_credit' => 'nullable|numeric|min:0',
+            'additional_invoice_lines' => 'nullable|array|max:50',
+            'additional_invoice_lines.*.description' => 'required_with:additional_invoice_lines|string|max:500',
+            'additional_invoice_lines.*.amount' => 'required_with:additional_invoice_lines|numeric',
+        ], [
+            'termination_date.date' => 'Ngày thanh lý không hợp lệ.',
+            'cancellation_party.in' => 'Giá trị bên khởi xướng không hợp lệ.',
+            'damage_fee_total.numeric' => 'Phí hư hỏng phải là số.',
+            'damage_fee_total.min' => 'Phí hư hỏng không được âm.',
+            'billing_mode.in' => 'billing_mode chỉ nhận combined hoặc split.',
+        ]);
+
+        $lockName = ProcessContractTerminationJob::terminationLockName($contract->id);
+        $lock = Cache::lock($lockName, 120);
+
+        if (! $lock->get()) {
+            return response()->json([
+                'message' => 'Hợp đồng đang được xử lý thanh lý. Vui lòng đợi vài phút hoặc làm mới trang.',
+            ], 409);
+        }
+
+        try {
+            $invoice = app(ContractTerminationPipelineService::class)->runIssueOnly(
+                $contract,
+                $validated
+            );
+        } finally {
+            $lock->release();
+        }
+
+        $invoice->loadMissing('items');
+
+        return response()->json([
+            'message' => 'Đã phát hành hóa đơn thanh lý cuối.',
+            'data' => [
+                'invoice_id' => $invoice->id,
+                'invoice_no' => $invoice->invoice_no,
+                'total_amount' => (float) $invoice->total_amount,
+                'status' => $invoice->status,
+                'billing_mode' => $validated['billing_mode'] ?? 'combined',
+                'items' => $invoice->items->map(fn ($it) => [
+                    'type' => $it->type,
+                    'description' => $it->description,
+                    'quantity' => (float) $it->quantity,
+                    'unit_price' => (float) $it->unit_price,
+                    'amount' => (float) $it->amount,
+                ])->values()->all(),
+            ],
+        ]);
+    }
+
+    /**
+     * Cấn trừ cọc và phát hành biên lai hoàn cọc / yêu cầu thu nợ (đồng bộ).
+     *
+     * Bước 6 của Termination Wizard. Sau khi đã có hóa đơn cuối từ bước 5.
+     */
+    public function finalizeTermination(Request $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+        $this->authorize('update', $contract);
+
+        $finalInvoice = Invoice::query()
+            ->where('contract_id', $contract->id)
+            ->where('is_termination', true)
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (! $finalInvoice) {
+            return response()->json([
+                'message' => 'Chưa có hóa đơn thanh lý. Vui lòng phát hành hóa đơn cuối trước.',
+            ], 422);
+        }
+
+        $finalizeOptions = $request->validate([
+            'refund_receipt_lines' => 'nullable|array|max:40',
+            'refund_receipt_lines.*.description' => 'required_with:refund_receipt_lines|string|max:500',
+            'refund_receipt_lines.*.amount' => 'required_with:refund_receipt_lines|numeric|min:0',
+            /** Manager: không phát hành biên lai hoàn — ghi nhận phần hoàn dự kiến là thu hồi. */
+            'forfeit_remaining_deposit' => 'nullable|boolean',
+        ]);
+
+        $result = app(TerminationReconciliationService::class)->reconcile(
+            $contract->fresh(),
+            $finalInvoice->fresh(),
+            array_merge($finalizeOptions, [
+                'acting_user_id' => $request->user()?->id,
+            ])
+        );
+
+        $contract->refresh();
+
+        $payload = [
+            'scenario' => $result['scenario'] ?? null,
+            'final_invoice_id' => $finalInvoice->id,
+            'contract_status' => $contract->status instanceof \BackedEnum ? $contract->status->value : (string) $contract->status,
+            'refund_receipt_id' => $result['refund_receipt_id'] ?? null,
+            'refund_amount' => isset($result['refund_amount']) ? (float) $result['refund_amount'] : null,
+            'deposit_refund_portion' => isset($result['deposit_refund_portion']) ? (float) $result['deposit_refund_portion'] : null,
+            'final_payment_request_id' => $result['final_payment_request_id'] ?? null,
+            'amount_due' => isset($result['amount_due']) ? (float) $result['amount_due'] : null,
+            'supplemental_invoice_id' => $result['supplemental_invoice_id'] ?? null,
+            'termination_final_invoice_id' => $result['termination_final_invoice_id'] ?? null,
+            'forfeited_amount' => isset($result['forfeited_amount']) ? (float) $result['forfeited_amount'] : null,
+        ];
+
+        return response()->json([
+            'message' => match ($payload['scenario']) {
+                'A' => 'Đã cấn trừ cọc và phát hành biên lai hoàn cọc.',
+                'B' => ! empty($payload['supplemental_invoice_id'])
+                    ? 'Đã cấn trừ cọc; hợp đồng đã kết thúc — còn nợ qua hóa đơn bổ sung và yêu cầu thanh toán cuối.'
+                    : 'Đã cấn trừ cọc; hợp đồng đã kết thúc — còn nợ, đã tạo yêu cầu thanh toán cuối.',
+                'C' => 'Đã cấn trừ cọc khớp, không phát sinh hoàn/thu thêm.',
+                'FORFEIT' => 'Đã cấn trừ cọc; phần còn lại được ghi nhận thu hồi (không phát hành biên lai hoàn).',
+                default => 'Đã chạy cấn trừ.',
+            },
+            'data' => $payload,
+        ]);
     }
 
     /**
@@ -544,9 +865,53 @@ class ContractController extends Controller
     }
 
     /**
-     * Thực hiện chuyển phòng cho khách hàng
+     * Xem trước chuyển phòng: đồng hồ, nợ cũ, dòng dự kiến trên hóa đơn cuối (điện/nước + chênh lệch tiền phòng).
+     */
+    public function previewRoomTransfer(RoomTransferPreviewRequest $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('update', $contract);
+
+        $payload = $this->service->previewRoomTransfer($contract, $request->validated());
+
+        return response()->json([
+            'data' => $payload,
+        ]);
+    }
+
+    /**
+     * Phát hành hóa đơn cuối phòng cũ (chuyển phòng) — bước tách khỏi execute-transfer.
+     */
+    public function issueRoomTransferFinalInvoice(ExecuteRoomTransferRequest $request, string $id): JsonResponse
+    {
+        $contract = Contract::findOrFail($id);
+
+        $this->authorize('update', $contract);
+
+        $validated = $request->validated();
+        unset($validated['linked_transfer_invoice_id'], $validated['deposit_amount']);
+
+        $invoice = $this->service->issueRoomTransferFinalInvoice($contract, $validated, $request->user());
+
+        return response()->json([
+            'message' => $invoice
+                ? 'Đã phát hành hóa đơn chuyển phòng.'
+                : 'Không phát sinh dòng thanh toán — có thể xác nhận chuyển phòng mà không cần hóa đơn.',
+            'data' => [
+                'invoice_id' => $invoice?->id,
+                'total_amount' => $invoice ? (float) $invoice->total_amount : null,
+                'status' => $invoice?->status,
+            ],
+        ]);
+    }
+
+    /**
+     * Thực hiện chuyển phòng cho khách hàng (luồng đơn giản, không qua thanh lý).
      *
-     * Chấm dứt hợp đồng cũ, tạo hợp đồng mới và thực hiện điều chuyển cọc, tiền nhà thừa.
+     * Đóng HĐ cũ → TERMINATED; nếu có khoản phát sinh (điện/nước + chênh lệch tiền phòng) thì phải
+     * phát hành hóa đơn trước (POST transfer/issue-final-invoice) và gửi linked_transfer_invoice_id.
+     * Tạo HĐ mới ACTIVE kế thừa nguyên tiền cọc.
      */
     public function executeTransfer(ExecuteRoomTransferRequest $request, string $id): JsonResponse
     {
@@ -554,10 +919,14 @@ class ContractController extends Controller
 
         $this->authorize('update', $contract);
 
-        $this->service->executeTransfer($contract, $request->validated(), $request->user());
+        $newContract = $this->service->executeTransfer($contract, $request->validated(), $request->user());
 
         return response()->json([
             'message' => 'Đã thực hiện chuyển phòng thành công.',
+            'data' => [
+                'new_contract_id' => $newContract->id,
+                'old_contract_id' => $contract->id,
+            ],
         ]);
     }
 
@@ -568,6 +937,7 @@ class ContractController extends Controller
      * 1. Transfer Requests trong contracts.meta->transfer_requests (status=PENDING)
      * 2. ContractMembers với status=PENDING thuộc property
      * 3. Contracts với status=PENDING_TERMINATION thuộc property
+     * 4. Renewal Requests trong contracts.meta->renewal_requests (status=PENDING)
      */
     public function pendingRequests(Request $request, string $propertyId): JsonResponse
     {
@@ -576,7 +946,10 @@ class ContractController extends Controller
         $results = [];
 
         // ── 1. ROOM TRANSFER REQUESTS (từ meta JSON) ──────────────────────────
-        $contractsWithTransfer = Contract::with(['room:id,name,code', 'members' => fn ($q) => $q->where('is_primary', true)->with('user:id,full_name')])
+        $contractsWithTransfer = Contract::with([
+            'room:id,name,code',
+            'primaryMember' => fn ($q) => $q->with('user:id,full_name,email'),
+        ])
             ->where('property_id', $propertyId)
             ->whereNotNull('meta')
             ->whereIn('status', ['ACTIVE', 'PENDING_TRANSFER'])
@@ -588,7 +961,7 @@ class ContractController extends Controller
                 if (($req['status'] ?? '') !== 'PENDING') {
                     continue;
                 }
-                $primaryMember = $contract->members->first();
+                $primaryMember = $contract->primaryMember;
                 $requestedById = $req['requested_by'] ?? null;
                 $requesterName = is_string($requestedById)
                     ? (User::query()->whereKey($requestedById)->value('full_name'))
@@ -646,7 +1019,10 @@ class ContractController extends Controller
             ->get();
 
         // Deduplicate — chỉ lấy is_primary = false và status = PENDING
-        $cleanPendingMembers = ContractMember::with(['contract.room:id,name,code'])
+        $cleanPendingMembers = ContractMember::with([
+            'contract.room:id,name,code',
+            'contract.primaryMember' => fn ($q) => $q->with('user:id,full_name,email'),
+        ])
             ->whereHas('contract', fn ($q) => $q->where('property_id', $propertyId)->whereIn('status', ['ACTIVE', 'PENDING_SIGNATURE']))
             ->where('status', 'PENDING')
             ->where('is_primary', false)
@@ -654,9 +1030,7 @@ class ContractController extends Controller
 
         foreach ($cleanPendingMembers as $member) {
             $contractModel = $member->contract;
-            $primary = $contractModel
-                ? $contractModel->members()->where('is_primary', true)->with('user:id,full_name')->first()
-                : null;
+            $primary = $contractModel?->primaryMember;
             $results[] = [
                 'type' => 'ADD_MEMBER',
                 'contract_id' => $member->contract_id,
@@ -671,21 +1045,60 @@ class ContractController extends Controller
         }
 
         // ── 3. TERMINATION REQUESTS (status=PENDING_TERMINATION) ──────────────
-        $terminationContracts = Contract::with(['room:id,name,code', 'members' => fn ($q) => $q->where('is_primary', true)->with('user:id,full_name')])
+        $terminationContracts = Contract::with([
+            'room:id,name,code',
+            'primaryMember' => fn ($q) => $q->with('user:id,full_name,email'),
+        ])
             ->where('property_id', $propertyId)
             ->where('status', 'PENDING_TERMINATION')
             ->get();
 
         foreach ($terminationContracts as $contract) {
-            $primaryMember = $contract->members->first();
+            $primaryMember = $contract->primaryMember;
             $results[] = [
                 'type' => 'TERMINATION',
                 'contract_id' => $contract->id,
                 'room_name' => $contract->room?->name ?? $contract->room?->code ?? 'N/A',
                 'tenant_full_name' => $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
                 'reason' => $contract->cancellation_reason,
+                'expected_move_out_date' => $contract->expected_move_out_date?->toDateString(),
                 'requested_at' => $contract->notice_given_at ?? $contract->updated_at,
             ];
+        }
+
+        // ── 4. RENEWAL REQUESTS (từ meta JSON) ────────────────────────────────
+        $contractsWithRenewal = Contract::with([
+            'room:id,name,code',
+            'primaryMember' => fn ($q) => $q->with('user:id,full_name,email'),
+        ])
+            ->where('property_id', $propertyId)
+            ->whereNotNull('meta')
+            ->where('status', ContractStatus::ACTIVE)
+            ->get();
+
+        foreach ($contractsWithRenewal as $contract) {
+            $renewalRequests = $contract->meta['renewal_requests'] ?? [];
+            foreach ($renewalRequests as $index => $req) {
+                if (($req['status'] ?? '') !== 'PENDING') {
+                    continue;
+                }
+                $primaryMember = $contract->primaryMember;
+                $requestedById = $req['requested_by'] ?? null;
+                $requesterName = is_string($requestedById)
+                    ? (User::query()->whereKey($requestedById)->value('full_name'))
+                    : null;
+                $results[] = [
+                    'type' => 'RENEWAL',
+                    'contract_id' => $contract->id,
+                    'room_name' => $contract->room?->name ?? $contract->room?->code ?? 'N/A',
+                    'tenant_full_name' => $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
+                    'requester_full_name' => $requesterName ?? $primaryMember?->user?->full_name ?? $primaryMember?->full_name ?? 'N/A',
+                    'reason' => $req['reason'] ?? null,
+                    'requested_end_date' => $req['requested_end_date'] ?? null,
+                    'requested_at' => $req['requested_at'] ?? $contract->updated_at,
+                    'request_index' => $index,
+                ];
+            }
         }
 
         // Sort all by requested_at descending
@@ -698,6 +1111,7 @@ class ContractController extends Controller
                 'transfer_count' => count(array_filter($results, fn ($r) => $r['type'] === 'ROOM_TRANSFER')),
                 'add_member_count' => count(array_filter($results, fn ($r) => $r['type'] === 'ADD_MEMBER')),
                 'termination_count' => count(array_filter($results, fn ($r) => $r['type'] === 'TERMINATION')),
+                'renewal_count' => count(array_filter($results, fn ($r) => $r['type'] === 'RENEWAL')),
             ],
         ]);
     }

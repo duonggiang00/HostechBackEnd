@@ -40,7 +40,7 @@ class ContractResource extends JsonResource
             'rent_price' => (float) $this->rent_price,
             'monthly_rent' => (float) $this->rent_price,
             'deposit_amount' => (float) $this->deposit_amount,
-            'deposit_months' => (int) $this->deposit_months,
+            'deposit_months' => $this->effectiveDepositMonths(),
             'deposit_status' => $this->deposit_status,
             'refunded_amount' => (float) $this->refunded_amount,
             'forfeited_amount' => (float) $this->forfeited_amount,

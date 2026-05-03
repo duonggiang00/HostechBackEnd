@@ -16,11 +16,17 @@
             width: 100%;
             padding: 20px;
         }
-        .header {
-            text-align: center;
+        .pdf-banner {
+            width: 100%;
             margin-bottom: 30px;
             border-bottom: 1px solid #e5e7eb;
             padding-bottom: 15px;
+        }
+        .pdf-banner .header {
+            text-align: center;
+            margin: 0;
+            border-bottom: none;
+            padding-bottom: 0;
         }
         .header h1 {
             color: #10b981;
@@ -111,16 +117,25 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>HÓA ĐƠN DỊCH VỤ</h1>
-            @php
-                $issueDisplay = $invoice->issue_date
-                    ?? ($invoice->issued_at ? \Illuminate\Support\Carbon::parse($invoice->issued_at) : null);
-                if ($issueDisplay === null && ! in_array($invoice->status, ['DRAFT', 'CANCELLED'], true)) {
-                    $issueDisplay = $invoice->created_at;
-                }
-            @endphp
-            <p>Mã HĐ: {{ $invoice->id }} | Ngày phát hành: {{ $issueDisplay?->format('d/m/Y') ?? '—' }}</p>
+        <div class="pdf-banner">
+            <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                    <td style="width:88px; vertical-align:top; padding-right:10px;">@include('pdf.partials.hostech-logo')</td>
+                    <td style="vertical-align:middle;">
+                        <div class="header">
+                            <h1>HÓA ĐƠN DỊCH VỤ</h1>
+                            @php
+                                $issueDisplay = $invoice->issue_date
+                                    ?? ($invoice->issued_at ? \Illuminate\Support\Carbon::parse($invoice->issued_at) : null);
+                                if ($issueDisplay === null && ! in_array($invoice->status, ['DRAFT', 'CANCELLED'], true)) {
+                                    $issueDisplay = $invoice->created_at;
+                                }
+                            @endphp
+                            <p>Mã HĐ: {{ $invoice->id }} | Ngày phát hành: {{ $issueDisplay?->format('d/m/Y') ?? '—' }}</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <div class="info-section">

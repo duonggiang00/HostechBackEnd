@@ -9,8 +9,8 @@ enum ContractStatus: string
     case PENDING_PAYMENT = 'PENDING_PAYMENT';
     case ACTIVE = 'ACTIVE';
     case PENDING_TERMINATION = 'PENDING_TERMINATION'; // Tenant đã báo dời, chờ Manager thanh lý
-    case PENDING_SETTLEMENT = 'PENDING_SETTLEMENT'; // Chờ khách thanh toán khoản nợ sau khi cấn trừ cọc (EDA thanh lý)
-    case ENDED = 'ENDED';
+    case PENDING_SETTLEMENT = 'PENDING_SETTLEMENT'; // Dữ liệu cũ: trước đây chờ thu nợ quyết toán; luồng mới kết thúc hợp đồng ngay (TERMINATED) khi còn FPR
+    case ENDED = 'ENDED'; // Legacy only: sẽ được migrate sang TERMINATED
     case TERMINATED = 'TERMINATED';
     case CANCELLED = 'CANCELLED';
     case EXPIRED = 'EXPIRED'; // Hết hạn HĐ nhưng chưa được Manager chính thức thanh lý
@@ -87,9 +87,9 @@ enum ContractStatus: string
             self::PENDING_PAYMENT => 'Chờ thanh toán',
             self::ACTIVE => 'Đang hiệu lực',
             self::PENDING_TERMINATION => 'Chờ thanh lý',
-            self::PENDING_SETTLEMENT => 'Chờ quyết toán nợ',
+            self::PENDING_SETTLEMENT => 'Chờ quyết toán nợ (cũ)',
             self::ENDED => 'Đã kết thúc',
-            self::TERMINATED => 'Đã thanh lý',
+            self::TERMINATED => 'Đã kết thúc',
             self::CANCELLED => 'Đã huỷ (phạt cọc)',
             self::EXPIRED => 'Hết hạn (chờ xử lý)',
         };

@@ -7,6 +7,7 @@ import type {
   RefundReceiptQueryParams,
   MarkRefundPaidPayload,
   CashflowFeedQueryParams,
+  LedgerDepositForfeitFeedQueryParams,
 } from '../types';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -20,6 +21,8 @@ export const financeKeys = {
   ledgerSummary: (params?: LedgerSummaryParams) => ['finance', 'ledger', 'summary', params] as const,
   refundReceipts: (params?: RefundReceiptQueryParams) => ['finance', 'refund-receipts', params] as const,
   cashflowFeed: (params?: CashflowFeedQueryParams) => ['finance', 'cashflow-feed', params] as const,
+  ledgerDepositForfeitFeed: (params?: LedgerDepositForfeitFeedQueryParams) =>
+    ['finance', 'ledger-deposit-forfeit-feed', params] as const,
   outstandingInvoices: (propertyId: string, params?: { page?: number; per_page?: number; sort?: string }) =>
     ['finance', 'outstanding-invoices', propertyId, params] as const,
 };
@@ -128,6 +131,7 @@ export function useMarkRefundPaid() {
       queryClient.invalidateQueries({ queryKey: ['finance', 'refund-receipts'] });
       queryClient.invalidateQueries({ queryKey: ['finance', 'ledger'] });
       queryClient.invalidateQueries({ queryKey: ['finance', 'cashflow-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['finance', 'ledger-deposit-forfeit-feed'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
     },
   });
@@ -142,6 +146,21 @@ export function useCashflowFeed(params?: CashflowFeedQueryParams, options?: { en
   return useQuery({
     queryKey: financeKeys.cashflowFeed(params),
     queryFn: () => financeApi.getCashflowFeed(params),
+    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Ghi nhận sổ: thu hồi cọc sau quyết toán (FORFEIT) — tab riêng trên Sổ cái.
+ */
+export function useLedgerDepositForfeitFeed(
+  params?: LedgerDepositForfeitFeedQueryParams,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: financeKeys.ledgerDepositForfeitFeed(params),
+    queryFn: () => financeApi.getLedgerDepositForfeitFeed(params),
     staleTime: 30_000,
     enabled: options?.enabled ?? true,
   });

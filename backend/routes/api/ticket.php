@@ -14,3 +14,7 @@ Route::post('tickets/{id}/events', [TicketController::class, 'storeEvent']);
 
 // Ticket Costs
 Route::post('tickets/{id}/costs', [TicketController::class, 'storeCost']);
+
+// Ticket Attachments
+Route::post('tickets/{id}/attachments', [TicketController::class, 'storeAttachment']);
+Route::delete('tickets/{id}/attachments/{mediaId}', [TicketController::class, 'destroyAttachment']);

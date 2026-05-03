@@ -16,9 +16,10 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   PENDING_PAYMENT: { label: 'Chờ thanh toán', color: 'bg-blue-100 text-blue-600' },
   ACTIVE: { label: 'Hiệu lực', color: 'bg-emerald-100 text-emerald-600' },
   PENDING_TERMINATION: { label: 'Chờ thanh lý', color: 'bg-amber-100 text-amber-600' },
+  PENDING_SETTLEMENT: { label: 'Chờ quyết toán nợ', color: 'bg-rose-100 text-rose-600' },
   EXPIRED: { label: 'Hết hạn', color: 'bg-rose-100 text-rose-600' },
   ENDED: { label: 'Đã kết thúc', color: 'bg-slate-100 text-slate-600' },
-  TERMINATED: { label: 'Đã thanh lý', color: 'bg-indigo-100 text-indigo-600' },
+  TERMINATED: { label: 'Đã kết thúc', color: 'bg-indigo-100 text-indigo-600' },
   CANCELLED: { label: 'Đã hủy', color: 'bg-slate-100 text-slate-400' },
 };
 

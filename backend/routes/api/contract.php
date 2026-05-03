@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Contract\ContractController;
 use App\Http\Controllers\Api\Contract\ContractDocumentController;
 use App\Http\Controllers\Api\Contract\ContractMemberController;
+use App\Http\Controllers\Api\Contract\FinalPaymentRequestController;
 use Illuminate\Support\Facades\Route;
 
 // Contracts
@@ -13,11 +14,24 @@ Route::post('contracts/{contract}/sign', [ContractController::class, 'sign']);
 Route::post('contracts/{contract}/reject-signature', [ContractController::class, 'rejectSignature']);
 Route::get('contracts/{contract}/available-rooms', [ContractController::class, 'availableRooms']);
 Route::post('contracts/{contract}/room-transfer-request', [ContractController::class, 'roomTransferRequest']);
+Route::post('contracts/{contract}/request-renewal', [ContractController::class, 'requestRenewal']);
+Route::post('contracts/{contract}/approve-renewal', [ContractController::class, 'approveRenewal']);
 Route::post('contracts/{contract}/confirm-payment', [ContractController::class, 'confirmPayment']);
 Route::get('contracts/{contract}/termination/liquidation-preview', [ContractController::class, 'liquidationPreview']);
+Route::get('contracts/{contract}/termination/linked-final-invoice', [ContractController::class, 'terminationLinkedFinalInvoice']);
+Route::post('contracts/{contract}/terminate/link-final-invoice', [ContractController::class, 'linkTerminationFinalInvoice']);
 Route::get('contracts/{contract}/termination-handover', [ContractController::class, 'terminationHandover']);
 Route::post('contracts/{contract}/termination-handover', [ContractController::class, 'commitTerminationHandover']);
 Route::post('contracts/{contract}/terminate', [ContractController::class, 'terminate']);
+Route::post('contracts/{contract}/terminate/issue-final-invoice', [ContractController::class, 'issueFinalInvoice']);
+Route::post('contracts/{contract}/terminate/finalize', [ContractController::class, 'finalizeTermination']);
+
+// Final Payment Requests (kịch bản B: nợ > cọc sau thanh lý)
+Route::get('final-payment-requests/{id}', [FinalPaymentRequestController::class, 'show']);
+Route::post('final-payment-requests/{id}/payment-url', [FinalPaymentRequestController::class, 'buildPaymentUrl']);
+Route::post('final-payment-requests/{id}/record-cash-payment', [FinalPaymentRequestController::class, 'recordCashPayment']);
+Route::get('contracts/{contract}/transfer/preview', [ContractController::class, 'previewRoomTransfer']);
+Route::post('contracts/{contract}/transfer/issue-final-invoice', [ContractController::class, 'issueRoomTransferFinalInvoice']);
 Route::post('contracts/{contract}/execute-transfer', [ContractController::class, 'executeTransfer']);
 Route::post('contracts/{contract}/request-termination', [ContractController::class, 'requestTermination']);   // Tenant báo dời đi
 Route::get('contracts/{contract}/status-histories', [ContractController::class, 'statusHistories']);           // Timeline lịch sử

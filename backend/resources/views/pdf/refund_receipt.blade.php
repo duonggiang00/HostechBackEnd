@@ -13,11 +13,17 @@
             padding: 0;
         }
         .container { width: 100%; padding: 20px; }
-        .header {
-            text-align: center;
+        .pdf-banner {
+            width: 100%;
             margin-bottom: 30px;
             border-bottom: 2px solid #7c3aed;
             padding-bottom: 15px;
+        }
+        .pdf-banner .header {
+            text-align: center;
+            margin: 0;
+            border-bottom: none;
+            padding-bottom: 0;
         }
         .header h1 {
             color: #7c3aed;
@@ -77,13 +83,22 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Biên lai hoàn cọc</h1>
-            <p>
-                Số: <strong>{{ $reference }}</strong>
-                | Ngày chi:
-                {{ $paid_at?->format('d/m/Y H:i') ?? $generated_at->format('d/m/Y H:i') }}
-            </p>
+        <div class="pdf-banner">
+            <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                    <td style="width:88px; vertical-align:top; padding-right:10px;">@include('pdf.partials.hostech-logo')</td>
+                    <td style="vertical-align:middle;">
+                        <div class="header">
+                            <h1>Biên lai hoàn cọc</h1>
+                            <p>
+                                Số: <strong>{{ $reference }}</strong>
+                                | Ngày chi:
+                                {{ $paid_at?->format('d/m/Y H:i') ?? $generated_at->format('d/m/Y H:i') }}
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <div class="info-section">
@@ -138,6 +153,18 @@
                     <tr>
                         <td>Đã cấn trừ vào hóa đơn (thanh lý)</td>
                         <td class="amount-col">−{{ number_format($offset_amount, 0, '.', ',') }}</td>
+                    </tr>
+                @endif
+                @if(($deposit_refund_portion ?? null) !== null && $deposit_refund_portion > 0)
+                    <tr>
+                        <td>Trong đó: hoàn từ tiền cọc (sau cấn trừ)</td>
+                        <td class="amount-col">{{ number_format((float) $deposit_refund_portion, 0, '.', ',') }}</td>
+                    </tr>
+                @endif
+                @if(($goodwill_refund_portion ?? null) !== null && $goodwill_refund_portion > 0)
+                    <tr>
+                        <td>Hoàn thêm (thỏa thuận / tiền thuê)</td>
+                        <td class="amount-col">{{ number_format((float) $goodwill_refund_portion, 0, '.', ',') }}</td>
                     </tr>
                 @endif
                 <tr style="background:#faf5ff;">

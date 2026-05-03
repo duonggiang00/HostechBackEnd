@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Events\Contract\ContractRenewalRequested;
+use App\Events\Contract\RoomTransferRequested;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Org\Org;
@@ -9,6 +11,7 @@ use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -194,6 +197,8 @@ class TenantSelfServiceTest extends TestCase
             'status' => 'AVAILABLE',
         ]);
 
+        Event::fake([RoomTransferRequested::class]);
+
         $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/room-transfer-request', [
             'target_room_id' => $targetRoom->id,
             'reason' => 'Cần phòng rộng hơn',
@@ -209,6 +214,13 @@ class TenantSelfServiceTest extends TestCase
         $updatedContract = Contract::find($contract->id);
         $this->assertNotEmpty($updatedContract->meta['transfer_requests']);
         $this->assertEquals('PENDING', $updatedContract->meta['transfer_requests'][0]['status']);
+
+        Event::assertDispatched(RoomTransferRequested::class, function (RoomTransferRequested $e) use ($contract, $property, $targetRoom, $tenant) {
+            return (string) $e->contractId === (string) $contract->id
+                && (string) $e->propertyId === (string) $property->id
+                && (string) $e->requestedByUserId === (string) $tenant->id
+                && (string) $e->toRoomId === (string) $targetRoom->id;
+        });
     }
 
     public function test_tenant_cannot_request_transfer_to_occupied_room()
@@ -228,5 +240,30 @@ class TenantSelfServiceTest extends TestCase
         ]);
 
         $response->assertStatus(422); // Phòng không hợp lệ
+    }
+
+    public function test_tenant_can_request_contract_renewal(): void
+    {
+        [, $tenant, , , $contract] = $this->setupActiveContract();
+
+        $requestedEnd = now()->addMonths(6)->toDateString();
+        Event::fake([ContractRenewalRequested::class]);
+
+        $response = $this->actingAs($tenant)->postJson('/api/contracts/'.$contract->id.'/request-renewal', [
+            'requested_end_date' => $requestedEnd,
+            'reason' => 'Gia đình muốn ở lâu dài',
+        ]);
+
+        $response->assertStatus(200);
+        $updatedContract = Contract::find($contract->id);
+        $this->assertNotEmpty($updatedContract->meta['renewal_requests']);
+        $this->assertEquals('PENDING', $updatedContract->meta['renewal_requests'][0]['status']);
+        $this->assertEquals($requestedEnd, $updatedContract->meta['renewal_requests'][0]['requested_end_date']);
+
+        Event::assertDispatched(ContractRenewalRequested::class, function (ContractRenewalRequested $event) use ($contract, $tenant, $requestedEnd) {
+            return (string) $event->contractId === (string) $contract->id
+                && (string) $event->requestedByUserId === (string) $tenant->id
+                && (string) $event->requestedEndDate === (string) $requestedEnd;
+        });
     }
 }

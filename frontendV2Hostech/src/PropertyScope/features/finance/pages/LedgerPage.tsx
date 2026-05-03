@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Landmark,
   Loader2,
+  ScrollText,
   TrendingDown,
   TrendingUp,
   Users,
@@ -15,6 +16,7 @@ import {
 
 import {
   useCashflowFeed,
+  useLedgerDepositForfeitFeed,
   useLedgerSummary,
   useOutstandingInvoices,
   usePayments,
@@ -23,17 +25,19 @@ import {
 import { useContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import type {
   CashflowFeedQueryParams,
+  LedgerDepositForfeitFeedQueryParams,
   LedgerSummaryParams,
   PaymentQueryParams,
   RefundReceiptQueryParams,
 } from '../types';
 
-type LedgerTab = 'all' | 'incoming' | 'refunds' | 'debts' | 'deposits';
+type LedgerTab = 'all' | 'incoming' | 'refunds' | 'forfeit_book' | 'debts' | 'deposits';
 
 const TABS: { id: LedgerTab; label: string; icon: typeof Wallet }[] = [
   { id: 'all', label: 'Dòng tiền tất cả', icon: Wallet },
   { id: 'incoming', label: 'Tiền thu vào', icon: TrendingUp },
   { id: 'refunds', label: 'Tiền hoàn trả', icon: TrendingDown },
+  { id: 'forfeit_book', label: 'Ghi nhận sổ (thu hồi cọc)', icon: ScrollText },
   { id: 'debts', label: 'Tiền nợ', icon: BookOpen },
   { id: 'deposits', label: 'Tiền cọc', icon: Landmark },
 ];
@@ -102,6 +106,16 @@ export function LedgerPage() {
   }), [propertyId, occurredBetween, page]);
   const { data: cashflowData, isLoading: cashflowLoading } = useCashflowFeed(cashflowParams, {
     enabled: tab === 'all',
+  });
+
+  const forfeitBookParams = useMemo((): LedgerDepositForfeitFeedQueryParams => ({
+    'filter[property_id]': propertyId || undefined,
+    'filter[occurred_between]': occurredBetween,
+    per_page: 20,
+    page,
+  }), [propertyId, occurredBetween, page]);
+  const { data: forfeitBookData, isLoading: forfeitBookLoading } = useLedgerDepositForfeitFeed(forfeitBookParams, {
+    enabled: tab === 'forfeit_book',
   });
 
   const incomingParams = useMemo((): PaymentQueryParams => ({
@@ -327,6 +341,51 @@ export function LedgerPage() {
     );
   };
 
+  const renderForfeitBookTab = () => {
+    const rows = forfeitBookData?.data ?? [];
+    if (forfeitBookLoading) return renderLoader();
+    if (rows.length === 0) {
+      return renderEmpty('Chưa có dòng ghi nhận thu hồi cọc vào sổ', ScrollText);
+    }
+    return (
+      <table className="w-full text-sm">
+        <thead>
+          {renderHeaderRow(['Mã tham chiếu', 'Số ghi nhận', 'Diễn giải', 'Hợp đồng', 'Thời điểm'])}
+        </thead>
+        <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+          {rows.map((r) => (
+            <tr key={r.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30">
+              <td className="px-4 py-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
+                {r.reference ?? shortId(r.ledger_entry_id)}
+              </td>
+              <td className="px-4 py-3">
+                <span className="font-black text-indigo-600 dark:text-indigo-400">+{fmtVND(r.amount)}</span>
+              </td>
+              <td className="max-w-md px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                {r.description ?? '—'}
+              </td>
+              <td className="px-4 py-3">
+                {r.contract_id && propertyId ? (
+                  <Link
+                    to={`/properties/${propertyId}/contracts/${r.contract_id}`}
+                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300"
+                  >
+                    {shortId(r.contract_id)} <ExternalLink className="h-3 w-3" />
+                  </Link>
+                ) : (
+                  <span className="text-slate-400">—</span>
+                )}
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">
+                {fmtDate(r.occurred_at)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  };
+
   const renderDepositsTab = () => {
     const allActive = depositsData?.data ?? [];
     const rows = allActive.filter((c) => Number(c.deposit_amount ?? 0) > 0);
@@ -371,6 +430,7 @@ export function LedgerPage() {
     if (tab === 'all') return cashflowData?.meta;
     if (tab === 'incoming') return incomingData?.meta;
     if (tab === 'refunds') return refundData?.meta;
+    if (tab === 'forfeit_book') return forfeitBookData?.meta;
     if (tab === 'debts') return outstandingData?.meta;
     return null;
   })();
@@ -383,7 +443,7 @@ export function LedgerPage() {
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Sổ Cái</h1>
           <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
-            Tổng hợp dòng tiền, công nợ và cọc đang giữ — chia 5 tab dữ liệu rõ ràng.
+            Tổng hợp dòng tiền, công nợ, cọc đang giữ và ghi nhận sổ thu hồi cọc — 6 tab dữ liệu rõ ràng.
           </p>
         </div>
 
@@ -484,6 +544,7 @@ export function LedgerPage() {
             {tab === 'all' && renderAllTab()}
             {tab === 'incoming' && renderIncomingTab()}
             {tab === 'refunds' && renderRefundsTab()}
+            {tab === 'forfeit_book' && renderForfeitBookTab()}
             {tab === 'debts' && renderDebtsTab()}
             {tab === 'deposits' && renderDepositsTab()}
           </div>
@@ -516,6 +577,17 @@ export function LedgerPage() {
                 Sau →
               </button>
             </div>
+          </div>
+        )}
+
+        {tab === 'forfeit_book' && (
+          <div className="flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50/90 px-4 py-3 text-xs text-indigo-950 dark:border-indigo-500/30 dark:bg-indigo-950/40 dark:text-indigo-100">
+            <ScrollText className="mt-0.5 h-4 w-4 shrink-0" />
+            <p>
+              <strong>Tiền cọc khi khách nộp</strong> không tạo dòng ở đây. Chỉ khi quyết toán thanh lý và chọn{' '}
+              <strong>thu hồi phần cọc còn lại</strong> (FORFEIT), hệ thống mới ghi nhận số tiền đó vào sổ kế toán
+              (không phải tiền mặt mới — khác tab Dòng tiền tất cả).
+            </p>
           </div>
         )}
 

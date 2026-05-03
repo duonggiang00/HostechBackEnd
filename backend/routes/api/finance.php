@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Finance\CashflowController;
 use App\Http\Controllers\Api\Finance\CashflowFeedController;
 use App\Http\Controllers\Api\Finance\LedgerController;
+use App\Http\Controllers\Api\Finance\LedgerDepositForfeitFeedController;
 use App\Http\Controllers\Api\Finance\PaymentController;
 use App\Http\Controllers\Api\Finance\PaymentVerificationController;
 use App\Http\Controllers\Api\Finance\RefundReceiptController;
@@ -41,6 +42,9 @@ Route::prefix('finance')->group(function () {
 
     // ── Cashflow Feed (dòng tiền hợp nhất Payment IN + RefundReceipt OUT) ─
     Route::get('cashflow-feed', [CashflowFeedController::class, 'index']);
+
+    // ── Ghi nhận sổ: thu hồi phần cọc còn lại sau quyết toán (FORFEIT) ─
+    Route::get('ledger-deposit-forfeit-feed', [LedgerDepositForfeitFeedController::class, 'index']);
 
     Route::get('refund-receipts', [RefundReceiptController::class, 'index']);
     Route::get('refund-receipts/{id}', [RefundReceiptController::class, 'show']);

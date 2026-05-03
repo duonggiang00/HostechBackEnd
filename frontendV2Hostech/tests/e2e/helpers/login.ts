@@ -8,13 +8,13 @@ export const E2E_STAFF_EMAIL = 'test_staff_1@example.com';
 
 /**
  * Đăng nhập qua `/login` (cùng form cho mọi role).
- * UI hiện tại: placeholder Email / Security Password, nút "Log In Securely".
+ * UI: placeholder Tài khoản / Mật khẩu, nút Đăng nhập.
  */
 export async function loginAs(page: Page, email: string, password: string = E2E_DEFAULT_PASSWORD): Promise<void> {
   await page.goto('/login');
-  await page.getByPlaceholder(/email or phone/i).fill(email);
+  await page.getByPlaceholder(/tài khoản/i).fill(email);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', { name: /log in securely/i }).click();
+  await page.getByRole('button', { name: /đăng nhập/i }).click();
   await page.waitForURL(
     (url) =>
       url.pathname.includes('/select-property') ||

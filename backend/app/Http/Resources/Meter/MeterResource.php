@@ -65,6 +65,7 @@ class MeterResource extends JsonResource
                     'period_start' => $r->period_start ? $r->period_start->format('Y-m-d') : null,
                     'period_end' => $r->period_end ? $r->period_end->format('Y-m-d') : null,
                     'reading_value' => $r->reading_value,
+                    'consumption' => $r->consumption,
                     'status' => $r->status ?? null,
                 ];
             }),

@@ -26,16 +26,15 @@ class InvoiceObserver
         if ($invoice->isDirty('status') && $invoice->status === 'ISSUED') {
             $newSnapshot = $this->buildSnapshot($invoice);
 
-            // Preserve is_initial flag so activateContractIfInitialInvoice() can detect initial invoices.
+            // Preserve toàn bộ flag/cờ đã set sẵn (ví dụ is_initial, is_termination, billing_mode,
+            // auto_reconcile, pipeline, cancellation_party, is_early...) — chỉ ghi đè các trường
+            // được rebuild (room_code, contract_code, tenant, items, snapshot_at).
             // getOriginal() may return a raw JSON string (before cast) or a decoded array depending on
             // Laravel version, so handle both cases.
             $oldRaw = $invoice->getOriginal('snapshot');
             $oldSnapshot = is_array($oldRaw) ? $oldRaw : (is_string($oldRaw) ? (json_decode($oldRaw, true) ?? []) : []);
-            if (! empty($oldSnapshot['is_initial'])) {
-                $newSnapshot['is_initial'] = true;
-            }
 
-            $invoice->snapshot = $newSnapshot;
+            $invoice->snapshot = array_merge($oldSnapshot, $newSnapshot);
         }
     }
 

@@ -36,8 +36,7 @@ class RoomQuickInvoiceController extends Controller
     public function create(Request $request, string $id): JsonResponse
     {
         $room = Room::findOrFail($id);
-
-        $this->authorize('update', clone $room->property); // Kiểm tra quyền truy cập property
+        $this->authorize('update', $room->property); // Kiểm tra quyền truy cập property
 
         $validated = $request->validate([
             'period_start' => 'required|date',

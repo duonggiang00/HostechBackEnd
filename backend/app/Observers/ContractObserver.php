@@ -20,6 +20,21 @@ class ContractObserver
     public function created(Contract $contract): void
     {
         $this->syncRoomStatus($contract);
+
+        // Ghi mốc CONTRACT_CREATED lên timeline (status hiện tại là DRAFT/PENDING_SIGNATURE/...)
+        $statusValue = $contract->status instanceof \BackedEnum
+            ? $contract->status->value
+            : (string) $contract->status;
+
+        ContractStatusHistory::create([
+            'org_id' => $contract->org_id,
+            'contract_id' => $contract->id,
+            'from_status' => null,
+            'to_status' => $statusValue !== '' ? $statusValue : null,
+            'event_type' => ContractStatusHistory::EVENT_CONTRACT_CREATED,
+            'changed_by_user_id' => auth()->id() ?? $contract->created_by_user_id,
+            'notes' => 'Hợp đồng được khởi tạo trên hệ thống.',
+        ]);
     }
 
     public function saved(Contract $contract): void
@@ -53,6 +68,7 @@ class ContractObserver
             'contract_id' => $contract->id,
             'from_status' => $fromStatusValue ?: null,
             'to_status' => $toStatusValue,
+            'event_type' => ContractStatusHistory::EVENT_STATUS_CHANGE,
             'changed_by_user_id' => auth()->id(),
             'notes' => $this->generateNotes($fromStatusValue, $toStatusValue),
         ]);

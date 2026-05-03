@@ -10,7 +10,7 @@ import {
 } from '@/shared/configs/navigation.config';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTickets } from '@/PropertyScope/features/tickets/hooks/useTickets';
-import { useContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import { useContracts, usePendingRequests } from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { usePropertyInvoices } from '@/PropertyScope/features/billing/hooks/usePropertyInvoices';
 import type { PropertyDashboardData } from '@/PropertyScope/features/dashboard/types';
 
@@ -48,6 +48,7 @@ export function useNavigation() {
   const contractParams = useMemo(() => ({ property_id: propertyId, per_page: 1 }), [propertyId]);
   const invoiceParams = useMemo(() => ({ status: 'ISSUED' as const, per_page: 1 }), []);
   const pendingPaymentParams = useMemo(() => ({ property_id: propertyId, per_page: 1 }), [propertyId]);
+  const isRequestsPage = location.pathname.includes('/requests');
 
   // Badge: Tickets
   const { data: openTicketsData } = useTickets(ticketParams, { 
@@ -73,11 +74,17 @@ export function useNavigation() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Badge: Pending Requests (ROOM_TRANSFER / ADD_MEMBER / TERMINATION)
+  const pendingRequestsPropertyId =
+    isPropertyScope && !!propertyId && !dashboardStats && !isRequestsPage ? propertyId : undefined;
+  const { data: pendingRequestsData } = usePendingRequests(pendingRequestsPropertyId);
+
   const badges: Record<string, number> = {
     openTickets: dashboardStats?.pendingTickets ?? openTicketsData?.meta.total ?? 0,
     contractAttention: dashboardStats ? 0 : ((contractData?.status_counts?.PENDING_SIGNATURE ?? 0) + (contractData?.status_counts?.PENDING_PAYMENT ?? 0)),
     issuedInvoices: dashboardStats?.unpaidInvoices ?? invoiceIssuedData?.meta?.total ?? 0,
     pendingVerifications: pendingPaymentsData?.meta?.total ?? 0,
+    pendingRequests: pendingRequestsData?.meta?.total ?? 0,
   };
 
   // 3. Hàm xử lý biến đổi Navigation Items (Role filtering & ID injection & Badges)

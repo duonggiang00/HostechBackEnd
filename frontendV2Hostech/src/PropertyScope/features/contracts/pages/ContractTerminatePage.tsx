@@ -42,10 +42,11 @@ export default function ContractTerminatePage() {
 
   return (
     <div className="min-h-screen bg-slate-50/80 dark:bg-slate-950">
-      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <PageBackButton to={backTo} className="mb-6" />
         <TerminationWizard
           contract={contract}
+          propertyId={propertyId}
           onClose={() => navigate(backTo)}
         />
       </div>

@@ -4,11 +4,14 @@ namespace App\Providers;
 
 use App\Events\Billing\InvoiceGenerated;
 use App\Events\Contract\ContractActivated;
+use App\Events\Contract\ContractSignatureConfirmed;
 use App\Events\Contract\Termination\DebtReconciliationTriggered;
 use App\Events\Contract\Termination\FinalInvoiceGenerated;
 use App\Events\Contract\Termination\HandoverSubmitted;
+use App\Events\Contract\Termination\SettlementPaymentRequired;
 use App\Events\Contract\Termination\SettlementResolved;
 use App\Events\Contract\Termination\TerminationInitiated;
+use App\Events\Finance\InvoicePaidEvent;
 use App\Events\Finance\PaymentProofSubmitted;
 use App\Events\Finance\PaymentRejected;
 use App\Events\Finance\PaymentSuccessfullyVerified;
@@ -29,11 +32,18 @@ use App\Events\Property\RoomUpdated;
 use App\Listeners\Billing\GenerateInvoicePdf;
 use App\Listeners\Billing\LockMeterReadingsAfterInvoiceGenerated;
 use App\Listeners\Billing\SnapshotContractServices;
+use App\Listeners\Contract\Termination\CheckAndResolvePendingSettlement;
 use App\Listeners\Contract\Termination\CreateTerminationFinalInvoice;
 use App\Listeners\Contract\Termination\DispatchDebtReconciliation;
 use App\Listeners\Contract\Termination\FinalizeTerminationSettlement;
 use App\Listeners\Contract\Termination\RunTerminationDebtReconciliation;
 use App\Listeners\Contract\Termination\TerminationInitiatedCreateHandoverAndLockMeters;
+use App\Listeners\Contract\Timeline\RecordDebtReconciliationTimeline;
+use App\Listeners\Contract\Timeline\RecordFinalInvoiceTimeline;
+use App\Listeners\Contract\Timeline\RecordHandoverSubmittedTimeline;
+use App\Listeners\Contract\Timeline\RecordSettlementPaymentRequiredTimeline;
+use App\Listeners\Contract\Timeline\RecordSettlementResolvedTimeline;
+use App\Listeners\Contract\Timeline\RecordSignatureTimeline;
 use App\Listeners\Finance\BroadcastInvoicePaidAfterPaymentVerified;
 use App\Listeners\Finance\GeneratePaymentReceipt;
 use App\Listeners\Finance\LogPaymentActivity;
@@ -185,6 +195,8 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(PaymentSuccessfullyVerified::class, LogPaymentActivity::class.'@handleApproved');
         Event::listen(PaymentSuccessfullyVerified::class, GeneratePaymentReceipt::class);
         Event::listen(PaymentSuccessfullyVerified::class, BroadcastInvoicePaidAfterPaymentVerified::class);
+        // Sau khi hóa đơn chuyển PAID: nếu hết nợ hợp đồng → đóng FPR; PENDING_SETTLEMENT (cũ) → TERMINATED
+        Event::listen(InvoicePaidEvent::class, CheckAndResolvePendingSettlement::class);
         // When a Receipt is GENERATED:
         //   1. Notify tenant with the actual receipt link
         Event::listen(ReceiptGenerated::class, NotifyTenantPaymentReceived::class);
@@ -204,6 +216,17 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(FinalInvoiceGenerated::class, DispatchDebtReconciliation::class);
         Event::listen(DebtReconciliationTriggered::class, RunTerminationDebtReconciliation::class);
         Event::listen(SettlementResolved::class, FinalizeTerminationSettlement::class);
+
+        // --- CONTRACT TIMELINE (EDA) ---
+        // Mỗi bước trong vòng đời hợp đồng được ghi lại vào contract_status_histories
+        // dưới dạng milestone (event_type ≠ STATUS_CHANGE) để timeline phía FE hiển thị
+        // đầy đủ chuỗi sự kiện, không chỉ các lần đổi trạng thái.
+        Event::listen(ContractSignatureConfirmed::class, RecordSignatureTimeline::class);
+        Event::listen(HandoverSubmitted::class, RecordHandoverSubmittedTimeline::class);
+        Event::listen(FinalInvoiceGenerated::class, RecordFinalInvoiceTimeline::class);
+        Event::listen(DebtReconciliationTriggered::class, RecordDebtReconciliationTimeline::class);
+        Event::listen(SettlementPaymentRequired::class, RecordSettlementPaymentRequiredTimeline::class);
+        Event::listen(SettlementResolved::class, RecordSettlementResolvedTimeline::class);
 
         $this->configureRateLimiting();
 

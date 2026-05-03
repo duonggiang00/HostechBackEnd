@@ -7,6 +7,7 @@ const ContractDetailPage = lazy(() => import('./pages/ContractDetailPage'));
 const ContractDocumentViewPage = lazy(() => import('./pages/ContractDocumentViewPage'));
 const ContractEditPage = lazy(() => import('./pages/ContractEditPage'));
 const ContractTerminatePage = lazy(() => import('./pages/ContractTerminatePage'));
+const ContractTransferPage = lazy(() => import('./pages/ContractTransferPage'));
 
 export const contractsRoutes: RouteObject[] = [
   {
@@ -28,6 +29,10 @@ export const contractsRoutes: RouteObject[] = [
   {
     path: 'contracts/:contractId/terminate',
     element: <ContractTerminatePage />,
+  },
+  {
+    path: 'contracts/:contractId/transfer',
+    element: <ContractTransferPage />,
   },
   {
     path: 'contracts/:contractId/view',

@@ -143,4 +143,38 @@ class TicketPolicy implements RbacModuleProvider
 
         return $this->checkPropertyScope($user, $ticket);
     }
+
+    /**
+     * Đính kèm file vào ticket. Tenant chỉ được trên ticket do mình tạo;
+     * staff/manager/owner phải đúng property scope (giống addEvent).
+     */
+    public function addAttachment(User $user, Ticket $ticket): bool
+    {
+        if ($user->hasRole('Tenant')) {
+            return (string) $ticket->created_by_user_id === (string) $user->id;
+        }
+
+        if (! $user->hasPermissionTo('view Ticket')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $ticket);
+    }
+
+    /**
+     * Xoá attachment: Tenant chỉ được xoá file do chính mình upload trên ticket
+     * của mình; staff/manager/owner cần update Ticket + property scope.
+     */
+    public function deleteAttachment(User $user, Ticket $ticket): bool
+    {
+        if ($user->hasRole('Tenant')) {
+            return (string) $ticket->created_by_user_id === (string) $user->id;
+        }
+
+        if (! $user->hasPermissionTo('update Ticket')) {
+            return false;
+        }
+
+        return $this->checkPropertyScope($user, $ticket);
+    }
 }

@@ -226,6 +226,22 @@ export const meteringApi = {
     return response;
   },
 
+  /**
+   * Wizard thanh lý: chốt chỉ số kỳ và APPROVED trong một bước (Manager/Owner).
+   * POST /rooms/{roomId}/meter-readings/finalize-approved
+   */
+  finalizeRoomReadingsApproved: async (
+    roomId: string,
+    payload: {
+      period_start: string;
+      period_end: string;
+      readings: { meter_id: string; reading_value: number }[];
+    },
+  ) => {
+    const response = await apiClient.post(`/rooms/${roomId}/meter-readings/finalize-approved`, payload);
+    return response.data.data ?? response.data;
+  },
+
   bulkCreateReadings: async (
     propertyId: string,
     readings: any[],

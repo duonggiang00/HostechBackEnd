@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Ticket;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Ticket\TicketAttachmentStoreRequest;
 use App\Http\Requests\Ticket\TicketCostStoreRequest;
 use App\Http\Requests\Ticket\TicketEventStoreRequest;
 use App\Http\Requests\Ticket\TicketIndexRequest;
@@ -333,5 +334,66 @@ class TicketController extends Controller
         $cost->load('createdBy');
 
         return (new TicketCostResource($cost))->response()->setStatusCode(201);
+    }
+
+    // ╔═══════════════════════════════════════════════════════╗
+    // ║  ATTACHMENTS ENDPOINTS                                ║
+    // ╠═══════════════════════════════════════════════════════╣
+
+    /**
+     * Tải lên tệp đính kèm cho ticket
+     *
+     * Upload nhiều file (ảnh/pdf) vào collection `ticket_attachments`. Mỗi file
+     * sẽ ghi 1 `TicketEvent` type `ATTACHMENT_ADDED` lên timeline.
+     *
+     * **Phân quyền:**
+     * - **Owner / Manager / Staff**: Upload trên ticket trong phạm vi property mình quản lý.
+     * - **Tenant**: Chỉ upload trên ticket do chính mình tạo.
+     *
+     * @urlParam id string required UUID phiếu sự cố. Example: 9d8e7f6a-5b4c-3d2e-1f0a-9b8c7d6e5f4a
+     *
+     * @response 201 scenario="Upload thành công" {"data": [{"id": 1, "name": "leak.jpg", "mime_type": "image/jpeg", "size": 102400, "url": "https://...", "created_at": "2026-05-04T..."}]}
+     * @response 403 scenario="Không có quyền" {"message": "This action is unauthorized."}
+     * @response 422 scenario="File không hợp lệ" {"message": "The files.0 field must be a file of type: jpg, jpeg, png, webp, gif, pdf.", "errors": {}}
+     */
+    public function storeAttachment(TicketAttachmentStoreRequest $request, string $id): JsonResponse
+    {
+        $ticket = Ticket::findOrFail($id);
+        $this->authorize('addAttachment', $ticket);
+
+        $files = $request->file('files', []);
+        $media = $this->service->attachFiles($ticket, is_array($files) ? $files : [], $request->user()->id);
+
+        $payload = array_map(fn ($m) => Ticket::formatAttachment($m), $media);
+
+        return response()->json(['data' => $payload], 201);
+    }
+
+    /**
+     * Xoá tệp đính kèm khỏi ticket
+     *
+     * **Phân quyền:**
+     * - **Owner / Manager**: Xoá file trên ticket thuộc property mình quản lý.
+     * - **Tenant**: Chỉ xoá file của ticket do chính mình tạo.
+     *
+     * @urlParam id string required UUID phiếu sự cố. Example: 9d8e7f6a-5b4c-3d2e-1f0a-9b8c7d6e5f4a
+     * @urlParam mediaId integer required ID của Media (Spatie) cần xoá. Example: 12
+     *
+     * @response 200 scenario="Xoá thành công" {"message": "Đã xoá tệp đính kèm."}
+     * @response 403 scenario="Không có quyền" {"message": "This action is unauthorized."}
+     * @response 404 scenario="Không tìm thấy file" {"message": "Không tìm thấy tệp đính kèm."}
+     */
+    public function destroyAttachment(string $id, int $mediaId): JsonResponse
+    {
+        $ticket = Ticket::findOrFail($id);
+        $this->authorize('deleteAttachment', $ticket);
+
+        $deleted = $this->service->deleteAttachment($ticket, $mediaId);
+
+        if (! $deleted) {
+            abort(404, 'Không tìm thấy tệp đính kèm.');
+        }
+
+        return response()->json(['message' => 'Đã xoá tệp đính kèm.']);
     }
 }

@@ -11,7 +11,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam search string Từ khóa tìm kiếm (mã join, tên thành viên, email). Example: ABCDEF
  * @queryParam filter[property_id] string Lọc theo ID tòa nhà (UUID).
  * @queryParam filter[room_id] string Lọc theo ID phòng (UUID).
- * @queryParam filter[status] string Trạng thái hợp đồng. Enum: DRAFT, ACTIVE, ENDED, CANCELLED.
+ * @queryParam filter[status] string Trạng thái hợp đồng. Enum: DRAFT, ACTIVE, TERMINATED, CANCELLED.
  * @queryParam sort string Sắp xếp kết quả (room_order, start_date, end_date, created_at, status, rent_price). Mặc định: room_order (tầng + mã phòng). Example: -created_at
  * @queryParam with_trashed boolean Bao gồm các bản ghi đã xóa. Example: true
  */

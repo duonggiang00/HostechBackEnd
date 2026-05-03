@@ -51,8 +51,29 @@ class CreateTerminationFinalInvoice
                 array_merge($payload, [
                     'penalty_amount' => $penaltyAmount,
                     'damage_fee_total' => $damageFee,
+                    'billing_mode' => $payload['billing_mode'] ?? 'combined',
                 ])
             );
+
+            foreach ($payload['additional_invoice_lines'] ?? [] as $line) {
+                if (! is_array($line)) {
+                    continue;
+                }
+                $desc = trim((string) ($line['description'] ?? ''));
+                $amt = round((float) ($line['amount'] ?? 0), 2);
+                if ($desc === '' || abs($amt) < 0.0001) {
+                    continue;
+                }
+                $items[] = [
+                    'type' => 'ADJUSTMENT',
+                    'description' => $desc,
+                    'quantity' => 1,
+                    'unit_price' => $amt,
+                    'amount' => $amt,
+                ];
+            }
+
+            $autoReconcile = (bool) ($payload['auto_reconcile'] ?? true);
 
             $invoice = $this->invoiceService->create([
                 'org_id' => $contract->org_id,
@@ -68,8 +89,10 @@ class CreateTerminationFinalInvoice
                 'snapshot' => [
                     'is_termination' => true,
                     'cancellation_party' => $payload['cancellation_party'] ?? null,
-                    'is_early' => $contract->isEarlyTermination(),
+                    'is_early' => $contract->isTerminationBeforeScheduledEnd($terminationDate),
                     'pipeline' => 'eda_v1',
+                    'billing_mode' => $payload['billing_mode'] ?? 'combined',
+                    'auto_reconcile' => $autoReconcile,
                 ],
             ], $items);
 

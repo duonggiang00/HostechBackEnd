@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/shared/components/ui/table';
 import { Input } from '@/shared/components/ui/input';
+import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
 
 function formatHandoverDate(item: { created_at?: string | null }): string {
   const raw = item.created_at;
@@ -45,6 +46,9 @@ function getCreatorName(item: any): string {
   return '—';
 }
 
+/** Khớp `ContractTerminatePage` — chỉ các trạng thái này mở được `/contracts/:id/terminate`. */
+const CONTRACT_TERMINATE_PAGE_STATUSES = new Set(['ACTIVE', 'PENDING_TERMINATION', 'EXPIRED']);
+
 function contractStatusLabel(status?: string | null): { label: string; className: string } {
   const s = (status ?? '').toUpperCase();
   const map: Record<string, { label: string; className: string }> = {
@@ -55,6 +59,10 @@ function contractStatusLabel(status?: string | null): { label: string; className
     PENDING_TERMINATION: {
       label: 'Chờ thanh lý',
       className: 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/20',
+    },
+    PENDING_SETTLEMENT: {
+      label: 'Chờ quyết toán nợ',
+      className: 'bg-rose-50 dark:bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-500/20',
     },
     EXPIRED: {
       label: 'Hết hạn',
@@ -75,10 +83,55 @@ function contractStatusLabel(status?: string | null): { label: string; className
   };
   return (
     map[s] ?? {
-      label: status || '—',
+      label: contractStatusLabelVi(status),
       className: 'bg-gray-50 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-500/20',
     }
   );
+}
+
+/**
+ * Cột trạng thái HĐ trên danh sách biên bản: ACTIVE / chờ thanh lý → "Đang thanh lý" (còn bước wizard).
+ * Các trạng thái khác giữ nhãn chuẩn (đã kết thúc / đã thanh lý…).
+ */
+function handoverListContractBadge(status?: string | null): { label: string; className: string } {
+  const s = (status ?? '').toUpperCase();
+  if (s === 'ACTIVE' || s === 'PENDING_TERMINATION') {
+    return {
+      label: 'Đang thanh lý',
+      className:
+        'bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-200 border-amber-200 dark:border-amber-500/25',
+    };
+  }
+  return contractStatusLabel(status);
+}
+
+function resolveHandoverDetailTo(
+  item: Handover,
+  propertyId: string | undefined,
+): { to: string; title: string; openTerminationWizard: boolean } {
+  const contractId = item.contract_id ?? item.contract?.id ?? null;
+  const status = (item.contract?.status ?? '').toUpperCase();
+
+  if (!propertyId || !item.id) {
+    return { to: '#', title: 'Thiếu dữ liệu', openTerminationWizard: false };
+  }
+
+  const canOpenTerminate =
+    Boolean(contractId) && CONTRACT_TERMINATE_PAGE_STATUSES.has(status);
+
+  if (canOpenTerminate) {
+    return {
+      to: `/properties/${propertyId}/contracts/${contractId}/terminate`,
+      title: 'Tiếp tục các bước thanh lý hợp đồng',
+      openTerminationWizard: true,
+    };
+  }
+
+  return {
+    to: `/properties/${propertyId}/handovers/${item.id}`,
+    title: 'Xem chi tiết biên bản bàn giao',
+    openTerminationWizard: false,
+  };
 }
 
 export default function HandoverListing() {
@@ -194,11 +247,11 @@ export default function HandoverListing() {
                   const tenantName = getTenantName(item);
                   const dateStr = formatHandoverDate(item);
                   const creator = getCreatorName(item);
-                  const st = contractStatusLabel(item.contract?.status);
-                  const detailPath =
-                    propertyId && item.id
-                      ? `/properties/${propertyId}/handovers/${item.id}`
-                      : '#';
+                  const st = handoverListContractBadge(item.contract?.status);
+                  const { to: detailPath, title: detailTitle, openTerminationWizard } = resolveHandoverDetailTo(
+                    item,
+                    propertyId,
+                  );
 
                   return (
                     <motion.tr
@@ -258,9 +311,13 @@ export default function HandoverListing() {
                         <div className="flex items-center justify-center">
                           <Link
                             to={detailPath}
-                            title="Xem chi tiết biên bản"
+                            title={detailTitle}
                             aria-disabled={!propertyId || !item.id}
-                            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg font-bold text-xs text-blue-900 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 ${!propertyId || !item.id ? 'pointer-events-none opacity-50' : ''}`}
+                            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg font-bold text-xs ${
+                              openTerminationWizard
+                                ? 'text-amber-900 dark:text-amber-200 hover:bg-amber-50 dark:hover:bg-amber-500/10'
+                                : 'text-blue-900 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10'
+                            } ${!propertyId || !item.id ? 'pointer-events-none opacity-50' : ''}`}
                           >
                             <Eye className="h-4 w-4" />
                             Chi tiết

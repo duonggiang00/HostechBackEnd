@@ -140,7 +140,7 @@ test('deposit months reads directly from column when set (no reverse-calc)', fun
 
     $vars = contractDocumentTemplateVars($contract);
 
-    expect($vars['contract_deposit_months'])->toBe(2)
+    expect($vars['contract_deposit_months'])->toBe(2.0)
         ->and($vars['contract_fixed_services_fee'])->toBe('600.000')
         ->and($vars['contract_total_rent'])->toBe('5.600.000')
         ->and($vars['contract_rent_price'])->toBe('5.000.000')

@@ -2,31 +2,21 @@ import { StatCard } from '../components/StatCard';
 import { RevenueTrend } from '../components/RevenueTrend';
 import { OccupancyGauge } from '../components/OccupancyGauge';
 import { TicketSummary } from '../components/TicketSummary';
-import { 
-  Users, 
-  DoorOpen, 
-  FileText, 
-  TrendingUp,
-  CalendarCheck
-} from 'lucide-react';
+import { Users, DoorOpen, FileText, TrendingUp, ScrollText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/shared/hooks/useTheme';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import type { PropertyDashboardData } from '../types';
 
 interface PropertyDashboardViewProps {
   dashboard: PropertyDashboardData;
-  isGenerating: boolean;
-  onGenerateBilling: () => Promise<void>;
-  /** Khi có — nút «Quản lý tòa nhà» mở mặt bằng tòa nhà (building-view). */
+  /** Khi có — liên kết Sổ cái + nút «Quản lý tòa nhà» (building-view). */
   propertyId?: string | null;
 }
 
-export function PropertyDashboardView({ 
-  dashboard, 
-  isGenerating, 
-  onGenerateBilling,
+export function PropertyDashboardView({
+  dashboard,
   propertyId,
 }: PropertyDashboardViewProps) {
   const { fontSize } = useTheme();
@@ -39,27 +29,18 @@ export function PropertyDashboardView({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Active Actions Row */}
-      <div className="flex justify-end">
-        <div className="flex items-center gap-1.5 p-1 bg-gray-50 rounded-lg w-fit border border-gray-200 shadow-sm">
-          <button 
-            onClick={onGenerateBilling}
-            disabled={isGenerating}
-            data-testid="generate-billing-btn"
-            className={`flex items-center gap-2 px-4 py-2 ${isGenerating ? 'bg-amber-400' : 'bg-amber-500 hover:bg-amber-600'} text-white shadow-sm rounded-md text-[13px] font-semibold transition-colors focus-visible:outline-none focus:ring-2 focus:ring-amber-500/50 ml-0.5`}
+      {propertyId ? (
+        <div className="flex justify-end">
+          <Link
+            to={`/properties/${propertyId}/finance/ledger`}
+            data-testid="ledger-link"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-800 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/40 dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-100 dark:hover:bg-slate-800"
           >
-            {isGenerating ? (
-               <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-            ) : (
-              <CalendarCheck className="w-4 h-4" />
-            )}
-            Chạy hóa đơn
-          </button>
-          <div className="h-5 w-px bg-gray-200 mx-1"></div>
-          <button className="px-4 py-2 bg-white shadow-sm rounded-md text-[13px] font-semibold text-gray-900 border border-gray-200">30 ngày qua</button>
-          <button className="px-4 py-2 hover:bg-gray-100 rounded-md text-[13px] font-medium text-gray-500 hover:text-gray-900 transition-colors mr-0.5">Quý trước</button>
+            <ScrollText className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" aria-hidden />
+            Sổ cái
+          </Link>
         </div>
-      </div>
+      ) : null}
 
       {/* High Level Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">

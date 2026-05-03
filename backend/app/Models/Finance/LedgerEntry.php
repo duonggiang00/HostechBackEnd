@@ -16,6 +16,9 @@ class LedgerEntry extends Model
 
     public const ACCOUNT_ACCOUNTS_RECEIVABLE = 'ACCOUNTS_RECEIVABLE';
 
+    /** Ghi nhận sổ: phần cọc còn lại bị thu hồi sau quyết toán (không phải tiền mặt mới). */
+    public const REF_TYPE_TERMINATION_DEPOSIT_FORFEIT = 'termination_deposit_forfeit';
+
     public $incrementing = false;
 
     protected $keyType = 'string';

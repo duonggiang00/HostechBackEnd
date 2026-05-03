@@ -288,17 +288,8 @@ class ContractDocumentService
         $billingLabel = $this->billingCycleLabelVi($cycleMonths);
         $paymentRange = $this->paymentRangeDescription($cycleMonths, $dueDay);
 
-        // Ưu tiên cột mới `deposit_months` (HĐ tạo từ 2026-05 trở đi luôn có giá trị).
-        // HĐ legacy chưa có thì fallback reverse-calc từ deposit_amount / total_rent (đảm bảo tương thích ngược).
-        $depositMonths = (int) ($contract->deposit_months ?? 0);
-        if ($depositMonths <= 0) {
-            $depositBasis = (float) ($contract->total_rent ?? 0) > 0
-                ? (float) $contract->total_rent
-                : (float) $contract->rent_price;
-            if ($depositBasis > 0) {
-                $depositMonths = round((float) $contract->deposit_amount / $depositBasis, 1);
-            }
-        }
+        // Khớp API/UI: tin `deposit_months` khi khớp tiền; nếu lệch thì suy từ deposit / total_rent.
+        $depositMonths = (float) $contract->effectiveDepositMonths();
 
         $createdAt = $contract->created_at ? Carbon::parse($contract->created_at) : Carbon::now();
         $contractCreatedAtVn = sprintf(
@@ -654,6 +645,31 @@ HTML;
     }
 
     /**
+     * Logo góc trái (PNG public) — DomPDF ổn định với data URI.
+     */
+    private function hostechDomPdfLogoHtml(): string
+    {
+        $path = public_path('images/hostech-logo.png');
+        if (! is_readable($path)) {
+            return '';
+        }
+        $uri = 'data:image/png;base64,'.base64_encode((string) file_get_contents($path));
+
+        return '<div style="margin:0 0 10px 0;display:inline-block;background:#fff;padding:5px 6px;border-radius:10px;border:1px solid #e5e7eb;"><img src=\''.$uri.'\' width="56" height="56" alt="" style="display:block;"/></div>';
+    }
+
+    private function injectHostechLogoAfterBodyOpen(string $html): string
+    {
+        $logo = $this->hostechDomPdfLogoHtml();
+        if ($logo === '') {
+            return $html;
+        }
+        $replaced = preg_replace('/<body([^>]*)>/i', '<body$1>'.$logo, $html, 1);
+
+        return $replaced ?? $html;
+    }
+
+    /**
      * DomPDF cần HTML đầy đủ + charset + font hỗ trợ tiếng Việt cho mọi fragment (kể cả phần append).
      */
     private function wrapHtmlForDomPdf(string $html): string
@@ -663,10 +679,12 @@ HTML;
                 $html = preg_replace('/<head([^>]*)>/i', '<head$1><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>', $html, 1) ?? $html;
             }
 
-            return $html;
+            return $this->injectHostechLogoAfterBodyOpen($html);
         }
 
-        return '<!DOCTYPE html><html lang="vi"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head><body style="font-family: DejaVu Sans, sans-serif; font-size: 12pt; line-height: 1.5; color: #111;">'.$html.'</body></html>';
+        $logo = $this->hostechDomPdfLogoHtml();
+
+        return '<!DOCTYPE html><html lang="vi"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/></head><body style="font-family: DejaVu Sans, sans-serif; font-size: 12pt; line-height: 1.5; color: #111;">'.$logo.$html.'</body></html>';
     }
 
     private function signatureVarToImgTag(array $vars, string $key): ?string

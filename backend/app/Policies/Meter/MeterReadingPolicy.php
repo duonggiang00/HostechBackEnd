@@ -109,16 +109,16 @@ class MeterReadingPolicy implements RbacModuleProvider
     public function approve(User $user, ?MeterReading $meterReading = null): bool
     {
         if (! $meterReading) {
-            return $user->hasPermissionTo('update MeterReading') && $user->hasRole(['Manager', 'Owner']);
+            return $user->hasPermissionTo('update MeterReading') && $user->hasRole(['Manager', 'Owner', 'Admin']);
         }
 
-        // Only Manager and Owner can approve (has 'U' permission which includes approve operations)
+        // Only Manager, Owner, Admin can approve (has 'U' permission which includes approve operations)
         if (! $user->hasPermissionTo('update MeterReading')) {
             return false;
         }
 
         // Additional check: Only Manager role (not Staff) can approve
-        if (! $user->hasRole(['Manager', 'Owner'])) {
+        if (! $user->hasRole(['Manager', 'Owner', 'Admin'])) {
             return false;
         }
 

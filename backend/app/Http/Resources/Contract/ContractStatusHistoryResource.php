@@ -17,16 +17,27 @@ class ContractStatusHistoryResource extends JsonResource
         return [
             'id' => $this->id,
             'contract_id' => $this->contract_id,
-            'old_status' => $this->old_status,
-            'new_status' => $this->new_status,
-            'reason' => $this->reason,
-            'comment' => $this->comment,
+            'event_type' => $this->event_type ?? 'STATUS_CHANGE',
+            'from_status' => $this->from_status,
+            'to_status' => $this->to_status,
+            'notes' => $this->notes,
+            'payload' => $this->payload,
             'created_at' => $this->created_at?->toIso8601String(),
-            'changedBy' => [
-                'id' => $this->changedBy?->id,
-                'full_name' => $this->changedBy?->full_name,
-                'email' => $this->changedBy?->email,
-            ],
+            'changed_by_user' => $this->whenLoaded('changedBy', function () {
+                if (! $this->changedBy) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->changedBy->id,
+                    'full_name' => $this->changedBy->full_name,
+                    'email' => $this->changedBy->email,
+                ];
+            }, fn () => $this->changedBy ? [
+                'id' => $this->changedBy->id,
+                'full_name' => $this->changedBy->full_name,
+                'email' => $this->changedBy->email,
+            ] : null),
         ];
     }
 }

@@ -7,11 +7,12 @@ use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
 use App\Enums\InvoiceItemType;
 use App\Enums\PenaltyRuleType;
+use App\Events\Contract\ContractRenewalRequested;
+use App\Events\Contract\RoomTransferRequested;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
 use App\Models\Finance\PenaltyRule;
 use App\Models\Invoice\Invoice;
-use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Org\User;
@@ -21,9 +22,9 @@ use App\Models\Service\Service;
 use App\Notifications\Contract\ContractSignatureRequested;
 use App\Services\Contract\Termination\ContractTerminationPipelineService;
 use App\Services\Invoice\InvoiceService;
-use App\Support\MeterInvoiceDescription;
 use App\Services\Service\ServiceService;
 use App\Services\System\UserInvitationService;
+use App\Support\MeterInvoiceDescription;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -81,7 +82,11 @@ class ContractService
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_sig_count', [ContractStatus::PENDING_SIGNATURE])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_pay_count', [ContractStatus::PENDING_PAYMENT])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_count', [ContractStatus::ACTIVE])
-            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as ended_count', [ContractStatus::ENDED])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as pending_termination_count', [ContractStatus::PENDING_TERMINATION])
+            // Legacy support: dữ liệu cũ từng lưu ENDED, giữ đếm riêng để FE chuyển tiếp dần.
+            ->selectRaw("SUM(CASE WHEN status = 'ENDED' THEN 1 ELSE 0 END) as ended_count")
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as terminated_count', [ContractStatus::TERMINATED])
+            ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as expired_count', [ContractStatus::EXPIRED])
             ->selectRaw('SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as cancelled_count', [ContractStatus::CANCELLED])
             ->selectRaw('SUM(CASE WHEN status = ? AND end_date IS NOT NULL AND end_date BETWEEN ? AND ? THEN 1 ELSE 0 END) as expiring_count', [ContractStatus::ACTIVE, $now, $in30])
             ->selectRaw("SUM(CASE WHEN EXISTS (
@@ -99,7 +104,10 @@ class ContractService
             'PENDING_SIGNATURE' => (int) ($row->pending_sig_count ?? 0),
             'PENDING_PAYMENT' => (int) ($row->pending_pay_count ?? 0),
             'ACTIVE' => (int) ($row->active_count ?? 0),
+            'PENDING_TERMINATION' => (int) ($row->pending_termination_count ?? 0),
             'ENDED' => (int) ($row->ended_count ?? 0),
+            'TERMINATED' => (int) ($row->terminated_count ?? 0),
+            'EXPIRED' => (int) ($row->expired_count ?? 0),
             'CANCELLED' => (int) ($row->cancelled_count ?? 0),
             'expiring' => (int) ($row->expiring_count ?? 0),
             'invoice_debt' => (int) ($row->invoice_debt_count ?? 0),
@@ -787,9 +795,133 @@ class ContractService
             'requested_at' => now()->toISOString(),
         ];
 
-        return $contract->update([
+        $updated = $contract->update([
             'meta' => array_merge($contract->meta ?? [], ['transfer_requests' => $transferRequests]),
         ]);
+
+        if ($updated) {
+            $contract->refresh();
+            $latest = collect($contract->meta['transfer_requests'] ?? [])->last();
+            if (is_array($latest)) {
+                RoomTransferRequested::dispatch(
+                    (string) $contract->id,
+                    (string) $contract->property_id,
+                    (string) $contract->org_id,
+                    (string) $user->id,
+                    isset($latest['to_room_id']) ? (string) $latest['to_room_id'] : null,
+                    (string) ($latest['requested_at'] ?? now()->toIso8601String()),
+                );
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Tenant gửi yêu cầu gia hạn hợp đồng.
+     */
+    public function requestRenewal(Contract $contract, User $user, array $data): bool
+    {
+        if ($contract->status !== ContractStatus::ACTIVE) {
+            abort(422, 'Chỉ có thể gửi yêu cầu gia hạn khi hợp đồng đang hiệu lực.');
+        }
+
+        $renewalRequests = $contract->meta['renewal_requests'] ?? [];
+        $renewalRequests[] = [
+            'requested_by' => $user->id,
+            'requested_end_date' => Carbon::parse($data['requested_end_date'])->toDateString(),
+            'reason' => $data['reason'] ?? null,
+            'status' => 'PENDING',
+            'requested_at' => now()->toIso8601String(),
+        ];
+
+        $updated = $contract->update([
+            'meta' => array_merge($contract->meta ?? [], ['renewal_requests' => $renewalRequests]),
+        ]);
+
+        if ($updated) {
+            $contract->refresh();
+            $latest = collect($contract->meta['renewal_requests'] ?? [])->last();
+            if (is_array($latest)) {
+                ContractRenewalRequested::dispatch(
+                    (string) $contract->id,
+                    (string) $contract->property_id,
+                    (string) $contract->org_id,
+                    (string) $user->id,
+                    (string) ($latest['requested_end_date'] ?? ''),
+                    (string) ($latest['requested_at'] ?? now()->toIso8601String()),
+                );
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Duyệt yêu cầu gia hạn (Owner/Manager/Staff) và cập nhật end_date hợp đồng.
+     * Chỉ duyệt khi hợp đồng không còn hóa đơn nợ.
+     */
+    public function approveRenewalRequest(Contract $contract, User $approver, ?int $requestIndex = null): Contract
+    {
+        if ($contract->status !== ContractStatus::ACTIVE) {
+            abort(422, 'Chỉ duyệt gia hạn khi hợp đồng đang hiệu lực.');
+        }
+
+        return DB::transaction(function () use ($contract, $approver, $requestIndex) {
+            $contract->refresh();
+
+            $outstandingCount = Invoice::query()
+                ->where('contract_id', $contract->id)
+                ->whereIn('status', Invoice::outstandingDebtStatuses())
+                ->whereRaw('(total_amount - COALESCE(paid_amount, 0)) > 0.009')
+                ->count();
+
+            if ($outstandingCount > 0) {
+                abort(422, "Không thể duyệt gia hạn: hợp đồng còn {$outstandingCount} hóa đơn chưa thanh toán.");
+            }
+
+            $renewalRequests = $contract->meta['renewal_requests'] ?? [];
+            if (! is_array($renewalRequests) || count($renewalRequests) === 0) {
+                abort(422, 'Không tìm thấy yêu cầu gia hạn.');
+            }
+
+            $targetIndex = $requestIndex;
+            if ($targetIndex === null) {
+                $targetIndex = collect($renewalRequests)
+                    ->keys()
+                    ->last(fn ($idx) => ($renewalRequests[$idx]['status'] ?? '') === 'PENDING');
+            }
+
+            if (! is_int($targetIndex) || ! isset($renewalRequests[$targetIndex])) {
+                abort(422, 'Yêu cầu gia hạn không hợp lệ.');
+            }
+
+            $target = $renewalRequests[$targetIndex];
+            if (($target['status'] ?? '') !== 'PENDING') {
+                abort(422, 'Yêu cầu gia hạn này không còn ở trạng thái chờ duyệt.');
+            }
+
+            $requestedEndDate = Carbon::parse((string) ($target['requested_end_date'] ?? ''))->toDateString();
+            $currentEndDate = $contract->end_date ? Carbon::parse($contract->end_date)->toDateString() : null;
+            if ($currentEndDate && $requestedEndDate <= $currentEndDate) {
+                abort(422, 'Ngày kết thúc đề nghị gia hạn không hợp lệ.');
+            }
+
+            $renewalRequests[$targetIndex]['status'] = 'APPROVED';
+            $renewalRequests[$targetIndex]['reviewed_by'] = $approver->id;
+            $renewalRequests[$targetIndex]['reviewed_at'] = now()->toIso8601String();
+
+            $contract->update([
+                'end_date' => $requestedEndDate,
+                'meta' => array_merge($contract->meta ?? [], [
+                    'renewal_requests' => $renewalRequests,
+                    'latest_renewal_approved_at' => now()->toIso8601String(),
+                    'latest_renewal_approved_by' => $approver->id,
+                ]),
+            ]);
+
+            return $contract->refresh();
+        });
     }
 
     /**
@@ -1153,7 +1285,16 @@ class ContractService
         $waivePenalty = (bool) ($data['waive_penalty'] ?? false);
         $cancellationParty = $data['cancellation_party'] ?? null;
         $depositAmount = (float) $contract->deposit_amount;
-        $isEarlyTermination = $contract->isEarlyTermination();
+
+        $terminationDate = $data['termination_date'] ?? now()->toDateString();
+        $scheduledEndStr = $data['_scheduled_end_date']
+            ?? ($contract->meta['termination_details']['scheduled_end_date'] ?? null);
+        if ($scheduledEndStr === null && $contract->end_date) {
+            $scheduledEndStr = $contract->end_date->format('Y-m-d');
+        }
+
+        $isEarlyTermination = $scheduledEndStr !== null
+            && Carbon::parse($terminationDate)->startOfDay()->lt(Carbon::parse($scheduledEndStr)->startOfDay());
 
         $penaltyAmount = 0.0;
         $penaltyRuleId = null;
@@ -1270,71 +1411,464 @@ class ContractService
     }
 
     /**
-     * Thực hiện chuyển phòng (Execute Room Transfer).
+     * Dòng phụ thu chênh lệch tiền phòng khi chuyển phòng sang phòng mới đắt hơn.
+     * Pro-rate theo số ngày còn lại của tháng kể từ ngày chuyển.
+     * Chỉ phát sinh dòng dương (phòng mới đắt hơn); phòng mới rẻ hơn → không tạo dòng.
      *
-     * 1. Thanh lý hợp đồng A.
-     * 2. Tạo hợp đồng B, copy các thành viên.
-     * 3. Tính dư và chuyển cọc -> Invoice Adjustment Credit cho hóa đơn B.
+     * @return array<int, array{description: string, amount: float}>
+     */
+    private function buildRoomTransferRentDeltaInvoiceLines(
+        Carbon $transferDate,
+        float $oldRentPrice,
+        float $newRentPrice,
+        ?string $oldRoomLabel = null,
+    ): array {
+        $deltaMonthly = round($newRentPrice - $oldRentPrice, 2);
+        if ($deltaMonthly <= 0.01) {
+            return [];
+        }
+
+        $daysInMonth = (int) $transferDate->daysInMonth;
+        $daysRemaining = $daysInMonth - (int) $transferDate->day + 1;
+        if ($daysRemaining < 1) {
+            return [];
+        }
+
+        $amount = round($deltaMonthly * ($daysRemaining / $daysInMonth), 0);
+        if ($amount < 1) {
+            return [];
+        }
+
+        $suffix = $oldRoomLabel ? " (HĐ phòng {$oldRoomLabel})" : '';
+
+        return [[
+            'description' => "Phụ thu chênh lệch tiền phòng (phòng mới cao hơn), {$daysRemaining}/{$daysInMonth} ngày từ ngày chuyển{$suffix}.",
+            'amount' => (float) $amount,
+        ]];
+    }
+
+    /**
+     * Số hóa đơn còn dư nợ của hợp đồng (trừ một hóa đơn — dùng khi execute sau bước phát hành HĐ chuyển phòng).
+     */
+    private function countOutstandingInvoicesForContractExcluding(?string $contractId, ?string $excludeInvoiceId = null): int
+    {
+        if (! $contractId) {
+            return 0;
+        }
+
+        $query = Invoice::query()
+            ->where('contract_id', $contractId)
+            ->whereIn('status', ['ISSUED', 'LATE', 'PARTIAL', 'OVERDUE'])
+            ->whereRaw('(total_amount - COALESCE(paid_amount, 0)) > 0.009');
+
+        if ($excludeInvoiceId) {
+            $query->where('id', '!=', $excludeInvoiceId);
+        }
+
+        return $query->count();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildRoomTransferFinalInvoiceItems(
+        Contract $oldContract,
+        string $transferDateStr,
+        string $targetRoomId,
+        float $resolvedNewRent,
+        Carbon $transferDate,
+    ): array {
+        $oldRoomId = $oldContract->room_id;
+        $items = [];
+
+        $meters = Meter::where('room_id', $oldRoomId)
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($meters as $meter) {
+            $usageData = $this->calculateTerminationMeterCost(
+                $meter,
+                $transferDateStr,
+                $oldRoomId,
+                $oldContract->org_id,
+            );
+
+            if (! $usageData) {
+                continue;
+            }
+
+            $items[] = [
+                'type' => InvoiceItemType::SERVICE->value,
+                'description' => MeterInvoiceDescription::forUsage(
+                    (string) $usageData['service_name'],
+                    $meter->type,
+                    $usageData['usage'],
+                )." (chuyển phòng) — kỳ {$usageData['period_start']} → {$usageData['period_end']}",
+                'quantity' => $usageData['usage'],
+                'unit_price' => $usageData['average_price'],
+                'amount' => $usageData['total_amount'],
+                'meta' => [
+                    'meter_id' => $meter->id,
+                    'meter_code' => $meter->code,
+                    'reading_id' => $usageData['reading_id'],
+                    'prev_reading' => $usageData['prev_reading'],
+                    'curr_reading' => $usageData['curr_reading'],
+                    'tiers' => $usageData['tiers_breakdown'],
+                    'is_room_transfer_reading' => true,
+                ],
+            ];
+        }
+
+        $deltaLines = $this->buildRoomTransferRentDeltaInvoiceLines(
+            $transferDate,
+            (float) $oldContract->rent_price,
+            $resolvedNewRent,
+            $oldContract->room?->code ?? $oldContract->room?->name,
+        );
+
+        foreach ($deltaLines as $line) {
+            $items[] = [
+                'type' => InvoiceItemType::ADJUSTMENT->value,
+                'description' => $line['description'],
+                'quantity' => 1,
+                'unit_price' => $line['amount'],
+                'amount' => $line['amount'],
+                'meta' => ['source' => 'room_transfer_rent_delta'],
+            ];
+        }
+
+        return $items;
+    }
+
+    private function resolveRoomTransferNewRent(Contract $oldContract, Room $targetRoom, array $data): float
+    {
+        $resolvedNewRent = $data['rent_price'] ?? null;
+        if ($resolvedNewRent === null || $resolvedNewRent === '') {
+            return (float) ($targetRoom->base_price ?? 0) > 0
+                ? (float) $targetRoom->base_price
+                : (float) $oldContract->rent_price;
+        }
+
+        return (float) $resolvedNewRent;
+    }
+
+    private function assertLinkedRoomTransferInvoiceMatches(
+        Invoice $linked,
+        Contract $oldContract,
+        string $transferDateStr,
+        string $targetRoomId,
+        float $resolvedNewRent,
+        array $items,
+    ): void {
+        if ((string) $linked->contract_id !== (string) $oldContract->id) {
+            abort(422, 'Hóa đơn liên kết không thuộc hợp đồng này.');
+        }
+
+        $snap = $linked->snapshot;
+        if (! is_array($snap)) {
+            abort(422, 'Hóa đơn liên kết không hợp lệ.');
+        }
+
+        if (($snap['source'] ?? null) !== 'room_transfer') {
+            abort(422, 'Hóa đơn liên kết không phải hóa đơn chuyển phòng.');
+        }
+
+        if ((string) ($snap['target_room_id'] ?? '') !== (string) $targetRoomId) {
+            abort(422, 'Hóa đơn liên kết không khớp phòng đích đã chọn.');
+        }
+
+        if (($snap['transfer_date'] ?? '') !== $transferDateStr) {
+            abort(422, 'Hóa đơn liên kết không khớp ngày chuyển.');
+        }
+
+        if (abs((float) ($snap['new_rent_price'] ?? 0) - $resolvedNewRent) > 0.02) {
+            abort(422, 'Hóa đơn liên kết không khớp giá thuê mới.');
+        }
+
+        if (abs((float) ($snap['old_rent_price'] ?? 0) - (float) $oldContract->rent_price) > 0.02) {
+            abort(422, 'Hóa đơn liên kết không khớp giá thuê cũ.');
+        }
+
+        $allowedStatuses = ['ISSUED', 'PARTIAL', 'LATE', 'OVERDUE', 'PAID'];
+        if (! in_array((string) $linked->status, $allowedStatuses, true)) {
+            abort(422, 'Trạng thái hóa đơn liên kết không hợp lệ để hoàn tất chuyển phòng.');
+        }
+
+        $sumItems = round(array_sum(array_map(fn ($row) => (float) ($row['amount'] ?? 0), $items)), 2);
+        $total = round((float) $linked->total_amount, 2);
+        if (abs($sumItems - $total) > 5.0) {
+            abort(422, 'Hóa đơn liên kết không khớp khoản phát sinh hiện tại (tổng tiền thay đổi — hãy phát hành lại hóa đơn sau khi chốt chỉ số).');
+        }
+    }
+
+    /**
+     * Xem trước chuyển phòng (read-only): đồng hồ, nợ, dòng HĐ dự kiến.
+     *
+     * @return array<string, mixed>
+     */
+    public function previewRoomTransfer(Contract $oldContract, array $data): array
+    {
+        if ($oldContract->status !== ContractStatus::ACTIVE) {
+            abort(422, 'Chỉ có thể xem trước chuyển phòng khi hợp đồng đang hiệu lực.');
+        }
+
+        $transferDate = Carbon::parse($data['transfer_date']);
+        $transferDateStr = $transferDate->toDateString();
+        $targetRoomId = $data['target_room_id'];
+        $oldRoomId = $oldContract->room_id;
+
+        $targetRoom = Room::query()
+            ->whereKey($targetRoomId)
+            ->where('property_id', $oldContract->property_id)
+            ->where('status', 'available')
+            ->first();
+
+        if (! $targetRoom) {
+            abort(422, 'Phòng đích không hợp lệ hoặc không còn trống trong cùng cơ sở.');
+        }
+
+        $resolvedNewRent = $this->resolveRoomTransferNewRent($oldContract, $targetRoom, $data);
+
+        $oldContract->loadMissing(['room']);
+
+        $unreadMeters = $this->getMetersWithoutApprovedReading($oldRoomId, $transferDateStr);
+        $outstandingCount = $this->countOutstandingInvoicesForContractExcluding($oldContract->id, null);
+
+        $items = $this->buildRoomTransferFinalInvoiceItems(
+            $oldContract,
+            $transferDateStr,
+            $targetRoomId,
+            $resolvedNewRent,
+            $transferDate,
+        );
+
+        $linePreview = array_map(fn ($row) => [
+            'description' => (string) ($row['description'] ?? ''),
+            'amount' => (float) ($row['amount'] ?? 0),
+            'type' => (string) ($row['type'] ?? ''),
+        ], $items);
+
+        return [
+            'transfer_date' => $transferDateStr,
+            'target_room_id' => $targetRoomId,
+            'resolved_new_rent' => $resolvedNewRent,
+            'meters_sealed' => $unreadMeters->isEmpty(),
+            'unread_meter_codes' => $unreadMeters->pluck('code')->filter()->values()->all(),
+            'outstanding_invoice_count' => $outstandingCount,
+            'has_invoice_lines' => count($items) > 0,
+            'line_preview' => $linePreview,
+            'estimated_invoice_total' => round(array_sum(array_column($linePreview, 'amount')), 2),
+        ];
+    }
+
+    /**
+     * Phát hành hóa đơn cuối cho HĐ cũ (điện/nước + chênh lệch tiền phòng nếu có).
+     * Trả về null nếu không có dòng nào.
+     */
+    public function issueRoomTransferFinalInvoice(Contract $oldContract, array $data, User $performer): ?Invoice
+    {
+        if ($oldContract->status !== ContractStatus::ACTIVE) {
+            abort(422, 'Chỉ có thể phát hành hóa đơn chuyển phòng khi hợp đồng đang hiệu lực.');
+        }
+
+        return DB::transaction(function () use ($oldContract, $data, $performer) {
+            $transferDate = Carbon::parse($data['transfer_date']);
+            $transferDateStr = $transferDate->toDateString();
+            $targetRoomId = $data['target_room_id'];
+            $oldRoomId = $oldContract->room_id;
+
+            $targetRoom = Room::query()
+                ->whereKey($targetRoomId)
+                ->where('property_id', $oldContract->property_id)
+                ->where('status', 'available')
+                ->first();
+
+            if (! $targetRoom) {
+                abort(422, 'Phòng đích không hợp lệ hoặc không còn trống trong cùng cơ sở.');
+            }
+
+            $unreadMeters = $this->getMetersWithoutApprovedReading($oldRoomId, $transferDateStr);
+            if ($unreadMeters->isNotEmpty()) {
+                $labels = $unreadMeters->pluck('code')->join(', ');
+                abort(422, "Chưa chốt số đồng hồ phòng hiện tại: [{$labels}]. Vui lòng ghi nhận và duyệt chỉ số đến ngày chuyển trước khi phát hành hóa đơn.");
+            }
+
+            $outstandingCount = $this->countOutstandingInvoicesForContractExcluding($oldContract->id, null);
+            if ($outstandingCount > 0) {
+                abort(422, "Hợp đồng còn {$outstandingCount} hóa đơn chưa thanh toán. Vui lòng thu hết nợ cũ trước khi phát hành hóa đơn chuyển phòng.");
+            }
+
+            $resolvedNewRent = $this->resolveRoomTransferNewRent($oldContract, $targetRoom, $data);
+
+            $oldContract->loadMissing(['room']);
+
+            $items = $this->buildRoomTransferFinalInvoiceItems(
+                $oldContract,
+                $transferDateStr,
+                $targetRoomId,
+                $resolvedNewRent,
+                $transferDate,
+            );
+
+            if (count($items) === 0) {
+                return null;
+            }
+
+            $invoice = $this->invoiceService->create([
+                'org_id' => $oldContract->org_id,
+                'property_id' => $oldContract->property_id,
+                'room_id' => $oldRoomId,
+                'contract_id' => $oldContract->id,
+                'status' => 'DRAFT',
+                'issue_date' => $transferDateStr,
+                'due_date' => $transferDate->copy()->addDays(3)->toDateString(),
+                'period_start' => $transferDateStr,
+                'period_end' => $transferDateStr,
+                'is_termination' => false,
+                'snapshot' => [
+                    'source' => 'room_transfer',
+                    'target_room_id' => $targetRoomId,
+                    'transfer_date' => $transferDateStr,
+                    'old_rent_price' => (float) $oldContract->rent_price,
+                    'new_rent_price' => $resolvedNewRent,
+                ],
+            ], $items);
+
+            $this->invoiceService->issueInvoice(
+                $invoice,
+                $performer->id,
+                'Hóa đơn chuyển phòng (điện/nước phòng cũ + chênh lệch nếu có).'
+            );
+
+            return $invoice->refresh();
+        });
+    }
+
+    /**
+     * Thực hiện chuyển phòng (Execute Room Transfer) — luồng đơn giản, KHÔNG đi qua pipeline thanh lý.
+     *
+     * Quy trình:
+     * 1. Guard chốt đồng hồ phòng cũ.
+     * 2. Guard nợ hóa đơn cũ chưa thanh toán (trừ hóa đơn chuyển phòng đã liên kết nếu có).
+     * 3. Nếu có dòng phát sinh: bắt buộc linked_transfer_invoice_id khớp bước phát hành; nếu không có dòng thì không gửi liên kết.
+     * 4. Đóng HĐ cũ thẳng → TERMINATED (không dispatch event termination, không tạo handover).
+     * 5. Tạo HĐ mới ACTIVE, kế thừa nguyên xi tiền cọc; không tạo hóa đơn đầu kỳ cho HĐ mới.
+     * 6. Nếu có HĐ chuyển phòng: cập nhật invoices.contract_id / room_id → HĐ mới & phòng mới (snapshot giữ id HĐ/phòng cũ).
      */
     public function executeTransfer(Contract $oldContract, array $data, User $performer): Contract
     {
+        if ($oldContract->status !== ContractStatus::ACTIVE) {
+            abort(422, 'Chỉ có thể chuyển phòng khi hợp đồng đang hiệu lực.');
+        }
+
         return DB::transaction(function () use ($oldContract, $data, $performer) {
             $transferDate = Carbon::parse($data['transfer_date']);
+            $transferDateStr = $transferDate->toDateString();
             $targetRoomId = $data['target_room_id'];
-            $transferUnusedRent = $data['transfer_unused_rent'] ?? false;
+            $oldRoomId = $oldContract->room_id;
+            $linkedInvoiceId = $data['linked_transfer_invoice_id'] ?? null;
 
-            // 1. Tính toán tiền dư nếu transfer_unused_rent = true
-            $unusedRentAmount = 0;
-            if ($transferUnusedRent && $oldContract->next_billing_date) {
-                // Tính số ngày dư từ ngày chuyển đến next_billing_date
-                $nextBilling = Carbon::parse($oldContract->next_billing_date);
-                if ($transferDate->lt($nextBilling)) {
-                    $daysInCurrentCycle = 30; // Mặc định 30 ngày để tính giá trị ngày
-                    $unusedDays = $nextBilling->diffInDays($transferDate);
+            $targetRoom = Room::query()
+                ->whereKey($targetRoomId)
+                ->where('property_id', $oldContract->property_id)
+                ->where('status', 'available')
+                ->first();
 
-                    if ($unusedDays > 0) {
-                        $dailyRent = $oldContract->rent_price / $daysInCurrentCycle;
-                        $unusedRentAmount = round($dailyRent * $unusedDays, 0); // Làm tròn số tiền
-                    }
-                }
+            if (! $targetRoom) {
+                abort(422, 'Phòng đích không hợp lệ hoặc không còn trống trong cùng cơ sở.');
             }
 
-            $oldDeposit = (float) $oldContract->deposit_amount;
-            $totalCreditAmount = $oldDeposit + $unusedRentAmount;
+            // Guard 1 — chốt đồng hồ phòng cũ đến ngày chuyển.
+            $unreadMeters = $this->getMetersWithoutApprovedReading($oldRoomId, $transferDateStr);
+            if ($unreadMeters->isNotEmpty()) {
+                $labels = $unreadMeters->pluck('code')->join(', ');
+                abort(422, "Chưa chốt số đồng hồ phòng hiện tại: [{$labels}]. Vui lòng ghi nhận và duyệt chỉ số đến ngày chuyển trước khi chuyển phòng.");
+            }
 
-            // 2. Chấm dứt hợp đồng cũ (MUTUAL agree, waive_penalty = true)
-            $this->terminate($oldContract, [
-                'termination_date' => $transferDate->toDateString(),
-                'cancellation_party' => 'MUTUAL',
-                'cancellation_reason' => 'Chuyển sang phòng mới ID: '.$targetRoomId,
-                'waive_penalty' => true,
-                'refund_remaining_rent' => false, // Ta không trả về client mà chuyển thành Credit cho HD mới
-                'skip_meter_readiness_guard' => true,
+            // Guard 2 — chặn khi HĐ còn hóa đơn chưa thanh toán (trừ HĐ chuyển phòng đã liên kết).
+            $outstandingCount = $this->countOutstandingInvoicesForContractExcluding($oldContract->id, $linkedInvoiceId);
+            if ($outstandingCount > 0) {
+                abort(422, "Hợp đồng còn {$outstandingCount} hóa đơn chưa thanh toán. Vui lòng thu hết nợ cũ trước khi chuyển phòng.");
+            }
+
+            $resolvedNewRent = $this->resolveRoomTransferNewRent($oldContract, $targetRoom, $data);
+
+            $oldContract->loadMissing(['members', 'room']);
+
+            $items = $this->buildRoomTransferFinalInvoiceItems(
+                $oldContract,
+                $transferDateStr,
+                $targetRoomId,
+                $resolvedNewRent,
+                $transferDate,
+            );
+
+            $invoiceId = null;
+
+            if (count($items) > 0) {
+                if (empty($linkedInvoiceId)) {
+                    abort(422, 'Cần phát hành hóa đơn chuyển phòng trước (POST /contracts/{id}/transfer/issue-final-invoice), sau đó gửi linked_transfer_invoice_id khi xác nhận chuyển phòng.');
+                }
+
+                $linked = Invoice::query()->whereKey($linkedInvoiceId)->lockForUpdate()->firstOrFail();
+                $this->assertLinkedRoomTransferInvoiceMatches(
+                    $linked,
+                    $oldContract,
+                    $transferDateStr,
+                    $targetRoomId,
+                    $resolvedNewRent,
+                    $items,
+                );
+                $invoiceId = $linked->id;
+            } elseif (! empty($linkedInvoiceId)) {
+                abort(422, 'Không có dòng thanh toán cho chuyển phòng — không gửi linked_transfer_invoice_id.');
+            }
+
+            // Đóng HĐ cũ trực tiếp về TERMINATED — KHÔNG dispatch event termination/handover.
+            $oldContract->update([
+                'status' => ContractStatus::TERMINATED,
+                'end_date' => $transferDateStr,
+                'terminated_at' => now(),
+                'cancellation_party' => ContractCancellationParty::MUTUAL,
+                'cancellation_reason' => 'Chuyển sang phòng mới (ID: '.$targetRoomId.').',
+                'meta' => array_merge($oldContract->meta ?? [], [
+                    'room_transfer' => [
+                        'to_room_id' => $targetRoomId,
+                        'transfer_date' => $transferDateStr,
+                        'final_invoice_id' => $invoiceId,
+                        'pipeline' => 'simple_transfer_v1',
+                    ],
+                ]),
             ]);
 
-            // 3. Tạo hợp đồng mới
-            $targetRoom = Room::findOrFail($targetRoomId);
-
+            // Tạo HĐ mới — kế thừa cọc + members.
             $newContractData = [
                 'org_id' => $oldContract->org_id,
                 'property_id' => $targetRoom->property_id,
                 'room_id' => $targetRoomId,
-                'start_date' => $transferDate->toDateString(),
-                'rent_price' => $data['rent_price'] ?? null,
-                'deposit_amount' => $data['deposit_amount'] ?? null,
-                // Kế thừa chu kỳ thanh toán
+                'start_date' => $transferDateStr,
+                'rent_price' => $resolvedNewRent,
+                'deposit_amount' => isset($data['deposit_amount']) && $data['deposit_amount'] !== ''
+                    ? (float) $data['deposit_amount']
+                    : (float) $oldContract->deposit_amount,
+                'deposit_months' => $oldContract->deposit_months,
+                'deposit_status' => DepositStatus::HELD,
                 'billing_cycle' => $oldContract->billing_cycle,
                 'due_day' => $oldContract->due_day,
                 'cutoff_day' => $oldContract->cutoff_day,
+                'meta' => [
+                    'deposit_inherited_from' => $oldContract->id,
+                    'transfer_source_contract_id' => $oldContract->id,
+                    'transfer_final_invoice_id' => $invoiceId,
+                ],
             ];
 
-            // Thiết lập user members
             $membersData = [];
             foreach ($oldContract->members as $member) {
                 $membersData[] = [
                     'user_id' => $member->user_id,
                     'is_primary' => $member->is_primary,
-                    'status' => 'APPROVED', // Thành viên từ HD cũ tự động APPROVED
+                    'status' => 'APPROVED',
                     'joined_at' => $transferDate->toDateTimeString(),
                 ];
             }
@@ -1342,69 +1876,29 @@ class ContractService
 
             $newContract = $this->create($newContractData, $performer);
 
-            // Bỏ qua PENDING_SIGNATURE, set PENDING_PAYMENT
+            // ACTIVE thẳng — cọc đã có, không cần ký + không phát hành hóa đơn đầu kỳ.
             $newContract->update([
-                'status' => ContractStatus::PENDING_PAYMENT,
+                'status' => ContractStatus::ACTIVE,
                 'signed_at' => now(),
             ]);
 
-            // 4. Tạo Initial Invoice cho hợp đồng mới
-            $primaryMember = $newContract->members->firstWhere('is_primary', true)?->user;
-            $initialInvoice = $this->createInitialInvoice($newContract, $primaryMember ?? $performer);
+            // ContractObserver chỉ tự free phòng khi contract → TERMINATED;
+            // chiều ngược (set occupied) phải làm thủ công như các flow khác.
+            $targetRoom->update(['status' => 'occupied']);
 
-            // 5. Tính toán và tạo Credit Adjustment cho hóa đơn ban đầu
-            if ($totalCreditAmount > 0) {
-                // Xác định số tiền hóa đơn trước khi giảm trừ (Tổng Cọc + Phí + Thuê)
-                $invoiceTotalBeforeCredit = $initialInvoice->total_amount;
-
-                $excessHandlingMethod = $data['excess_handling_method'] ?? 'CASH_REFUND';
-
-                // Mức tín dụng thực tế sẽ cấn trừ vào hóa đơn (không vượt quá tổng hóa đơn)
-                $appliedCredit = 0;
-                $excessCredit = 0;
-
-                if ($totalCreditAmount > $invoiceTotalBeforeCredit) {
-                    $appliedCredit = clone $invoiceTotalBeforeCredit;
-                    $excessCredit = $totalCreditAmount - $invoiceTotalBeforeCredit;
-                } else {
-                    $appliedCredit = $totalCreditAmount;
-                }
-
-                // Xử lý lưu Số dư dư nợ nếu chọn KEEP_AS_CREDIT
-                if ($excessCredit > 0 && $excessHandlingMethod === 'KEEP_AS_CREDIT') {
-                    $meta = $newContract->meta ?? [];
-                    $meta['credit_balance'] = ($meta['credit_balance'] ?? 0) + $excessCredit;
-                    $newContract->update(['meta' => $meta]);
-                } elseif ($excessCredit > 0) {
-                    // Nếu là CASH_REFUND hoặc thiếu tiền thì chỉ trừ khoản đã apply,
-                    // phần thừa do kế toán trả tay.
-                    // Nếu không muốn tự động chặt về 0 mà muốn để Hóa đơn -1tr để Kế toán nhìn thấy,
-                    // thì thay vì tính $appliedCredit, ta đẩy thẳng $totalCreditAmount vào
-                    // Nhưng Hostech thiết kế "total >= 0", vì vậy ta vẫn phải push $appliedCredit.
-                    // Để bảo toàn giá trị sổ sách, ta vẫn ghi nhận full amount vào Adjustment
-                    // dù invoice total sẽ kẹp bằng 0.
-                    $appliedCredit = $totalCreditAmount;
-                } else {
-                    $appliedCredit = $totalCreditAmount;
-                }
-
-                InvoiceAdjustment::create([
-                    'org_id' => $newContract->org_id,
-                    'invoice_id' => $initialInvoice->id,
-                    'type' => 'CREDIT',
-                    'amount' => $appliedCredit,
-                    'reason' => 'Chuyển cọc ('.number_format($oldDeposit).') & tiền dư ('.number_format($unusedRentAmount).') từ phòng cũ.',
-                    'created_by_user_id' => $performer->id,
-                    'approved_by_user_id' => $performer->id, // Tự động duyệt
-                    'approved_at' => now(),
-                ]);
-
-                // Tính lại bill
-                $this->invoiceService->recalculateTotalAmount($initialInvoice);
-
-                // Nếu hóa đơn trả về 0 sau khi bù trừ, tự động đóng (PAID) hóa đơn và kích hoạt HD
-                if ($initialInvoice->total_amount <= 0) {
-                    $this->invoiceService->payInvoice($initialInvoice, 'Thanh toán bằng cấn trừ từ phòng cũ.');
+            // Gán hóa đơn chuyển phòng sang HĐ mới (và phòng mới) để danh sách hóa đơn theo HĐ hiện tại đúng nghiệp vụ thu.
+            // Lưu mốc HĐ/phòng cũ trong snapshot để đối soát.
+            if ($invoiceId !== null) {
+                $transferInvoice = Invoice::query()->whereKey($invoiceId)->lockForUpdate()->first();
+                if ($transferInvoice) {
+                    $snap = is_array($transferInvoice->snapshot) ? $transferInvoice->snapshot : [];
+                    $snap['transfer_invoice_original_contract_id'] = (string) $oldContract->id;
+                    $snap['transfer_invoice_original_room_id'] = (string) $oldRoomId;
+                    $transferInvoice->update([
+                        'contract_id' => $newContract->id,
+                        'room_id' => $targetRoomId,
+                        'snapshot' => $snap,
+                    ]);
                 }
             }
 
@@ -1473,7 +1967,7 @@ class ContractService
     }
 
     /**
-     * Các dòng hóa đơn thanh lý cuối (EDA): tiền thuê pro-rate, điện/nước, phí hư hỏng, phạt — không gom nợ cũ và không ghi hoàn cọc trên hóa đơn (cấn trừ FIFO ở Reconciliation).
+     * Các dòng hóa đơn thanh lý cuối (EDA): tiền phòng + phí cố định tháng cuối (đủ tháng — BQL tự chỉnh dòng / điều chỉnh nếu cần), điện/nước, phí hư hỏng, phạt — không gom nợ cũ và không ghi hoàn cọc trên hóa đơn (cấn trừ FIFO ở Reconciliation).
      *
      * @param  array<string, mixed>  $data
      * @return array<int, array<string, mixed>>
@@ -1487,61 +1981,83 @@ class ContractService
 
         $terminationDateObj = Carbon::parse($terminationDate);
         $periodStart = $terminationDateObj->copy()->startOfMonth();
-        $daysUsed = (int) $periodStart->diffInDays($terminationDateObj) + 1;
-        $daysInMonth = (int) $terminationDateObj->daysInMonth;
         $fullRent = (float) $contract->rent_price;
-        $proRatedRent = (float) round($fullRent * ($daysUsed / $daysInMonth), 0);
+        $fullFixedServices = (float) $contract->fixed_services_fee;
 
-        $items[] = [
-            'type' => InvoiceItemType::RENT->value,
-            'description' => "Tiền thuê tháng cuối (pro-rated: {$daysUsed}/{$daysInMonth} ngày)",
-            'quantity' => 1,
-            'unit_price' => $proRatedRent,
-            'amount' => $proRatedRent,
-            'meta' => [
-                'days_used' => $daysUsed,
-                'days_in_month' => $daysInMonth,
-                'full_rent' => $fullRent,
-                'is_pro_rated' => true,
-            ],
-        ];
+        $existingInvoice = Invoice::where('contract_id', $contract->id)
+            ->where('period_start', $periodStart->toDateString())
+            ->where('period_end', $periodStart->copy()->endOfMonth()->toDateString())
+            ->whereIn('status', ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OVERDUE'])
+            ->exists();
 
-        $meters = Meter::where('room_id', $contract->room_id)
-            ->where('is_active', true)
-            ->get();
+        // billing_mode:
+        //   - 'combined' (default): nếu chưa có HĐ định kỳ tháng đó → thanh lý gộp rent + dịch vụ + điện/nước.
+        //   - 'split': giả định HĐ định kỳ tháng cuối đã/sẽ phát hành riêng → HĐ thanh lý CHỈ chứa damage + penalty.
+        $billingMode = ($data['billing_mode'] ?? 'combined') === 'split' ? 'split' : 'combined';
+        $skipRecurringItems = $billingMode === 'split' || $existingInvoice;
 
-        foreach ($meters as $meter) {
-            $usageData = $this->calculateTerminationMeterCost(
-                $meter,
-                $terminationDate,
-                $contract->room_id,
-                $contract->org_id,
-            );
-
-            if (! $usageData) {
-                continue;
-            }
-
+        if (! $skipRecurringItems) {
             $items[] = [
-                'type' => InvoiceItemType::SERVICE->value,
-                'description' => MeterInvoiceDescription::forUsage(
-                    (string) $usageData['service_name'],
-                    $meter->type,
-                    $usageData['usage'],
-                )." tháng cuối — kỳ {$usageData['period_start']} → {$usageData['period_end']}",
-                'quantity' => $usageData['usage'],
-                'unit_price' => $usageData['average_price'],
-                'amount' => $usageData['total_amount'],
+                'type' => InvoiceItemType::RENT->value,
+                'description' => 'Tiền thuê tháng cuối (theo giá hợp đồng — chỉnh sửa thủ công nếu cần)',
+                'quantity' => 1,
+                'unit_price' => $fullRent,
+                'amount' => $fullRent,
                 'meta' => [
-                    'meter_id' => $meter->id,
-                    'meter_code' => $meter->code,
-                    'reading_id' => $usageData['reading_id'],
-                    'prev_reading' => $usageData['prev_reading'],
-                    'curr_reading' => $usageData['curr_reading'],
-                    'tiers' => $usageData['tiers_breakdown'],
-                    'is_termination_reading' => true,
+                    'full_rent' => $fullRent,
                 ],
             ];
+
+            if ($fullFixedServices > 0.009) {
+                $items[] = [
+                    'type' => InvoiceItemType::SERVICE->value,
+                    'description' => 'Phí dịch vụ cố định tháng cuối (theo hợp đồng — chỉnh sửa thủ công nếu cần)',
+                    'quantity' => 1,
+                    'unit_price' => $fullFixedServices,
+                    'amount' => $fullFixedServices,
+                    'meta' => [
+                        'full_fixed_services_fee' => $fullFixedServices,
+                    ],
+                ];
+            }
+
+            $meters = Meter::where('room_id', $contract->room_id)
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($meters as $meter) {
+                $usageData = $this->calculateTerminationMeterCost(
+                    $meter,
+                    $terminationDate,
+                    $contract->room_id,
+                    $contract->org_id,
+                );
+
+                if (! $usageData) {
+                    continue;
+                }
+
+                $items[] = [
+                    'type' => InvoiceItemType::SERVICE->value,
+                    'description' => MeterInvoiceDescription::forUsage(
+                        (string) $usageData['service_name'],
+                        $meter->type,
+                        $usageData['usage'],
+                    )." tháng cuối — kỳ {$usageData['period_start']} → {$usageData['period_end']}",
+                    'quantity' => $usageData['usage'],
+                    'unit_price' => $usageData['average_price'],
+                    'amount' => $usageData['total_amount'],
+                    'meta' => [
+                        'meter_id' => $meter->id,
+                        'meter_code' => $meter->code,
+                        'reading_id' => $usageData['reading_id'],
+                        'prev_reading' => $usageData['prev_reading'],
+                        'curr_reading' => $usageData['curr_reading'],
+                        'tiers' => $usageData['tiers_breakdown'],
+                        'is_termination_reading' => true,
+                    ],
+                ];
+            }
         }
 
         $damageFee = (float) ($data['damage_fee_total'] ?? 0);
@@ -1567,6 +2083,18 @@ class ContractService
             ];
         }
 
+        $midMonthCredit = round(max(0, (float) ($data['mid_month_rent_credit'] ?? 0)), 2);
+        if ($midMonthCredit > 0.009 && ($existingInvoice || $billingMode === 'split')) {
+            $items[] = [
+                'type' => InvoiceItemType::DISCOUNT->value,
+                'description' => 'Điều chỉnh giảm (đã thu cả tháng / trả phòng giữa kỳ — thỏa thuận)',
+                'quantity' => 1,
+                'unit_price' => -$midMonthCredit,
+                'amount' => -$midMonthCredit,
+                'meta' => ['source' => 'mid_month_rent_credit'],
+            ];
+        }
+
         return $items;
     }
 
@@ -1575,7 +2103,17 @@ class ContractService
     // ───────────────────────────────────────────────────────────────────────────
 
     /**
-     * Trả về các meters của phòng chưa có reading APPROVED tính đến terminationDate.
+     * Chỉ số đã chốt kỳ (khách đã trả / đã khóa sau phát hành HĐ định kỳ) chuyển sang LOCKED — vẫn hợp lệ cho thanh lý.
+     *
+     * @return array<int, string>
+     */
+    private function meterReadingStatusesEligibleForTermination(): array
+    {
+        return ['APPROVED', 'LOCKED'];
+    }
+
+    /**
+     * Trả về các meters của phòng chưa có reading APPROVED/LOCKED tính đến terminationDate.
      * Dùng làm guard trước khi cho phép thanh lý.
      */
     private function getMetersWithoutApprovedReading(string $roomId, string $terminationDate): Collection
@@ -1586,23 +2124,26 @@ class ContractService
 
         return $meters->filter(function (Meter $meter) use ($terminationDate) {
             return ! MeterReading::where('meter_id', $meter->id)
-                ->where('status', 'APPROVED')
+                ->whereIn('status', $this->meterReadingStatusesEligibleForTermination())
                 ->where('period_end', '<=', $terminationDate)
                 ->exists();
         });
     }
 
     /**
-     * Tính chi phí điện/nước cuối kỳ từ reading APPROVED gần nhất.
+     * Tính chi phí điện/nước cuối kỳ từ reading APPROVED hoặc LOCKED gần nhất.
+     * LOCKED: chỉ số đã khóa sau kỳ thanh toán định kỳ — vẫn dùng được cho HĐ thanh lý.
      * Kế thừa logic tiered/flat từ RecurringBillingService::calculateMeterUsage().
      *
-     * @return array|null null nếu không có reading APPROVED phù hợp
+     * @return array|null null nếu không có reading phù hợp
      */
     public function calculateTerminationMeterCost(Meter $meter, string $terminationDate, ?string $roomId = null, ?string $orgId = null): ?array
     {
-        // Reading APPROVED gần nhất (≤ terminationDate)
+        $statuses = $this->meterReadingStatusesEligibleForTermination();
+
+        // Reading gần nhất đã chốt (≤ terminationDate)
         $currentReading = MeterReading::where('meter_id', $meter->id)
-            ->where('status', 'APPROVED')
+            ->whereIn('status', $statuses)
             ->where('period_end', '<=', $terminationDate)
             ->orderBy('period_end', 'desc')
             ->first();
@@ -1613,7 +2154,7 @@ class ContractService
 
         // Reading trước đó để tính consumption
         $previousReading = MeterReading::where('meter_id', $meter->id)
-            ->where('status', 'APPROVED')
+            ->whereIn('status', $statuses)
             ->where('period_end', '<', $currentReading->period_end)
             ->orderBy('period_end', 'desc')
             ->first();

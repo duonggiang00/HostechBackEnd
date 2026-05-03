@@ -11,6 +11,7 @@ use App\Models\Finance\Payment;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * Sổ cái kế toán kép: mỗi payment tạo 2 dòng (CASH_BANK debit, A/R credit).
@@ -80,6 +81,56 @@ class LedgerService
             ]);
 
             return [$debitEntry, $creditEntry];
+        });
+    }
+
+    /**
+     * Ghi nhận vào sổ kế toán: phần cọc còn lại bị thu hồi sau quyết toán thanh lý (không phát hành biên lai hoàn).
+     *
+     * Tiền cọc khi thu ban đầu không tạo dòng này; chỉ khi FORFEIT phần dư sau FIFO mới sinh bút ghi nhận.
+     * Một dòng debit (không phải CASH_BANK) — không hợp nhất vào KPI “tiền vào quỹ” của cashflow-feed.
+     */
+    public function recordTerminationDepositForfeit(Contract $contract, float $amount, ?string $finalInvoiceId = null): ?LedgerEntry
+    {
+        if ($amount <= 0.02) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($contract, $amount, $finalInvoiceId) {
+            $q = LedgerEntry::query()
+                ->where('org_id', $contract->org_id)
+                ->where('ref_type', LedgerEntry::REF_TYPE_TERMINATION_DEPOSIT_FORFEIT)
+                ->where('meta->contract_id', $contract->id)
+                ->lockForUpdate();
+
+            if ($finalInvoiceId) {
+                $q->where('meta->final_invoice_id', $finalInvoiceId);
+            } else {
+                $q->whereNull('meta->final_invoice_id');
+            }
+
+            if ($existing = $q->first()) {
+                return $existing;
+            }
+
+            $contract->loadMissing('property');
+
+            return LedgerEntry::create([
+                'org_id' => $contract->org_id,
+                'ref_type' => LedgerEntry::REF_TYPE_TERMINATION_DEPOSIT_FORFEIT,
+                'ref_id' => (string) Str::uuid(),
+                'debit' => round($amount, 2),
+                'credit' => 0.00,
+                'occurred_at' => now(),
+                'meta' => [
+                    'account' => 'DEPOSIT_FORFEIT_BOOK',
+                    'property_id' => $contract->property_id,
+                    'contract_id' => $contract->id,
+                    'final_invoice_id' => $finalInvoiceId,
+                    'reference' => 'THU-HOI-COC-'.strtoupper(substr((string) $contract->id, 0, 8)),
+                    'description' => 'Ghi nhận sổ: thu hồi phần tiền cọc còn lại sau quyết toán thanh lý (không hoàn cho khách).',
+                ],
+            ]);
         });
     }
 

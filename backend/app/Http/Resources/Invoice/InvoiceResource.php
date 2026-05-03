@@ -30,6 +30,7 @@ class InvoiceResource extends JsonResource
             'org_id' => $this->org_id,
             'contract_id' => $this->contract_id,
             'status' => $this->status,
+            'is_termination' => (bool) $this->is_termination,
 
             // Kỳ thanh toán
             'period_start' => $this->period_start?->format('Y-m-d'),

@@ -13,10 +13,16 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Ticket extends Model
+class Ticket extends Model implements HasMedia
 {
-    use HasFactory, HasUuids, MultiTenant, SoftDeletes, SystemLoggable;
+    use HasFactory, HasUuids, InteractsWithMedia, MultiTenant, SoftDeletes, SystemLoggable;
+
+    /** Tên collection media cho file đính kèm trên ticket (ảnh + pdf). */
+    public const MEDIA_ATTACHMENTS = 'ticket_attachments';
 
     public $incrementing = false;
 
@@ -83,5 +89,32 @@ class Ticket extends Model
     public function costs()
     {
         return $this->hasMany(TicketCost::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection(self::MEDIA_ATTACHMENTS)
+            ->acceptsMimeTypes([
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/gif',
+                'application/pdf',
+            ]);
+    }
+
+    /**
+     * Format media item thành payload tối giản cho FE (kèm URL đã resolve).
+     */
+    public static function formatAttachment(Media $media): array
+    {
+        return [
+            'id' => $media->id,
+            'name' => $media->file_name,
+            'mime_type' => $media->mime_type,
+            'size' => (int) $media->size,
+            'url' => $media->getFullUrl(),
+            'created_at' => $media->created_at?->toIso8601String(),
+        ];
     }
 }

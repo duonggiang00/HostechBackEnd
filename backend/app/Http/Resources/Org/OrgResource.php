@@ -16,6 +16,7 @@ class OrgResource extends JsonResource
             'address' => $this->address,
             'timezone' => $this->timezone,
             'currency' => $this->currency,
+            'settings' => $this->settings,
             'properties_count' => $this->whenCounted('properties'),
             'users_count' => $this->whenCounted('users'),
             'created_at' => $this->created_at,

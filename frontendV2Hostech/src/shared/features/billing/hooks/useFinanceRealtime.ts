@@ -7,7 +7,11 @@ import {
   TENANT_PAYMENTS_QUERY_KEY,
 } from '@/shared/features/billing/hooks/usePaymentVerification';
 import { INVOICES_QUERY_KEY } from '@/shared/features/billing/hooks/useInvoice';
-import { CONTRACT_KEY, MY_CONTRACTS_KEY } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import {
+  CONTRACT_KEY,
+  MY_CONTRACTS_KEY,
+  PENDING_REQUESTS_KEY,
+} from '@/PropertyScope/features/contracts/hooks/useContracts';
 
 /**
  * Kênh private `property.{id}` — đồng bộ khi staff duyệt thanh toán / hóa đơn chuyển PAID (broadcast Laravel).
@@ -28,6 +32,13 @@ export function usePropertyFinanceRealtime(propertyId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['property-rooms-simple', propertyId] });
     };
 
+    const onRoomTransferRequested = () => {
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY, propertyId] });
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY] });
+    };
+
     const onInvoicePaid = (payload?: { invoice_id?: string }) => {
       invalidate();
       if (payload?.invoice_id) {
@@ -46,6 +57,8 @@ export function usePropertyFinanceRealtime(propertyId: string | undefined) {
       queryClient.invalidateQueries({ queryKey: ['property-rooms'] });
       queryClient.invalidateQueries({ queryKey: ['property-rooms-simple', propertyId] });
     });
+    channel.listen('.room_transfer.requested', onRoomTransferRequested);
+    channel.listen('.contract.renewal_requested', onRoomTransferRequested);
 
     return () => {
       channel.stopListening('.payment.successfully_verified');
@@ -53,6 +66,8 @@ export function usePropertyFinanceRealtime(propertyId: string | undefined) {
       channel.stopListening('.payment.rejected');
       channel.stopListening('.invoice.paid');
       channel.stopListening('.contract.activated');
+      channel.stopListening('.room_transfer.requested');
+      channel.stopListening('.contract.renewal_requested');
     };
   }, [propertyId, queryClient]);
 }
@@ -82,12 +97,22 @@ export function useOrgFinanceRealtime(orgId: string | null | undefined) {
       }
     };
 
+    const onRoomTransferRequested = () => {
+      queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: [CONTRACT_KEY] });
+    };
+
     channel.listen('.payment.successfully_verified', invalidate);
     channel.listen('.invoice.paid', onInvoicePaid);
+    channel.listen('.room_transfer.requested', onRoomTransferRequested);
+    channel.listen('.contract.renewal_requested', onRoomTransferRequested);
 
     return () => {
       channel.stopListening('.payment.successfully_verified');
       channel.stopListening('.invoice.paid');
+      channel.stopListening('.room_transfer.requested');
+      channel.stopListening('.contract.renewal_requested');
     };
   }, [orgId, queryClient]);
 }

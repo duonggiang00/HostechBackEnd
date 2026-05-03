@@ -27,6 +27,7 @@ export interface Meter {
     period_start?: string;
     period_end?: string;
     reading_value?: number;
+    consumption?: number | null;
     status?: string;
   } | null;
 }

@@ -34,6 +34,7 @@ import RoomImageGallery from '../components/RoomImageGallery';
 import InvoiceManager from '@/PropertyScope/features/billing/components/InvoiceManager';
 import { formatCurrency } from '@/lib/utils';
 import { AddMemberModal } from '@/PropertyScope/features/contracts/components/AddMemberModal';
+import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
 import { UserPlus } from 'lucide-react';
 
 
@@ -49,14 +50,30 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   draft:       { label: 'Nháp',          className: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
 };
 
+/** Khớp `Contract.status` từ API (SCREAMING_SNAKE). */
 const CONTRACT_STATUS_MAP: Record<string, { label: string; className: string }> = {
-  active:             { label: 'Đang hiệu lực', className: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30' },
-  draft:              { label: 'Nháp',           className: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
-  pending_signature:  { label: 'Chờ ký',         className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30' },
-  pending_payment:    { label: 'Chờ thanh toán', className: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30' },
-  ended:              { label: 'Hết hạn',        className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30' },
-  terminated:         { label: 'Đã chấm dứt',   className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30' },
-  cancelled:          { label: 'Đã hủy',         className: 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700' },
+  DRAFT: { label: 'Bản nháp', className: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
+  PENDING_SIGNATURE: {
+    label: 'Chờ ký',
+    className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30',
+  },
+  PENDING_PAYMENT: {
+    label: 'Chờ thanh toán',
+    className: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
+  },
+  ACTIVE: { label: 'Đang hiệu lực', className: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30' },
+  PENDING_TERMINATION: {
+    label: 'Chờ thanh lý',
+    className: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30',
+  },
+  PENDING_SETTLEMENT: {
+    label: 'Chờ quyết toán nợ',
+    className: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-500/30',
+  },
+  ENDED: { label: 'Đã kết thúc', className: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' },
+  EXPIRED: { label: 'Hết hạn', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30' },
+  TERMINATED: { label: 'Đã thanh lý', className: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-400 dark:border-indigo-500/30' },
+  CANCELLED: { label: 'Đã huỷ', className: 'bg-gray-100 text-gray-500 border-gray-200 dark:bg-slate-800 dark:text-slate-500 dark:border-slate-700' },
 };
 
 
@@ -569,7 +586,12 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
           <div className="space-y-4">
             {room.contracts && room.contracts.length > 0 ? (
               room.contracts.map((contract) => {
-                const cs = CONTRACT_STATUS_MAP[contract.status] ?? { label: contract.status, className: 'bg-gray-100 text-gray-600 border-gray-200' };
+                const statusKey = String(contract.status ?? '').toUpperCase();
+                const cs =
+                  CONTRACT_STATUS_MAP[statusKey] ?? {
+                    label: contractStatusLabelVi(contract.status),
+                    className: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+                  };
                 return (
                   <div key={contract.id} className="bg-white dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-800 p-6">
                     <div className="flex items-start justify-between mb-4">

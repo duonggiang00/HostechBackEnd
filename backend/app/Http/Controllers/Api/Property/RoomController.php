@@ -110,6 +110,7 @@ class RoomController extends Controller
             'activeContract.members.user',
             'meters.latestApprovedReading',
             'meters.latestInvoiceEligibleReading',
+            'meters.latestReading',
             'invoices',
             'roomServices.service.currentRate',
             'floorPlanNode',

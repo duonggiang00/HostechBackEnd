@@ -4,11 +4,11 @@ import {
   FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
   AlertCircle, CheckCircle2, History, XCircle, Loader2, ArrowRightLeft, IdCard,
-  CircleDollarSign
+  CircleDollarSign, Receipt, ExternalLink,
 } from 'lucide-react';
-import { useContract, useContractActions } from '../hooks/useContracts';
-import { ExecuteRoomTransferModal } from '../components/ExecuteRoomTransferModal';
+import { useContract, useContractActions, useContractStatusHistories } from '../hooks/useContracts';
 import { ContractRentDebtPanel } from '../components/ContractRentDebtPanel';
+import { ContractStatusTimeline } from '../components/ContractStatusTimeline';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -20,6 +20,21 @@ import { PenTool, UserPlus, LogOut, ClipboardCheck } from 'lucide-react';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
 import { useHandover } from '@/shared/features/operations/hooks/useHandover';
+import { usePropertyInvoices } from '@/PropertyScope/features/billing/hooks/usePropertyInvoices';
+import { InvoiceStatusBadge } from '@/PropertyScope/features/billing/components/InvoiceStatusBadge';
+import { usePayments } from '@/PropertyScope/features/finance/hooks/useFinance';
+import { PaymentStatusBadge } from '@/PropertyScope/features/finance/components/PaymentStatusBadge';
+import type { Invoice } from '@/PropertyScope/features/billing/types';
+import type { Payment } from '@/PropertyScope/features/finance/types';
+
+type ContractDetailTab = 'info' | 'timeline' | 'invoices' | 'payments';
+
+const CONTRACT_DETAIL_TABS: { id: ContractDetailTab; label: string }[] = [
+  { id: 'info', label: 'Thông tin hợp đồng' },
+  { id: 'timeline', label: 'Lịch sử hợp đồng' },
+  { id: 'invoices', label: 'Lịch sử hóa đơn' },
+  { id: 'payments', label: 'Thu tiền & biên lai' },
+];
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
   if (value === 'MONTHLY') return 1;
@@ -37,9 +52,10 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
   PENDING_PAYMENT: { label: 'Chờ thanh toán', color: 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400', icon: DollarSign },
   ACTIVE: { label: 'Hiệu lực', color: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400', icon: CheckCircle2 },
   PENDING_TERMINATION: { label: 'Chờ thanh lý', color: 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400', icon: AlertCircle },
+  PENDING_SETTLEMENT: { label: 'Chờ quyết toán nợ', color: 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400', icon: Clock },
   EXPIRED: { label: 'Hết hạn', color: 'bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400', icon: Clock },
   ENDED: { label: 'Đã kết thúc', color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400', icon: Shield },
-  TERMINATED: { label: 'Đã thanh lý', color: 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400', icon: XCircle },
+  TERMINATED: { label: 'Đã kết thúc', color: 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400', icon: XCircle },
   CANCELLED: { label: 'Đã hủy', color: 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500', icon: AlertCircle },
 };
 
@@ -62,13 +78,35 @@ export default function ContractDetailPage() {
   );
   const terminationHandoverId = (handoverForContractRes as { data?: { id: string }[] } | undefined)?.data?.[0]?.id;
   const { generateDocument, downloadDocument } = useContractActions();
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [identityViewMember, setIdentityViewMember] = useState<ContractMember | null>(null);
+  const [detailTab, setDetailTab] = useState<ContractDetailTab>('info');
   const { signContract, removeContractMember, approveContractMember } = useContractActions();
   const { user, hasPermission, hasRole } = useAuth();
+  const {
+    data: statusHistories,
+    isLoading: isLoadingHistories,
+  } = useContractStatusHistories(contractId);
+
+  const { data: invoicesPage, isLoading: invoicesLoading } = usePropertyInvoices(
+    propertyId ?? '',
+    { contract_id: contractId, per_page: 100, page: 1 },
+    { enabled: !!propertyId && !!contractId && detailTab === 'invoices' },
+  );
+
+  const { data: paymentsPage, isLoading: paymentsLoading } = usePayments(
+    {
+      property_id: propertyId,
+      'filter[property_id]': propertyId,
+      'filter[contract_id]': contractId,
+      per_page: 100,
+      page: 1,
+      sort: '-received_at',
+    },
+    { enabled: !!propertyId && !!contractId && detailTab === 'payments' },
+  );
 
   useEffect(() => {
     if (searchParams.get('openTerminate') !== '1' || !propertyId || !contractId) return;
@@ -185,29 +223,29 @@ export default function ContractDetailPage() {
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden transition-colors">
       {/* Header & Actions */}
-      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-5">
-          <PageBackButton className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 shadow-sm" />
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <PageBackButton className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm mt-1" />
           <div>
-            <div className="flex flex-wrap items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white leading-tight transition-colors">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white leading-tight transition-colors">
                 Chi tiết Hợp đồng
               </h1>
-              <div className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color}`}>
+              <div className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${statusInfo.color}`}>
                 {statusInfo.label}
               </div>
               {contract.has_invoice_debt && (
-                <div className="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/25">
+                <div className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-200 dark:border-rose-500/25">
                   Có hóa đơn nợ
                 </div>
               )}
               {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
-                <div className="px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                <div className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
                   Sắp trả phòng
                 </div>
               )}
             </div>
-            <p className="text-slate-500 dark:text-slate-400 font-bold flex items-center gap-2 text-xs transition-colors">
+            <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2 text-xs transition-colors">
               <span className="text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md font-bold">
                 {contract.id?.substring(0, 8).toUpperCase()}
               </span>
@@ -216,11 +254,11 @@ export default function ContractDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {propertyId && terminationHandoverId && endedWithHandoverStatuses.includes(String(contract.status)) && (
             <Link
               to={`/properties/${propertyId}/handovers/${terminationHandoverId}`}
-              className="flex items-center gap-2 px-5 py-3.5 bg-teal-50/90 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/25 rounded-2xl text-teal-800 dark:text-teal-300 font-bold text-sm hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 bg-teal-50/90 dark:bg-teal-500/10 border border-teal-100 dark:border-teal-500/25 rounded-xl text-teal-800 dark:text-teal-300 font-bold text-sm hover:bg-teal-100 dark:hover:bg-teal-500/20 transition-all shadow-sm"
             >
               <ClipboardCheck className="w-4 h-4" />
               <span>Biên bản bàn giao</span>
@@ -228,7 +266,7 @@ export default function ContractDetailPage() {
           )}
           <button 
             onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/view`)}
-            className="flex items-center gap-2 px-5 py-3.5 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-2xl text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-50/50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl text-indigo-600 dark:text-indigo-400 font-bold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-all shadow-sm"
           >
             <FileText className="w-4 h-4" />
             <span>Xem hợp đồng</span>
@@ -236,123 +274,74 @@ export default function ContractDetailPage() {
           <button 
             onClick={handlePrintContract}
             disabled={isPrinting}
-            className="flex items-center gap-2 px-5 py-3.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
-            <span>{isPrinting ? 'Đang tạo file...' : 'In hợp đồng'}</span>
+            <span>{isPrinting ? 'Đang tạo...' : 'In'}</span>
           </button>
           {canLandlordSign && (
             <button 
               onClick={() => setIsSignatureModalOpen(true)}
-              className="flex items-center gap-2 px-6 py-3.5 bg-emerald-600 dark:bg-emerald-500 text-white rounded-2xl font-bold text-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 dark:shadow-none ring-4 ring-emerald-50 dark:ring-emerald-500/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 dark:bg-emerald-500 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-all shadow-sm"
             >
               <PenTool className="w-4 h-4" />
-              <span>Ký của Chủ nhà</span>
+              <span>Ký hợp đồng</span>
             </button>
           )}
           {isOrdinalEditable && (
             <button 
               onClick={handleEdit}
-              className="flex items-center gap-2 px-6 py-3.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-100 dark:shadow-none ring-4 ring-indigo-50 dark:ring-indigo-500/20"
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-sm"
             >
               <Edit3 className="w-4 h-4" />
-              <span>Chỉnh sửa</span>
+              <span>Sửa</span>
             </button>
           )}
           {contract.status === 'ACTIVE' && (
             <>
-              <button 
-                onClick={() => setIsTransferModalOpen(true)}
-                className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 dark:bg-blue-500 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-all shadow-lg shadow-blue-100 dark:shadow-none ring-4 ring-blue-50 dark:ring-blue-500/20"
+              <button
+                onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/transfer`)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-xl font-bold text-sm hover:bg-blue-700 dark:hover:bg-blue-600 transition-all shadow-sm"
               >
                 <ArrowRightLeft className="w-4 h-4" />
                 <span>Chuyển phòng</span>
               </button>
               <button 
                 onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`)}
-                className="flex items-center gap-2 px-6 py-3.5 bg-rose-600 dark:bg-rose-500 text-white rounded-2xl font-bold text-sm hover:bg-rose-700 dark:hover:bg-rose-600 transition-all shadow-lg shadow-rose-100 dark:shadow-none ring-4 ring-rose-50 dark:ring-rose-500/20"
+                className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 dark:bg-rose-500 text-white rounded-xl font-bold text-sm hover:bg-rose-700 dark:hover:bg-rose-600 transition-all shadow-sm"
               >
                 <AlertCircle className="w-4 h-4" />
-                <span>Thanh lý hợp đồng</span>
+                <span>Thanh lý</span>
               </button>
             </>
           )}
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-6">
+        {CONTRACT_DETAIL_TABS.map((t) => {
+          const active = detailTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setDetailTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+                active
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {detailTab === 'info' && (
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
         {/* Main Content */}
         <div className="xl:col-span-8 space-y-8">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl p-6 rounded-2xl border border-white/60 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors"
-            >
-              <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-500/10 rounded-xl flex items-center justify-center mb-3">
-                <DollarSign className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1 transition-colors">Tiền phòng (Tháng)</p>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums transition-colors">
-                {Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} <span className="text-sm font-bold">đ</span>
-              </h3>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl p-6 rounded-2xl border border-white/60 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors"
-            >
-              <div className="w-10 h-10 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl flex items-center justify-center mb-3">
-                <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1 transition-colors">Tiền đặt cọc</p>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight tabular-nums transition-colors">
-                {Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} <span className="text-sm font-bold">đ</span>
-                {Number(contract.deposit_months) > 0 && (
-                  <span className="ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    ({contract.deposit_months} tháng)
-                  </span>
-                )}
-              </h3>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white/40 dark:bg-slate-800/40 backdrop-blur-xl p-6 rounded-2xl border border-white/60 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-none transition-colors"
-            >
-              <div className="w-10 h-10 bg-amber-50 dark:bg-amber-500/10 rounded-xl flex items-center justify-center mb-3">
-                <Calendar className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              </div>
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1 transition-colors">Thời hạn hợp đồng</p>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight transition-colors">
-                {contract.cycle_months || 0} <span className="text-sm font-bold font-sans tracking-tight">Tháng</span>
-              </h3>
-            </motion.div>
-
-            {contract.meta?.credit_balance > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-xl p-6 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-xl shadow-blue-100 dark:shadow-none transition-colors"
-              >
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-800 rounded-xl flex items-center justify-center mb-3">
-                  <DollarSign className="w-5 h-5 text-blue-600 dark:text-blue-300" />
-                </div>
-                <p className="text-xs font-bold text-blue-600 dark:text-blue-400 mb-1 transition-colors">Ví cấn trừ</p>
-                <h3 className="text-xl font-bold text-blue-700 dark:text-blue-300 tracking-tight tabular-nums transition-colors">
-                  {Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} <span className="text-sm font-bold">đ</span>
-                </h3>
-              </motion.div>
-            )}
-          </div>
-
           {/* Details Sections */}
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
@@ -369,13 +358,35 @@ export default function ContractDetailPage() {
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 <DetailItem 
+                  label="Tiền phòng (Tháng)" 
+                  value={`${Intl.NumberFormat('vi-VN').format(contract.rent_price || 0)} đ`}
+                  icon={<DollarSign className="w-4 h-4" />}
+                />
+                <DetailItem 
+                  label="Tiền đặt cọc" 
+                  value={`${Intl.NumberFormat('vi-VN').format(contract.deposit_amount || 0)} đ ${Number(contract.deposit_months) > 0 ? `(${contract.deposit_months} tháng)` : ''}`}
+                  icon={<Shield className="w-4 h-4" />}
+                />
+                <DetailItem 
+                  label="Thời hạn hợp đồng" 
+                  value={Number(contract.cycle_months) > 0 ? `${contract.cycle_months} tháng` : 'Vô hạn'}
+                  icon={<Calendar className="w-4 h-4" />}
+                />
+                {contract.meta?.credit_balance > 0 && (
+                  <DetailItem 
+                    label="Ví cấn trừ" 
+                    value={`${Intl.NumberFormat('vi-VN').format(contract.meta?.credit_balance || 0)} đ`}
+                    icon={<DollarSign className="w-4 h-4" />}
+                  />
+                )}
+                <DetailItem 
                   label="Ngày bắt đầu" 
                   value={contract.start_date ? format(new Date(contract.start_date), 'dd/MM/yyyy') : '---'}
                   icon={<Calendar className="w-4 h-4" />}
                 />
                 <DetailItem 
                   label="Ngày kết thúc" 
-                  value={contract.end_date ? format(new Date(contract.end_date), 'dd/MM/yyyy') : '---'}
+                  value={contract.end_date ? format(new Date(contract.end_date), 'dd/MM/yyyy') : 'Vô hạn'}
                   icon={<Calendar className="w-4 h-4" />}
                 />
                 {contract.status === 'PENDING_TERMINATION' && contract.expected_move_out_date && (
@@ -623,71 +634,193 @@ export default function ContractDetailPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 }}
-            className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6 transition-colors"
+            className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"
           >
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 transition-colors">
-              <History className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              Nghiệp vụ
-            </h3>
-            
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl flex items-center justify-center shrink-0 transition-colors">
-                  <User className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Người tạo</p>
-                  <p className="font-bold text-slate-700 dark:text-slate-300 transition-colors">{contract.createdBy?.full_name || 'Hệ thống'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-xl flex items-center justify-center shrink-0 transition-colors">
-                  <AlertCircle className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 transition-colors">Ghi chú nghiệp vụ</p>
-                  <p className="text-sm font-bold text-slate-500 dark:text-slate-400 transition-colors">Không có ghi chú nào đặc biệt cho hợp đồng này.</p>
-                </div>
-              </div>
-            </div>
-
-            {['ACTIVE', 'PENDING_TERMINATION', 'EXPIRED'].includes(contract.status as string) && (
-              <button
-                onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/terminate`)}
-                className="w-full bg-red-600 text-white py-4 rounded-2xl font-bold uppercase text-xs hover:bg-red-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-200 dark:shadow-none"
-              >
-                <XCircle className="w-4 h-4" />
-                Thanh lý hợp đồng
-              </button>
-            )}
-
-            <div className="pt-6 border-t border-slate-100 dark:border-slate-700">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-3 mb-4 transition-colors">
-                <CircleDollarSign className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                Hóa đơn đang nợ
-              </h4>
-              <ContractRentDebtPanel
-                propertyId={propertyId ?? ''}
-                invoiceDebt={contract.invoice_debt}
-                isLoading={isLoading}
-              />
-            </div>
+            <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-3 mb-6 transition-colors">
+              <CircleDollarSign className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              Hóa đơn đang nợ
+            </h4>
+            <ContractRentDebtPanel
+              propertyId={propertyId ?? ''}
+              invoiceDebt={contract.invoice_debt}
+              isLoading={isLoading}
+            />
           </motion.div>
         </div>
       </div>
+      )}
+
+      {detailTab === 'timeline' && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm transition-colors"
+        >
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+            <History className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+            Lịch sử trạng thái & nghiệp vụ
+          </h3>
+          <ContractStatusTimeline
+            histories={statusHistories ?? []}
+            isLoading={isLoadingHistories}
+          />
+        </motion.div>
+      )}
+
+      {detailTab === 'invoices' && propertyId && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          {invoicesLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80">
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Kỳ</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Tổng</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Đã trả</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Còn nợ</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Trạng thái</th>
+                    <th className="py-3 px-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500"> </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                  {(invoicesPage?.data ?? []).map((inv: Invoice) => (
+                    <tr key={inv.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/40">
+                      <td className="py-3 px-4 text-sm font-bold text-slate-800 dark:text-slate-200">
+                        {new Date(inv.period_start).toLocaleDateString('vi-VN')} – {new Date(inv.period_end).toLocaleDateString('vi-VN')}
+                      </td>
+                      <td className="py-3 px-4 text-sm font-semibold tabular-nums">{inv.total_amount.toLocaleString('vi-VN')} đ</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-emerald-600 tabular-nums">{inv.paid_amount.toLocaleString('vi-VN')} đ</td>
+                      <td className="py-3 px-4 text-sm font-semibold text-rose-600 tabular-nums">{inv.debt.toLocaleString('vi-VN')} đ</td>
+                      <td className="py-3 px-4">
+                        <InvoiceStatusBadge status={inv.status} size="sm" />
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <Link
+                          to={`/properties/${propertyId}/billing/invoices/${inv.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                        >
+                          Chi tiết
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                  {(invoicesPage?.data ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-sm font-medium text-slate-500">
+                        Chưa có hóa đơn gắn hợp đồng này.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {detailTab === 'payments' && propertyId && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+          {paymentsLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80">
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Thời điểm</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Số tiền</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Phương thức</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Trạng thái</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Gạch nợ (hóa đơn)</th>
+                    <th className="py-3 px-4 text-[10px] font-black uppercase tracking-widest text-slate-500">Biên lai</th>
+                    <th className="py-3 px-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500"> </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                  {(paymentsPage?.data ?? []).map((p: Payment) => {
+                    const allocLabels = (p.allocations ?? [])
+                      .map((a) => {
+                        const inv = a.invoice;
+                        if (!inv) return null;
+                        const ps = new Date(inv.period_start).toLocaleDateString('vi-VN');
+                        const pe = new Date(inv.period_end).toLocaleDateString('vi-VN');
+                        return `${ps}→${pe}: ${a.amount.toLocaleString('vi-VN')}đ`;
+                      })
+                      .filter(Boolean)
+                      .join(' · ');
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/40">
+                        <td className="py-3 px-4 text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                          {p.received_at
+                            ? new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(p.received_at))
+                            : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-sm font-bold tabular-nums">{p.amount.toLocaleString('vi-VN')} đ</td>
+                        <td className="py-3 px-4 text-sm text-slate-600 dark:text-slate-400">{p.method_label ?? p.method}</td>
+                        <td className="py-3 px-4">
+                          <PaymentStatusBadge status={p.status} size="sm" />
+                        </td>
+                        <td className="py-3 px-4 text-xs text-slate-600 dark:text-slate-400 max-w-[220px] truncate" title={allocLabels}>
+                          {allocLabels || '—'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {p.receipt?.url ? (
+                            <a
+                              href={p.receipt.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                            >
+                              <Receipt className="w-3.5 h-3.5" />
+                              PDF
+                            </a>
+                          ) : p.proof_receipt?.url ? (
+                            <a
+                              href={p.proof_receipt.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline"
+                            >
+                              Chứng từ
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <Link
+                            to={`/properties/${propertyId}/finance/payments/${p.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            Chi tiết
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(paymentsPage?.data ?? []).length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-sm font-medium text-slate-500">
+                        Chưa có giao dịch thu tiền gạch nợ hóa đơn của hợp đồng này.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
-      <ExecuteRoomTransferModal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        contract={contract}
-        onSuccess={() => {
-          // You might prefer to navigate to the new contract here, 
-          // or at least refresh the list. Let it handled or just reload page briefly.
-          window.location.reload();
-        }}
-      />
       <SignatureModal
         isOpen={isSignatureModalOpen}
         onClose={() => setIsSignatureModalOpen(false)}

@@ -34,6 +34,7 @@ export default function PaymentDetailPage() {
   const { data: payment, isLoading, isError } = usePayment(paymentId ?? null);
 
   const receiptUrl = payment?.receipt?.url ?? null;
+  const proofUrl = payment?.proof_receipt?.url ?? null;
 
   if (isLoading) {
     return (
@@ -124,6 +125,30 @@ export default function PaymentDetailPage() {
           <p className="text-sm text-slate-500">Biên lai chưa có phân bổ hóa đơn.</p>
         )}
       </div>
+
+      {proofUrl ? (
+        <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-black uppercase tracking-widest text-slate-500">Ảnh bằng chứng thanh toán</h2>
+            <a
+              href={proofUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-slate-700 text-white rounded-lg hover:bg-slate-800 transition-colors dark:bg-slate-600 dark:hover:bg-slate-500"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Mở ảnh tab mới
+            </a>
+          </div>
+          <div className="mt-4 flex justify-center rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+            <img
+              src={proofUrl}
+              alt="Bằng chứng thanh toán"
+              className="max-h-[min(420px,55vh)] max-w-full rounded-lg object-contain shadow-sm"
+            />
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded-2xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
         <div className="flex items-center justify-between">

@@ -15,6 +15,8 @@ import type {
   RefundReceiptRow,
   MarkRefundPaidPayload,
   CashflowFeedQueryParams,
+  LedgerDepositForfeitFeedQueryParams,
+  PaginatedLedgerDepositForfeitFeed,
 } from '../types';
 
 export const financeApi = {
@@ -113,6 +115,17 @@ export const financeApi = {
   getCashflowFeed: async (params?: CashflowFeedQueryParams): Promise<PaginatedCashflowFeed> => {
     const response = await apiClient.get('/finance/cashflow-feed', { params });
     return response.data as PaginatedCashflowFeed;
+  },
+
+  /**
+   * Ghi nhận sổ: thu hồi phần cọc còn lại sau quyết toán (FORFEIT) — không phải dòng tiền mặt.
+   * GET /api/finance/ledger-deposit-forfeit-feed
+   */
+  getLedgerDepositForfeitFeed: async (
+    params?: LedgerDepositForfeitFeedQueryParams,
+  ): Promise<PaginatedLedgerDepositForfeitFeed> => {
+    const response = await apiClient.get('/finance/ledger-deposit-forfeit-feed', { params });
+    return response.data as PaginatedLedgerDepositForfeitFeed;
   },
 
   /**

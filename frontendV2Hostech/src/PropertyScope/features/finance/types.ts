@@ -118,6 +118,8 @@ export interface PaymentQueryParams {
   'filter[status]'?: PaymentStatus;
   'filter[method]'?: PaymentMethod;
   'filter[property_id]'?: string;
+  /** Gạch nợ hóa đơn thuộc hợp đồng */
+  'filter[contract_id]'?: string;
   'filter[received_between]'?: string; // "YYYY-MM-DD,YYYY-MM-DD"
   sort?: string;
 }
@@ -194,6 +196,36 @@ export interface CashflowFeedQueryParams {
 
 export interface PaginatedCashflowFeed {
   data: CashflowFeedRow[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+/** GET /finance/ledger-deposit-forfeit-feed — ghi nhận sổ khi thu hồi phần cọc còn lại (FORFEIT). */
+export interface LedgerDepositForfeitFeedRow {
+  id: string;
+  ledger_entry_id: string;
+  amount: number;
+  occurred_at: string;
+  contract_id: string | null;
+  property_id: string | null;
+  final_invoice_id: string | null;
+  reference: string | null;
+  description: string | null;
+}
+
+export interface LedgerDepositForfeitFeedQueryParams {
+  per_page?: number;
+  page?: number;
+  'filter[property_id]'?: string;
+  'filter[occurred_between]'?: string;
+}
+
+export interface PaginatedLedgerDepositForfeitFeed {
+  data: LedgerDepositForfeitFeedRow[];
   meta: {
     current_page: number;
     last_page: number;
