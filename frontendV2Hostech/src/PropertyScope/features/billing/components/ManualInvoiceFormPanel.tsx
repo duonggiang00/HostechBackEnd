@@ -588,14 +588,16 @@ export const ManualInvoiceFormPanel: React.FC<ManualInvoiceFormPanelProps> = ({
                             <span className="text-sm font-semibold text-gray-800 dark:text-slate-100">
                               {fmtVND(row.quantity * row.unit_price)}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => removeManualRow(row.id)}
-                              className="rounded p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
-                              aria-label="Xóa dòng"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {manualRows.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeManualRow(row.id)}
+                                className="rounded p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                                aria-label="Xóa dòng"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

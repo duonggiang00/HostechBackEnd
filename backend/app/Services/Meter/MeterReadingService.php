@@ -269,6 +269,8 @@ class MeterReadingService
             }
 
             $reading = MeterReading::withoutEvents(fn () => MeterReading::create($data));
+            // withoutEvents bỏ qua Observer@saving → consumption không được set; MeterResource/màn Đồng hồ dùng trường này.
+            $this->recalculateConsumption($reading->load('meter'));
             $this->attachProofs($reading, $data['proof_media_ids'] ?? []);
 
             return $reading->fresh()->load(['meter', 'submittedBy', 'approvedBy']);

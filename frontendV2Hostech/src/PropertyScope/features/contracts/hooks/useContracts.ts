@@ -37,13 +37,20 @@ export const contractTerminationLinkedFinalInvoiceQueryKey = (contractId: string
 export const useContracts = (params?: ContractQueryParams, options?: Partial<UseQueryOptions<ContractListResponse>>) => {
   const propertyId = params?.property_id;
 
+  /** Tránh 422 khi query string có `filter[property_id]=undefined` hoặc không phải UUID. */
+  const listFilterParamsOk =
+    (!params?.property_id || isUuid(params.property_id)) &&
+    (!params?.room_id || isUuid(params.room_id));
+
+  const baseEnabled = options?.enabled !== undefined ? options.enabled : true;
+
   return useQuery({
     queryKey: [CONTRACTS_KEY, propertyId, params],
     queryFn: async ({ signal }) => {
       return contractsApi.getContracts(params, signal);
     },
     ...options,
-    enabled: options?.enabled !== undefined ? options.enabled : true,
+    enabled: baseEnabled && listFilterParamsOk,
     staleTime: options?.staleTime ?? 5 * 60 * 1000, // 5 minutes stale time for the list
     gcTime: options?.gcTime ?? 10 * 60 * 1000, // 10 minutes cache time
     placeholderData: keepPreviousData,
@@ -55,12 +62,18 @@ export const useContracts = (params?: ContractQueryParams, options?: Partial<Use
  */
 export const useTrashContracts = (params?: ContractQueryParams, options?: Partial<UseQueryOptions<Contract[]>>) => {
   const propertyId = params?.property_id;
-  
+
+  const listFilterParamsOk =
+    (!params?.property_id || isUuid(params.property_id)) &&
+    (!params?.room_id || isUuid(params.room_id));
+
+  const baseEnabled = options?.enabled !== undefined ? options.enabled : true;
+
   return useQuery({
     queryKey: [TRASH_CONTRACTS_KEY, propertyId, params],
     queryFn: ({ signal }) => contractsApi.getTrashContracts(params, signal),
     ...options,
-    enabled: options?.enabled !== undefined ? options.enabled : true,
+    enabled: baseEnabled && listFilterParamsOk,
     placeholderData: keepPreviousData,
   });
 };

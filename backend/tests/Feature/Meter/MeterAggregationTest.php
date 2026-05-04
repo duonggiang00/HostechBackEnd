@@ -249,5 +249,12 @@ class MeterAggregationTest extends TestCase
 
         // ONE batch event dispatched, NOT N individual MeterReadingApproved events
         Event::assertDispatched(BulkMeterReadingsApproved::class, 1);
+
+        $created = MeterReading::query()
+            ->where('meter_id', $this->roomMeter->id)
+            ->whereDate('period_end', '2024-01-31')
+            ->first();
+        $this->assertNotNull($created);
+        $this->assertEquals(50, (int) $created->consumption, 'bulkStore (createSilent) must persist consumption for APPROVED readings');
     }
 }

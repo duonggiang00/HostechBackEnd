@@ -14,6 +14,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
+import { isUuid } from '@/lib/utils';
 import {
   useCashflowFeed,
   useLedgerDepositForfeitFeed,
@@ -149,7 +150,7 @@ export function LedgerPage() {
 
   const { data: depositsData, isLoading: depositsLoading } = useContracts(
     { property_id: propertyId, status: 'ACTIVE', per_page: 100, page: 1 },
-    { enabled: tab === 'deposits' && !!propertyId },
+    { enabled: tab === 'deposits' && isUuid(propertyId) },
   );
 
   // ─── Render helpers ──────────────────────────────────────────────────────────

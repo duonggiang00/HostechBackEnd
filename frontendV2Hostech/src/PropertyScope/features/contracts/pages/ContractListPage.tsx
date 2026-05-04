@@ -14,6 +14,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { toast } from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { useDebounce } from '@/shared/hooks/useDebounce';
+import { isUuid } from '@/lib/utils';
 
 // --- Sub-components ---
 
@@ -145,7 +146,7 @@ export default function ContractListPage() {
 
   const { data: contractResponse, isLoading: isActiveLoading } = useContracts(
     queryParams,
-    { enabled: !isTrashView }
+    { enabled: !isTrashView && isUuid(propertyId) },
   );
 
   const activeContracts = contractResponse?.data ?? [];
@@ -153,7 +154,7 @@ export default function ContractListPage() {
 
   const { data: trashContracts = [], isLoading: isTrashLoading } = useTrashContracts(
     queryParams,
-    { enabled: isTrashView }
+    { enabled: isTrashView && isUuid(propertyId) },
   );
 
   const { useHandovers } = useHandover();

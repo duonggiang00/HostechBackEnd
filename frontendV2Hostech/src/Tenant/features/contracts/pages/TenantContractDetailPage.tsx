@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -310,12 +310,12 @@ export default function TenantContractDetailPage() {
     setNoticeOpen(true);
   };
 
-  const selectTerminationNextMonth = useCallback(() => {
+  const selectTerminationNextMonth = () => {
     setTerminationSchedule('next_month');
     setNoticeDate(ymdLocal(getDay30OrLastOfNextMonth()));
-  }, []);
+  };
 
-  const selectTerminationThisMonth = useCallback(() => {
+  const selectTerminationThisMonth = () => {
     setTerminationSchedule('this_month');
     const minD = startOfTodayYmd();
     const maxD = endOfCurrentMonthYmd();
@@ -323,7 +323,7 @@ export default function TenantContractDetailPage() {
       if (!prev || prev < minD || prev > maxD) return minD;
       return prev;
     });
-  }, []);
+  };
 
   const handleRequestRenewal = () => {
     const currentEnd = contract.end_date ? String(contract.end_date).slice(0, 10) : '';

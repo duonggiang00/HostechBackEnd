@@ -1,4 +1,5 @@
 import apiClient from '@/shared/api/client';
+import { isUuid } from '@/lib/utils';
 import type {
   Contract,
   ContractListResponse,
@@ -13,18 +14,32 @@ import type {
   TerminationSyncPayload,
 } from '../types';
 
+function contractListQueryParams(params?: ContractQueryParams, forTrash = false): Record<string, unknown> {
+  const apiParams: Record<string, unknown> = {
+    'filter[status]': params?.status || undefined,
+    search: params?.search || undefined,
+    sort: params?.sort || undefined,
+    page: params?.page ?? 1,
+    per_page: params?.per_page ?? 15,
+  };
+
+  if (!forTrash) {
+    apiParams.with_trashed = params?.with_trashed ? 1 : undefined;
+  }
+
+  if (isUuid(params?.property_id)) {
+    apiParams['filter[property_id]'] = params!.property_id;
+  }
+  if (isUuid(params?.room_id)) {
+    apiParams['filter[room_id]'] = params!.room_id;
+  }
+
+  return apiParams;
+}
+
 export const contractsApi = {
   getContracts: async (params?: ContractQueryParams, signal?: AbortSignal): Promise<ContractListResponse> => {
-    const apiParams: Record<string, any> = {
-      'filter[property_id]': params?.property_id || undefined,
-      'filter[room_id]': params?.room_id || undefined,
-      'filter[status]': params?.status || undefined,
-      search: params?.search || undefined,
-      sort: params?.sort || undefined,
-      with_trashed: params?.with_trashed ? 1 : undefined,
-      page: params?.page ?? 1,
-      per_page: params?.per_page ?? 15,
-    };
+    const apiParams = contractListQueryParams(params);
 
     const response = await apiClient.get('/contracts', { params: apiParams, signal });
 
@@ -42,15 +57,7 @@ export const contractsApi = {
   },
 
   getTrashContracts: async (params?: ContractQueryParams, signal?: AbortSignal) => {
-    const apiParams: Record<string, any> = {
-      'filter[property_id]': params?.property_id || undefined,
-      'filter[room_id]': params?.room_id || undefined,
-      'filter[status]': params?.status || undefined,
-      search: params?.search || undefined,
-      sort: params?.sort || undefined,
-      page: params?.page ?? 1,
-      per_page: params?.per_page ?? 15,
-    };
+    const apiParams = contractListQueryParams(params, true);
 
     const response = await apiClient.get('/contracts/trash', { params: apiParams, signal });
     return (response.data?.data || response.data) as Contract[];

@@ -15,6 +15,7 @@ import { usePropertyInvoices } from '@/PropertyScope/features/billing/hooks/useP
 import type { PropertyDashboardData } from '@/PropertyScope/features/dashboard/types';
 
 import { usePendingPayments } from '@/shared/features/billing/hooks/usePaymentVerification';
+import { isUuid } from '@/lib/utils';
 
 function matchesNavRoles(user: User | null | undefined, roles?: string[]): boolean {
   if (!roles?.length) return true;
@@ -58,7 +59,7 @@ export function useNavigation() {
 
   // Badge: Contracts
   const { data: contractData } = useContracts(contractParams, { 
-    enabled: isPropertyScope && !!propertyId && !dashboardStats && !location.pathname.includes('/contracts'),
+    enabled: isPropertyScope && isUuid(propertyId) && !dashboardStats && !location.pathname.includes('/contracts'),
     staleTime: 10 * 60 * 1000,
   });
 

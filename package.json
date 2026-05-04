@@ -21,6 +21,6 @@
     "v2:test:e2e": "npm run test:e2e --prefix frontendV2Hostech"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^9.2.1"
   }
 }
