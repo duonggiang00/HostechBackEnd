@@ -8,6 +8,7 @@ use App\Models\Contract\RefundReceipt;
 use App\Models\Handover\Handover;
 use App\Models\Handover\HandoverItem;
 use App\Models\Handover\HandoverMeterSnapshot;
+use App\Models\Meter\MeterReading;
 use App\Models\Property\Room;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
@@ -377,6 +378,45 @@ class HandoverService
         $snapshot->loadMissing('handover');
         $this->assertHandoverEditable($snapshot->handover);
         $snapshot->delete();
+    }
+
+    /**
+     * Đồng bộ HandoverMeterSnapshot từ các MeterReading đã APPROVED của phòng.
+     * Gọi sau khi chốt chỉ số đồng hồ trong wizard thanh lý.
+     *
+     * @param  string[]  $meterIds  Giới hạn đồng bộ các meter cụ thể; [] = tất cả meter của phòng.
+     */
+    public function syncSnapshotsFromApprovedReadings(Handover $handover, array $meterIds = []): void
+    {
+        if (! $handover->room_id) {
+            return;
+        }
+
+        $query = MeterReading::query()
+            ->where('status', 'APPROVED')
+            ->whereHas('meter', fn ($q) => $q->where('room_id', $handover->room_id))
+            ->with('meter')
+            ->orderByDesc('period_end');
+
+        if (! empty($meterIds)) {
+            $query->whereIn('meter_id', $meterIds);
+        }
+
+        // Lấy chỉ số APPROVED mới nhất theo từng meter (không giới hạn kỳ — lấy kỳ cuối).
+        $latestByMeter = $query->get()->unique('meter_id');
+
+        foreach ($latestByMeter as $reading) {
+            HandoverMeterSnapshot::updateOrCreate(
+                [
+                    'handover_id' => $handover->id,
+                    'meter_id' => $reading->meter_id,
+                ],
+                [
+                    'org_id' => $handover->org_id,
+                    'reading_value' => (int) $reading->reading_value,
+                ]
+            );
+        }
     }
 
     /**

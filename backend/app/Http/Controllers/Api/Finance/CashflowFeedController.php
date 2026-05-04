@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Finance;
 
 use App\Http\Controllers\Controller;
 use App\Models\Contract\RefundReceipt;
+use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
 use App\Services\TenantManager;
 use Dedoc\Scramble\Attributes\Group;
@@ -86,9 +87,9 @@ class CashflowFeedController extends Controller
             ->when($from, fn ($q) => $q->where('received_at', '>=', $from.' 00:00:00'))
             ->when($to, fn ($q) => $q->where('received_at', '<=', $to.' 23:59:59'))
             ->selectRaw(
-                "id, ".
+                'id, '.
                 "CAST('IN' AS CHAR(3)) as direction, ".
-                "CAST('payment' AS CHAR(20)) as kind, ".
+                "CAST('payment' AS CHAR(30)) as kind, ".
                 'reference, '.
                 'amount, '.
                 'received_at as occurred_at, '.
@@ -104,9 +105,9 @@ class CashflowFeedController extends Controller
             ->when($from, fn ($q) => $q->where('paid_at', '>=', $from.' 00:00:00'))
             ->when($to, fn ($q) => $q->where('paid_at', '<=', $to.' 23:59:59'))
             ->selectRaw(
-                "id, ".
+                'id, '.
                 "CAST('OUT' AS CHAR(3)) as direction, ".
-                "CAST('refund_receipt' AS CHAR(20)) as kind, ".
+                "CAST('refund_receipt' AS CHAR(30)) as kind, ".
                 'reference, '.
                 'amount, '.
                 'paid_at as occurred_at, '.
@@ -114,12 +115,32 @@ class CashflowFeedController extends Controller
                 'contract_id'
             );
 
+        // Cấn trừ cọc khi quyết toán thanh lý → IN (tiền cọc giải ngân vào quỹ).
+        $depositSettlementsQ = LedgerEntry::query()
+            ->withoutGlobalScope('org_id')
+            ->where('org_id', $orgId)
+            ->where('ref_type', 'termination_deposit_allocation')
+            ->where('meta->account', LedgerEntry::ACCOUNT_CASH_BANK)
+            ->when($propertyId, fn ($q) => $q->where('meta->property_id', $propertyId))
+            ->when($from, fn ($q) => $q->where('occurred_at', '>=', $from.' 00:00:00'))
+            ->when($to, fn ($q) => $q->where('occurred_at', '<=', $to.' 23:59:59'))
+            ->selectRaw(
+                'id, '.
+                "CAST('IN' AS CHAR(3)) as direction, ".
+                "CAST('deposit_settlement' AS CHAR(30)) as kind, ".
+                "meta->>'$.reference' as reference, ".
+                'debit as amount, '.
+                'occurred_at, '.
+                'CAST(NULL AS CHAR(36)) as actor_user_id, '.
+                "meta->>'$.contract_id' as contract_id"
+            );
+
         if ($direction === 'IN') {
-            $unionQ = $paymentsQ;
+            $unionQ = $paymentsQ->unionAll($depositSettlementsQ);
         } elseif ($direction === 'OUT') {
             $unionQ = $refundsQ;
         } else {
-            $unionQ = $paymentsQ->unionAll($refundsQ);
+            $unionQ = $paymentsQ->unionAll($refundsQ)->unionAll($depositSettlementsQ);
         }
 
         $base = DB::query()->fromSub($unionQ, 'feed');

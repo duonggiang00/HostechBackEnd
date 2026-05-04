@@ -59,12 +59,15 @@ class LedgerEntry extends Model
             })->orWhere(function (Builder $x) {
                 $x->where('ref_type', 'payment_reversal')
                     ->where('meta->account', self::ACCOUNT_CASH_BANK);
+            })->orWhere(function (Builder $x) {
+                $x->where('ref_type', 'termination_deposit_allocation')
+                    ->where('meta->account', self::ACCOUNT_CASH_BANK);
             })->orWhere('ref_type', 'cashflow_manual');
         });
     }
 
     /**
-     * Chỉ nhánh tiền mặt/ngân hàng của payment / payment_reversal (KPI sổ cái).
+     * Nhánh tiền mặt/ngân hàng dùng cho KPI sổ cái (bao gồm cấn trừ cọc thanh lý).
      */
     public function scopeForLedgerCashKpis(Builder $query): Builder
     {
@@ -74,6 +77,9 @@ class LedgerEntry extends Model
                     ->where('meta->account', self::ACCOUNT_CASH_BANK);
             })->orWhere(function (Builder $x) {
                 $x->where('ref_type', 'payment_reversal')
+                    ->where('meta->account', self::ACCOUNT_CASH_BANK);
+            })->orWhere(function (Builder $x) {
+                $x->where('ref_type', 'termination_deposit_allocation')
                     ->where('meta->account', self::ACCOUNT_CASH_BANK);
             });
         });

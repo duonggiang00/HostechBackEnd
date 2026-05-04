@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\Meter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Meter\MeterReadingFinalizeApprovedRequest;
 use App\Http\Resources\Meter\MeterReadingResource;
+use App\Models\Handover\Handover;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Property\Room;
+use App\Services\Handover\HandoverService;
 use App\Services\Meter\MeterReadingService;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +20,8 @@ use Illuminate\Validation\ValidationException;
 class RoomMeterReadingFinalizeController extends Controller
 {
     public function __construct(
-        protected MeterReadingService $meterReadingService
+        protected MeterReadingService $meterReadingService,
+        protected HandoverService $handoverService,
     ) {}
 
     public function store(MeterReadingFinalizeApprovedRequest $request, string $room)
@@ -52,6 +55,29 @@ class RoomMeterReadingFinalizeController extends Controller
         ])->all();
 
         $results = $this->meterReadingService->finalizeReadingsApproved($payload);
+
+        // Đồng bộ chỉ số đã chốt vào HandoverMeterSnapshot nếu phòng có biên bản bàn giao đang mở.
+        try {
+            $handover = Handover::query()
+                ->where('room_id', $roomModel->id)
+                ->whereHas('contract', fn ($q) => $q->whereIn('status', [
+                    'PENDING_TERMINATION', 'TERMINATED', 'ENDED',
+                ]))
+                ->latest()
+                ->first();
+
+            if ($handover) {
+                $this->handoverService->syncSnapshotsFromApprovedReadings(
+                    $handover,
+                    $meterIds->all()
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[Meter] Không sync snapshot vào handover', [
+                'room_id' => $roomModel->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return MeterReadingResource::collection(collect($results));
     }

@@ -15,6 +15,7 @@ use App\Models\Org\Org;
 use App\Models\Org\User;
 use App\Services\Contract\ContractService;
 use App\Services\Finance\LedgerService;
+use App\Services\Finance\ReceiptService;
 use App\Services\Invoice\InvoiceAdjustmentService;
 use App\Services\Invoice\InvoiceService;
 use Carbon\Carbon;
@@ -29,6 +30,7 @@ class TerminationReconciliationService
         protected ContractService $contractService,
         protected InvoiceAdjustmentService $invoiceAdjustmentService,
         protected LedgerService $ledgerService,
+        protected ReceiptService $receiptService,
     ) {}
 
     /**
@@ -326,6 +328,17 @@ class TerminationReconciliationService
                     'meta' => $receiptMeta,
                 ]);
                 $refundReceiptId = $receipt->id;
+
+                // Sinh PDF biên lai hoàn cọc ngay lập tức (không cần chờ mark-paid).
+                try {
+                    $this->receiptService->generateForRefundReceipt($receipt->fresh());
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('[Termination] Không sinh được PDF hoàn cọc', [
+                        'receipt_id' => $refundReceiptId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
                 $contract->update([
                     'refunded_amount' => $totalRefundPayout,
                     'deposit_status' => DepositStatus::REFUND_PENDING,
@@ -479,6 +492,26 @@ class TerminationReconciliationService
             return;
         }
 
+        $sharedMeta = [
+            'invoice_id' => $invoice->id,
+            'contract_id' => $contract->id,
+            'property_id' => $contract->property_id,
+            'reference' => 'DEP-SETTLE-'.strtoupper(substr((string) $contract->id, 0, 8)),
+            'description' => 'Cấn trừ tiền cọc vào hóa đơn khi quyết toán thanh lý.',
+        ];
+
+        // DEBIT: CASH_BANK — tiền cọc được "giải ngân" vào quỹ (hiển thị trên dòng tiền IN).
+        LedgerEntry::create([
+            'org_id' => $contract->org_id,
+            'ref_type' => 'termination_deposit_allocation',
+            'ref_id' => $contract->id,
+            'debit' => $amount,
+            'credit' => 0,
+            'occurred_at' => now(),
+            'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_CASH_BANK]),
+        ]);
+
+        // CREDIT: ACCOUNTS_RECEIVABLE — giảm công nợ phải thu.
         LedgerEntry::create([
             'org_id' => $contract->org_id,
             'ref_type' => 'termination_deposit_allocation',
@@ -486,10 +519,7 @@ class TerminationReconciliationService
             'debit' => 0,
             'credit' => $amount,
             'occurred_at' => now(),
-            'meta' => [
-                'invoice_id' => $invoice->id,
-                'contract_id' => $contract->id,
-            ],
+            'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_ACCOUNTS_RECEIVABLE]),
         ]);
     }
 }

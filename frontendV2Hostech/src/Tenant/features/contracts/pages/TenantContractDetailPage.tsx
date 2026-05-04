@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { addMonths, endOfMonth, format as formatDateFns, setDate, startOfToday } from 'date-fns';
 import {
   Building2,
   Calendar,
@@ -55,6 +56,27 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString('vi-VN');
 };
 
+/** Ngày 30 của tháng sau (nếu tháng sau không đủ 30 ngày — ví dụ tháng 2 — thì lấy ngày cuối tháng). */
+function getDay30OrLastOfNextMonth(): Date {
+  const now = new Date();
+  const firstOfNextMonth = addMonths(new Date(now.getFullYear(), now.getMonth(), 1), 1);
+  const lastDayNext = endOfMonth(firstOfNextMonth).getDate();
+  const day = Math.min(30, lastDayNext);
+  return setDate(firstOfNextMonth, day);
+}
+
+function ymdLocal(d: Date): string {
+  return formatDateFns(d, 'yyyy-MM-dd');
+}
+
+function startOfTodayYmd(): string {
+  return ymdLocal(startOfToday());
+}
+
+function endOfCurrentMonthYmd(): string {
+  return ymdLocal(endOfMonth(startOfToday()));
+}
+
 const depositStatusLabel = (raw: unknown): string => {
   const v = typeof raw === 'string' ? raw : (raw as { value?: string } | null)?.value ?? '';
   const labels: Record<string, string> = {
@@ -104,6 +126,8 @@ export default function TenantContractDetailPage() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [noticeOpen, setNoticeOpen] = useState(false);
+  /** Tháng sau: ngày 30 tháng sau (hoặc cuối tháng). Tháng này: chọn ngày trong tháng hiện tại, không trước hôm nay. */
+  const [terminationSchedule, setTerminationSchedule] = useState<'next_month' | 'this_month'>('next_month');
   const [noticeDate, setNoticeDate] = useState('');
   const [noticeReason, setNoticeReason] = useState('');
   const [terminationWarningsOpen, setTerminationWarningsOpen] = useState(false);
@@ -280,13 +304,26 @@ export default function TenantContractDetailPage() {
 
   const openNoticeDialog = () => {
     if (!contract) return;
-    const d = contract.end_date
-      ? contract.end_date.slice(0, 10)
-      : new Date().toISOString().slice(0, 10);
-    setNoticeDate(d);
+    setTerminationSchedule('next_month');
+    setNoticeDate(ymdLocal(getDay30OrLastOfNextMonth()));
     setNoticeReason('');
     setNoticeOpen(true);
   };
+
+  const selectTerminationNextMonth = useCallback(() => {
+    setTerminationSchedule('next_month');
+    setNoticeDate(ymdLocal(getDay30OrLastOfNextMonth()));
+  }, []);
+
+  const selectTerminationThisMonth = useCallback(() => {
+    setTerminationSchedule('this_month');
+    const minD = startOfTodayYmd();
+    const maxD = endOfCurrentMonthYmd();
+    setNoticeDate((prev) => {
+      if (!prev || prev < minD || prev > maxD) return minD;
+      return prev;
+    });
+  }, []);
 
   const handleRequestRenewal = () => {
     const currentEnd = contract.end_date ? String(contract.end_date).slice(0, 10) : '';
@@ -315,6 +352,22 @@ export default function TenantContractDetailPage() {
       toast.error('Vui lòng chọn ngày dự kiến dọn đi.');
       return;
     }
+
+    const minThisMonth = startOfTodayYmd();
+    const maxThisMonth = endOfCurrentMonthYmd();
+    if (terminationSchedule === 'this_month') {
+      if (noticeDate < minThisMonth || noticeDate > maxThisMonth) {
+        toast.error('Ngày dọn đi phải nằm trong tháng này và không được trước hôm nay.');
+        return;
+      }
+    }
+
+    const contractEnd = contract.end_date ? String(contract.end_date).slice(0, 10) : null;
+    if (contractEnd && noticeDate > contractEnd) {
+      toast.error('Ngày dự kiến dọn đi không được sau ngày kết thúc hợp đồng.');
+      return;
+    }
+
     requestTermination.mutate(
       {
         id: contract.id,
@@ -897,21 +950,78 @@ export default function TenantContractDetailPage() {
                 Thông báo trả phòng
               </h3>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                Chọn ngày dự kiến dọn đi và ghi lý do (nếu có). Quản lý sẽ nhận thông báo để chuẩn bị thanh lý.
+                Chọn thời điểm kết thúc: hệ thống gợi ý ngày theo lựa chọn của bạn. Quản lý sẽ nhận thông báo để chuẩn bị thanh lý.
               </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={selectTerminationNextMonth}
+                  className={`rounded-2xl border p-4 text-left transition-all ${
+                    terminationSchedule === 'next_month'
+                      ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500/30 dark:border-indigo-400 dark:bg-indigo-500/15'
+                      : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Lựa chọn 1
+                  </p>
+                  <p className="mt-2 text-sm font-black text-slate-950 dark:text-white">Kết thúc tháng sau</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    Tự động đặt ngày dọn đi là <strong>ngày 30</strong> của{' '}
+                    <strong>tháng sau</strong> (nếu tháng đó không có ngày 30 — ví dụ tháng 2 — sẽ lấy ngày cuối tháng).
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={selectTerminationThisMonth}
+                  className={`rounded-2xl border p-4 text-left transition-all ${
+                    terminationSchedule === 'this_month'
+                      ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-500/30 dark:border-indigo-400 dark:bg-indigo-500/15'
+                      : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Lựa chọn 2
+                  </p>
+                  <p className="mt-2 text-sm font-black text-slate-950 dark:text-white">Kết thúc tháng này</p>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    Bạn chọn một ngày trong <strong>tháng hiện tại</strong>; không được chọn các ngày{' '}
+                    <strong>trước hôm nay</strong>.
+                  </p>
+                </button>
+              </div>
+
               <div className="mt-6 space-y-4">
-                <div>
-                  <label htmlFor="notice-move-out" className="text-xs font-black uppercase tracking-widest text-slate-500">
-                    Ngày dự kiến dọn đi
-                  </label>
-                  <input
-                    id="notice-move-out"
-                    type="date"
-                    value={noticeDate}
-                    onChange={(e) => setNoticeDate(e.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-                  />
-                </div>
+                {terminationSchedule === 'next_month' ? (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60">
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Ngày dự kiến dọn đi (tự động)
+                    </p>
+                    <p className="mt-2 text-lg font-black text-slate-950 dark:text-white">
+                      {noticeDate ? formatDate(noticeDate) : '—'}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-slate-500 dark:text-slate-400">{noticeDate}</p>
+                  </div>
+                ) : (
+                  <div>
+                    <label htmlFor="notice-move-out" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                      Ngày dự kiến dọn đi (trong tháng này)
+                    </label>
+                    <input
+                      id="notice-move-out"
+                      type="date"
+                      min={startOfTodayYmd()}
+                      max={endOfCurrentMonthYmd()}
+                      value={noticeDate}
+                      onChange={(e) => setNoticeDate(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    />
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Chỉ từ {formatDate(startOfTodayYmd())} đến {formatDate(endOfCurrentMonthYmd())}.
+                    </p>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="notice-reason" className="text-xs font-black uppercase tracking-widest text-slate-500">
                     Lý do (tuỳ chọn)
