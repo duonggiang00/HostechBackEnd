@@ -31,12 +31,19 @@ export function useTickets(params: TicketQueryParams = {}, options: any = {}) {
 }
 
 // ─── Detail Hook ─────────────────────────────────────────────────────────────
-export function useTicketDetail(id: string | undefined) {
+/**
+ * Lấy chi tiết ticket. Mặc định polling mỗi 30s khi tab focus để hỗ trợ chat
+ * 2 chiều giữa Tenant và Manager/Staff (gần realtime, không cần websocket).
+ */
+export function useTicketDetail(id: string | undefined, options: any = {}) {
   return useQuery({
     queryKey: ticketKeys.detail(id!),
     queryFn: () => ticketsApi.getTicket(id!),
     enabled: !!id,
-    staleTime: 60 * 1000, // 1 minute stale time
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchIntervalInBackground: false,
+    ...options,
   });
 }
 
@@ -81,6 +88,7 @@ export function useTicketMutations() {
       ticketsApi.addEvent(ticketId, data),
     onSuccess: (_data, { ticketId }) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
     },
   });
 
@@ -92,5 +100,31 @@ export function useTicketMutations() {
     },
   });
 
-  return { createTicket, updateTicket, updateStatus, deleteTicket, addComment, addCost };
+  const attachFiles = useMutation({
+    mutationFn: ({ ticketId, files }: { ticketId: string; files: File[] }) =>
+      ticketsApi.attachFiles(ticketId, files),
+    onSuccess: (_data, { ticketId }) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+    },
+  });
+
+  const deleteAttachment = useMutation({
+    mutationFn: ({ ticketId, mediaId }: { ticketId: string; mediaId: number }) =>
+      ticketsApi.deleteAttachment(ticketId, mediaId),
+    onSuccess: (_data, { ticketId }) => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+    },
+  });
+
+  return {
+    createTicket,
+    updateTicket,
+    updateStatus,
+    deleteTicket,
+    addComment,
+    addCost,
+    attachFiles,
+    deleteAttachment,
+  };
 }

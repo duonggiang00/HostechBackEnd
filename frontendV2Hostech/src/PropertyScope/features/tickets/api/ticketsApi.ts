@@ -8,6 +8,7 @@ import type {
   UpdateTicketStatusPayload,
   CreateTicketEventPayload,
   CreateTicketCostPayload,
+  TicketAttachment,
   TicketEvent,
   TicketCost,
 } from '../types';
@@ -72,5 +73,25 @@ export const ticketsApi = {
   addCost: async (ticketId: string, data: CreateTicketCostPayload): Promise<TicketCost> => {
     const response = await apiClient.post(`/tickets/${ticketId}/costs`, data);
     return response.data.data as TicketCost;
+  },
+
+  // ─── Attachments ───────────────────────────────────────────────────────────
+  /**
+   * Upload danh sách file (ảnh / pdf) cho ticket. Trả về mảng attachments mới được tạo.
+   * Sử dụng `multipart/form-data` — apiClient sẽ tự set Content-Type khi nhận FormData.
+   */
+  attachFiles: async (ticketId: string, files: File[]): Promise<TicketAttachment[]> => {
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files[]', file));
+
+    const response = await apiClient.post(
+      `/tickets/${ticketId}/attachments`,
+      formData,
+    );
+    return (response.data.data ?? []) as TicketAttachment[];
+  },
+
+  deleteAttachment: async (ticketId: string, mediaId: number): Promise<void> => {
+    await apiClient.delete(`/tickets/${ticketId}/attachments/${mediaId}`);
   },
 };

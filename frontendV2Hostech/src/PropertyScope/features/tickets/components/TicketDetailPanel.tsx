@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, CheckCircle, XCircle, DollarSign, MessageCircle, ChevronDown, Send, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, XCircle, DollarSign, MessageCircle, ChevronDown, Send, AlertCircle, Paperclip } from 'lucide-react';
 import { useTicketDetail, useTicketMutations } from '../hooks/useTickets';
 import TicketStatusBadge from './TicketStatusBadge';
 import TicketPriorityBadge from './TicketPriorityBadge';
@@ -236,6 +236,7 @@ export default function TicketDetailPanel({ ticketId, onClose }: Props) {
                         {event.type === 'CREATED' && <AlertCircle className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />}
                         {event.type === 'STATUS_CHANGED' && <CheckCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
                         {event.type === 'COMMENT' && <MessageCircle className="w-3.5 h-3.5 text-slate-500" />}
+                        {event.type === 'ATTACHMENT_ADDED' && <Paperclip className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between gap-2">

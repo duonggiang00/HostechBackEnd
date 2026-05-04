@@ -10,7 +10,11 @@ export type TicketStatus =
 
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
-export type TicketEventType = 'CREATED' | 'STATUS_CHANGED' | 'COMMENT';
+export type TicketEventType =
+  | 'CREATED'
+  | 'STATUS_CHANGED'
+  | 'COMMENT'
+  | 'ATTACHMENT_ADDED';
 
 export type TicketCostPayer = 'OWNER' | 'TENANT';
 
@@ -38,6 +42,15 @@ export interface TicketCost {
   note: string | null;
   created_by: TicketActor;
   created_at: string;
+}
+
+export interface TicketAttachment {
+  id: number;
+  name: string;
+  mime_type: string;
+  size: number;
+  url: string;
+  created_at: string | null;
 }
 
 export interface TicketRoom {
@@ -73,6 +86,7 @@ export interface Ticket {
   assigned_to: TicketActor | null;
   events?: TicketEvent[];
   costs?: TicketCost[];
+  attachments?: TicketAttachment[];
   created_at: string;
   updated_at: string;
 }

@@ -2,7 +2,10 @@ import { Navigate } from 'react-router-dom';
 import type { RouteObject } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { dashboardRoutes } from './features/dashboard/routes';
-import { requestsRoutes } from './features/requests/routes';
+import {
+  legacyRequestsRoutes,
+  ticketsRoutes,
+} from './features/tickets/routes';
 import { messagingRoutes } from './features/messaging/routes';
 import { billingRoutes } from './features/billing/routes';
 import { contractsRoutes } from './features/contracts/routes';
@@ -18,7 +21,8 @@ export const tenantScopeRoutes: RouteObject[] = [
     element: <Navigate to="dashboard" replace />,
   },
   ...dashboardRoutes,
-  ...requestsRoutes,
+  ...ticketsRoutes,
+  ...legacyRequestsRoutes,
   ...messagingRoutes,
   ...billingRoutes,
   {

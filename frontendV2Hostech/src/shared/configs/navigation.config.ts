@@ -280,7 +280,7 @@ export const TENANT_NAVIGATION: NavigationSection[] = [
         label: 'Yêu cầu chuyển phòng',
         path: '/app/transfer-requests',
       },
-      { id: 'requests', icon: ClipboardList, label: 'Yêu cầu', path: '/app/requests' },
+      { id: 'tickets', icon: ClipboardList, label: 'Sự cố', path: '/app/tickets' },
     ],
   },
 ];

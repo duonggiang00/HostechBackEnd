@@ -4,8 +4,27 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 import MaintenanceReportModal from '@/shared/features/tickets/components/MaintenanceReportModal';
 import TenantMeterModal from '@/PropertyScope/features/metering/components/TenantMeterModal';
-import { useMyPendingContracts } from '@/PropertyScope/features/contracts/hooks/useContracts';
+import {
+  useMyContracts,
+  useMyPendingContracts,
+} from '@/PropertyScope/features/contracts/hooks/useContracts';
 import { useInvoice } from '@/shared/features/billing/hooks/useInvoice';
+
+const ACTIVE_LIKE = new Set([
+  'ACTIVE',
+  'PENDING_TERMINATION',
+  'PENDING_SIGNATURE',
+  'PENDING_PAYMENT',
+]);
+
+function pickContextContract(
+  contracts:
+    | { id: string; status: string; property_id: string; room_id: string }[]
+    | undefined,
+) {
+  if (!contracts?.length) return null;
+  return contracts.find((c) => ACTIVE_LIKE.has(c.status)) ?? contracts[0];
+}
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
@@ -22,6 +41,12 @@ export default function TenantDashboard() {
   const [isMeterModalOpen, setIsMeterModalOpen] = useState(false);
 
   const { data: pendingContracts = [] } = useMyPendingContracts();
+  const { data: myContracts } = useMyContracts();
+  const reportContext = useMemo(() => pickContextContract(myContracts), [myContracts]);
+  const canReportIncident = !!(
+    reportContext?.property_id && reportContext?.room_id
+  );
+
   const { useInvoices } = useInvoice();
   const { data: invoicesResponse } = useInvoices();
 
@@ -72,12 +97,21 @@ export default function TenantDashboard() {
       id: 'requests',
       icon: Wrench,
       title: 'Báo sự cố',
-      description: 'Gửi yêu cầu mới khi phòng cần hỗ trợ hoặc bảo trì.',
-      actionLabel: 'Tạo yêu cầu',
-      onClick: () => setIsReportModalOpen(true),
+      description: canReportIncident
+        ? 'Gửi phiếu mới khi phòng cần hỗ trợ hoặc bảo trì (có đính kèm ảnh).'
+        : 'Bạn cần có hợp đồng đang hiệu lực (có phòng) để báo sự cố.',
+      actionLabel: 'Tạo phiếu',
+      onClick: () => {
+        if (!canReportIncident) return;
+        setIsReportModalOpen(true);
+      },
       tone: 'blue',
+      disabled: !canReportIncident,
+      tooltip: !canReportIncident
+        ? 'Bạn cần có hợp đồng đang hiệu lực (có phòng) để báo sự cố.'
+        : undefined,
     },
-  ] as const;
+  ];
 
   const toneClasses: Record<string, string> = {
     amber: 'border-amber-200 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-500/10',
@@ -88,7 +122,12 @@ export default function TenantDashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <MaintenanceReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} />
+      <MaintenanceReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        propertyId={reportContext?.property_id}
+        roomId={reportContext?.room_id}
+      />
       <TenantMeterModal isOpen={isMeterModalOpen} onClose={() => setIsMeterModalOpen(false)} />
 
       <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
@@ -140,8 +179,11 @@ export default function TenantDashboard() {
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{task.description}</p>
                       </div>
                       <button
+                        type="button"
                         onClick={task.onClick}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white transition-colors hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+                        disabled={'disabled' in task && task.disabled}
+                        title={'tooltip' in task ? task.tooltip : undefined}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
                       >
                         {task.actionLabel}
                         <ArrowRight className="h-4 w-4" />
@@ -171,12 +213,26 @@ export default function TenantDashboard() {
             </button>
 
             <button
-              onClick={() => setIsReportModalOpen(true)}
-              className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
+              type="button"
+              onClick={() => {
+                if (!canReportIncident) return;
+                setIsReportModalOpen(true);
+              }}
+              disabled={!canReportIncident}
+              title={
+                !canReportIncident
+                  ? 'Bạn cần có hợp đồng đang hiệu lực (có phòng) để báo sự cố.'
+                  : undefined
+              }
+              className="flex w-full items-center justify-between rounded-3xl border border-slate-200 px-4 py-4 text-left transition-colors hover:border-indigo-300 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:hover:border-indigo-500 dark:hover:bg-indigo-500/10"
             >
               <div>
-                <p className="text-sm font-black text-slate-950 dark:text-white">Tạo yêu cầu hỗ trợ</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Báo sự cố hoặc gửi phản ánh mới.</p>
+                <p className="text-sm font-black text-slate-950 dark:text-white">
+                  Báo sự cố
+                </p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  Gửi phiếu mới hoặc đính kèm ảnh cho ban quản lý.
+                </p>
               </div>
               <Wrench className="h-5 w-5 text-slate-400" />
             </button>
