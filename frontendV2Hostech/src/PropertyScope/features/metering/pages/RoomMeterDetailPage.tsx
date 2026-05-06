@@ -162,6 +162,7 @@ function MeterColumn({ meter, type, propertyId }: MeterColumnProps) {
   const isManager = hasRole(['Manager', 'Owner']);
   const [readingsPage, setReadingsPage] = useState(1);
   const perPage = 10;
+  const abnormalThreshold = type === 'ELECTRIC' ? 500 : 100;
 
   // Use useQuery for readings
   const { data: readingsData, isLoading: readingsLoading, refetch } = useQuery({
@@ -430,19 +431,39 @@ function MeterColumn({ meter, type, propertyId }: MeterColumnProps) {
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Tiêu thụ dự kiến
                   </label>
-                  <div className="h-[46px] flex items-center px-4 bg-slate-100 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <span className={`text-lg font-black ${
-                      formData.reading_value && parseInt(formData.reading_value) >= (meter.latest_reading ?? meter.base_reading)
-                        ? 'text-indigo-600 dark:text-indigo-400'
-                        : 'text-slate-400'
-                    }`}>
-                      {formData.reading_value 
-                        ? Math.max(0, parseInt(formData.reading_value) - (meter.latest_reading ?? meter.base_reading)).toLocaleString()
-                        : '0'
-                      }
-                    </span>
-                    <span className="ml-2 text-xs text-slate-400 font-medium">{unit}</span>
-                  </div>
+                  {(() => {
+                    const prevVal = meter.latest_reading ?? meter.base_reading;
+                    const previewConsumption = formData.reading_value
+                      ? Math.max(0, parseInt(formData.reading_value) - prevVal)
+                      : 0;
+                    const isAbnormal = formData.reading_value !== '' && previewConsumption > abnormalThreshold;
+                    return (
+                      <>
+                        <div className={`h-[46px] flex items-center px-4 rounded-lg border ${
+                          isAbnormal
+                            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-600'
+                            : 'bg-slate-100 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700'
+                        }`}>
+                          <span className={`text-lg font-black ${
+                            isAbnormal
+                              ? 'text-amber-600 dark:text-amber-400 animate-pulse'
+                              : formData.reading_value && parseInt(formData.reading_value) >= prevVal
+                                ? 'text-indigo-600 dark:text-indigo-400'
+                                : 'text-slate-400'
+                          }`}>
+                            {formData.reading_value ? previewConsumption.toLocaleString() : '0'}
+                          </span>
+                          <span className="ml-2 text-xs text-slate-400 font-medium">{unit}</span>
+                        </div>
+                        {isAbnormal && (
+                          <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            <AlertCircle className="w-3 h-3 shrink-0" />
+                            Tiêu thụ bất thường! Vui lòng kiểm tra lại chỉ số.
+                          </p>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -568,11 +589,21 @@ function MeterColumn({ meter, type, propertyId }: MeterColumnProps) {
                       </td>
                       <td className="p-4 text-right">
                         {reading.consumption !== undefined ? (
-                          <div className="flex flex-col items-end">
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className={`text-sm font-black ${
+                              reading.consumption > abnormalThreshold
+                                ? 'text-amber-500 dark:text-amber-400'
+                                : 'text-emerald-600 dark:text-emerald-400'
+                            }`}>
                                +{reading.consumption.toLocaleString()}
                             </span>
                             <span className="text-[10px] text-gray-400 font-medium">/{unit}</span>
+                            {reading.consumption > abnormalThreshold && (
+                              <span className="flex items-center gap-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                                <AlertCircle className="w-3 h-3 shrink-0" />
+                                Bất thường!
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-300">-</span>

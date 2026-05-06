@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, Plus, Search, Edit2, Trash2 } from 'lucide-react';
-import { useServices, useUpdateService, useDeleteService } from '../hooks/useServices';
+import { Settings, Plus, Search, Edit2 } from 'lucide-react';
+import { useServices } from '../hooks/useServices';
 import { useParams, Link } from 'react-router-dom';
-import { toast } from 'react-hot-toast';
 import type { Service } from '../types';
 import { useAuth } from '@/shared/features/auth/hooks/useAuth';
 
@@ -17,35 +16,10 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
   const { hasRole } = useAuth();
   /** Staff chỉ xem; không thêm / sửa / xóa / bật tắt dịch vụ */
   const canManageServices = hasRole(['Owner', 'Manager', 'Admin']);
-  const tableColCount = canManageServices ? 6 : 5;
+  const tableColCount = canManageServices ? 5 : 4;
 
   const { data: response, isLoading } = useServices({ search, per_page: 50 });
   const services = response?.data || [];
-
-  const updateServiceMutation = useUpdateService();
-  const deleteServiceMutation = useDeleteService();
-
-  const handleToggleActive = async (service: Service) => {
-    try {
-      await updateServiceMutation.mutateAsync({
-        id: service.id,
-        data: { is_active: !service.is_active }
-      });
-      toast.success(service.is_active ? 'Đã tắt tính phí dịch vụ' : 'Đã bật tính phí dịch vụ');
-    } catch {
-      toast.error('Có lỗi xảy ra khi cập nhật dịch vụ');
-    }
-  };
-
-  const handleDelete = async (service: Service) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa dịch vụ "${service.name}"?`)) return;
-    try {
-      await deleteServiceMutation.mutateAsync(service.id);
-      toast.success('Đã xóa dịch vụ');
-    } catch {
-      toast.error('Không thể xóa dịch vụ này');
-    }
-  };
 
   const getCalcModeLabel = (mode: string) => {
     switch (mode) {
@@ -118,7 +92,6 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Cách tính phí</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider">Đơn giá / Đơn vị</th>
                 <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-center">Tự động</th>
-                <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-center">Kích hoạt</th>
                 {canManageServices && (
                   <th className="px-6 py-4 text-xs font-semibold text-[#4B5563] dark:text-slate-400 uppercase tracking-wider text-right">Thao tác</th>
                 )}
@@ -180,33 +153,6 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                           <span className="text-slate-400 text-xs font-medium">KHÔNG</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-center">
-                        {canManageServices ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleActive(service)}
-                            className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                              service.is_active ? 'bg-[#1E3A8A]' : 'bg-slate-200 dark:bg-slate-700'
-                            }`}
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                service.is_active ? 'translate-x-5' : 'translate-x-0'
-                              }`}
-                            />
-                          </button>
-                        ) : (
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-bold ${
-                              service.is_active
-                                ? 'bg-blue-50 text-[#1E3A8A] dark:bg-blue-500/10 dark:text-blue-400'
-                                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                            }`}
-                          >
-                            {service.is_active ? 'Đang bật' : 'Đang tắt'}
-                          </span>
-                        )}
-                      </td>
                       {canManageServices && (
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-end gap-2 group-hover:opacity-100 transition-opacity">
@@ -217,14 +163,6 @@ export default function ServiceListPage({ hideHeader = false }: ServiceListPageP
                             >
                               <Edit2 className="w-4 h-4" />
                             </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(service)}
-                              className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors"
-                              title="Xóa dịch vụ"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </td>
                       )}

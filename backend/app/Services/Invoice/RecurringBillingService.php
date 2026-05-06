@@ -4,13 +4,13 @@ namespace App\Services\Invoice;
 
 use App\Enums\InvoiceItemType;
 use App\Models\Contract\Contract;
-use App\Support\MeterInvoiceDescription;
 use App\Models\Invoice\Invoice;
 use App\Models\Invoice\InvoiceAdjustment;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
 use App\Models\Service\Service;
 use App\Services\Service\ServiceService;
+use App\Support\MeterInvoiceDescription;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -157,8 +157,17 @@ class RecurringBillingService
     public function generateInvoiceForContract(Contract $contract, Carbon $periodMonth, ?Carbon $customPeriodStart = null, ?Carbon $customPeriodEnd = null)
     {
         return DB::transaction(function () use ($contract, $periodMonth, $customPeriodStart, $customPeriodEnd) {
-            $periodStart = $customPeriodStart ?? $periodMonth->copy()->startOfMonth();
-            $periodEnd = $customPeriodEnd ?? $periodMonth->copy()->endOfMonth();
+            $fullMonthStart = $periodMonth->copy()->startOfMonth();
+            $fullMonthEnd = $periodMonth->copy()->endOfMonth();
+
+            // Auto-prorate: if contract starts mid-month, effective period begins at start_date
+            $contractStart = Carbon::parse($contract->start_date)->startOfDay();
+            $contractEnd = $contract->end_date ? Carbon::parse($contract->end_date)->startOfDay() : null;
+
+            $periodStart = $customPeriodStart
+                ?? ($contractStart->gt($fullMonthStart) ? $contractStart->copy() : $fullMonthStart);
+            $periodEnd = $customPeriodEnd
+                ?? ($contractEnd && $contractEnd->lt($fullMonthEnd) ? $contractEnd->copy() : $fullMonthEnd);
 
             // ── Duplicate check: khớp unique DB (contract_id + period_start + period_end) ──
             $existing = Invoice::where('contract_id', $contract->id)
@@ -195,22 +204,42 @@ class RecurringBillingService
             } else {
                 // Balance is 0, need to charge rent based on billing cycle
                 $cycleMonths = $this->resolveBillingCycleMonths($contract->billing_cycle);
+                $baseRent = (float) $contract->base_rent;
 
-                $desc = $cycleMonths === 1
-                    ? 'Tiền phòng chu kỳ '.$periodStart->format('d/m').' - '.$periodEnd->format('d/m/Y')
-                    : 'Tiền phòng chu kỳ '.$cycleMonths.' tháng';
+                // Pro-rate rent for partial months (e.g. new tenant moved in mid-month)
+                $isPartialMonth = $cycleMonths === 1
+                    && (! $periodStart->isSameDay($fullMonthStart) || ! $periodEnd->isSameDay($fullMonthEnd));
 
-                $items[] = [
-                    'type' => InvoiceItemType::RENT->value,
-                    'description' => $desc,
-                    'quantity' => $cycleMonths,
-                    'unit_price' => (float) $contract->base_rent,
-                    'amount' => ((float) $contract->base_rent) * $cycleMonths,
-                ];
+                if ($isPartialMonth) {
+                    $daysInPeriod = (int) $periodStart->diffInDays($periodEnd) + 1;
+                    $daysInFullMonth = (int) $fullMonthStart->daysInMonth;
+                    $rentAmount = round($baseRent * $daysInPeriod / $daysInFullMonth);
+                    $desc = 'Tiền phòng (tính theo ngày) '.$periodStart->format('d/m').' - '.$periodEnd->format('d/m/Y')
+                        ." ({$daysInPeriod}/{$daysInFullMonth} ngày)";
+                    $items[] = [
+                        'type' => InvoiceItemType::RENT->value,
+                        'description' => $desc,
+                        'quantity' => $daysInPeriod,
+                        'unit_price' => round($baseRent / $daysInFullMonth),
+                        'amount' => $rentAmount,
+                    ];
+                } else {
+                    $desc = $cycleMonths === 1
+                        ? 'Tiền phòng chu kỳ '.$periodStart->format('d/m').' - '.$periodEnd->format('d/m/Y')
+                        : 'Tiền phòng chu kỳ '.$cycleMonths.' tháng';
 
-                if ($cycleMonths > 1) {
-                    // Add purchased tokens minus 1 (because 1 is consumed for the current month)
-                    $contract->increment('rent_token_balance', $cycleMonths - 1);
+                    $items[] = [
+                        'type' => InvoiceItemType::RENT->value,
+                        'description' => $desc,
+                        'quantity' => $cycleMonths,
+                        'unit_price' => $baseRent,
+                        'amount' => $baseRent * $cycleMonths,
+                    ];
+
+                    if ($cycleMonths > 1) {
+                        // Add purchased tokens minus 1 (because 1 is consumed for the current month)
+                        $contract->increment('rent_token_balance', $cycleMonths - 1);
+                    }
                 }
             }
 

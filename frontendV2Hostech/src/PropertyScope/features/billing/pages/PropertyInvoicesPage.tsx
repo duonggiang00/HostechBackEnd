@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, FileText, ClipboardList, Gauge } from 'lucide-react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
@@ -22,7 +22,8 @@ export default function PropertyInvoicesPage() {
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isBulkApproveOpen, setIsBulkApproveOpen] = useState(false);
   const [terminationOnly, setTerminationOnly] = useState(false);
-  const [billingPeriod, setBillingPeriod] = useState(() => startOfMonth(new Date()));
+  // Default to previous month: readings are taken end-of-month and invoiced in early next month.
+  const [billingPeriod, setBillingPeriod] = useState(() => startOfMonth(subMonths(new Date(), 1)));
   const periodStart = format(billingPeriod, 'yyyy-MM-dd');
   const periodEnd = format(endOfMonth(billingPeriod), 'yyyy-MM-dd');
 

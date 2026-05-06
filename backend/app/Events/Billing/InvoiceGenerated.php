@@ -22,10 +22,22 @@ class InvoiceGenerated implements ShouldBroadcast
      */
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new PrivateChannel('property.'.$this->invoice->property_id),
             new PrivateChannel('org.'.$this->invoice->org_id),
         ];
+
+        // Tenant chính của hợp đồng — nhận thông báo khi BQL phát hành hóa đơn
+        $primaryTenant = $this->invoice->contract?->members()
+            ->where('is_primary', true)
+            ->whereNotNull('user_id')
+            ->first();
+
+        if ($primaryTenant) {
+            $channels[] = new PrivateChannel('App.Models.Org.User.'.$primaryTenant->user_id);
+        }
+
+        return $channels;
     }
 
     /**
@@ -43,6 +55,7 @@ class InvoiceGenerated implements ShouldBroadcast
     {
         return [
             'id' => $this->invoice->id,
+            'property_id' => $this->invoice->property_id,
             'contract_id' => $this->invoice->contract_id,
             'room_id' => $this->invoice->room_id,
             'period_start' => $this->invoice->period_start,

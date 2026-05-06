@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import axios from 'axios';
 import { format, isBefore, parseISO } from 'date-fns';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
@@ -29,6 +29,7 @@ import { billingApi } from '@/PropertyScope/features/billing/api/billing';
 import { ManualInvoiceFormPanel } from '@/PropertyScope/features/billing/components/ManualInvoiceFormPanel';
 import type { Invoice } from '@/PropertyScope/features/billing/types';
 import { contractsApi } from '../../api/contracts';
+import { paymentDetailReferrerState } from '@/PropertyScope/features/finance/utils/paymentNavigation';
 import {
   CONTRACT_KEY,
   CONTRACT_TERMINATION_HANDOVER_KEY,
@@ -155,6 +156,8 @@ type LineDraft = { id: string; description: string; amount: string };
 type PendingHandoverScan = { id: string; file: File; previewUrl: string };
 
 export function TerminationWizard({ contract, propertyId, onClose }: TerminationWizardProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<TerminationFormValues>(() => ({
@@ -168,8 +171,6 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
   }));
   const [issueResult, setIssueResult] = useState<FinalInvoiceStepResult | null>(null);
   const [linkedInvoicePdfUrl, setLinkedInvoicePdfUrl] = useState<string | null>(null);
-  /** Kịch B: ưu tiên nút thu sau quyết toán */
-  const [extraPaymentPreference, setExtraPaymentPreference] = useState<'transfer' | 'cash'>('transfer');
   const [fprProofFile, setFprProofFile] = useState<File | null>(null);
   const [fprProofPreviewUrl, setFprProofPreviewUrl] = useState<string | null>(null);
   /** Sau khi ghi nhận thu qua yêu cầu thanh toán cuối: xem biên lai / ảnh bằng chứng trên máy chủ */
@@ -193,6 +194,9 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
   const pendingScansRef = useRef<PendingHandoverScan[]>([]);
   pendingScansRef.current = pendingHandoverScans;
   const [issueLinkBusy, setIssueLinkBusy] = useState(false);
+  /** Chế độ bước 3: tạo hóa đơn mới hay gắn hóa đơn đã phát hành từ trước. */
+  const [invoiceLinkMode, setInvoiceLinkMode] = useState<'create' | 'link_existing'>('create');
+  const [selectedExternalInvoiceId, setSelectedExternalInvoiceId] = useState('');
   /** Hoàn cọc: biên lai hoàn phần còn lại | Không hoàn cọc: thu hồi (FORFEIT), không gửi dòng hoàn cọc. */
   const [depositRefundChoice, setDepositRefundChoice] = useState<'refund' | 'no_refund'>('refund');
 
@@ -223,6 +227,23 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
     }
     return null;
   }, [issueResult, linkedFinalInvoiceQuery.data]);
+
+  const existingIssuedInvoicesQuery = useQuery({
+    queryKey: ['property-invoices', propertyId, 'linkable-for-termination', contract.id],
+    queryFn: () =>
+      billingApi.getPropertyInvoices(propertyId, {
+        contract_id: contract.id,
+        per_page: 50,
+      }),
+    enabled: activeStep === 3 && invoiceLinkMode === 'link_existing' && !effectiveIssueResult,
+    staleTime: 30_000,
+    select: (data) => ({
+      ...data,
+      data: data.data.filter((inv) =>
+        ['ISSUED', 'PAID', 'PARTIAL', 'OVERDUE'].includes(inv.status) && !inv.is_termination,
+      ),
+    }),
+  });
 
   useEffect(() => {
     const invId = effectiveIssueResult?.data?.invoice_id;
@@ -287,7 +308,6 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
     setFinalizeResult(null);
     setRefundReceiptLineDrafts([]);
     setDepositRefundChoice('refund');
-    setExtraPaymentPreference('transfer');
     setFprProofFile(null);
     setFprRecordedPaymentSummary(null);
     setFprProofPreviewUrl((prev) => {
@@ -375,6 +395,38 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
     }
   };
 
+  const handleLinkExistingInvoice = async () => {
+    if (!selectedExternalInvoiceId.trim()) {
+      toast.error('Vui lòng chọn hóa đơn cần gắn.');
+      return;
+    }
+    setIssueLinkBusy(true);
+    try {
+      const res = await linkTerminationFinalInvoice.mutateAsync({
+        id: contract.id,
+        data: {
+          invoice_id: selectedExternalInvoiceId,
+          ...buildSyncPayload(form),
+        },
+      });
+      setIssueResult(res);
+      try {
+        const fullInv = await billingApi.getInvoice(selectedExternalInvoiceId);
+        setLinkedInvoicePdfUrl(fullInv.pdf_url ?? null);
+      } catch {
+        /* bỏ qua — vẫn có thể tiếp tục */
+      }
+      void queryClient.invalidateQueries({
+        queryKey: contractTerminationLinkedFinalInvoiceQueryKey(contract.id),
+      });
+      toast.success(res.message || 'Đã gắn hóa đơn thanh lý.');
+    } catch (e) {
+      toast.error(parseErr(e));
+    } finally {
+      setIssueLinkBusy(false);
+    }
+  };
+
   const toRefundReceiptLines = (): TerminationRefundReceiptLine[] =>
     refundReceiptLineDrafts
       .map((row) => ({
@@ -416,6 +468,21 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
       }
     } catch (e) {
       toast.error(parseErr(e));
+    }
+  };
+
+  const handleFinish = () => {
+    if (!finalizeResult) {
+      onClose();
+      return;
+    }
+    
+    if (finalizeResult.data.scenario === 'A' && finalizeResult.data.refund_receipt_id) {
+      navigate(`/properties/${propertyId}/finance/payments?tab=refunds&focus=${finalizeResult.data.refund_receipt_id}`);
+    } else if (finalizeResult.data.scenario === 'B' && finalizeResult.data.final_payment_request_id) {
+      navigate(`/properties/${propertyId}/finance/payments?tab=payments&focus=${finalizeResult.data.final_payment_request_id}`);
+    } else {
+      onClose();
     }
   };
 
@@ -678,49 +745,38 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
             </p>
           ) : null}
           <p className="text-[11px] text-slate-600 dark:text-slate-400">
-            Ưu tiên thao tác theo lựa chọn trước khi quyết toán:{' '}
-            {extraPaymentPreference === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt'}.
+            Ghi nhận thu trên yêu cầu thanh toán cuối — chuyển khoản cần kèm ảnh bằng chứng.
           </p>
-          {extraPaymentPreference === 'transfer' && (
-            <div className="space-y-2 rounded-lg border border-slate-200 bg-white/80 p-3 text-xs dark:border-slate-600 dark:bg-slate-900/40">
-              <label className="block font-medium text-slate-800 dark:text-slate-200">
-                Ảnh bằng chứng chuyển khoản (bắt buộc)
-              </label>
-              <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFprProofInput} />
-              {fprProofPreviewUrl ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <img src={fprProofPreviewUrl} alt="" className="h-16 max-w-[8rem] rounded border object-cover" />
-                  <button
-                    type="button"
-                    onClick={clearFprProof}
-                    className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
-                  >
-                    Xóa ảnh
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          )}
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-white/80 p-3 text-xs dark:border-slate-600 dark:bg-slate-900/40">
+            <label className="block font-medium text-slate-800 dark:text-slate-200">
+              Ảnh bằng chứng chuyển khoản (bắt buộc khi ghi nhận CK)
+            </label>
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFprProofInput} />
+            {fprProofPreviewUrl ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <img src={fprProofPreviewUrl} alt="" className="h-16 max-w-[8rem] rounded border object-cover" />
+                <button
+                  type="button"
+                  onClick={clearFprProof}
+                  className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
+                >
+                  Xóa ảnh
+                </button>
+              </div>
+            ) : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void handleRecordFprPayment('BANK_TRANSFER')}
-              className={
-                extraPaymentPreference === 'transfer'
-                  ? 'rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700'
-                  : 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800'
-              }
+              className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700"
             >
               Ghi nhận chuyển khoản
             </button>
             <button
               type="button"
               onClick={() => void handleRecordFprPayment('CASH')}
-              className={
-                extraPaymentPreference === 'cash'
-                  ? 'rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700'
-                  : 'rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800'
-              }
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:hover:bg-slate-800"
             >
               Ghi nhận tiền mặt
             </button>
@@ -740,6 +796,7 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
               ) : null}
               <Link
                 to={`/properties/${propertyId}/finance/payments/${fprRecordedPaymentSummary.paymentId}`}
+                state={paymentDetailReferrerState(location.pathname, location.search)}
                 className="inline-flex items-center gap-1 font-semibold text-indigo-700 underline underline-offset-2 hover:text-indigo-900 dark:text-indigo-300 dark:hover:text-indigo-200"
               >
                 Mở chi tiết biên lai trong tài chính
@@ -948,7 +1005,8 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                     value={handoverNote}
                     onChange={(e) => setHandoverNote(e.target.value)}
                     rows={3}
-                    className={inputClass}
+                    disabled={handoverState.persisted}
+                    className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-60`}
                   />
                 </label>
                 <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-600">
@@ -972,7 +1030,8 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                                   [it.room_asset_id]: e.target.value as 'OK' | 'MISSING' | 'DAMAGED',
                                 }))
                               }
-                              className="rounded border border-slate-200 px-2 py-1 dark:border-slate-700 dark:bg-slate-950"
+                              disabled={handoverState.persisted}
+                              className="rounded border border-slate-200 px-2 py-1 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
                             >
                               <option value="OK">OK</option>
                               <option value="MISSING">Thiếu</option>
@@ -1057,13 +1116,22 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                 <button
                   type="button"
                   onClick={() => void handleCommitHandover()}
-                  disabled={commitTerminationHandover.isPending || handoverUploadBusy}
-                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                  disabled={handoverState.persisted || commitTerminationHandover.isPending || handoverUploadBusy}
+                  className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70 ${
+                    handoverState.persisted
+                      ? 'bg-emerald-600 hover:bg-emerald-600'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
                 >
                   {commitTerminationHandover.isPending || handoverUploadBusy ? (
                     <>
                       <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
                       {handoverUploadBusy ? 'Đang tải ảnh…' : 'Đang lưu…'}
+                    </>
+                  ) : handoverState.persisted ? (
+                    <>
+                      <Check className="mr-1.5 inline h-4 w-4" />
+                      Đã lưu biên bản
                     </>
                   ) : (
                     'Lưu biên bản bàn giao'
@@ -1104,32 +1172,155 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                       Đang kiểm tra hóa đơn thanh lý đã gắn với hợp đồng…
                     </div>
                   ) : !effectiveIssueResult ? (
-                    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-600 dark:bg-slate-950/50">
-                      <p className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        Soạn hóa đơn lẻ (thanh lý)
-                      </p>
-                      <p className="mb-3 text-xs text-slate-500">
-                        Kiểm tra ngày thanh lý ở bước đầu và chỉ số đồng hồ. Sau khi tạo, nếu còn nháp hệ thống sẽ phát
-                        hành rồi gắn làm HĐ thanh lý cuối.
-                      </p>
-                      {issueLinkBusy ? (
-                        <p className="mb-3 text-xs font-bold text-indigo-600">Đang phát hành / gắn HĐ…</p>
-                      ) : null}
-                      <ManualInvoiceFormPanel
-                        variant="termination"
-                        propertyId={propertyId}
-                        roomId={contract.room_id}
-                        contractId={contract.id}
-                        roomName={roomLabel}
-                        supplierDisplayName={contract.property?.name}
-                        enabled={activeStep === 3 && !effectiveIssueResult}
-                        formId="termination-manual-invoice"
-                        onInvoiceCreated={(inv) => {
-                          void handleBillingInvoiceCreated(inv);
-                        }}
-                        closeOnSuccess={false}
-                        embeddedSubmit
-                      />
+                    <div className="space-y-4">
+                      {/* Tab chọn chế độ */}
+                      <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-600 dark:bg-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setInvoiceLinkMode('create')}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                            invoiceLinkMode === 'create'
+                              ? 'bg-white text-indigo-700 shadow dark:bg-slate-700 dark:text-indigo-300'
+                              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                          }`}
+                        >
+                          Tạo hóa đơn mới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInvoiceLinkMode('link_existing');
+                            setSelectedExternalInvoiceId('');
+                          }}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                            invoiceLinkMode === 'link_existing'
+                              ? 'bg-white text-indigo-700 shadow dark:bg-slate-700 dark:text-indigo-300'
+                              : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                          }`}
+                        >
+                          Gắn hóa đơn có sẵn
+                        </button>
+                      </div>
+
+                      {invoiceLinkMode === 'create' ? (
+                        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-600 dark:bg-slate-950/50">
+                          <p className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Soạn hóa đơn lẻ (thanh lý)
+                          </p>
+                          <p className="mb-3 text-xs text-slate-500">
+                            Kiểm tra ngày thanh lý ở bước đầu và chỉ số đồng hồ. Sau khi tạo, nếu còn nháp hệ thống sẽ phát
+                            hành rồi gắn làm HĐ thanh lý cuối.
+                          </p>
+                          {issueLinkBusy ? (
+                            <p className="mb-3 text-xs font-bold text-indigo-600">Đang phát hành / gắn HĐ…</p>
+                          ) : null}
+                          <ManualInvoiceFormPanel
+                            variant="termination"
+                            propertyId={propertyId}
+                            roomId={contract.room_id}
+                            contractId={contract.id}
+                            roomName={roomLabel}
+                            supplierDisplayName={contract.property?.name}
+                            enabled={activeStep === 3 && !effectiveIssueResult}
+                            formId="termination-manual-invoice"
+                            onInvoiceCreated={(inv) => {
+                              void handleBillingInvoiceCreated(inv);
+                            }}
+                            closeOnSuccess={false}
+                            embeddedSubmit
+                          />
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-600 dark:bg-slate-950/50">
+                          <p className="mb-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            Gắn hóa đơn đã phát hành
+                          </p>
+                          <p className="mb-3 text-xs text-slate-500">
+                            Chọn một hóa đơn <strong>ISSUED</strong> của hợp đồng này — dùng khi bạn đã chốt số và phát hành
+                            hóa đơn kỳ cuối từ module hóa đơn thông thường.
+                          </p>
+                          {existingIssuedInvoicesQuery.isLoading ? (
+                            <div className="flex items-center gap-2 py-4 text-sm text-slate-500">
+                              <Loader2 className="h-4 w-4 animate-spin" /> Đang tải danh sách hóa đơn…
+                            </div>
+                          ) : existingIssuedInvoicesQuery.isError ? (
+                            <p className="text-sm text-rose-600 dark:text-rose-400">
+                              Không tải được danh sách hóa đơn.
+                            </p>
+                          ) : !existingIssuedInvoicesQuery.data?.data?.length ? (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                              Không có hóa đơn ISSUED nào của hợp đồng này để gắn. Hãy dùng tab{' '}
+                              <strong>Tạo hóa đơn mới</strong>.
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              <select
+                                value={selectedExternalInvoiceId}
+                                onChange={(e) => setSelectedExternalInvoiceId(e.target.value)}
+                                className={`${inputClass} cursor-pointer`}
+                              >
+                                <option value="">-- Chọn hóa đơn --</option>
+                                {existingIssuedInvoicesQuery.data.data.map((inv) => {
+                                  const periodLabel = inv.period_start
+                                    ? `${new Date(inv.period_start).toLocaleDateString('vi-VN')} — ${new Date(inv.period_end).toLocaleDateString('vi-VN')}`
+                                    : inv.id.slice(0, 8);
+                                  const amountLabel = formatCurrency(Number(inv.total_amount ?? 0));
+                                  const statusLabel =
+                                    inv.status === 'PAID' ? ' [ĐÃ TT]'
+                                    : inv.status === 'PARTIAL' ? ' [TT 1 phần]'
+                                    : inv.status === 'OVERDUE' ? ' [Quá hạn]'
+                                    : '';
+                                  return (
+                                    <option key={inv.id} value={inv.id}>
+                                      {periodLabel} · {amountLabel}{statusLabel}
+                                    </option>
+                                  );
+                                })}
+                              </select>
+                              {(() => {
+                                const selInv = selectedExternalInvoiceId
+                                  ? existingIssuedInvoicesQuery.data?.data.find((i) => i.id === selectedExternalInvoiceId)
+                                  : null;
+                                if (selInv?.status === 'PAID') {
+                                  return (
+                                    <div className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2.5 text-xs text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100">
+                                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                                      <span>
+                                        Hóa đơn này đã được thanh toán đủ — quyết toán sẽ <strong>không thu thêm</strong>{' '}
+                                        từ hóa đơn này và sẽ hoàn trả phần cọc còn lại (nếu có).
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                                if (selInv?.status === 'PARTIAL') {
+                                  return (
+                                    <div className="flex gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-100">
+                                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                                      <span>
+                                        Hóa đơn thanh toán một phần — quyết toán sẽ dùng tiền cọc bù phần còn thiếu trước
+                                        khi tính hoàn trả.
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+                              {issueLinkBusy ? (
+                                <p className="text-xs font-bold text-indigo-600">Đang gắn hóa đơn…</p>
+                              ) : null}
+                              <button
+                                type="button"
+                                disabled={!selectedExternalInvoiceId || issueLinkBusy}
+                                onClick={() => void handleLinkExistingInvoice()}
+                                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {issueLinkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                Gắn hóa đơn này làm hóa đơn thanh lý
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1261,6 +1452,16 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                   'Biên lai hoàn tiền',
                   'Soạn phiếu hoàn theo mẫu giấy, đối chiếu nợ hóa đơn, rồi quyết toán.',
                 )}
+                {effectiveIssueResult?.data?.status === 'PAID' && !finalizeResult ? (
+                  <div className="flex gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2.5 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-100">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <span>
+                      Hóa đơn thanh lý đã được thanh toán đủ — quyết toán sẽ{' '}
+                      <strong>không thu thêm</strong> từ hóa đơn này. Phần cọc còn lại sau khi cấn trừ nợ cũ sẽ được
+                      hoàn trả theo lựa chọn bên dưới.
+                    </span>
+                  </div>
+                ) : null}
                 {finalizeResult ? (
                   finalizeSuccessSection
                 ) : !effectiveIssueResult ? (
@@ -1569,60 +1770,6 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                           </p>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-slate-200 bg-slate-50/90 p-4 text-sm dark:border-slate-600 dark:bg-slate-900/50">
-                        <p className="font-semibold text-slate-900 dark:text-white">
-                          Nếu sau quyết toán còn phải thu thêm (kịch bản B)
-                        </p>
-                        <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                          Chọn phương thức dự kiến — sau quyết toán, nút ghi nhận tương ứng sẽ được nhấn mạnh (lựa chọn chỉ
-                          trên giao diện; chuyển khoản bắt buộc kèm ảnh bằng chứng khi ghi nhận).
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-4">
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                            <input
-                              type="radio"
-                              name="term-extra-pay"
-                              checked={extraPaymentPreference === 'transfer'}
-                              onChange={() => setExtraPaymentPreference('transfer')}
-                              className="accent-indigo-600"
-                            />
-                            <span>Chuyển khoản</span>
-                          </label>
-                          <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                            <input
-                              type="radio"
-                              name="term-extra-pay"
-                              checked={extraPaymentPreference === 'cash'}
-                              onChange={() => {
-                                setExtraPaymentPreference('cash');
-                                clearFprProof();
-                              }}
-                              className="accent-indigo-600"
-                            />
-                            <span>Tiền mặt</span>
-                          </label>
-                        </div>
-                        {extraPaymentPreference === 'transfer' && (
-                          <div className="mt-3 space-y-2 rounded-md border border-dashed border-slate-300 p-3 text-xs dark:border-slate-600">
-                            <p className="font-medium text-slate-800 dark:text-slate-200">
-                              Ảnh bằng chứng (có thể chọn trước hoặc sau khi quyết toán)
-                            </p>
-                            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFprProofInput} />
-                            {fprProofPreviewUrl ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <img src={fprProofPreviewUrl} alt="" className="h-14 max-w-[7rem] rounded border object-cover" />
-                                <button
-                                  type="button"
-                                  onClick={clearFprProof}
-                                  className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-100 dark:border-slate-600 dark:hover:bg-slate-800"
-                                >
-                                  Xóa ảnh
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
                       <button
                         type="button"
                         onClick={handleFinalize}
@@ -1676,7 +1823,7 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
               className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
             >
               <X className="h-4 w-4" aria-hidden />
-              Hủy
+              {finalizeResult ? 'Đóng' : 'Hủy'}
             </button>
           ) : (
             <PageBackButton
@@ -1693,6 +1840,15 @@ export function TerminationWizard({ contract, propertyId, onClose }: Termination
                 className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98] dark:bg-indigo-500 dark:hover:bg-indigo-600"
               >
                 Tiếp tục
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </button>
+            ) : finalizeResult ? (
+              <button
+                type="button"
+                onClick={handleFinish}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 active:scale-[0.98]"
+              >
+                Hoàn tất & Mở Biên Lai
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </button>
             ) : null}

@@ -36,7 +36,7 @@ class RoomService
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price'])
             ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'meters.latestInvoiceEligibleReading', 'invoices', 'roomServices'])
-            ->defaultSort('code');
+            ->defaultSort('floor_number', 'code');
 
         // Scoping Pattern: Membership-based for Tenant (Renters) OR they can see 'available' rooms
         if ($performer && $performer->hasRole('Tenant')) {
@@ -86,7 +86,7 @@ class RoomService
             ->allowedFilters($allowedFilters)
             ->allowedSorts(['name', 'code', 'status', 'type', 'area', 'capacity', 'created_at', 'floor_number', 'base_price', 'deleted_at'])
             ->allowedIncludes(['floor', 'property', 'assets', 'prices', 'statusHistories', 'media', 'floorPlanNode', 'contracts', 'contracts.members', 'meters', 'meters.readings', 'meters.latestReading', 'meters.latestApprovedReading', 'meters.latestInvoiceEligibleReading', 'invoices', 'roomServices'])
-            ->defaultSort('code');
+            ->defaultSort('floor_number', 'code');
 
         if ($performer && $performer->hasRole(['Manager', 'Staff'])) {
             $query->whereHas('property.managers', function ($q) use ($performer) {

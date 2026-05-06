@@ -124,8 +124,6 @@ export function useNavigation() {
         'staff_today',
         'service_metering',
         'people_support',
-        'property_core',
-        'finance_ledger',
       ];
       const byId = new Map(propertySections.map((s) => [s.id, s]));
       const ordered = staffSectionOrder

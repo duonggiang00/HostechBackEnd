@@ -245,7 +245,43 @@ class ContractDocumentService
     }
 
     /**
-     * @return array{0: array<string, mixed>, 1: array<int, string>}
+     * Danh sách tài sản phòng cho placeholder ${room_asset_list} (HTML / DOCX).
+     *
+     * @return array<int, string>
+     */
+    private function buildRoomAssetInventoryLines(Contract $contract): array
+    {
+        $assets = $contract->room?->assets;
+        if ($assets === null || $assets->isEmpty()) {
+            return ['Không có danh mục tài sản được khai báo trên hệ thống (hai bên ghi nhận hiện trạng khi bàn giao).'];
+        }
+
+        $lines = [];
+        foreach ($assets->values() as $index => $asset) {
+            $n = $index + 1;
+            $name = $asset->name ?: 'Tài sản';
+            $line = "{$n}. {$name}";
+            $extras = [];
+            if ($asset->serial) {
+                $extras[] = 'S/N: '.$asset->serial;
+            }
+            if ($asset->condition) {
+                $extras[] = 'Tình trạng: '.$asset->condition;
+            }
+            if ($asset->note) {
+                $extras[] = 'Ghi chú: '.$asset->note;
+            }
+            if ($extras !== []) {
+                $line .= ' — '.implode(' — ', $extras);
+            }
+            $lines[] = $line;
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @return array{0: array<string, mixed>, 1: array<int, string>, 2: array<int, string>}
      */
     private function composeDocumentVariables(Contract $contract, array $extraData = []): array
     {
@@ -282,6 +318,8 @@ class ContractDocumentService
         } else {
             $serviceItems[] = 'Theo quy định chung của tòa nhà';
         }
+
+        $assetItems = $this->buildRoomAssetInventoryLines($contract);
 
         $cycleMonths = $this->resolveContractBillingCycleMonths($contract->billing_cycle);
         $dueDay = (int) ($contract->due_day ?? 5);
@@ -363,7 +401,7 @@ class ContractDocumentService
 
         ], $extraData);
 
-        return [$vars, $serviceItems];
+        return [$vars, $serviceItems, $assetItems];
     }
 
     // ───────────────────────────────────────────────────────────────────────────
@@ -382,9 +420,9 @@ class ContractDocumentService
             $extraData['signature_tenant'] = $this->findSignaturePath($contractId, 'tenant');
         }
 
-        $contract->loadMissing(['members', 'room.services', 'property', 'org', 'createdBy']);
+        $contract->loadMissing(['members', 'room.services', 'room.assets', 'property', 'org', 'createdBy']);
 
-        [$vars, $serviceItems] = $this->composeDocumentVariables($contract, $extraData);
+        [$vars, $serviceItems, $assetItems] = $this->composeDocumentVariables($contract, $extraData);
 
         // Backward-compatible signature placeholders for legacy templates.
         if (! empty($vars['signature_landlord'])) {
@@ -432,23 +470,27 @@ class ContractDocumentService
         // Delegate rendering
         if (! empty($contract->custom_content)) {
             $vars['room_service_list'] = implode('<br/>', $serviceItems);
+            $vars['room_asset_list'] = implode('<br/>', $assetItems);
             $vars['member_list'] = $this->getMemberListTable($contract, 'HTML');
             // Create a fake template to easily reuse the generateHtmlDocument code
             $fakeTemplate = new DocumentTemplate(['content' => $contract->custom_content, 'format' => 'HTML']);
             $storagePath = $this->generateHtmlDocument($contract, $fakeTemplate, $vars);
         } elseif ($template && $template->format === 'HTML') {
             $vars['room_service_list'] = implode('<br/>', $serviceItems);
+            $vars['room_asset_list'] = implode('<br/>', $assetItems);
             $vars['member_list'] = $this->getMemberListTable($contract, 'HTML');
             $storagePath = $this->generateHtmlDocument($contract, $template, $vars);
         } elseif ($hasSignatures) {
             // Có ít nhất một chữ ký: luôn HTML→PDF để nhúng ảnh ký đúng (DomPDF + base64).
             // Template DOCX + PHPWord + docx-preview trên trình duyệt không hiển thị ảnh ký tin cậy.
             $vars['room_service_list'] = implode('<br/>', $serviceItems);
+            $vars['room_asset_list'] = implode('<br/>', $assetItems);
             $vars['member_list'] = $this->getMemberListTable($contract, 'HTML');
             $fakeTemplate = new DocumentTemplate(['content' => $this->buildDefaultHtmlContent(), 'format' => 'HTML']);
             $storagePath = $this->generateHtmlDocument($contract, $fakeTemplate, $vars);
         } else {
             $vars['room_service_list'] = implode('<w:br/>', $serviceItems);
+            $vars['room_asset_list'] = implode('<w:br/>', $assetItems);
             $vars['member_list'] = $this->getMemberListTable($contract, 'DOCX');
             $storagePath = $this->generateDocxDocument($contract, $template, $vars);
         }
@@ -959,6 +1001,8 @@ HTML;
 <p>1.1. Bên A đồng ý cho bên B được thuê căn phòng số: <strong>${room_code}</strong>, tổng diện tích: ${room_area}m² thuộc tòa nhà ${property_name}.</p>
 <p>1.2. Mục đích thuê: Dùng để ở. Sức chứa tối đa: ${room_capacity} người.</p>
 <p>1.3. Thời hạn thuê: Từ ngày <strong>${contract_start_date}</strong> đến ngày <strong>${contract_end_date}</strong>.</p>
+<p>1.4. Tài sản trong nhà bàn giao:</p>
+<p>${room_asset_list}</p>
 
 <p class="section-title">ĐIỀU 2: GIÁ THUÊ VÀ PHƯƠNG THỨC THANH TOÁN</p>
 <p>2.1. Giá thuê nhà mỗi tháng là: <strong>${contract_rent_price} VNĐ/tháng</strong> (phí dịch vụ cố định gắn phòng: ${contract_fixed_services_fee} VNĐ/tháng; tổng: ${contract_total_rent} VNĐ/tháng).</p>
@@ -1064,6 +1108,8 @@ HTML;
         $section->addText('1.1. Bên A đồng ý cho bên B được thuê căn phòng số: ${room_code}, tổng diện tích: ${room_area}m2 thuộc tòa nhà ${property_name}.');
         $section->addText('1.2. Mục đích thuê: Dùng để ở. Sức chứa tối đa: ${room_capacity} người.');
         $section->addText('1.3. Thời hạn thuê: Từ ngày ${contract_start_date} đến ngày ${contract_end_date}.');
+        $section->addText('1.4. Tài sản trong nhà bàn giao:');
+        $section->addText('${room_asset_list}');
         $section->addText('');
 
         $section->addText('ĐIỀU 2: GIÁ THUÊ VÀ PHƯƠNG THỨC THANH TOÁN', ['bold' => true]);

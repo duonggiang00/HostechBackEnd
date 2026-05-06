@@ -14,6 +14,7 @@ import SelectionLayout from '@/shared/layouts/SelectionLayout';
 import LoginPage from '@/shared/features/auth/components/LoginPage';
 import InvitationSetupPage from '@/shared/features/auth/components/InvitationSetupPage';
 import PropertySelectionPage from '@/shared/features/properties/pages/PropertySelectionPage';
+import AccountLockedPage from '@/shared/pages/AccountLockedPage';
 
 // Modular Routes
 import { orgScopeRoutes } from '@/OrgScope/routes';
@@ -106,6 +107,7 @@ export default function AppRoutes() {
       <Routes>
         {/* --- Public & Auth Routes --- */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/account-locked" element={<AccountLockedPage />} />
         <Route path="/setup-account/:token" element={<InvitationSetupPage />} />
         <Route path="/unauthorized" element={
           <div className="flex h-screen flex-col items-center justify-center bg-slate-50">

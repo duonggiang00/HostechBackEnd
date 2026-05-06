@@ -2,95 +2,130 @@
 
 namespace Database\Seeders;
 
+use App\Models\Contract\ContractMember;
+use App\Models\Finance\Payment;
+use App\Models\Finance\PaymentAllocation;
+use App\Models\Invoice\Invoice;
+use App\Models\Org\Org;
+use App\Services\Finance\LedgerService;
+use App\Services\Finance\ReceiptService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+/**
+ * Seeder thủ công (chạy riêng, không nằm trong DatabaseSeeder).
+ *
+ * Tạo 1 Payment mẫu cho một invoice chưa được thanh toán (status=ISSUED/OVERDUE)
+ * rồi ghi sổ cái qua LedgerService để đảm bảo bút toán kép và meta đầy đủ.
+ *
+ * Chạy: php artisan db:seed --class=PaymentRelatedTablesSeeder
+ */
 class PaymentRelatedTablesSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    public function __construct(
+        protected LedgerService $ledgerService,
+        protected ReceiptService $receiptService,
+    ) {}
+
     public function run(): void
     {
-        // Lấy dữ liệu cơ sở ngẫu nhiên
-        $org = DB::table('orgs')->inRandomOrder()->first();
-
+        $org = Org::inRandomOrder()->first();
         if (! $org) {
             $this->command->warn('Chưa có dữ liệu ở bảng orgs. Bỏ qua seed thanh toán.');
-
             return;
         }
 
-        $property = DB::table('properties')->where('org_id', $org->id)->inRandomOrder()->first();
-        $user = DB::table('users')->where('org_id', $org->id)->inRandomOrder()->first();
-        $invoice = DB::table('invoices')->where('org_id', $org->id)->inRandomOrder()->first();
+        // Tìm invoice chưa thanh toán (ISSUED hoặc OVERDUE) có hợp đồng + tenant member
+        $invoice = Invoice::withoutGlobalScope('org_id')
+            ->where('org_id', $org->id)
+            ->whereIn('status', ['ISSUED', 'OVERDUE'])
+            ->whereDoesntHave('allocations')
+            ->whereNotNull('contract_id')
+            ->inRandomOrder()
+            ->first();
 
-        // 1. Fake 1 khoản thanh toán (Payment)
-        $paymentAmount = $invoice ? $invoice->total_amount : 5000000.00;
-        $paymentId = Str::uuid();
-
-        DB::table('payments')->insert([
-            'id' => $paymentId,
-            'org_id' => $org->id,
-            'property_id' => $property ? $property->id : null,
-            'payer_user_id' => $user ? $user->id : null,
-            'received_by_user_id' => $user ? $user->id : null,
-            'method' => 'TRANSFER',
-            'amount' => $paymentAmount,
-            'reference' => 'CK TIEN NHA THANG NAY',
-            'received_at' => Carbon::now(),
-            'status' => 'APPROVED',
-            'approved_by_user_id' => $user ? $user->id : null,
-            'approved_at' => Carbon::now(),
-            'note' => 'Thanh toán tiền nhà và dịch vụ',
-            'created_at' => Carbon::now(),
-            'updated_at' => Carbon::now(),
-        ]);
-
-        // 2. Fake 1 bút toán sổ cái (Ledger Entry) liên quan tới Payment bên trên
-        $ledgerId = Str::uuid();
-        DB::table('ledger_entries')->insert([
-            'id' => $ledgerId,
-            'org_id' => $org->id,
-            'ref_type' => 'payment',
-            'ref_id' => $paymentId,
-            'debit' => $paymentAmount,
-            'credit' => 0.00,
-            'occurred_at' => Carbon::now(),
-            'created_at' => Carbon::now(),
-        ]);
-
-        // 3. Fake 1 biên lai / uỷ nhiệm chi (Receipt) đính kèm
-        DB::table('receipts')->insert([
-            'id' => Str::uuid(),
-            'org_id' => $org->id,
-            'payment_id' => $paymentId,
-            'kind' => 'OFFICIAL',
-            'path' => 'receipts/'.date('Y/m').'/'.$paymentId.'_receipt.png',
-            'sha256' => hash('sha256', random_bytes(10)),
-            'created_at' => Carbon::now(),
-        ]);
-
-        // 4. Fake phân bổ thanh toán (Payment Allocation)
-        // Nếu có invoice thì phân bổ số tiền thanh toán vào hoá đơn này
-        if ($invoice) {
-            DB::table('payment_allocations')->insert([
-                'id' => Str::uuid(),
-                'org_id' => $org->id,
-                'payment_id' => $paymentId,
-                'invoice_id' => $invoice->id,
-                'amount' => $paymentAmount,
-                'created_at' => Carbon::now(),
-            ]);
-
-            // Cập nhật lại số tiền đã thanh toán của hoá đơn
-            DB::table('invoices')->where('id', $invoice->id)->update([
-                'paid_amount' => DB::raw("paid_amount + {$paymentAmount}"),
-                'status' => 'PAID', // Giả sử đã thanh toán đủ
-                'updated_at' => Carbon::now(),
-            ]);
+        if (! $invoice) {
+            $this->command->warn('Không tìm thấy invoice phù hợp để seed payment.');
+            return;
         }
+
+        // Lấy payer là tenant chính của hợp đồng
+        $tenantMember = ContractMember::withoutGlobalScope('org_id')
+            ->where('contract_id', $invoice->contract_id)
+            ->whereIn('role', ['TENANT', 'PRIMARY'])
+            ->orderByRaw("CASE WHEN role = 'TENANT' THEN 0 ELSE 1 END")
+            ->first();
+
+        $ownerUserId = \App\Models\Org\User::withoutGlobalScope('org_id')
+            ->where('org_id', $org->id)
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['Owner', 'Manager']))
+            ->inRandomOrder()
+            ->value('id');
+
+        $payerUserId = $tenantMember?->user_id ?? $ownerUserId;
+        $total = (float) $invoice->total_amount;
+
+        if ($total <= 0) {
+            $this->command->warn('Invoice có tổng tiền = 0, bỏ qua.');
+            return;
+        }
+
+        // Tạo Payment qua Eloquent để PaymentObserver kích hoạt (broadcast, cache clear, v.v.)
+        // Nhưng KHÔNG để observer tự ghi ledger vì có thể bị queue → dùng seedLedgerForPaymentIfMissing.
+        $payment = Payment::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $org->id,
+            'property_id' => $invoice->property_id,
+            'payer_user_id' => $payerUserId,
+            'received_by_user_id' => $ownerUserId,
+            'method' => 'TRANSFER',
+            'amount' => $total,
+            'reference' => 'CK-SEED-'.strtoupper(substr((string) Str::uuid(), 0, 8)),
+            'received_at' => Carbon::parse($invoice->due_date ?? now())->subDays(1),
+            'status' => 'APPROVED',
+            'approved_by_user_id' => $ownerUserId,
+            'approved_at' => Carbon::parse($invoice->due_date ?? now())->subDays(1),
+            'note' => 'Thanh toán tiền nhà (seed)',
+        ]);
+
+        // Tạo allocation trước khi ghi ledger để LedgerService có thể loadMissing
+        PaymentAllocation::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $org->id,
+            'payment_id' => $payment->id,
+            'invoice_id' => $invoice->id,
+            'amount' => $total,
+        ]);
+
+        // Ghi sổ cái qua LedgerService → bút toán kép + meta đầy đủ (payer_name, description, v.v.)
+        $existing = \App\Models\Finance\LedgerEntry::withoutGlobalScope('org_id')
+            ->where('ref_type', 'payment')
+            ->where('ref_id', $payment->id)
+            ->count();
+        if ($existing === 0) {
+            try {
+                $this->ledgerService->recordPayment($payment);
+                $this->command->info("  ✓ Ledger ghi nhận: payment {$payment->id}");
+            } catch (\Throwable $e) {
+                $this->command->warn("  - Ledger seed thất bại: {$e->getMessage()}");
+            }
+        }
+
+        // Phát hành biên lai PDF
+        try {
+            $this->receiptService->generateForPayment($payment);
+        } catch (\Throwable $e) {
+            $this->command->warn("  - Biên lai seed thất bại: {$e->getMessage()}");
+        }
+
+        // Cập nhật trạng thái invoice
+        $invoice->update([
+            'status' => 'PAID',
+            'paid_amount' => $total,
+        ]);
+
+        $tenantName = $tenantMember?->full_name ?? '(không rõ)';
+        $this->command->info("  ✓ Payment seed thành công — khách: {$tenantName}, invoice: {$invoice->id}, số tiền: {$total}");
     }
 }

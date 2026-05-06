@@ -11,6 +11,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam filter[property_id] string UUID Lọc theo Tòa nhà. Example: uuid
  * @queryParam filter[room_id] string UUID Lọc theo Phòng. Example: uuid
  * @queryParam filter[contract_id] string UUID Lọc theo Hợp đồng. Example: uuid
+ * @queryParam include_inherited boolean Nếu true và có filter[contract_id], gộp thêm dữ liệu hóa đơn từ hợp đồng nguồn chuyển phòng. Example: true
  * @queryParam filter[status] string Lọc theo trạng thái. Enum: DRAFT, ISSUED, PENDING, PAID, OVERDUE, CANCELLED. Example: DRAFT
  * @queryParam sort string Sắp xếp. Các trường: due_date, total_amount, created_at, status, period_start, period_end. Tiền tố '-' để sắp xếp giảm dần. Example: -created_at
  */
@@ -32,6 +33,7 @@ class InvoiceIndexRequest extends FormRequest
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.room_id' => ['nullable', 'uuid'],
             'filter.contract_id' => ['nullable', 'uuid'],
+            'include_inherited' => ['nullable', 'boolean'],
             'filter.status' => ['nullable', 'string', 'in:DRAFT,ISSUED,PENDING,PAID,OVERDUE,CANCELLED'],
             'filter.is_termination' => ['nullable', 'boolean'],
             'filter.has_outstanding' => ['nullable', 'boolean'],
@@ -50,6 +52,7 @@ class InvoiceIndexRequest extends FormRequest
             'filter.property_id' => 'ID Tòa nhà',
             'filter.room_id' => 'ID Phòng',
             'filter.contract_id' => 'ID Hợp đồng',
+            'include_inherited' => 'Bao gồm dữ liệu kế thừa',
             'filter.status' => 'Trạng thái hóa đơn',
             'sort' => 'Sắp xếp',
         ];

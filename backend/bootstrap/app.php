@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\AccountLockedException;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\ResolveTenant;
 use App\Support\FriendlySqlDuplicateMessage;
@@ -33,6 +34,15 @@ return Application::configure(basePath: dirname(__DIR__))
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->renderable(function (AccountLockedException $e, $request) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'error_code' => 'ACCOUNT_LOCKED',
+                ], 423);
+            }
+        });
+
         // Standardize JSON error responses for API requests
         $exceptions->renderable(function (ValidationException $e, $request) {
             if ($request->expectsJson()) {

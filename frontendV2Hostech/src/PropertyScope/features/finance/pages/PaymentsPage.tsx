@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Wallet,
@@ -18,6 +18,7 @@ import { PermissionGate } from '@/shared/features/auth/components/PermissionGate
 import { PERMISSIONS } from '@/shared/features/auth/permissions';
 import type { PaymentStatus, PaymentMethod, RefundReceiptRow } from '../types';
 import { paymentMethodLabelVi } from '@/shared/utils/paymentMethodLabelVi';
+import { paymentDetailReferrerState } from '../utils/paymentNavigation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ const depositStatusLabel: Record<string, string> = {
 export function PaymentsPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabFromUrl = searchParams.get('tab');
@@ -302,7 +304,11 @@ export function PaymentsPage() {
                         {/* Actions */}
                         <td className="px-4 py-3 whitespace-nowrap text-right">
                           <button
-                            onClick={() => navigate(`/properties/${propertyId}/finance/payments/${payment.id}`)}
+                            onClick={() =>
+                              navigate(`/properties/${propertyId}/finance/payments/${payment.id}`, {
+                                state: paymentDetailReferrerState(location.pathname, location.search),
+                              })
+                            }
                             className="px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-xl transition-colors"
                           >
                             Chi tiết

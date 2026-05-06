@@ -184,6 +184,22 @@ class Contract extends Model implements HasMedia
     }
 
     /**
+     * Resolve current contract lineage IDs for billing read-model queries.
+     *
+     * @return list<string>
+     */
+    public function lineageContractIds(): array
+    {
+        $lineage = [(string) $this->id];
+        $sourceContractId = (string) ($this->meta['transfer_source_contract_id'] ?? '');
+        if ($sourceContractId !== '') {
+            $lineage[] = $sourceContractId;
+        }
+
+        return array_values(array_unique($lineage));
+    }
+
+    /**
      * Hóa đơn đang có dư nợ (dùng cho badge / phân bổ nợ phòng vs dịch vụ).
      */
     public function outstandingInvoices(): HasMany

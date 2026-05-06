@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  BarChart3,
   BookOpen,
   ExternalLink,
   Landmark,
@@ -13,10 +14,14 @@ import {
   Users,
   Wallet,
 } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 import { isUuid } from '@/lib/utils';
+import { paymentDetailReferrerState } from '../utils/paymentNavigation';
 import {
+  useCashflowFeedAll,
   useCashflowFeed,
+  useLedgerSummarySeries,
   useLedgerDepositForfeitFeed,
   useLedgerSummary,
   useOutstandingInvoices,
@@ -32,9 +37,10 @@ import type {
   RefundReceiptQueryParams,
 } from '../types';
 
-type LedgerTab = 'all' | 'incoming' | 'refunds' | 'forfeit_book' | 'debts' | 'deposits';
+type LedgerTab = 'charts' | 'all' | 'incoming' | 'refunds' | 'forfeit_book' | 'debts' | 'deposits';
 
 const TABS: { id: LedgerTab; label: string; icon: typeof Wallet }[] = [
+  { id: 'charts', label: 'Biểu đồ', icon: BarChart3 },
   { id: 'all', label: 'Dòng tiền tất cả', icon: Wallet },
   { id: 'incoming', label: 'Tiền thu vào', icon: TrendingUp },
   { id: 'refunds', label: 'Tiền hoàn trả', icon: TrendingDown },
@@ -67,16 +73,93 @@ function shortId(id: string | null | undefined): string {
   return id.length > 8 ? id.slice(0, 8).toUpperCase() : id.toUpperCase();
 }
 
+type MonthBucket = {
+  key: string;
+  label: string;
+  from: string;
+  to: string;
+};
+
+type LedgerChartRow = {
+  month: string;
+  monthKey: string;
+  totalCollected: number;
+  cashIn: number;
+  depositByMonth: number;
+  cashOut: number;
+};
+
+function fmtMonthLabel(date: Date): string {
+  return new Intl.DateTimeFormat('vi-VN', { month: '2-digit', year: 'numeric' }).format(date);
+}
+
+function toMonthKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+function toDateOnly(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** Xây dựng danh sách bucket theo tháng từ "YYYY-MM" đến "YYYY-MM" (inclusive). */
+function buildMonthBuckets(fromMonth: string, toMonth: string): MonthBucket[] {
+  const result: MonthBucket[] = [];
+  const [fy, fm] = fromMonth.split('-').map(Number);
+  const [ty, tm] = toMonth.split('-').map(Number);
+  if (!fy || !fm || !ty || !tm) return result;
+
+  let year = fy;
+  let month = fm;
+
+  while (year < ty || (year === ty && month <= tm)) {
+    const d = new Date(year, month - 1, 1);
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    result.push({
+      key: toMonthKey(d),
+      label: fmtMonthLabel(d),
+      from: toDateOnly(firstDay),
+      to: toDateOnly(lastDay),
+    });
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+    if (result.length > 60) break; // tối đa 5 năm
+  }
+  return result;
+}
+
+function monthKeyFromIso(iso: string | null | undefined): string | null {
+  if (!iso) {
+    return null;
+  }
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return null;
+  }
+
+  return toMonthKey(d);
+}
+
 export function LedgerPage() {
   const { propertyId } = useParams<{ propertyId: string }>();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const tabParam = (searchParams.get('tab') ?? 'all') as LedgerTab;
-  const tab: LedgerTab = TABS.some((t) => t.id === tabParam) ? tabParam : 'all';
+  const tabParam = (searchParams.get('tab') ?? 'charts') as LedgerTab;
+  const tab: LedgerTab = TABS.some((t) => t.id === tabParam) ? tabParam : 'charts';
 
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+
+  // Bộ lọc khoảng tháng cho biểu đồ — mặc định T6/2025 → T6/2026
+  const [chartFromMonth, setChartFromMonth] = useState('2025-06');
+  const [chartToMonth, setChartToMonth] = useState('2026-06');
 
   const switchTab = (next: LedgerTab) => {
     const sp = new URLSearchParams(searchParams);
@@ -96,6 +179,88 @@ export function LedgerPage() {
     return p;
   }, [propertyId, occurredBetween]);
   const { data: summary, isLoading: summaryLoading } = useLedgerSummary(summaryParams);
+
+  const chartMonths = useMemo(
+    () => buildMonthBuckets(chartFromMonth, chartToMonth),
+    [chartFromMonth, chartToMonth],
+  );
+  const chartRange = useMemo(() => {
+    if (chartMonths.length === 0) {
+      return undefined;
+    }
+    return `${chartMonths[0].from},${chartMonths[chartMonths.length - 1].to}`;
+  }, [chartMonths]);
+
+  const chartSummaryRequests = useMemo((): LedgerSummaryParams[] => (
+    chartMonths.map((bucket) => {
+      const params: LedgerSummaryParams = {
+        'filter[occurred_between]': `${bucket.from},${bucket.to}`,
+      };
+      if (propertyId) {
+        params['filter[property_id]'] = propertyId;
+      }
+      return params;
+    })
+  ), [chartMonths, propertyId]);
+
+  const { data: chartSummarySeries, isLoading: chartSummaryLoading } = useLedgerSummarySeries(
+    chartSummaryRequests,
+    { enabled: tab === 'charts' },
+  );
+
+  const chartCashflowParams = useMemo((): Omit<CashflowFeedQueryParams, 'page' | 'per_page'> => ({
+    'filter[property_id]': propertyId || undefined,
+    'filter[occurred_between]': chartRange,
+  }), [propertyId, chartRange]);
+  const { data: chartCashflowRows, isLoading: chartCashflowLoading } = useCashflowFeedAll(chartCashflowParams, {
+    enabled: tab === 'charts',
+  });
+
+  // Fetch tất cả contracts của property để tính tiền cọc theo tháng bắt đầu HĐ
+  const { data: allContractsForChart, isLoading: allContractsLoading } = useContracts(
+    { property_id: propertyId, per_page: 300, page: 1 },
+    { enabled: tab === 'charts' && isUuid(propertyId) },
+  );
+
+  const chartRows = useMemo((): LedgerChartRow[] => {
+    const base = chartMonths.map((bucket, idx) => ({
+      month: bucket.label,
+      monthKey: bucket.key,
+      totalCollected: Number(chartSummarySeries?.[idx]?.total_collected ?? 0),
+      cashIn: 0,
+      depositByMonth: 0,
+      cashOut: 0,
+    }));
+    const indexByMonth = new Map<string, number>();
+    base.forEach((row, idx) => {
+      indexByMonth.set(row.monthKey, idx);
+    });
+
+    for (const row of chartCashflowRows ?? []) {
+      const monthKey = monthKeyFromIso(row.occurred_at);
+      if (!monthKey) continue;
+      const idx = indexByMonth.get(monthKey);
+      if (idx === undefined) continue;
+      if (row.direction === 'IN') {
+        base[idx].cashIn += Number(row.amount ?? 0);
+      } else {
+        base[idx].cashOut += Number(row.amount ?? 0);
+      }
+    }
+
+    // Nhóm tiền cọc theo tháng bắt đầu hợp đồng (start_date)
+    for (const contract of allContractsForChart?.data ?? []) {
+      const deposit = Number(contract.deposit_amount ?? 0);
+      if (deposit <= 0 || !contract.start_date) continue;
+      const monthKey = monthKeyFromIso(contract.start_date);
+      if (!monthKey) continue;
+      const idx = indexByMonth.get(monthKey);
+      if (idx === undefined) continue;
+      base[idx].depositByMonth += deposit;
+    }
+
+    return base;
+  }, [chartCashflowRows, chartMonths, chartSummarySeries, allContractsForChart]);
 
   // ─── Data per tab ────────────────────────────────────────────────────────────
 
@@ -181,6 +346,108 @@ export function LedgerPage() {
     </div>
   );
 
+  const renderChartCard = ({
+    title,
+    dataKey,
+    color,
+  }: {
+    title: string;
+    dataKey: keyof Pick<LedgerChartRow, 'totalCollected' | 'cashIn' | 'depositByMonth' | 'cashOut'>;
+    color: string;
+  }) => (
+    <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+      <div className="mb-3">
+        <h3 className="text-sm font-black text-slate-900 dark:text-white">{title}</h3>
+      </div>
+      <div className="h-56 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartRows}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11 }}
+              tickFormatter={(value: number) => new Intl.NumberFormat('vi-VN').format(Number(value ?? 0))}
+              width={90}
+            />
+            <Tooltip
+              formatter={(value) => fmtVND(Number(value ?? 0))}
+              labelFormatter={(label) => `Tháng ${label}`}
+            />
+            <Bar dataKey={dataKey} fill={color} radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+
+  const renderChartsTab = () => {
+    const chartIsLoading = chartSummaryLoading || chartCashflowLoading || allContractsLoading;
+    return (
+      <div className="space-y-4 p-4 md:p-6">
+        {/* Bộ lọc khoảng tháng */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/50">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Khoảng thời gian
+          </span>
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">Từ tháng</span>
+            <input
+              type="month"
+              value={chartFromMonth}
+              max={chartToMonth}
+              onChange={(e) => setChartFromMonth(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            />
+          </label>
+          <label className="flex items-center gap-1.5">
+            <span className="text-xs text-slate-500">Đến tháng</span>
+            <input
+              type="month"
+              value={chartToMonth}
+              min={chartFromMonth}
+              onChange={(e) => setChartToMonth(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => { setChartFromMonth('2025-06'); setChartToMonth('2026-06'); }}
+            className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+          >
+            Mặc định
+          </button>
+          <span className="ml-auto text-xs text-slate-400 dark:text-slate-500">
+            {chartMonths.length} tháng
+          </span>
+        </div>
+
+        {chartIsLoading && renderLoader()}
+        {!chartIsLoading && (
+          <div className="grid grid-cols-1 gap-4">
+            
+            {renderChartCard({
+              title: 'Tiền thu thực tế vào quỹ theo tháng - Không bao gồm cọc',
+              dataKey: 'cashIn',
+              color: '#16a34a',
+            })}
+            {renderChartCard({
+              title: 'Tiền cọc thu theo tháng (theo ngày bắt đầu HĐ)',
+              dataKey: 'depositByMonth',
+              color: '#d97706',
+            })}
+            {renderChartCard({
+              title: 'Dòng tiền hoàn trả theo tháng',
+              dataKey: 'cashOut',
+              color: '#dc2626',
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── Tab content ─────────────────────────────────────────────────────────────
 
   const renderAllTab = () => {
@@ -189,7 +456,7 @@ export function LedgerPage() {
     if (rows.length === 0) return renderEmpty('Chưa có dòng tiền nào', Wallet);
     return (
       <table className="w-full text-sm">
-        <thead>{renderHeaderRow(['Loại', 'Mã biên lai', 'Giá trị', 'Thời điểm'])}</thead>
+        <thead>{renderHeaderRow(['Loại', 'Diễn giải', 'Người giao dịch', 'Giá trị', 'Thời điểm'])}</thead>
         <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
           {rows.map((r) => {
             const isIn = r.direction === 'IN';
@@ -207,8 +474,11 @@ export function LedgerPage() {
                     {isIn ? 'Thu vào' : 'Hoàn trả'}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs font-bold text-slate-500 dark:text-slate-400">
-                  {r.reference ?? shortId(r.id)}
+                <td className="max-w-xs px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                  <span className="line-clamp-2">{r.description ?? '—'}</span>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-700 dark:text-slate-300">
+                  {r.actor_name ?? '—'}
                 </td>
                 <td className="px-4 py-3">
                   <span
@@ -256,6 +526,7 @@ export function LedgerPage() {
               <td className="px-4 py-3">
                 <Link
                   to={`/properties/${propertyId}/finance/payments/${p.id}`}
+                  state={paymentDetailReferrerState(location.pathname, location.search)}
                   className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300"
                 >
                   Chi tiết <ExternalLink className="h-3.5 w-3.5" />
@@ -351,7 +622,7 @@ export function LedgerPage() {
     return (
       <table className="w-full text-sm">
         <thead>
-          {renderHeaderRow(['Mã tham chiếu', 'Số ghi nhận', 'Diễn giải', 'Hợp đồng', 'Thời điểm'])}
+          {renderHeaderRow(['Mã tham chiếu', 'Số ghi nhận', 'Diễn giải', 'Khách thuê', 'Hợp đồng', 'Thời điểm'])}
         </thead>
         <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
           {rows.map((r) => (
@@ -362,8 +633,11 @@ export function LedgerPage() {
               <td className="px-4 py-3">
                 <span className="font-black text-indigo-600 dark:text-indigo-400">+{fmtVND(r.amount)}</span>
               </td>
-              <td className="max-w-md px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
-                {r.description ?? '—'}
+              <td className="max-w-xs px-4 py-3 text-xs text-slate-600 dark:text-slate-400">
+                <span className="line-clamp-2">{r.description ?? '—'}</span>
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-700 dark:text-slate-300">
+                {r.tenant_name ?? '—'}
               </td>
               <td className="px-4 py-3">
                 {r.contract_id && propertyId ? (
@@ -428,6 +702,7 @@ export function LedgerPage() {
   // ─── Pagination footer ───────────────────────────────────────────────────────
 
   const meta = (() => {
+    if (tab === 'charts') return null;
     if (tab === 'all') return cashflowData?.meta;
     if (tab === 'incoming') return incomingData?.meta;
     if (tab === 'refunds') return refundData?.meta;
@@ -436,7 +711,7 @@ export function LedgerPage() {
     return null;
   })();
 
-  const showFilter = tab !== 'deposits' && tab !== 'debts';
+  const showFilter = tab !== 'charts' && tab !== 'deposits' && tab !== 'debts';
 
   return (
     <div className="min-h-screen flex-1 bg-slate-50 dark:bg-slate-900">
@@ -444,7 +719,7 @@ export function LedgerPage() {
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Sổ Cái</h1>
           <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
-            Tổng hợp dòng tiền, công nợ, cọc đang giữ và ghi nhận sổ thu hồi cọc — 6 tab dữ liệu rõ ràng.
+            Tổng hợp dòng tiền, công nợ, cọc đang giữ và ghi nhận sổ thu hồi cọc — thêm tab biểu đồ theo tháng trực quan.
           </p>
         </div>
 
@@ -542,6 +817,7 @@ export function LedgerPage() {
         {/* Table card */}
         <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
           <div className="overflow-x-auto">
+            {tab === 'charts' && renderChartsTab()}
             {tab === 'all' && renderAllTab()}
             {tab === 'incoming' && renderIncomingTab()}
             {tab === 'refunds' && renderRefundsTab()}

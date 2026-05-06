@@ -115,6 +115,7 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
     label: 'Cơ sở vật chất',
     icon: Building2,
     defaultOpen: true,
+    roles: ['Admin', 'Owner', 'Manager'],
     items: [
       {
         id: 'dashboard',
@@ -155,13 +156,15 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
         icon: ScrollText, 
         label: 'Quản lý hợp đồng', 
         path: '/properties/:propertyId/contracts',
-        badgeKey: 'contractAttention'
+        badgeKey: 'contractAttention',
+        roles: ['Admin', 'Owner', 'Manager'],
       },
       {
         id: 'handovers',
         icon: ClipboardCheck,
         label: 'Biên bản bàn giao phòng',
         path: '/properties/:propertyId/handovers',
+        roles: ['Admin', 'Owner', 'Manager'],
       },
     ],
   },
@@ -206,6 +209,7 @@ export const PROPERTY_NAVIGATION: NavigationSection[] = [
     label: 'Kế Toán / Sổ Quỹ',
     icon: Wallet,
     defaultOpen: false,
+    roles: ['Admin', 'Owner', 'Manager'],
     items: [
       {
         id: 'finance-ledger',

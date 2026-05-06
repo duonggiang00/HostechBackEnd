@@ -6,6 +6,7 @@ use App\Models\Finance\Payment;
 use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
 use App\Models\Org\User;
+use App\Services\Contract\ContractBillingInheritanceService;
 use App\Services\Invoice\InvoiceService;
 use App\Services\OrgContextResolver;
 use App\Support\PaymentMethod;
@@ -17,7 +18,8 @@ use Spatie\QueryBuilder\QueryBuilder;
 class PaymentService
 {
     public function __construct(
-        protected InvoiceService $invoiceService
+        protected InvoiceService $invoiceService,
+        protected ContractBillingInheritanceService $billingInheritanceService
     ) {}
 
     // ╔═══════════════════════════════════════════════════════╗
@@ -47,8 +49,9 @@ class PaymentService
                     if ($value === null || $value === '') {
                         return;
                     }
-                    $query->whereHas('allocations.invoice', function ($q) use ($value): void {
-                        $q->where('contract_id', $value);
+                    $lineageContractIds = $this->billingInheritanceService->resolveLineageContractIds((string) $value);
+                    $query->whereHas('allocations.invoice', function ($q) use ($lineageContractIds): void {
+                        $q->whereIn('contract_id', $lineageContractIds);
                     });
                 }),
                 AllowedFilter::exact('status'),

@@ -93,7 +93,12 @@ apiClient.interceptors.response.use(
     
     if (error.response) {
       const data = error.response.data as any;
-      if (error.response.status === 422) {
+      if (error.response.status === 401) {
+        // 401 phải được xử lý trước data.message vì Laravel luôn trả body {"message":"Unauthenticated."}
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(error); // dừng sớm, không cần toast
+      } else if (error.response.status === 422) {
         const firstValidationError =
           data?.errors && typeof data.errors === 'object'
             ? Object.entries(data.errors).flatMap(([, messages]) =>
@@ -104,30 +109,20 @@ apiClient.interceptors.response.use(
           (typeof firstValidationError === 'string' && firstValidationError) ||
           data?.message ||
           'Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường đã nhập.';
-      } else if (data && data.message) {
-        errorMessage = data.message;
-      } else if (error.response.status === 401) {
-        errorMessage = 'Session expired. Please log in again.';
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
       } else if (error.response.status === 403) {
-        errorMessage = 'You do not have permission to perform this action.';
+        errorMessage = data?.message || 'Bạn không có quyền thực hiện hành động này.';
       } else if (error.response.status === 404) {
-        errorMessage = 'Resource not found.';
+        errorMessage = data?.message || 'Không tìm thấy tài nguyên.';
       } else if (error.response.status >= 500) {
-        errorMessage = 'Server error. Please try again later.';
+        errorMessage = data?.message || 'Lỗi máy chủ. Vui lòng thử lại sau.';
+      } else if (data?.message) {
+        errorMessage = data.message;
       }
     } else if (error.request) {
-      errorMessage = 'Network error. Please check your connection.';
+      errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra đường truyền.';
     }
 
-    // Don't show toast for 401s if it's the initial check or passive fetch to avoid spamming the user
-    const configUrl = error.config?.url || '';
-    const isPassive = configUrl.includes('/me') || configUrl.includes('/dashboard');
-    
-    if (!(error.response?.status === 401 && isPassive)) {
-      toast.error(errorMessage);
-    }
+    toast.error(errorMessage);
     
     return Promise.reject(error);
   }

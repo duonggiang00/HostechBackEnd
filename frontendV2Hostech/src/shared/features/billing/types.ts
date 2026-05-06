@@ -171,7 +171,7 @@ export interface Payment {
   receipt?: PaymentReceipt | null;
   proof_receipt?: PaymentReceipt | null;
   allocations?: PaymentAllocationItem[];
-  payer?: { id: string; name: string; email?: string } | null;
+  payer?: { id: string; full_name: string; email?: string } | null;
   property?: { id: string; name: string } | null;
   received_at: string | null;
   approved_at: string | null;

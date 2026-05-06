@@ -608,6 +608,15 @@ export default function RoomDetailPage({ forceId }: { forceId?: string } = {}) {
                             ? new Date(contract.end_date).toLocaleDateString('vi-VN')
                             : 'Không xác định'}
                         </p>
+                        {(() => {
+                          const primaryTenant = contract.members?.find((m: any) => m.role === 'TENANT');
+                          return primaryTenant ? (
+                            <p className="text-sm font-medium text-gray-800 dark:text-slate-200 mt-1">
+                              <span className="text-gray-400 dark:text-slate-500 font-normal">Khách thuê chính: </span>
+                              {primaryTenant.full_name}
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                       <span className={`px-3 py-1 rounded-lg text-xs font-medium border ${cs.className}`}>
                         {cs.label}

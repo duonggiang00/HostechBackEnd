@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../api/financeApi';
 import type {
+  CashflowFeedRow,
+  CashflowFeedQueryParams,
+  LedgerFinancialSummary,
+  LedgerSummaryParams,
+  LedgerDepositForfeitFeedQueryParams,
   PaymentQueryParams,
   LedgerQueryParams,
-  LedgerSummaryParams,
   RefundReceiptQueryParams,
   MarkRefundPaidPayload,
-  CashflowFeedQueryParams,
-  LedgerDepositForfeitFeedQueryParams,
 } from '../types';
 
 // ─── Query Keys ───────────────────────────────────────────────────────────────
@@ -148,6 +150,52 @@ export function useCashflowFeed(params?: CashflowFeedQueryParams, options?: { en
     queryFn: () => financeApi.getCashflowFeed(params),
     staleTime: 30_000,
     enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Lấy toàn bộ dòng cashflow trong khoảng lọc (tự lật trang) để phục vụ aggregate biểu đồ theo tháng.
+ */
+export function useCashflowFeedAll(params?: Omit<CashflowFeedQueryParams, 'page' | 'per_page'>, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['finance', 'cashflow-feed', 'all', params],
+    queryFn: async (): Promise<CashflowFeedRow[]> => {
+      const perPage = 100;
+      let page = 1;
+      let lastPage = 1;
+      const rows: CashflowFeedRow[] = [];
+
+      do {
+        const response = await financeApi.getCashflowFeed({
+          ...params,
+          page,
+          per_page: perPage,
+        });
+        rows.push(...(response.data ?? []));
+        lastPage = response.meta?.last_page ?? 1;
+        page += 1;
+      } while (page <= lastPage);
+
+      return rows;
+    },
+    staleTime: 30_000,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/**
+ * Chuỗi KPI summary theo từng tháng (mỗi phần tử = 1 tháng).
+ */
+export function useLedgerSummarySeries(
+  requests: LedgerSummaryParams[],
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: ['finance', 'ledger', 'summary', 'series', requests],
+    queryFn: async (): Promise<LedgerFinancialSummary[]> =>
+      Promise.all(requests.map((params) => financeApi.getLedgerSummary(params))),
+    staleTime: 30_000,
+    enabled: (options?.enabled ?? true) && requests.length > 0,
   });
 }
 

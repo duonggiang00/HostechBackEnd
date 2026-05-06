@@ -128,7 +128,7 @@ function PaymentCard({
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   const invoiceCode = payment.allocations?.[0]?.invoice?.code ?? 'Không rõ';
-  const payerName = payment.payer?.name ?? 'Không rõ';
+  const payerName = payment.payer?.full_name ?? 'Không rõ';
   // proof_receipt = ảnh tenant gửi trước khi duyệt; receipt = biên lai PDF chính thức sau duyệt
   const proofUrl = payment.proof_receipt?.url ?? null;
 

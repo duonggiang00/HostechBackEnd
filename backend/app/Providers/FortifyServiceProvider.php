@@ -7,6 +7,7 @@ use App\Actions\Fortify\RedirectIfTwoFactorAuthenticatable;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Exceptions\AccountLockedException;
 use App\Http\Responses\Auth\LoginResponse;
 use App\Http\Responses\Auth\LogoutResponse;
 use App\Http\Responses\Auth\RegisterResponse;
@@ -54,12 +55,12 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::authenticateUsing(function (Request $request) {
             $user = User::where('email', $request->email)->first();
 
-            // Check if user exists, password is correct, and account is active
-            if (
-                $user &&
-                Hash::check($request->password, $user->password_hash) &&
-                $user->is_active
-            ) {
+            if ($user && Hash::check($request->password, $user->password_hash)) {
+                // Mật khẩu đúng nhưng tài khoản bị khóa — trả về lỗi riêng biệt
+                if (! $user->is_active) {
+                    throw new AccountLockedException;
+                }
+
                 return $user;
             }
 

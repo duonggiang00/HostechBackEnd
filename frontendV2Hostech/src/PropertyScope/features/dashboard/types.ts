@@ -10,7 +10,14 @@ export interface DashboardStats {
   unpaidInvoices?: number;
   activeContracts: number;
   thisMonthRevenue: number;
+  revenueTrendValue: number;
+  tenantTrendValue: number;
+  /** Số hợp đồng đang có hóa đơn OVERDUE */
+  overdueContractCount: number;
+  /** Tổng số tiền chưa thu của các hóa đơn nợ */
+  totalOutstandingDebt: number;
 }
+
 
 export interface RevenueDataPoint {
   month: string;

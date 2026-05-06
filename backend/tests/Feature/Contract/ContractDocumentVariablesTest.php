@@ -4,16 +4,17 @@ use App\Models\Contract\Contract;
 use App\Models\Org\Org;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Models\Property\RoomAsset;
 use App\Services\Contract\ContractDocumentService;
 
 /** @return array<string, mixed> */
 function contractDocumentTemplateVars(Contract $contract, array $extra = []): array
 {
-    $contract->loadMissing(['members', 'room.services', 'property', 'org', 'createdBy']);
+    $contract->loadMissing(['members', 'room.services', 'room.assets', 'property', 'org', 'createdBy']);
     $svc = app(ContractDocumentService::class);
     $m = new ReflectionMethod(ContractDocumentService::class, 'composeDocumentVariables');
     $m->setAccessible(true);
-    /** @var array{0: array<string, mixed>, 1: array<int, string>} $tuple */
+    /** @var array{0: array<string, mixed>, 1: array<int, string>, 2: array<int, string>} $tuple */
     $tuple = $m->invoke($svc, $contract, $extra);
 
     return $tuple[0];
@@ -145,4 +146,40 @@ test('deposit months reads directly from column when set (no reverse-calc)', fun
         ->and($vars['contract_total_rent'])->toBe('5.600.000')
         ->and($vars['contract_rent_price'])->toBe('5.000.000')
         ->and($vars['contract_deposit_amount'])->toBe('11.000.000');
+});
+
+test('composeDocumentVariables builds room asset inventory lines', function () {
+    $org = Org::factory()->create();
+    $property = Property::factory()->create(['org_id' => $org->id]);
+    $room = Room::factory()->create(['property_id' => $property->id, 'org_id' => $org->id]);
+
+    RoomAsset::where('room_id', $room->id)->delete();
+
+    RoomAsset::create([
+        'org_id' => $org->id,
+        'room_id' => $room->id,
+        'name' => 'Điều hòa',
+        'serial' => 'SN-1',
+        'condition' => 'good',
+        'note' => 'Hoạt động bình thường',
+    ]);
+
+    $contract = Contract::factory()->create([
+        'org_id' => $org->id,
+        'property_id' => $property->id,
+        'room_id' => $room->id,
+    ]);
+
+    $contract->loadMissing(['members', 'room.services', 'room.assets', 'property', 'org', 'createdBy']);
+    $svc = app(ContractDocumentService::class);
+    $m = new ReflectionMethod(ContractDocumentService::class, 'composeDocumentVariables');
+    $m->setAccessible(true);
+    /** @var array{0: array<string, mixed>, 1: array<int, string>, 2: array<int, string>} $tuple */
+    $tuple = $m->invoke($svc, $contract, []);
+
+    expect($tuple[2])->toHaveCount(1)
+        ->and($tuple[2][0])->toContain('Điều hòa')
+        ->and($tuple[2][0])->toContain('Tình trạng: good')
+        ->and($tuple[2][0])->toContain('S/N: SN-1')
+        ->and($tuple[2][0])->toContain('Ghi chú: Hoạt động bình thường');
 });

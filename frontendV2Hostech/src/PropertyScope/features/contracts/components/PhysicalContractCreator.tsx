@@ -150,7 +150,7 @@ type FormValues = z.input<typeof schema>;
 interface PhysicalContractCreatorProps {
   propertyId: string;
   roomId?: string;
-  onSuccess?: () => void;
+  onSuccess?: (contract: any) => void;
   onCancel?: () => void;
 }
 
@@ -478,7 +478,7 @@ export default function PhysicalContractCreator({
   // ── Mutation ───────────────────────────────────────────────────────────────
   const createContract = useMutation({
     mutationFn: (payload: CreateContractPayload) => contractsApi.createContract(payload),
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Đồng bộ với useContractActions.invalidateContracts — trang list có staleTime 5 phút
       // nên bắt buộc invalidate sau khi tạo (mutation này không đi qua useContractActions).
       queryClient.invalidateQueries({ queryKey: [CONTRACTS_KEY] });
@@ -487,7 +487,7 @@ export default function PhysicalContractCreator({
       queryClient.invalidateQueries({ queryKey: [MY_CONTRACTS_KEY] });
       queryClient.invalidateQueries({ queryKey: [PENDING_REQUESTS_KEY] });
       toast.success('Hợp đồng đã được tạo thành công!');
-      onSuccess?.();
+      onSuccess?.(data);
     },
     onError: (error: AxiosError<any>) => {
       console.error('Create contract error:', error.response?.data || error);
@@ -761,7 +761,7 @@ export default function PhysicalContractCreator({
               </InfoRow>
               <InfoRow label="Số CCCD">
                 <InlineInput id="tenant_identity_number" value={v.tenant_identity_number}
-                  onChange={val => setValue('tenant_identity_number', val, { shouldValidate: true })}
+                  onChange={val => setValue('tenant_identity_number', val.replace(/\D/g, ''), { shouldValidate: true })}
                   placeholder="012345678901" className="w-44"
                   error={errors.tenant_identity_number?.message} />
               </InfoRow>
@@ -897,7 +897,7 @@ export default function PhysicalContractCreator({
                         <InlineInput
                           id={`member_${index}_id`}
                           value={watch(`additional_members.${index}.identity_number`) || ''}
-                          onChange={val => setValue(`additional_members.${index}.identity_number`, val, { shouldValidate: true })}
+                          onChange={val => setValue(`additional_members.${index}.identity_number`, val.replace(/\D/g, ''), { shouldValidate: true })}
                           placeholder="Số định danh..."
                           className="w-36"
                           error={(errors.additional_members?.[index] as any)?.identity_number?.message}
@@ -1040,6 +1040,8 @@ export default function PhysicalContractCreator({
                       <tr className="text-xs text-gray-500 border-b border-dotted border-gray-400">
                         <th className="text-left font-semibold py-0.5 w-8">STT</th>
                         <th className="text-left font-semibold py-0.5">Tên tài sản</th>
+                        <th className="text-left font-semibold py-0.5 w-36">Tình trạng</th>
+                       
                       </tr>
                     </thead>
                     <tbody>
@@ -1048,6 +1050,8 @@ export default function PhysicalContractCreator({
                           className="border-b border-dotted border-gray-300 dark:border-gray-600">
                           <td className="py-1 text-gray-500">{i + 1}</td>
                           <td className="py-1 font-medium text-gray-800 dark:text-gray-200">{asset.name}</td>
+                          <td className="py-1 text-gray-700 dark:text-gray-300 capitalize">{asset.condition ?? '—'}</td>
+                      
                         </tr>
                       ))}
                     </tbody>

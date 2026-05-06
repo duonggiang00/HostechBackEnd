@@ -25,7 +25,7 @@ class ContractIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:300'],
             'page' => ['nullable', 'integer', 'min:1'],
             'search' => ['nullable', 'string'],
             'with_trashed' => ['nullable', 'boolean'],

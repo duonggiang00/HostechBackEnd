@@ -1,9 +1,11 @@
-import { useParams } from 'react-router-dom';
+import { useMemo } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import { FileText, ExternalLink, Loader2 } from 'lucide-react';
 import { usePayment } from '../hooks/useFinance';
 import { paymentMethodLabelVi } from '@/shared/utils/paymentMethodLabelVi';
 import { PaymentStatusBadge } from '../components/PaymentStatusBadge';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { paymentDetailReturnPath } from '../utils/paymentNavigation';
 
 function fmtVND(n: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
@@ -31,7 +33,13 @@ function InfoCard({ label, value }: { label: string; value: React.ReactNode }) {
 
 export default function PaymentDetailPage() {
   const { paymentId, propertyId } = useParams<{ paymentId: string; propertyId: string }>();
+  const location = useLocation();
   const { data: payment, isLoading, isError } = usePayment(paymentId ?? null);
+
+  const backTo = useMemo(
+    () => paymentDetailReturnPath(propertyId ?? '', (location.state as { from?: string } | null)?.from),
+    [propertyId, location.state],
+  );
 
   const receiptUrl = payment?.receipt?.url ?? null;
   const proofUrl = payment?.proof_receipt?.url ?? null;
@@ -47,7 +55,7 @@ export default function PaymentDetailPage() {
   if (isError || !payment) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8">
-        <PageBackButton to={`/properties/${propertyId}/finance/payments`} />
+        <PageBackButton to={backTo} />
         <div className="mt-6 rounded-2xl border border-rose-100 bg-rose-50 p-6 text-rose-700">
           Không tải được chi tiết biên lai.
         </div>
@@ -58,7 +66,7 @@ export default function PaymentDetailPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
-        <PageBackButton to={`/properties/${propertyId}/finance/payments`} />
+        <PageBackButton to={backTo} />
         <PaymentStatusBadge status={payment.status} />
       </div>
 

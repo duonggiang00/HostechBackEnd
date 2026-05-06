@@ -492,12 +492,19 @@ class TerminationReconciliationService
             return;
         }
 
+        $contract->loadMissing('primaryMember');
+        $tenantName = $contract->primaryMember?->full_name ?? null;
+        $description = $tenantName
+            ? "Cấn trừ tiền cọc của khách {$tenantName} vào hóa đơn quyết toán thanh lý."
+            : 'Cấn trừ tiền cọc vào hóa đơn khi quyết toán thanh lý.';
+
         $sharedMeta = [
             'invoice_id' => $invoice->id,
             'contract_id' => $contract->id,
             'property_id' => $contract->property_id,
             'reference' => 'DEP-SETTLE-'.strtoupper(substr((string) $contract->id, 0, 8)),
-            'description' => 'Cấn trừ tiền cọc vào hóa đơn khi quyết toán thanh lý.',
+            'tenant_name' => $tenantName,
+            'description' => $description,
         ];
 
         // DEBIT: CASH_BANK — tiền cọc được "giải ngân" vào quỹ (hiển thị trên dòng tiền IN).

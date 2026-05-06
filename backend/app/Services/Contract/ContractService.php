@@ -215,7 +215,7 @@ class ContractService
     public function find(string $id): ?Contract
     {
         return Contract::with([
-            'room',
+            'room' => fn ($q) => $q->with(['media']),
             'property',
             'members' => fn ($q) => $q->with(['user', 'media']),
             'createdBy',

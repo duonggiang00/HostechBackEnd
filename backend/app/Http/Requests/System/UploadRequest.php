@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * @bodyParam file file required File cần upload (Tối đa 5MB).
- * @bodyParam collection string Tên collection để phân loại file. Example: avatars
+ * @bodyParam collection string Tên collection để phân loại file. Example: avatars, contract-members
  */
 class UploadRequest extends FormRequest
 {
@@ -31,7 +31,8 @@ class UploadRequest extends FormRequest
                 'required',
                 'file',
                 'max:5120', // Tối đa 5MB
-                'mimes:jpeg,png,jpg,gif,svg,pdf,doc,docx,xls,xlsx',
+                // webp: Chrome/Android; heic/heif: ảnh iPhone; bmp: một số máy ảnh cũ
+                'mimes:jpeg,png,jpg,gif,svg,webp,bmp,heic,heif,pdf,doc,docx,xls,xlsx',
             ],
             'collection' => ['nullable', 'string', 'max:50'],
         ];

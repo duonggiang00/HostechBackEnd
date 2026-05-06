@@ -8,6 +8,7 @@ use App\Models\Contract\Contract;
 use App\Models\Contract\RefundReceipt;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -50,6 +51,24 @@ class LedgerService
                 return [$existing[0], $existing[1]];
             }
 
+            // Enrich meta với thông tin payer và hóa đơn liên quan
+            $payment->loadMissing('payer', 'allocations.invoice');
+            $payerName = $payment->payer?->full_name ?? null;
+            $invoices = $payment->allocations->map(fn ($a) => $a->invoice)->filter();
+            $invoiceIds = $invoices->pluck('id')->values()->toArray();
+            $billingPeriods = $invoices->map(fn ($inv) => $this->formatInvoicePeriod($inv))->filter()->values()->toArray();
+            $description = $this->buildPaymentDescription($payerName, $invoices);
+
+            $sharedMeta = [
+                'method' => $payment->method,
+                'reference' => $payment->reference,
+                'property_id' => $payment->property_id,
+                'payer_name' => $payerName,
+                'description' => $description,
+                'invoice_ids' => $invoiceIds,
+                'billing_periods' => $billingPeriods,
+            ];
+
             $debitEntry = LedgerEntry::create([
                 'org_id' => $payment->org_id,
                 'ref_type' => 'payment',
@@ -57,12 +76,7 @@ class LedgerService
                 'debit' => $payment->amount,
                 'credit' => 0.00,
                 'occurred_at' => $payment->received_at ?? now(),
-                'meta' => [
-                    'account' => LedgerEntry::ACCOUNT_CASH_BANK,
-                    'method' => $payment->method,
-                    'reference' => $payment->reference,
-                    'property_id' => $payment->property_id,
-                ],
+                'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_CASH_BANK]),
             ]);
 
             $creditEntry = LedgerEntry::create([
@@ -72,16 +86,45 @@ class LedgerService
                 'debit' => 0.00,
                 'credit' => $payment->amount,
                 'occurred_at' => $payment->received_at ?? now(),
-                'meta' => [
-                    'account' => LedgerEntry::ACCOUNT_ACCOUNTS_RECEIVABLE,
-                    'method' => $payment->method,
-                    'reference' => $payment->reference,
-                    'property_id' => $payment->property_id,
-                ],
+                'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_ACCOUNTS_RECEIVABLE]),
             ]);
 
             return [$debitEntry, $creditEntry];
         });
+    }
+
+    /**
+     * Tạo chuỗi diễn giải cho bút toán thanh toán.
+     */
+    private function buildPaymentDescription(?string $payerName, \Illuminate\Support\Collection $invoices): string
+    {
+        $name = $payerName ?? 'Khách';
+        if ($invoices->isEmpty()) {
+            return "Khách {$name} thanh toán";
+        }
+        if ($invoices->count() === 1) {
+            $period = $this->formatInvoicePeriod($invoices->first());
+            return $period
+                ? "Khách {$name} thanh toán hóa đơn kỳ {$period}"
+                : "Khách {$name} thanh toán hóa đơn";
+        }
+
+        return "Khách {$name} thanh toán {$invoices->count()} hóa đơn";
+    }
+
+    /**
+     * Định dạng kỳ hóa đơn thành chuỗi "tháng M/YYYY" từ period_start.
+     */
+    private function formatInvoicePeriod(mixed $invoice): ?string
+    {
+        if (! $invoice || ! $invoice->period_start) {
+            return null;
+        }
+        try {
+            return 'tháng '.Carbon::parse($invoice->period_start)->format('m/Y');
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -113,7 +156,11 @@ class LedgerService
                 return $existing;
             }
 
-            $contract->loadMissing('property');
+            $contract->loadMissing('property', 'primaryMember');
+            $tenantName = $contract->primaryMember?->full_name ?? null;
+            $description = $tenantName
+                ? "Thu hồi tiền cọc còn lại của khách {$tenantName} sau quyết toán thanh lý."
+                : 'Ghi nhận sổ: thu hồi phần tiền cọc còn lại sau quyết toán thanh lý (không hoàn cho khách).';
 
             return LedgerEntry::create([
                 'org_id' => $contract->org_id,
@@ -128,7 +175,8 @@ class LedgerService
                     'contract_id' => $contract->id,
                     'final_invoice_id' => $finalInvoiceId,
                     'reference' => 'THU-HOI-COC-'.strtoupper(substr((string) $contract->id, 0, 8)),
-                    'description' => 'Ghi nhận sổ: thu hồi phần tiền cọc còn lại sau quyết toán thanh lý (không hoàn cho khách).',
+                    'tenant_name' => $tenantName,
+                    'description' => $description,
                 ],
             ]);
         });
@@ -160,6 +208,19 @@ class LedgerService
                 return [$existing[0], $existing[1]];
             }
 
+            $payment->loadMissing('payer');
+            $payerName = $payment->payer?->full_name ?? null;
+            $description = $payerName
+                ? "Đảo ngược thanh toán của khách {$payerName}"
+                : 'Đảo ngược thanh toán (payment voided)';
+
+            $sharedMeta = [
+                'property_id' => $payment->property_id,
+                'original_received_at' => $payment->received_at,
+                'payer_name' => $payerName,
+                'description' => $description,
+            ];
+
             $debitEntry = LedgerEntry::create([
                 'org_id' => $payment->org_id,
                 'ref_type' => 'payment_reversal',
@@ -167,12 +228,7 @@ class LedgerService
                 'debit' => $payment->amount,
                 'credit' => 0.00,
                 'occurred_at' => now(),
-                'meta' => [
-                    'account' => LedgerEntry::ACCOUNT_ACCOUNTS_RECEIVABLE,
-                    'reason' => 'Payment voided',
-                    'property_id' => $payment->property_id,
-                    'original_received_at' => $payment->received_at,
-                ],
+                'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_ACCOUNTS_RECEIVABLE]),
             ]);
 
             $creditEntry = LedgerEntry::create([
@@ -182,12 +238,7 @@ class LedgerService
                 'debit' => 0.00,
                 'credit' => $payment->amount,
                 'occurred_at' => now(),
-                'meta' => [
-                    'account' => LedgerEntry::ACCOUNT_CASH_BANK,
-                    'reason' => 'Payment voided',
-                    'property_id' => $payment->property_id,
-                    'original_received_at' => $payment->received_at,
-                ],
+                'meta' => array_merge($sharedMeta, ['account' => LedgerEntry::ACCOUNT_CASH_BANK]),
             ]);
 
             return [$debitEntry, $creditEntry];

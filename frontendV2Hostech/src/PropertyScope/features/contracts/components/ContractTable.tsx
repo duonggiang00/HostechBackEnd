@@ -225,17 +225,7 @@ export const ContractTable: React.FC<ContractTableProps> = ({
             <LayoutGrid className="h-3.5 w-3.5" />
             Hoạt động
           </button>
-          <button
-            onClick={() => onViewChange(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md transition-all ${
-              isTrashView
-                ? 'bg-white dark:bg-gray-600 text-red-600 dark:text-red-400 shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Thùng rác
-          </button>
+          {/* Thùng rác — tạm ẩn */}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { 
   FileText, User, Home, Calendar, Shield, 
   DollarSign, Clock, MapPin, Users, Printer, Edit3, 
@@ -26,6 +26,7 @@ import { usePayments } from '@/PropertyScope/features/finance/hooks/useFinance';
 import { PaymentStatusBadge } from '@/PropertyScope/features/finance/components/PaymentStatusBadge';
 import type { Invoice } from '@/PropertyScope/features/billing/types';
 import type { Payment } from '@/PropertyScope/features/finance/types';
+import { paymentDetailReferrerState } from '@/PropertyScope/features/finance/utils/paymentNavigation';
 
 type ContractDetailTab = 'info' | 'timeline' | 'invoices' | 'payments';
 
@@ -62,6 +63,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 export default function ContractDetailPage() {
   const { propertyId, contractId } = useParams<{ propertyId: string; contractId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { data: contract, isLoading, error } = useContract(contractId);
   const { useHandovers } = useHandover();
@@ -98,7 +100,6 @@ export default function ContractDetailPage() {
 
   const { data: paymentsPage, isLoading: paymentsLoading } = usePayments(
     {
-      property_id: propertyId,
       'filter[property_id]': propertyId,
       'filter[contract_id]': contractId,
       per_page: 100,
@@ -263,6 +264,15 @@ export default function ContractDetailPage() {
               <ClipboardCheck className="w-4 h-4" />
               <span>Biên bản bàn giao</span>
             </Link>
+          )}
+          {contract.room_id && (
+            <button 
+              onClick={() => navigate(`/properties/${propertyId}/rooms/${contract.room_id}`)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 rounded-xl text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all shadow-sm"
+            >
+              <Home className="w-4 h-4" />
+              <span>Xem chi tiết phòng</span>
+            </button>
           )}
           <button 
             onClick={() => navigate(`/properties/${propertyId}/contracts/${contractId}/view`)}
@@ -797,6 +807,7 @@ export default function ContractDetailPage() {
                         <td className="py-3 px-4 text-right">
                           <Link
                             to={`/properties/${propertyId}/finance/payments/${p.id}`}
+                            state={paymentDetailReferrerState(location.pathname, location.search)}
                             className="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                           >
                             Chi tiết

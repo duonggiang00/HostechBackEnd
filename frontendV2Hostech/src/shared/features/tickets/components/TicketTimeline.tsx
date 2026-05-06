@@ -64,10 +64,10 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
 };
 
 const PRIORITY_TONES: Record<TicketPriority, string> = {
-  LOW: 'border-slate-500/40 bg-slate-500/10 text-slate-300',
-  MEDIUM: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
-  HIGH: 'border-amber-500/40 bg-amber-500/10 text-amber-300',
-  URGENT: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
+  LOW: 'border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  MEDIUM: 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+  HIGH: 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+  URGENT: 'border-rose-300 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
 };
 
 function formatWhen(iso?: string | null) {
@@ -116,7 +116,7 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-white/10 bg-white/5 p-16">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-slate-200 bg-white p-16 dark:border-slate-800 dark:bg-slate-900">
         <Loader2 className="h-10 w-10 animate-spin text-emerald-400" />
         <p className="text-sm font-bold text-slate-400">Đang tải tiến độ…</p>
       </div>
@@ -162,10 +162,10 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
   };
 
   return (
-    <div className="flex max-h-[min(85vh,720px)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl">
-      <div className="flex flex-col gap-2 border-b border-white/10 p-8 pb-6">
+    <div className="flex max-h-[min(85vh,720px)] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex flex-col gap-2 border-b border-slate-200 p-8 pb-6 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-xl font-black tracking-tight text-white">
+          <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
             Tiến độ xử lý
           </h3>
           <span
@@ -178,7 +178,7 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
           Phiếu #{ticket.id.slice(0, 8)} · {STATUS_LABELS[status]}
           {ticket.category ? ` · ${ticket.category}` : ''}
         </p>
-        <p className="text-sm leading-relaxed text-slate-300">
+        <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
           {ticket.description}
         </p>
       </div>
@@ -203,7 +203,7 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
                           ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
                           : reached
                             ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
-                            : 'border-white/10 bg-white/5 text-slate-500'
+                            : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400'
                       }`}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
@@ -264,7 +264,7 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
         </div>
       </div>
 
-      <div className="border-t border-white/10 bg-white/[0.03] p-4">
+      <div className="border-t border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/50">
         <div className="flex items-end gap-2">
           <textarea
             value={messageDraft}
@@ -277,7 +277,7 @@ export default function TicketTimeline({ ticketId }: TicketTimelineProps) {
                 : 'Nhắn cho ban quản lý… (Enter để gửi, Shift+Enter để xuống dòng)'
             }
             rows={1}
-            className="flex-1 resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition-all focus:border-emerald-500/50 disabled:opacity-50"
+            className="flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all focus:border-emerald-500/50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder-slate-500"
           />
           <button
             type="button"
@@ -339,8 +339,8 @@ function TimelineEvent({
           <div
             className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
               isMe
-                ? 'bg-emerald-500 text-white'
-                : 'border border-white/10 bg-white/5 text-slate-200'
+                ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-100'
+                : 'border border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200'
             }`}
           >
             {event.message}
@@ -357,7 +357,7 @@ function TimelineEvent({
     return (
       <motion.div
         {...animation}
-        className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300"
+        className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-indigo-300">
           <Paperclip className="h-4 w-4" />
@@ -367,7 +367,7 @@ function TimelineEvent({
             {event.actor?.full_name || 'Người dùng'} ·{' '}
             {formatWhen(event.created_at)}
           </p>
-          <p className="mt-1 truncate font-bold text-slate-200">
+          <p className="mt-1 truncate font-bold text-slate-700 dark:text-slate-200">
             Đính kèm: {media?.name || event.meta?.name || 'tệp mới'}
           </p>
           {media && (
@@ -389,14 +389,14 @@ function TimelineEvent({
   const tone =
     event.type === 'STATUS_CHANGED'
       ? 'border-amber-500/30 bg-amber-500/10 text-amber-200'
-      : 'border-white/10 bg-white/5 text-slate-400';
+      : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400';
 
   return (
     <motion.div
       {...animation}
       className={`flex items-start gap-3 rounded-2xl border p-3 text-xs ${tone}`}
     >
-      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-900 text-slate-300">
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
         {event.type === 'STATUS_CHANGED' ? (
           <CheckCircle2 className="h-3.5 w-3.5" />
         ) : (
@@ -424,7 +424,7 @@ function TimelineEvent({
           </p>
         )}
         {event.message && (
-          <p className="mt-1 text-[13px] leading-relaxed text-slate-300">
+          <p className="mt-1 text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
             {event.message}
           </p>
         )}
@@ -441,7 +441,7 @@ function AttachmentTile({ item }: { item: TicketAttachment }) {
       href={item.url}
       target="_blank"
       rel="noreferrer"
-      className="group relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-slate-900 transition-colors hover:border-emerald-500/40"
+      className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 transition-colors hover:border-emerald-500/40 dark:border-slate-800 dark:bg-slate-900"
     >
       {isImage ? (
         <img

@@ -27,6 +27,11 @@ class ContractSignatureConfirmed implements ShouldBroadcast
             new PrivateChannel('App.Models.Org.User.'.$this->contract->created_by_user_id),
         ];
 
+        // Toàn bộ manager/staff cùng tòa nhà
+        if ($this->contract->property_id) {
+            $channels[] = new PrivateChannel('property.'.$this->contract->property_id);
+        }
+
         // Also notify the primary tenant if they have a user account
         $primaryTenant = $this->contract->members()
             ->where('is_primary', true)
@@ -55,8 +60,9 @@ class ContractSignatureConfirmed implements ShouldBroadcast
     {
         return [
             'id' => $this->contract->id,
+            'property_id' => $this->contract->property_id,
             'role' => $this->role,
-            'meta' => $this->contract->meta, // To check who has signed
+            'meta' => $this->contract->meta,
         ];
     }
 }

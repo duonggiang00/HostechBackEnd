@@ -13,8 +13,10 @@ import { useNavigation } from '@/shared/hooks/useNavigation';
 import Breadcrumbs from '@/shared/components/ui/Breadcrumbs';
 import NotificationCenter from '@/shared/features/messaging/components/NotificationCenter';
 import { usePropertyFinanceRealtime } from '@/shared/features/billing/hooks/useFinanceRealtime';
+import { useOrgTicketRealtime } from '@/PropertyScope/features/tickets/hooks/useTicketRealtime';
 import { useSessionBootstrap } from '@/shared/features/auth/hooks/useSessionBootstrap';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
+import { useUnreadNotificationCount } from '@/shared/features/messaging/hooks/useNotifications';
 
 interface PropertyScopeLayoutProps {
   children: ReactNode;
@@ -24,6 +26,8 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
   const { propertyId } = useParams<{ propertyId: string }>();
   useSessionBootstrap();
   usePropertyFinanceRealtime(propertyId);
+  const user = useAuthStore((s) => s.user);
+  useOrgTicketRealtime(user?.org_id);
 
   const { menuSections, scopeLabel } = useNavigation();
   const navigate = useNavigate();
@@ -47,6 +51,8 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const { data: unreadData } = useUnreadNotificationCount();
+  const unreadCount = unreadData?.count ?? 0;
 
   return (
     <div className="flex min-h-screen bg-[#f5f5f9] font-sans text-[#697a8d] dark:bg-[#232333] dark:text-[#a3b4cc]">
@@ -107,8 +113,12 @@ export default function PropertyScopeLayout({ children }: PropertyScopeLayoutPro
               className="relative z-10 flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-400 transition-colors hover:text-indigo-600 dark:border-slate-600 dark:bg-slate-700/50 dark:text-slate-400 dark:hover:text-indigo-400"
               aria-label="Thông báo"
             >
-              <Bell className="h-5 w-5" />
-              <span className="pointer-events-none absolute right-2 top-2.5 h-2 w-2 rounded-full border-2 border-white bg-rose-500 dark:border-slate-800" />
+              <Bell className="h-5 w-5" aria-hidden="true" />
+              {unreadCount > 0 && (
+                <span className="pointer-events-none absolute -right-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-rose-500 px-1 text-[10px] font-black text-white dark:border-slate-800">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </button>
 
             <div className="mx-0.5 hidden h-8 w-px shrink-0 bg-slate-100 dark:bg-slate-700 md:block" />

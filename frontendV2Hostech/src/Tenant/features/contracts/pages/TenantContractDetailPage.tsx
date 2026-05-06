@@ -36,6 +36,13 @@ import { TenantEditRoommateModal } from '../components/TenantEditRoommateModal';
 import { MemberIdentityViewDialog } from '@/PropertyScope/features/contracts/components/MemberIdentityViewDialog';
 import { contractInitialInvoiceAsInvoice } from '../utils/initialInvoiceForProof';
 import type { ContractMember } from '@/PropertyScope/features/contracts/types';
+import RoomImageGallery from '@/PropertyScope/features/rooms/components/RoomImageGallery';
+
+const CONTRACT_DETAIL_TABS = [
+  { id: 'info', label: 'Thông tin chung' },
+  { id: 'images', label: 'Hình ảnh phòng' },
+] as const;
+
 
 
 const normalizeBillingCycleMonths = (value: string | number | null | undefined): number => {
@@ -137,6 +144,7 @@ export default function TenantContractDetailPage() {
   const [initialProofModalOpen, setInitialProofModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<ContractMember | null>(null);
   const [identityViewMember, setIdentityViewMember] = useState<ContractMember | null>(null);
+  const [detailTab, setDetailTab] = useState<'info' | 'images'>('info');
 
   const initialInvoiceStub = useMemo(
     () => (contract ? contractInitialInvoiceAsInvoice(contract) : null),
@@ -148,7 +156,7 @@ export default function TenantContractDetailPage() {
     if (!contract || !contract.id) return;
     try {
       setIsPrinting(true);
-      const blob = await downloadDocument.mutateAsync(contract.id);
+      const blob = await downloadDocument.mutateAsync({ id: contract.id });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -282,7 +290,6 @@ export default function TenantContractDetailPage() {
     createVnpayPayment.mutate(
       {
         org_id: contract.org_id,
-        property_id: contract.property.id,
         payer_user_id: user.id,
         method: 'QR',
         amount: initialInvoiceOutstanding,
@@ -605,6 +612,28 @@ export default function TenantContractDetailPage() {
         </section>
       )}
 
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-6">
+        {CONTRACT_DETAIL_TABS.map((t) => {
+          const active = detailTab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setDetailTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${
+                active
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {detailTab === 'info' && (
+      <div className="space-y-6">
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <div className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
           <div className="flex items-center gap-3">
@@ -874,6 +903,14 @@ export default function TenantContractDetailPage() {
           />
         </div>
       </section>
+      </div>
+      )}
+
+      {detailTab === 'images' && (
+        <section className="rounded-[32px] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:p-7">
+          <RoomImageGallery roomId={contract.room_id || ''} images={contract.room?.images || []} />
+        </section>
+      )}
 
       <AnimatePresence>
         {showModal && (

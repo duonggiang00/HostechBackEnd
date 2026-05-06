@@ -11,6 +11,8 @@ use App\Models\Property\Property;
 use App\Models\Property\Room;
 use App\Models\Property\RoomFloorPlanNode;
 use App\Models\Property\RoomTemplate;
+use Illuminate\Foundation\Bus\PendingDispatch;
+use Illuminate\Queue\SyncQueue;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -72,7 +74,10 @@ class BuildingOverviewService
                     ]);
                 }
 
-                return $this->buildLayoutData($property);
+                $layout = $this->buildLayoutData($property);
+                $this->rememberBuildingOverviewLayout($property, $layout);
+
+                return $layout;
             }
         }
 
@@ -187,9 +192,20 @@ class BuildingOverviewService
             return $this->buildLayoutData($property);
         });
 
+        $this->rememberBuildingOverviewLayout($property, $layout);
+
         $this->queueDeferredTemplateCloneAfterOverviewSync($galleryCopyPairs);
 
         return $layout;
+    }
+
+    /**
+     * Ghi đè cache GET overview ngay trong request sync — tránh refetch trả bản cũ khi
+     * {@see ClearBuildingOverviewCache} còn nằm trên queue (ShouldQueueAfterCommit).
+     */
+    private function rememberBuildingOverviewLayout(Property $property, array $layout): void
+    {
+        Cache::put("building_overview_{$property->id}", $layout, now()->addSeconds(300));
     }
 
     private function findBuildingOverviewSyncIdempotency(string $propertyId, string $idempotencyKey): ?object
@@ -221,7 +237,12 @@ class BuildingOverviewService
     }
 
     /**
-     * Tách khỏi XHR: (1) clone room_assets từ template, (2) copy gallery — mỗi phần một job khi queue ≠ sync.
+     * Sau khi gửi response sync mặt bằng: clone room_assets + copy gallery từ template.
+     *
+     * - Không copy trong transaction HTTP (tránh chậm / timeout khi nhiều phòng).
+     * - Luôn qua job: với {@see SyncQueue} job vẫn chạy ngay sau response nhờ {@see PendingDispatch::afterResponse()}.
+     * - Trước đây nhánh `sync` dùng `register_shutdown_function` — không thấy job trên Horizon và dễ hiểu nhầm là “không chạy”.
+     * - Copy ảnh là Spatie Media Library trên server (`$media->copy`), không phải API upload từ browser.
      */
     private function queueDeferredTemplateCloneAfterOverviewSync(array $templateClonePairs): void
     {
@@ -229,21 +250,8 @@ class BuildingOverviewService
             return;
         }
 
-        if (config('queue.default') !== 'sync') {
-            ApplyTemplateAssetsAfterOverviewSyncJob::dispatch($templateClonePairs);
-            CopyTemplateGalleryAfterOverviewSyncJob::dispatch($templateClonePairs);
-
-            return;
-        }
-
-        $roomService = $this->roomService;
-        register_shutdown_function(static function () use ($templateClonePairs, $roomService): void {
-            if (function_exists('fastcgi_finish_request')) {
-                fastcgi_finish_request();
-            }
-            $roomService->applyTemplateAssetsForOverviewPairs($templateClonePairs);
-            $roomService->copyTemplateGalleryForOverviewPairs($templateClonePairs);
-        });
+        ApplyTemplateAssetsAfterOverviewSyncJob::dispatch($templateClonePairs)->afterResponse();
+        CopyTemplateGalleryAfterOverviewSyncJob::dispatch($templateClonePairs)->afterResponse();
     }
 
     // ─── Private Helpers ─────────────────────────────────────────────────

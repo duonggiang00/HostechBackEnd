@@ -237,7 +237,11 @@ export function AddMemberModal({ isOpen, onClose, contractId, contractStartDate 
                   <div className="relative">
                     <FileEdit className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
-                      {...register('identity_number')}
+                      {...register('identity_number', {
+                        onChange: (e) => {
+                          e.target.value = e.target.value.replace(/\D/g, '');
+                        }
+                      })}
                       placeholder="0123456789..."
                       className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors font-medium"
                     />

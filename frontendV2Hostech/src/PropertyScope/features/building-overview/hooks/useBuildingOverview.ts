@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { buildingOverviewApi } from '../api/buildingOverview';
-import type { SyncBuildingOverviewPayload } from '../types';
+import type { BuildingOverviewResponse, SyncBuildingOverviewPayload } from '../types';
 import { isUuid } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -33,9 +33,11 @@ export const useSyncBuildingOverview = (propertyId?: string) => {
     mutationFn: (payload: SyncBuildingOverviewPayload) =>
       buildingOverviewApi.syncOverview(propertyId!, payload),
 
-    onSuccess: () => {
-      // Làm mới dữ liệu overview và rooms sau khi sync thành công
-      queryClient.invalidateQueries({ queryKey: [BUILDING_OVERVIEW_KEY, propertyId] });
+    onSuccess: (data: BuildingOverviewResponse) => {
+      // Response sync đã là layout mới — gán thẳng để UI cập nhật tức thì (không chờ refetch + cache server).
+      if (propertyId) {
+        queryClient.setQueryData([BUILDING_OVERVIEW_KEY, propertyId], data);
+      }
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       queryClient.invalidateQueries({ queryKey: ['floors'] });
       toast.success('Đã lưu mặt bằng thành công!');

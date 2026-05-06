@@ -9,6 +9,7 @@ import {
   ChevronRight,
   MoreVertical,
   Edit2,
+  Eye,
   RefreshCw,
   LayoutGrid,
   History,
@@ -32,6 +33,8 @@ const ROOM_STATUS_LABELS: Record<RoomStatus, string> = {
   reserved: 'Đã đặt',
   draft: 'Nháp',
 };
+
+const DEFAULT_SORT = 'floor_number';
 
 interface RoomListPageProps {
   hideHeader?: boolean;
@@ -79,7 +82,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
   // Applied Filter State (Actual filters sent to API)
   const [appliedFilters, setAppliedFilters] = useState<RoomFiltersState>(pendingFilters);
 
-  const [sort, setSort] = useState(searchParams.get('sort') || '-created_at');
+  const [sort, setSort] = useState(searchParams.get('sort') || DEFAULT_SORT);
   const [showTrashed, setShowTrashed] = useState(searchParams.get('trashed') === 'true');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -99,7 +102,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
     if (appliedFilters.areaMax) params.set('area_max', appliedFilters.areaMax.toString());
     if (appliedFilters.capacityMin) params.set('capacity_min', appliedFilters.capacityMin.toString());
     if (appliedFilters.capacityMax) params.set('capacity_max', appliedFilters.capacityMax.toString());
-    if (sort !== '-created_at') params.set('sort', sort);
+    if (sort !== DEFAULT_SORT) params.set('sort', sort);
     if (page > 1) params.set('page', page.toString());
     if (showTrashed) params.set('trashed', 'true');
 
@@ -153,7 +156,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
     setPendingFilters(cleared);
     setAppliedFilters(cleared);
     setSearchTerm('');
-    setSort('-created_at');
+    setSort(DEFAULT_SORT);
     setPage(1);
   };
 
@@ -388,20 +391,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
             ))}
           </select>
 
-          {/* Trashed Toggle — chỉ Owner/Manager/Admin */}
-          {canManageRooms && (
-            <button 
-              onClick={() => setShowTrashed(!showTrashed)}
-              className={`flex items-center gap-2 px-4 py-2.5 border rounded-[8px] text-sm font-bold transition-all ${
-                showTrashed 
-                  ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/30' 
-                  : 'bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              {showTrashed ? 'Đang hiện thùng rác' : 'Hiện thùng rác'}
-            </button>
-          )}
+          {/* Trashed Toggle — tạm ẩn */}
 
           {/* Advanced Filter Toggle */}
           <button 
@@ -608,16 +598,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-50/50 dark:bg-gray-800/50 border-b border-gray-100 dark:border-gray-800/60">
-                {canManageRooms && (
-                  <th className="p-4 w-12 text-center">
-                    <input 
-                      type="checkbox" 
-                      checked={rooms && rooms.length > 0 && selectedIds.length === rooms.length}
-                      onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900/50 text-blue-900 focus:ring-blue-500"
-                    />
-                  </th>
-                )}
                 <th 
                   className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest cursor-pointer hover:text-blue-900 transition-colors"
                   onClick={() => toggleSort('name')}
@@ -652,9 +632,7 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                     )}
                   </div>
                 </th>
-                {canManageRooms && (
-                  <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Hành động</th>
-                )}
+                <th className="p-4 text-xs font-black uppercase text-gray-400 tracking-widest text-right">Hành động</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -664,16 +642,6 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                   key={room.id} 
                   className={`group hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors ${selectedIds.includes(room.id) ? 'bg-blue-50/30 dark:bg-blue-500/10' : ''}`}
                 >
-                  {canManageRooms && (
-                    <td className="p-4 text-center">
-                      <input 
-                        type="checkbox" 
-                        checked={selectedIds.includes(room.id)}
-                        onChange={() => toggleSelect(room.id)}
-                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-900/50 text-blue-900 focus:ring-blue-500"
-                      />
-                    </td>
-                  )}
                   <td className="p-4">
                     <div className="flex flex-col cursor-pointer group/row" onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}>
                       <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-900 dark:group-hover:text-blue-400 transition-colors">
@@ -700,10 +668,17 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                        {ROOM_STATUS_LABELS[room.status as RoomStatus] || room.status}
                     </span>
                   </td>
-                  {canManageRooms && (
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1  group-hover:opacity-100 transition-all transform group-hover:translate-x-0">
-                        {room.deleted_at ? (
+                  <td className="p-4 text-right">
+                    <div className="flex items-center justify-end gap-1 group-hover:opacity-100 transition-all transform group-hover:translate-x-0">
+                      <button
+                        onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}`)}
+                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg transition-all"
+                        title="Xem chi tiết phòng"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      {canManageRooms && (
+                        room.deleted_at ? (
                           <>
                             <button 
                               onClick={() => restoreRoom.mutate(room.id)}
@@ -728,7 +703,8 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                           <>
                             <button 
                               onClick={() => navigate(`/properties/${propertyId}/rooms/${room.id}/edit`)}
-                              className="p-2 text-gray-400 hover:text-blue-900 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all shadow-hover"
+                              className="p-2 text-gray-400 hover:text-blue-900 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+                              title="Chỉnh sửa phòng"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -743,23 +719,24 @@ export default function RoomListPage({ hideHeader = false }: RoomListPageProps) 
                                   toast.success(`Đã xóa phòng ${room.name}.`);
                                 }
                               }}
-                              className="p-2 text-gray-400 hover:text-rose-500 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all shadow-hover"
+                              className="p-2 text-gray-400 hover:text-rose-500 hover:bg-white dark:hover:bg-gray-800 rounded-lg transition-all"
+                              title="Xóa phòng"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                            <button type="button" className="p-2 text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400">
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
                           </>
-                        )}
-                        <button type="button" className="p-2 text-gray-300 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                        )
+                      )}
+                    </div>
+                  </td>
                 </motion.tr>
               ))}
               {rooms?.length === 0 && (
                 <tr>
-                  <td colSpan={canManageRooms ? 7 : 6} className="p-20 text-center">
+                  <td colSpan={canManageRooms ? 5 : 5} className="p-20 text-center">
                     <div className="flex flex-col items-center gap-4">
                        <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800/50 rounded-full flex items-center justify-center">
                           <LayoutGrid className="w-8 h-8 text-gray-200 dark:text-gray-700" />

@@ -113,6 +113,15 @@ class UserService
             }
         }
 
+        // Quy tắc khóa tài khoản: chỉ được khóa khi lần đăng nhập cuối cách đây > 30 ngày
+        if (isset($data['is_active']) && ! $data['is_active'] && $user->is_active) {
+            $threshold = now()->subDays(30);
+            if ($user->last_login_at && $user->last_login_at->greaterThan($threshold)) {
+                abort(422, 'Chỉ có thể khóa tài khoản người dùng chưa đăng nhập trong 30 ngày gần đây. Người dùng này vừa đăng nhập '
+                    .$user->last_login_at->diffForHumans().'.');
+            }
+        }
+
         if (isset($data['password'])) {
             $data['password_hash'] = Hash::make($data['password']);
             unset($data['password'], $data['password_confirmation']);

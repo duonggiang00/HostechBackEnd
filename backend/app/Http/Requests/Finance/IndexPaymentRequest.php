@@ -9,6 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
  * @queryParam page int Trang hiện tại. Example: 1
  * @queryParam filter[property_id] uuid Lọc theo tòa nhà.
  * @queryParam filter[contract_id] uuid Lọc giao dịch có gạch nợ ít nhất một hóa đơn thuộc hợp đồng.
+ * @queryParam include_inherited boolean Nếu true và có filter[contract_id], gộp thêm payment/biên lai từ hợp đồng nguồn chuyển phòng. Example: true
  * @queryParam filter[status] string Lọc theo trạng thái: PENDING, APPROVED, REJECTED.
  * @queryParam filter[method] string Lọc theo PTTT: CASH, BANK_TRANSFER (gộp legacy TRANSFER), VNPAY, WALLET, QR.
  * @queryParam filter[received_between] string Lọc theo khoảng thời gian nhận tiền (ISO 8601, phân cách bằng dấu phẩy). Example: 2024-03-01,2024-03-31
@@ -30,6 +31,7 @@ class IndexPaymentRequest extends FormRequest
             'search' => ['nullable', 'string', 'max:255'],
             'filter.property_id' => ['nullable', 'uuid'],
             'filter.contract_id' => ['nullable', 'uuid'],
+            'include_inherited' => ['nullable', 'boolean'],
             'filter.status' => ['nullable', 'string', 'in:PENDING,APPROVED,REJECTED'],
             'filter.method' => ['nullable', 'string', 'in:CASH,BANK_TRANSFER,VNPAY,TRANSFER,WALLET,QR'],
             'filter.payer_user_id' => ['nullable', 'uuid'],

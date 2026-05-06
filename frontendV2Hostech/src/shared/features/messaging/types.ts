@@ -53,4 +53,12 @@ export interface Notification {
   time: string;
   type: 'message' | 'announcement' | 'alert' | 'update';
   unread: boolean;
+  /** Backend notification `data.type` (e.g. 'ticket.created', 'contract.signed') */
+  source_type?: string;
+  /** Deep-link URL for navigating on click */
+  action_url?: string;
+  /** ISO string when marked read; null = unread */
+  read_at?: string | null;
+  /** Original backend `data` payload for extended rendering */
+  raw?: Record<string, unknown>;
 }

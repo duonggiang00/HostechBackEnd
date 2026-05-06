@@ -8,8 +8,8 @@ export default function ContractCreatePage() {
   const roomId = searchParams.get('roomId') || '';
   const navigate = useNavigate();
 
-  const handleSuccess = () => {
-    navigate(`/properties/${propertyId}/contracts`);
+  const handleSuccess = (contract: any) => {
+    navigate(`/properties/${propertyId}/contracts/${contract.id}`);
   };
 
   const handleCancel = () => {

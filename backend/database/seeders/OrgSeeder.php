@@ -286,6 +286,8 @@ class OrgSeeder extends Seeder
                             <p>1.1. Bên A cho bên B thuê phòng <strong>${room_code}</strong>, diện tích <strong>${room_area}m2</strong> tại <strong>${property_name}</strong>.</p>
                             <p>1.2. Mục đích: Để ở. Sức chứa tối đa: ${room_capacity} người.</p>
                             <p>1.3. Thời hạn: ${contract_start_date} đến ${contract_end_date}.</p>
+                            <p>1.4. Tài sản bàn giao kèm phòng:</p>
+                            <div style="margin-left: 20px;">${room_asset_list}</div>
 
                             <h4 style="margin-bottom: 5px;">ĐIỀU 2: GIÁ THUÊ VÀ THANH TOÁN</h4>
                             <p>2.1. Giá thuê: <strong>${contract_rent_price} VNĐ/tháng</strong>.</p>
@@ -339,10 +341,8 @@ class OrgSeeder extends Seeder
             // ---------------------------------------------------------
             $this->command->info("\n🔧 Tạo Dịch vụ cơ bản cho tổ chức...");
             $serviceDataList = [
-                ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 4000, 'type' => 'ELECTRIC'],
+                ['code' => 'DIEN', 'name' => 'Tiền điện', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 3800, 'type' => 'ELECTRIC'],
                 ['code' => 'NUOC', 'name' => 'Tiền nước', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 30000, 'type' => 'WATER'],
-                ['code' => 'DIEN_BT', 'name' => 'Điện bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'kwh', 'price' => 1984, 'type' => 'ELECTRIC'],
-                ['code' => 'NUOC_BT', 'name' => 'Nước bậc thang', 'calc_mode' => 'PER_METER', 'unit' => 'm3', 'price' => 5973, 'type' => 'WATER'],
                 ['code' => 'INTERNET', 'name' => 'Internet', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 100000, 'type' => 'OTHER'],
                 ['code' => 'QL', 'name' => 'Phí quản lý', 'calc_mode' => 'PER_ROOM', 'unit' => 'month', 'price' => 50000, 'type' => 'OTHER'],
                 ['code' => 'GUIXE', 'name' => 'Gửi xe máy', 'calc_mode' => 'PER_QUANTITY', 'unit' => 'bike', 'price' => 100000, 'type' => 'OTHER'],

@@ -11,6 +11,7 @@ use App\Models\Invoice\Payment;
 use App\Models\Org\User;
 use App\Models\Property\Property;
 use App\Models\Property\Room;
+use App\Services\Contract\ContractBillingInheritanceService;
 use App\Services\Finance\PaymentService;
 use App\Services\OrgContextResolver;
 use Carbon\Carbon;
@@ -23,6 +24,10 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class InvoiceService
 {
+    public function __construct(
+        protected ContractBillingInheritanceService $billingInheritanceService
+    ) {}
+
     // ----------------------------------------------------------------------------
     //   READ OPERATIONS
     // ----------------------------------------------------------------------------
@@ -62,7 +67,13 @@ class InvoiceService
             ->allowedFilters([
                 AllowedFilter::exact('org_id'),
                 AllowedFilter::exact('property_id'),
-                AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('contract_id', function ($query, $value): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $lineageContractIds = $this->billingInheritanceService->resolveLineageContractIds((string) $value);
+                    $query->whereIn('contract_id', $lineageContractIds);
+                }),
                 AllowedFilter::exact('room_id'),
                 AllowedFilter::exact('status'),
             ])
@@ -130,7 +141,13 @@ class InvoiceService
                 AllowedFilter::exact('org_id'),
                 AllowedFilter::exact('property_id'),
                 AllowedFilter::exact('room_id'),
-                AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('contract_id', function ($query, $value): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $lineageContractIds = $this->billingInheritanceService->resolveLineageContractIds((string) $value);
+                    $query->whereIn('contract_id', $lineageContractIds);
+                }),
                 AllowedFilter::exact('status'),
             ])
             ->allowedSorts([
@@ -185,7 +202,13 @@ class InvoiceService
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
-                AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('contract_id', function ($query, $value): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $lineageContractIds = $this->billingInheritanceService->resolveLineageContractIds((string) $value);
+                    $query->whereIn('contract_id', $lineageContractIds);
+                }),
                 AllowedFilter::callback('is_termination', fn ($query, $value) => $query->where('is_termination', (bool) $value)),
                 AllowedFilter::callback('has_outstanding', function ($q, $value): void {
                     if (filter_var($value, FILTER_VALIDATE_BOOLEAN)) {
@@ -260,7 +283,13 @@ class InvoiceService
             ->allowedFilters([
                 AllowedFilter::exact('status'),
                 AllowedFilter::exact('room_id'),
-                AllowedFilter::exact('contract_id'),
+                AllowedFilter::callback('contract_id', function ($query, $value): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    $lineageContractIds = $this->billingInheritanceService->resolveLineageContractIds((string) $value);
+                    $query->whereIn('contract_id', $lineageContractIds);
+                }),
                 AllowedFilter::callback('is_termination', fn ($query, $value) => $query->where('is_termination', (bool) $value)),
             ])
             ->allowedSorts([

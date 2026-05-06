@@ -73,7 +73,6 @@ export const TenantInvoiceDetailModal: React.FC<Props> = ({ invoiceId, onClose }
     createVnpayPayment.mutate(
       {
         org_id: invoice.org_id || '',
-        property_id: invoice.property_id || '',
         payer_user_id: user.id,
         method: 'QR',
         amount: outstandingAmount,

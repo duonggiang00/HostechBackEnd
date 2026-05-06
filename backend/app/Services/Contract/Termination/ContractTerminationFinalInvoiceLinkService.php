@@ -132,8 +132,8 @@ class ContractTerminationFinalInvoiceLinkService
         if ($invoice->trashed()) {
             throw new UnprocessableEntityHttpException('Hóa đơn đã bị xóa mềm.');
         }
-        if ($invoice->status !== 'ISSUED') {
-            throw new UnprocessableEntityHttpException('Chỉ gắn hóa đơn đã phát hành (ISSUED).');
+        if (! in_array($invoice->status, ['ISSUED', 'PAID', 'PARTIAL', 'OVERDUE'])) {
+            throw new UnprocessableEntityHttpException('Chỉ gắn hóa đơn đã phát hành hoặc đã thanh toán (ISSUED / PAID / PARTIAL / OVERDUE).');
         }
         if ($invoice->is_termination) {
             throw new UnprocessableEntityHttpException('Hóa đơn đã được đánh dấu là thanh lý.');

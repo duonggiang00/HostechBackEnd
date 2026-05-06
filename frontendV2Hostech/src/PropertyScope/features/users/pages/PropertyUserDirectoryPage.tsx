@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, Trash2, DoorOpen, Briefcase, ArrowRight } from 'lucide-react';
+import { Users, Mail, UserPlus, Search, Clock, CheckCircle2, Trash2, Briefcase, ArrowRight, Lock, LockOpen, LogIn } from 'lucide-react';
 import { usePropertyUsers, type PropertyUserRoleGroup } from '../hooks/usePropertyUsers';
 import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -20,7 +20,7 @@ export default function PropertyUserDirectoryPage() {
   const navigate = useNavigate();
   const { propertyId } = useParams<{ propertyId: string }>();
 
-  const { usersQuery, invitationsQuery, revokeMutation } = usePropertyUsers(
+  const { usersQuery, invitationsQuery, revokeMutation, updateUserMutation } = usePropertyUsers(
     propertyId
       ? {
           propertyId,
@@ -31,6 +31,38 @@ export default function PropertyUserDirectoryPage() {
         }
       : undefined,
   );
+
+  const isLoginedWithin30Days = (lastLoginAt?: string | null) => {
+    if (!lastLoginAt) return false;
+    const threshold = new Date();
+    threshold.setDate(threshold.getDate() - 30);
+    return new Date(lastLoginAt) > threshold;
+  };
+
+  const formatLastLogin = (lastLoginAt?: string | null) => {
+    if (!lastLoginAt) return null;
+    const d = new Date(lastLoginAt);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Hôm nay';
+    if (diffDays === 1) return 'Hôm qua';
+    if (diffDays < 30) return `${diffDays} ngày trước`;
+    const diffMonths = Math.floor(diffDays / 30);
+    if (diffMonths < 12) return `${diffMonths} tháng trước`;
+    return d.toLocaleDateString('vi-VN');
+  };
+
+  const handleToggleLock = async (userId: string, currentIsActive: boolean) => {
+    const action = currentIsActive ? 'khóa' : 'mở khóa';
+    if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản này?`)) return;
+    try {
+      await updateUserMutation.mutateAsync({ id: userId, data: { is_active: !currentIsActive } });
+      toast.success(`Đã ${action} tài khoản thành công!`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || `Không thể ${action} tài khoản.`);
+    }
+  };
 
   const handleRevoke = async (id: string) => {
     if (!window.confirm('Bạn có chắc chắn muốn thu hồi lời mời này?')) return;
@@ -207,8 +239,8 @@ export default function PropertyUserDirectoryPage() {
                         <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Người dùng</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Vai trò</th>
-                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Phòng</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Trạng thái</th>
+                          <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700">Đăng nhập cuối</th>
                           <th className="px-6 py-4 font-bold border-b border-slate-100 dark:border-slate-700 text-right">Thao tác</th>
                         </tr>
                       </thead>
@@ -242,36 +274,79 @@ export default function PropertyUserDirectoryPage() {
                               </span>
                             </td>
                             <td className="px-6 py-4">
-                              {user.assigned_rooms && user.assigned_rooms.length > 0 ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {user.assigned_rooms.map((room) => (
-                                    <span
-                                      key={room.id}
-                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 rounded-lg text-xs font-bold border border-violet-100 dark:border-violet-800/50"
-                                    >
-                                      <DoorOpen className="w-3.5 h-3.5" />
-                                      {room.name || room.code}
-                                    </span>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Chưa gán phòng</span>
-                              )}
+                              {(() => {
+                                const isActive = user.is_active === true || user.is_active === '1' || user.is_active === 'true';
+                                return isActive ? (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-black uppercase tracking-tight">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    Hoạt động
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-xs font-black uppercase tracking-tight">
+                                    <Lock className="w-3.5 h-3.5" />
+                                    Bị khóa
+                                  </span>
+                                );
+                              })()}
                             </td>
                             <td className="px-6 py-4">
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg text-xs font-black uppercase tracking-tight">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Active
-                              </span>
+                              {user.last_login_at ? (
+                                <div className="flex items-center gap-1.5">
+                                  <LogIn className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <div>
+                                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                      {formatLastLogin(user.last_login_at)}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                                      {new Date(user.last_login_at).toLocaleDateString('vi-VN')}
+                                    </p>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Chưa đăng nhập</span>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-right">
-                              <button
-                                type="button"
-                                onClick={() => navigate(`/properties/${propertyId}/users/${user.id}`)}
-                                className="px-4 py-2 text-xs font-bold text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white border border-[#1E3A8A]/20 rounded-lg transition-all shadow-sm"
-                              >
-                                Xem hồ sơ
-                              </button>
+                              <div className="flex items-center justify-end gap-2">
+                                {(() => {
+                                  const isActive = user.is_active === true || user.is_active === '1' || user.is_active === 'true';
+                                  const recentlyActive = isLoginedWithin30Days(user.last_login_at);
+                                  const canLock = isActive && !recentlyActive;
+                                  const canUnlock = !isActive;
+                                  return (
+                                    <div className="relative group/lock">
+                                      <button
+                                        type="button"
+                                        onClick={() => (canLock || canUnlock) ? handleToggleLock(user.id, isActive) : undefined}
+                                        disabled={isActive && !canLock}
+                                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg transition-all ${
+                                          canUnlock
+                                            ? 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800/50'
+                                            : canLock
+                                              ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 border border-rose-200 dark:border-rose-800/50'
+                                              : 'text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 cursor-not-allowed opacity-50'
+                                        }`}
+                                      >
+                                        {canUnlock ? <LockOpen className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                                        {canUnlock ? 'Mở khóa' : 'Khóa'}
+                                      </button>
+                                      {isActive && !canLock && (
+                                        <div className="absolute bottom-full right-0 mb-2 w-56 bg-slate-900 dark:bg-slate-700 text-white text-[11px] font-medium rounded-xl px-3 py-2 opacity-0 group-hover/lock:opacity-100 pointer-events-none transition-opacity z-50 shadow-lg">
+                                          Chỉ có thể khóa tài khoản chưa đăng nhập trong 30 ngày gần đây.
+                                          <div className="absolute top-full right-4 border-4 border-transparent border-t-slate-900 dark:border-t-slate-700" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(`/properties/${propertyId}/users/${user.id}`)}
+                                  className="px-4 py-2 text-xs font-bold text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white border border-[#1E3A8A]/20 rounded-lg transition-all shadow-sm"
+                                >
+                                  Xem hồ sơ
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}

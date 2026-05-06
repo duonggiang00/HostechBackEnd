@@ -2,10 +2,15 @@ import apiClient from '@/shared/api/client';
 import type { UploadResponse } from '../types';
 
 export const mediaApi = {
-  uploadFile: async (file: File, path: string = 'general', onProgress?: (percent: number) => void): Promise<UploadResponse> => {
+  /** `collection` khớp Laravel `UploadRequest` + Spatie collection (vd. contract-members, reading_proofs). */
+  uploadFile: async (
+    file: File,
+    collection: string = 'default',
+    onProgress?: (percent: number) => void,
+  ): Promise<UploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('path', path);
+    formData.append('collection', collection);
 
     const response = await apiClient.post('/media/upload', formData, {
       headers: {

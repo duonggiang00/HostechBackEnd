@@ -67,6 +67,10 @@ export default function LoginPage() {
 
       await finishLogin(data.token!, data.user!);
     } catch (err: any) {
+      if (err.response?.data?.error_code === 'ACCOUNT_LOCKED') {
+        navigate('/account-locked', { replace: true });
+        return;
+      }
       const msg = err.response?.data?.message || err.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.';
       setError(msg);
       setLoading(false);

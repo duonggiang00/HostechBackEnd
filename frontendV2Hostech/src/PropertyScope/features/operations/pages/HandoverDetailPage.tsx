@@ -42,6 +42,7 @@ import { invoiceKeys, usePropertyInvoices } from '@/PropertyScope/features/billi
 import { formatCurrency, isUuid } from '@/lib/utils';
 import type { Payment } from '@/PropertyScope/features/billing/types';
 import { PageBackButton } from '@/shared/components/ui/PageBackButton';
+import { paymentDetailReferrerState } from '@/PropertyScope/features/finance/utils/paymentNavigation';
 import { contractStatusLabelVi } from '@/PropertyScope/features/contracts/utils/contractStatusLabels';
 
 function formatHandoverDate(iso?: string | null): string {
@@ -805,6 +806,7 @@ export default function HandoverDetailPage() {
                   </div>
                   <Link
                     to={`/properties/${propertyId}/finance/payments/${p.id}`}
+                    state={paymentDetailReferrerState(location.pathname, location.search)}
                     className="inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Chi tiết biên lai

@@ -12,8 +12,42 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class InvoiceResource extends JsonResource
 {
+    private function requestedContractId(Request $request): ?string
+    {
+        $contractId = (string) $request->input('filter.contract_id', '');
+
+        return $contractId !== '' ? $contractId : null;
+    }
+
+    private function sourceContractId(): ?string
+    {
+        $sourceContractId = (string) ($this->snapshot['transfer_invoice_original_contract_id'] ?? '');
+        if ($sourceContractId !== '') {
+            return $sourceContractId;
+        }
+
+        return $this->contract_id ? (string) $this->contract_id : null;
+    }
+
+    private function isInheritedRecord(Request $request, ?string $sourceContractId): bool
+    {
+        $requestedContractId = $this->requestedContractId($request);
+        if (! $requestedContractId) {
+            return false;
+        }
+
+        $includeInherited = filter_var($request->input('include_inherited', false), FILTER_VALIDATE_BOOLEAN);
+        if (! $includeInherited) {
+            return false;
+        }
+
+        return $sourceContractId !== null && $sourceContractId !== $requestedContractId;
+    }
+
     public function toArray(Request $request): array
     {
+        $sourceContractId = $this->sourceContractId();
+
         // Tên khách "đại diện" hợp đồng (primary member) — phục vụ trang Sổ cái tab "Tiền nợ".
         $tenantName = null;
         if ($this->relationLoaded('contract') && $this->contract) {
@@ -29,6 +63,8 @@ class InvoiceResource extends JsonResource
             'id' => $this->id,
             'org_id' => $this->org_id,
             'contract_id' => $this->contract_id,
+            'source_contract_id' => $sourceContractId,
+            'is_inherited' => $this->isInheritedRecord($request, $sourceContractId),
             'status' => $this->status,
             'is_termination' => (bool) $this->is_termination,
 

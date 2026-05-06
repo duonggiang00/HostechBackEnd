@@ -497,6 +497,7 @@ export default function QuickReadingPage() {
                         const currentValue = readings[meter.id] || '';
                         const consumption = calculateConsumption(meter, currentValue);
                         const prevValue = baselineReadingValue(meter);
+                        const abnormalThreshold = isElectric ? 500 : 100;
 
                         return (
                           <div key={meter.id} className="p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors space-y-2">
@@ -557,7 +558,7 @@ export default function QuickReadingPage() {
                                 <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">Tiêu thụ</p>
                                 <div className="flex items-center justify-end gap-1.5">
                                   <p
-                                    className={`text-sm font-bold ${consumption > 500
+                                    className={`text-sm font-bold ${consumption > abnormalThreshold
                                         ? 'text-[#F59E0B] animate-pulse'
                                         : consumption > 0
                                           ? 'text-[#1E3A8A] dark:text-blue-400'
@@ -582,7 +583,7 @@ export default function QuickReadingPage() {
                                     </div>
                                   )}
                                 </div>
-                                {consumption > 500 && (
+                                {consumption > abnormalThreshold && (
                                   <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 flex items-center justify-end gap-0.5 mt-0.5">
                                     <AlertCircle className="w-3 h-3" />
                                     Bất thường!

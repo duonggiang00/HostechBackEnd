@@ -1,12 +1,16 @@
 import { motion } from 'framer-motion';
 import { AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TicketSummaryProps {
   pending: number;
   unresolved: number;
+  propertyId?: string | null;
 }
 
-export const TicketSummary = ({ pending, unresolved }: TicketSummaryProps) => {
+export const TicketSummary = ({ pending, unresolved, propertyId }: TicketSummaryProps) => {
+  const allTicketsHref = propertyId ? `/properties/${propertyId}/requests` : '#';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -15,9 +19,12 @@ export const TicketSummary = ({ pending, unresolved }: TicketSummaryProps) => {
     >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[16px] font-bold text-gray-900 dark:text-white">Bảo trì</h3>
-        <button className="text-[11px] font-semibold text-blue-900 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-md transition-colors uppercase tracking-wider">
+        <Link
+          to={allTicketsHref}
+          className="text-[11px] font-semibold text-blue-900 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-md transition-colors uppercase tracking-wider"
+        >
           Tất cả
-        </button>
+        </Link>
       </div>
 
       <div className="space-y-3">

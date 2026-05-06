@@ -2,7 +2,7 @@ import { StatCard } from '../components/StatCard';
 import { RevenueTrend } from '../components/RevenueTrend';
 import { OccupancyGauge } from '../components/OccupancyGauge';
 import { TicketSummary } from '../components/TicketSummary';
-import { Users, DoorOpen, FileText, TrendingUp, ScrollText } from 'lucide-react';
+import { Users, DoorOpen, FileText, TrendingUp, ScrollText, AlertTriangle, Banknote } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/shared/hooks/useTheme';
 import { Link, useNavigate } from 'react-router-dom';
@@ -49,7 +49,7 @@ export function PropertyDashboardView({
           value={stats.totalTenants.toLocaleString('vi-VN')} 
           icon={Users} 
           color="blue"
-          trend={{ value: 12, isUp: true }}
+          trend={{ value: Math.abs(stats.tenantTrendValue ?? 0), isUp: (stats.tenantTrendValue ?? 0) >= 0 }}
           testId="stat-tenants"
         />
         <StatCard 
@@ -71,12 +71,29 @@ export function PropertyDashboardView({
           value={stats.thisMonthRevenue.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })} 
           icon={TrendingUp} 
           color="emerald"
-          trend={{ value: 8, isUp: true }}
+          trend={{ value: Math.abs(stats.revenueTrendValue ?? 0), isUp: (stats.revenueTrendValue ?? 0) >= 0 }}
           testId="stat-revenue"
         />
       </div>
 
-      {/* Main Charts Row */}
+      {/* Debt Alert Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+        <StatCard
+          label="Hợp đồng nợ quá hạn"
+          value={(stats.overdueContractCount ?? 0).toLocaleString('vi-VN')}
+          icon={AlertTriangle}
+          color="rose"
+          testId="stat-overdue-contracts"
+        />
+        <StatCard
+          label="Tổng tiền nợ"
+          value={(stats.totalOutstandingDebt ?? 0).toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+          icon={Banknote}
+          color="amber"
+          testId="stat-outstanding-debt"
+        />
+      </div>
+
       {isLargeFont ? (
         <div className="w-full">
           <RevenueTrend data={revenueTrend} />
@@ -99,7 +116,8 @@ export function PropertyDashboardView({
         <div className={isLargeFont ? 'col-span-1' : ''}>
           <TicketSummary 
             pending={stats.pendingTickets} 
-            unresolved={stats.unresolvedTickets} 
+            unresolved={stats.unresolvedTickets}
+            propertyId={propertyId}
           />
         </div>
         

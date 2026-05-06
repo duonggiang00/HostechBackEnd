@@ -23,13 +23,19 @@ export function GenerateMonthlyModal({
   onClose,
   billingMonthStart,
 }: GenerateMonthlyModalProps) {
-  const today = new Date().toISOString().slice(0, 10);
-  const [billingDate, setBillingDate] = useState(billingMonthStart?.trim() || today);
+  // Default fallback: first of previous month (readings taken end-of-month, invoiced in next month)
+  const prevMonthStart = (() => {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [billingDate, setBillingDate] = useState(billingMonthStart?.trim() || prevMonthStart);
 
   useEffect(() => {
     if (!isOpen) return;
     const anchor = billingMonthStart?.trim();
-    if (anchor) setBillingDate(anchor);
+    setBillingDate(anchor || prevMonthStart);
   }, [isOpen, billingMonthStart]);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [showErrors, setShowErrors] = useState(false);

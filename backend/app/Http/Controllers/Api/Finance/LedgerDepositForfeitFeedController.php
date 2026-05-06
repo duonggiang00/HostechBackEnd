@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Finance;
 
 use App\Http\Controllers\Controller;
+use App\Models\Contract\Contract;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
 use App\Services\TenantManager;
@@ -79,19 +80,46 @@ class LedgerDepositForfeitFeedController extends Controller
 
         $paginator = $query->paginate($perPage, ['*'], 'page', $page)->withQueryString();
 
-        $rows = collect($paginator->items())->map(function (LedgerEntry $e) {
+        $items = collect($paginator->items());
+
+        // Batch-load tenant names via contract.primaryMember
+        $contractIds = $items->map(fn (LedgerEntry $e) => $e->meta['contract_id'] ?? null)->filter()->unique()->values();
+        $tenantNamesByContract = collect();
+        if ($contractIds->isNotEmpty()) {
+            $tenantNamesByContract = Contract::withoutGlobalScope('org_id')
+                ->with('primaryMember')
+                ->whereIn('id', $contractIds)
+                ->get()
+                ->mapWithKeys(fn (Contract $c) => [
+                    (string) $c->id => $c->primaryMember?->full_name,
+                ]);
+        }
+
+        $rows = $items->map(function (LedgerEntry $e) use ($tenantNamesByContract) {
             $meta = $e->meta ?? [];
+            $contractId = isset($meta['contract_id']) ? (string) $meta['contract_id'] : null;
+
+            // Use tenant_name stored in meta if available (new entries), otherwise look up from contract
+            $tenantName = $meta['tenant_name']
+                ?? ($contractId ? $tenantNamesByContract->get($contractId) : null);
+
+            // Build a rich description including tenant name if not already personalized
+            $description = isset($meta['description']) ? (string) $meta['description'] : null;
+            if ($tenantName && $description && ! str_contains($description, $tenantName)) {
+                $description = "Thu hồi tiền cọc còn lại của khách {$tenantName} sau quyết toán thanh lý.";
+            }
 
             return [
                 'id' => $e->id,
                 'ledger_entry_id' => $e->id,
                 'amount' => (float) $e->debit,
                 'occurred_at' => $e->occurred_at?->toIso8601String(),
-                'contract_id' => isset($meta['contract_id']) ? (string) $meta['contract_id'] : null,
+                'contract_id' => $contractId,
                 'property_id' => isset($meta['property_id']) ? (string) $meta['property_id'] : null,
                 'final_invoice_id' => isset($meta['final_invoice_id']) ? (string) $meta['final_invoice_id'] : null,
                 'reference' => isset($meta['reference']) ? (string) $meta['reference'] : null,
-                'description' => isset($meta['description']) ? (string) $meta['description'] : null,
+                'tenant_name' => $tenantName,
+                'description' => $description,
             ];
         })->values();
 

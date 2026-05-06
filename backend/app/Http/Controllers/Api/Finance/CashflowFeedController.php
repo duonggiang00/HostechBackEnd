@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Contract\RefundReceipt;
 use App\Models\Finance\LedgerEntry;
 use App\Models\Finance\Payment;
+use App\Models\Org\User;
 use App\Services\TenantManager;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\JsonResponse;
@@ -146,22 +147,75 @@ class CashflowFeedController extends Controller
         $base = DB::query()->fromSub($unionQ, 'feed');
 
         $total = (clone $base)->count();
-        $rows = $base
+        $rawRows = $base
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->forPage($page, $perPage)
-            ->get()
-            ->map(fn ($r) => [
-                'id' => (string) $r->id,
+            ->get();
+
+        // Batch-load actor names for payment rows (actor_user_id = payer_user_id)
+        $actorUserIds = $rawRows->pluck('actor_user_id')->filter()->unique()->values();
+        $userNames = $actorUserIds->isNotEmpty()
+            ? User::whereIn('id', $actorUserIds)->pluck('full_name', 'id')
+            : collect();
+
+        // Batch-load tenant names for refund_receipt rows
+        $refundIds = $rawRows->where('kind', 'refund_receipt')->pluck('id')->filter()->values();
+        $refundTenantNames = collect();
+        if ($refundIds->isNotEmpty()) {
+            $refundTenantNames = RefundReceipt::with('contract.primaryMember')
+                ->whereIn('id', $refundIds)
+                ->get()
+                ->mapWithKeys(fn ($r) => [
+                    (string) $r->id => $r->contract?->primaryMember?->full_name,
+                ]);
+        }
+
+        // Batch-load meta descriptions for payment rows (written at ledger-write time)
+        $paymentIds = $rawRows->where('kind', 'payment')->pluck('id')->filter()->values();
+        $paymentMeta = collect();
+        if ($paymentIds->isNotEmpty()) {
+            $paymentMeta = LedgerEntry::withoutGlobalScope('org_id')
+                ->where('ref_type', 'payment')
+                ->where('meta->account', LedgerEntry::ACCOUNT_CASH_BANK)
+                ->whereIn('ref_id', $paymentIds)
+                ->get(['ref_id', 'meta'])
+                ->mapWithKeys(fn ($e) => [(string) $e->ref_id => $e->meta]);
+        }
+
+        $rows = $rawRows->map(function ($r) use ($userNames, $refundTenantNames, $paymentMeta) {
+            $kind = (string) $r->kind;
+            $actorUserId = $r->actor_user_id ? (string) $r->actor_user_id : null;
+            $id = (string) $r->id;
+
+            $actorName = null;
+            $description = null;
+
+            if ($kind === 'payment') {
+                $meta = $paymentMeta->get($id);
+                $actorName = $meta['payer_name'] ?? ($actorUserId ? $userNames->get($actorUserId) : null);
+                $description = $meta['description'] ?? ($actorName ? "Khách {$actorName} thanh toán" : 'Thanh toán');
+            } elseif ($kind === 'refund_receipt') {
+                $actorName = $refundTenantNames->get($id);
+                $description = $actorName ? "Hoàn trả tiền cọc cho khách {$actorName}" : 'Hoàn trả tiền cọc';
+            } elseif ($kind === 'deposit_settlement') {
+                $actorName = null;
+                $description = 'Cấn trừ cọc quyết toán thanh lý';
+            }
+
+            return [
+                'id' => $id,
                 'direction' => (string) $r->direction,
-                'kind' => (string) $r->kind,
+                'kind' => $kind,
                 'reference' => $r->reference !== null ? (string) $r->reference : null,
                 'amount' => (float) $r->amount,
                 'occurred_at' => $r->occurred_at,
-                'actor_user_id' => $r->actor_user_id ? (string) $r->actor_user_id : null,
+                'actor_user_id' => $actorUserId,
                 'contract_id' => $r->contract_id ? (string) $r->contract_id : null,
-            ])
-            ->values();
+                'actor_name' => $actorName,
+                'description' => $description,
+            ];
+        })->values();
 
         $paginator = new LengthAwarePaginator(
             items: $rows,

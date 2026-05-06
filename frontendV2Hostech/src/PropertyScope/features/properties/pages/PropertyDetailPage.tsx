@@ -4,7 +4,7 @@ import { usePropertyDetail } from '@/OrgScope/features/properties/hooks/usePrope
 import { useDashboard } from '../../dashboard/hooks/useDashboard';
 import { PropertyDashboardView } from '../../dashboard/components/PropertyDashboardView';
 import { Skeleton } from '@/shared/components/ui/skeleton';
-import { LayoutDashboard } from 'lucide-react';
+import { Building2, LayoutDashboard, Layers, MapPin, Maximize2 } from 'lucide-react';
 import { useAuthStore } from '@/shared/features/auth/stores/useAuthStore';
 
 export default function PropertyDetailPage() {
@@ -71,6 +71,88 @@ export default function PropertyDetailPage() {
           <div>
             <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Bảng điều khiển</h1>
             <p className="text-gray-500 dark:text-gray-400 font-medium">Tổng quan vận hành cho <span className="text-blue-900 dark:text-blue-400 font-bold">{property.name}</span></p>
+          </div>
+        </div>
+      </div>
+
+      {/* Card thông tin tòa nhà */}
+      <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+        <div className="flex flex-wrap items-center gap-6 px-6 py-4">
+          {/* Tên */}
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-500/10">
+              <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tên tòa nhà</p>
+              <p className="truncate text-base font-black text-slate-900 dark:text-white">{property.name}</p>
+            </div>
+          </div>
+
+          <div className="h-10 w-px shrink-0 bg-slate-100 dark:bg-slate-700" />
+
+          {/* Địa chỉ */}
+          {property.address && (
+            <>
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+                  <MapPin className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Địa chỉ</p>
+                  <p className="max-w-xs truncate text-sm font-semibold text-slate-700 dark:text-slate-300">{property.address}</p>
+                </div>
+              </div>
+              <div className="h-10 w-px shrink-0 bg-slate-100 dark:bg-slate-700" />
+            </>
+          )}
+
+          {/* Diện tích */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10">
+              <Maximize2 className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Diện tích</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">
+                {property.area != null ? `${property.area.toLocaleString('vi-VN')} m²` : '—'}
+                {property.shared_area != null && property.shared_area > 0 && (
+                  <span className="ml-1 text-xs font-medium text-slate-400">(+{property.shared_area} m² chung)</span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="h-10 w-px shrink-0 bg-slate-100 dark:bg-slate-700" />
+
+          {/* Số tầng */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 dark:bg-violet-500/10">
+              <Layers className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Số tầng</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">
+                {property.floors_count ?? property.stats?.total_floors ?? '—'}
+                {(property.floors_count ?? property.stats?.total_floors) ? ' tầng' : ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="h-10 w-px shrink-0 bg-slate-100 dark:bg-slate-700" />
+
+          {/* Tổng số phòng */}
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 dark:bg-sky-500/10">
+              <LayoutDashboard className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tổng phòng</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">
+                {property.rooms_count ?? property.stats?.total_rooms ?? '—'}
+                {(property.rooms_count ?? property.stats?.total_rooms) ? ' phòng' : ''}
+              </p>
+            </div>
           </div>
         </div>
       </div>

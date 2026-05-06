@@ -3,15 +3,15 @@
 namespace App\Listeners\Property;
 
 use App\Events\Property\RoomUpdated;
-use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Request;
 
-class ClearBuildingOverviewCache implements ShouldQueueAfterCommit
+/**
+ * Xóa cache mặt bằng tòa nhà — chạy đồng bộ để GET /overview không trả dữ liệu cũ
+ * trong khi worker queue chưa xử lý (trước đây ShouldQueueAfterCommit gây trễ UI).
+ */
+class ClearBuildingOverviewCache
 {
-    use InteractsWithQueue;
-
     /**
      * Handle the event.
      */

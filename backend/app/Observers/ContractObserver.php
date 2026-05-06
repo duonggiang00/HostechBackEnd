@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Events\Contract\ContractActivated;
 use App\Events\Contract\ContractPendingPayment;
 use App\Events\Contract\ContractSignatureConfirmed;
+use App\Events\Contract\ContractStatusChanged;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractStatusHistory;
 use App\Models\Property\RoomStatusHistory;
@@ -83,6 +84,9 @@ class ContractObserver
         if ($contract->isDirty('status')) {
             $this->syncRoomStatus($contract);
 
+            $fromStatusRaw = $contract->getOriginal('status');
+            $fromStatusValue = $fromStatusRaw instanceof \BackedEnum ? $fromStatusRaw->value : (string) ($fromStatusRaw ?? '');
+
             $newStatusValue = $contract->status instanceof \BackedEnum
                 ? $contract->status->value
                 : (string) $contract->status;
@@ -94,6 +98,18 @@ class ContractObserver
 
             if ($newStatusValue === 'PENDING_PAYMENT') {
                 ContractPendingPayment::dispatch($contract);
+            }
+
+            // Broadcast generic status change cho các trạng thái chưa có event riêng
+            if (in_array($newStatusValue, [
+                'PENDING_SIGNATURE',
+                'PENDING_TERMINATION',
+                'TERMINATED',
+                'EXPIRED',
+                'CANCELLED',
+                'PENDING_SETTLEMENT',
+            ])) {
+                ContractStatusChanged::dispatch($contract, $fromStatusValue, $newStatusValue);
             }
         }
 

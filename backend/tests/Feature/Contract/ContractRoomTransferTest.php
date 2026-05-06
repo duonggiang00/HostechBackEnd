@@ -6,6 +6,8 @@ use App\Enums\ContractStatus;
 use App\Enums\DepositStatus;
 use App\Models\Contract\Contract;
 use App\Models\Contract\ContractMember;
+use App\Models\Finance\Payment;
+use App\Models\Finance\PaymentAllocation;
 use App\Models\Invoice\Invoice;
 use App\Models\Meter\Meter;
 use App\Models\Meter\MeterReading;
@@ -373,5 +375,120 @@ class ContractRoomTransferTest extends TestCase
         $daysRemaining = $daysInMonth - (int) $transferDate->day + 1;
         $expected = round((3_500_000 - 3_000_000) * ($daysRemaining / $daysInMonth), 0);
         $this->assertEqualsWithDelta($expected, (float) $deltaItem->amount, 1.0);
+    }
+
+    public function test_transfer_contract_can_read_inherited_invoice_and_receipt_history_with_include_inherited_flag(): void
+    {
+        ['admin' => $admin, 'oldRoom' => $oldRoom, 'newRoom' => $newRoom, 'contract' => $oldContract]
+            = $this->bootstrapTransferScenario();
+
+        $oldInvoice = Invoice::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $oldContract->org_id,
+            'property_id' => $oldContract->property_id,
+            'room_id' => $oldRoom->id,
+            'contract_id' => $oldContract->id,
+            'status' => 'PAID',
+            'issue_date' => now()->subDays(20)->toDateString(),
+            'due_date' => now()->subDays(10)->toDateString(),
+            'period_start' => now()->subMonth()->startOfMonth()->toDateString(),
+            'period_end' => now()->subMonth()->endOfMonth()->toDateString(),
+            'total_amount' => 1_000_000,
+            'paid_amount' => 1_000_000,
+            'is_termination' => false,
+        ]);
+
+        $payment = Payment::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $oldContract->org_id,
+            'property_id' => $oldContract->property_id,
+            'payer_user_id' => null,
+            'received_by_user_id' => $admin->id,
+            'method' => 'CASH',
+            'amount' => 1_000_000,
+            'reference' => 'PAY-TRANSFER-HISTORY',
+            'received_at' => now()->subDays(9),
+            'status' => 'APPROVED',
+            'approved_by_user_id' => $admin->id,
+            'approved_at' => now()->subDays(9),
+        ]);
+
+        PaymentAllocation::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $oldContract->org_id,
+            'payment_id' => $payment->id,
+            'invoice_id' => $oldInvoice->id,
+            'amount' => 1_000_000,
+        ]);
+
+        $transferDate = now()->toDateString();
+        $transferInvoiceId = $this->postIssueRoomTransferInvoice($admin, $oldContract, $newRoom->id, $transferDate);
+        $this->assertNotNull($transferInvoiceId);
+
+        $transferResponse = $this->actingAs($admin)
+            ->postJson("/api/contracts/{$oldContract->id}/execute-transfer", [
+                'target_room_id' => $newRoom->id,
+                'transfer_date' => $transferDate,
+                'linked_transfer_invoice_id' => $transferInvoiceId,
+            ]);
+        $transferResponse->assertOk();
+
+        $newContractId = (string) $transferResponse->json('data.new_contract_id');
+        $this->assertNotEmpty($newContractId);
+        $newContract = Contract::query()->findOrFail($newContractId);
+
+        $newContractOnlyInvoice = Invoice::create([
+            'id' => (string) Str::uuid(),
+            'org_id' => $newContract->org_id,
+            'property_id' => $newContract->property_id,
+            'room_id' => $newContract->room_id,
+            'contract_id' => $newContract->id,
+            'status' => 'ISSUED',
+            'issue_date' => now()->toDateString(),
+            'due_date' => now()->addDays(5)->toDateString(),
+            'period_start' => now()->startOfMonth()->toDateString(),
+            'period_end' => now()->endOfMonth()->toDateString(),
+            'total_amount' => 2_000_000,
+            'paid_amount' => 0,
+            'is_termination' => false,
+        ]);
+
+        $invoiceNoInheritance = $this->actingAs($admin)
+            ->getJson('/api/invoices?filter[contract_id]='.$newContract->id);
+        $invoiceNoInheritance->assertOk();
+        $invoiceIdsWithoutInheritance = collect($invoiceNoInheritance->json('data'))->pluck('id')->all();
+        $this->assertNotContains($oldInvoice->id, $invoiceIdsWithoutInheritance);
+
+        $invoiceWithInheritance = $this->actingAs($admin)
+            ->getJson('/api/invoices?filter[contract_id]='.$newContract->id.'&include_inherited=1');
+        $invoiceWithInheritance->assertOk();
+        $invoiceRows = collect($invoiceWithInheritance->json('data'))->keyBy('id');
+        $this->assertTrue($invoiceRows->has($oldInvoice->id));
+        $this->assertTrue($invoiceRows->has($newContractOnlyInvoice->id));
+        $this->assertTrue((bool) $invoiceRows[$oldInvoice->id]['is_inherited']);
+        $this->assertSame((string) $oldContract->id, (string) $invoiceRows[$oldInvoice->id]['source_contract_id']);
+        $this->assertFalse((bool) $invoiceRows[$newContractOnlyInvoice->id]['is_inherited']);
+        $this->assertSame((string) $newContract->id, (string) $invoiceRows[$newContractOnlyInvoice->id]['source_contract_id']);
+
+        $paymentsNoInheritance = $this->actingAs($admin)
+            ->getJson('/api/finance/payments?filter[contract_id]='.$newContract->id);
+        $paymentsNoInheritance->assertOk();
+        $paymentIdsWithoutInheritance = collect($paymentsNoInheritance->json('data'))->pluck('id')->all();
+        $this->assertNotContains($payment->id, $paymentIdsWithoutInheritance);
+
+        $paymentsWithInheritance = $this->actingAs($admin)
+            ->getJson('/api/finance/payments?filter[contract_id]='.$newContract->id.'&include_inherited=1');
+        $paymentsWithInheritance->assertOk();
+        $paymentRows = collect($paymentsWithInheritance->json('data'))->keyBy('id');
+        $this->assertTrue($paymentRows->has($payment->id));
+
+        $inheritedPaymentRow = $paymentRows[$payment->id];
+        $this->assertTrue((bool) ($inheritedPaymentRow['is_inherited'] ?? false));
+        $this->assertContains((string) $oldContract->id, $inheritedPaymentRow['source_contract_ids'] ?? []);
+
+        $allocationInvoice = collect($inheritedPaymentRow['allocations'] ?? [])->first()['invoice'] ?? null;
+        $this->assertNotNull($allocationInvoice);
+        $this->assertTrue((bool) ($allocationInvoice['is_inherited'] ?? false));
+        $this->assertSame((string) $oldContract->id, (string) ($allocationInvoice['source_contract_id'] ?? ''));
     }
 }

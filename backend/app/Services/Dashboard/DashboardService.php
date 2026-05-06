@@ -388,13 +388,55 @@ class DashboardService
                 ->whereIn('status', ['ISSUED', 'OVERDUE', 'PENDING'])
                 ->count();
 
+            // Số hợp đồng đang có ít nhất 1 hóa đơn OVERDUE
+            $overdueContractCount = Contract::withoutGlobalScopes()
+                ->where('org_id', $orgId)
+                ->whereIn('property_id', $propertyIds)
+                ->where('status', 'ACTIVE')
+                ->whereHas('invoices', fn ($q) => $q->where('status', 'OVERDUE'))
+                ->count();
+
+            // Tổng số tiền nợ (chưa thu) của các hóa đơn quá hạn / chưa thanh toán đủ
+            $totalOutstandingDebt = (float) Invoice::withoutGlobalScopes()
+                ->where('org_id', $orgId)
+                ->whereIn('property_id', $propertyIds)
+                ->whereIn('status', ['OVERDUE', 'PARTIAL', 'ISSUED', 'LATE'])
+                ->sum(DB::raw('GREATEST(0, total_amount - paid_amount)'));
+
             $monthStart = Carbon::now()->copy()->startOfMonth()->startOfDay();
             $monthEnd = Carbon::now()->copy()->endOfDay();
             $thisMonthCollected = $this->collectedRevenueBetween($orgId, $propertyIds, $monthStart, $monthEnd);
 
+            // Previous month revenue trend
+            $prevMonthStart = $monthStart->copy()->subMonth();
+            $prevMonthEnd = $monthStart->copy()->subSecond();
+            $prevMonthCollected = $this->collectedRevenueBetween($orgId, $propertyIds, $prevMonthStart, $prevMonthEnd);
+
+            $revenueTrendValue = $prevMonthCollected > 0
+                ? round((($thisMonthCollected - $prevMonthCollected) / $prevMonthCollected) * 100, 2)
+                : ($thisMonthCollected > 0 ? 100 : 0);
+
+            // Previous month tenants trend
+            $currentActiveTenants = $tenants['active'];
+            $prevMonthActiveTenants = ContractMember::withoutGlobalScopes()
+                ->where('contract_members.org_id', $orgId)
+                ->where('contract_members.joined_at', '<=', $prevMonthEnd)
+                ->where(function ($q) use ($prevMonthEnd) {
+                    $q->whereNull('contract_members.left_at')
+                        ->orWhere('contract_members.left_at', '>', $prevMonthEnd);
+                })
+                ->whereHas('contract', function ($q) use ($propertyIds) {
+                    $q->whereIn('property_id', $propertyIds);
+                })
+                ->count();
+
+            $tenantTrendValue = $prevMonthActiveTenants > 0
+                ? round((($currentActiveTenants - $prevMonthActiveTenants) / $prevMonthActiveTenants) * 100, 2)
+                : ($currentActiveTenants > 0 ? 100 : 0);
+
             return [
                 'stats' => [
-                    'totalTenants' => $tenants['active'],
+                    'totalTenants' => $currentActiveTenants,
                     'totalRooms' => $propStats['total_rooms'],
                     'vacantRooms' => $propStats['available_rooms'],
                     'occupiedRooms' => $propStats['occupied_rooms'],
@@ -403,7 +445,11 @@ class DashboardService
                     'unresolvedTickets' => $tickets['pending'] + $tickets['in_progress'],
                     'unpaidInvoices' => $unpaidInvoices,
                     'activeContracts' => $contracts['total_active'],
+                    'overdueContractCount' => $overdueContractCount,
+                    'totalOutstandingDebt' => $totalOutstandingDebt,
                     'thisMonthRevenue' => $thisMonthCollected,
+                    'revenueTrendValue' => $revenueTrendValue,
+                    'tenantTrendValue' => $tenantTrendValue,
                 ],
                 'revenueTrend' => $this->getPropertyRevenueTrend($orgId, $property->id),
             ];

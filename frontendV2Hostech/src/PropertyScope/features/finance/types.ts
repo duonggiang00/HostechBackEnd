@@ -178,12 +178,14 @@ export interface RefundReceiptQueryParams {
 export interface CashflowFeedRow {
   id: string;
   direction: 'IN' | 'OUT';
-  kind: 'payment' | 'refund_receipt';
+  kind: 'payment' | 'refund_receipt' | 'deposit_settlement';
   reference: string | null;
   amount: number;
   occurred_at: string;
   actor_user_id: string | null;
   contract_id: string | null;
+  actor_name?: string | null;
+  description?: string | null;
 }
 
 export interface CashflowFeedQueryParams {
@@ -215,6 +217,7 @@ export interface LedgerDepositForfeitFeedRow {
   final_invoice_id: string | null;
   reference: string | null;
   description: string | null;
+  tenant_name?: string | null;
 }
 
 export interface LedgerDepositForfeitFeedQueryParams {

@@ -40,6 +40,20 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(iso));
 }
 
+/** Hiển thị tên phòng trước; code chỉ làm fallback (tránh nhầm mã với tên trên UI). */
+function roomDisplayLabel(room: { name?: string | null; code?: string | null } | null | undefined): string {
+  const name = room?.name?.trim();
+  if (name) return name;
+  return room?.code?.trim() || '—';
+}
+
+function roomCodeSubtitle(room: { name?: string | null; code?: string | null } | null | undefined): string | undefined {
+  const name = room?.name?.trim();
+  const code = room?.code?.trim();
+  if (!code || !name || name === code) return undefined;
+  return `Mã: ${code}`;
+}
+
 const itemTypeLabel: Record<InvoiceItemType, { label: string; color: string }> = {
   RENT:       { label: 'Tiền phòng',   color: 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400' },
   SERVICE:    { label: 'Dịch vụ',      color: 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400' },
@@ -198,7 +212,7 @@ export default function InvoiceDetailPage() {
                 <InvoiceStatusBadge status={invoice.status} size="sm" />
               </div>
               <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                {invoice.room?.code ?? invoice.room?.name ?? '—'} · {invoice.property?.name}
+                {roomDisplayLabel(invoice.room)} · {invoice.property?.name}
               </p>
             </div>
           </div>
@@ -274,9 +288,10 @@ export default function InvoiceDetailPage() {
                 value={
                   <span className="flex items-center gap-1.5">
                     <DoorOpen className="w-4 h-4 text-slate-400" />
-                    {invoice.room?.code ?? invoice.room?.name ?? '—'}
+                    {roomDisplayLabel(invoice.room)}
                   </span>
                 }
+                sub={roomCodeSubtitle(invoice.room)}
               />
               <InfoCard
                 label="Tòa nhà"

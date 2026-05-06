@@ -12,9 +12,62 @@ use Illuminate\Support\Facades\Storage;
 
 class PaymentResource extends JsonResource
 {
+    private function requestedContractId(Request $request): ?string
+    {
+        $contractId = (string) $request->input('filter.contract_id', '');
+
+        return $contractId !== '' ? $contractId : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function sourceContractIds(): array
+    {
+        if (! $this->relationLoaded('allocations')) {
+            return [];
+        }
+
+        $sourceContractIds = [];
+        foreach ($this->allocations as $allocation) {
+            $invoice = $allocation->relationLoaded('invoice') ? $allocation->invoice : null;
+            if (! $invoice) {
+                continue;
+            }
+            $sourceContractId = (string) ($invoice->snapshot['transfer_invoice_original_contract_id'] ?? $invoice->contract_id ?? '');
+            if ($sourceContractId !== '') {
+                $sourceContractIds[] = $sourceContractId;
+            }
+        }
+
+        return array_values(array_unique($sourceContractIds));
+    }
+
+    private function isInherited(Request $request, array $sourceContractIds): bool
+    {
+        $requestedContractId = $this->requestedContractId($request);
+        if (! $requestedContractId) {
+            return false;
+        }
+
+        $includeInherited = filter_var($request->input('include_inherited', false), FILTER_VALIDATE_BOOLEAN);
+        if (! $includeInherited) {
+            return false;
+        }
+
+        foreach ($sourceContractIds as $sourceContractId) {
+            if ($sourceContractId !== $requestedContractId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function toArray(Request $request): array
     {
         /** @var Payment $this */
+        $sourceContractIds = $this->sourceContractIds();
 
         return [
             'id' => $this->id,
@@ -25,6 +78,8 @@ class PaymentResource extends JsonResource
             'method' => $this->method,
             'method_label' => PaymentMethod::labelVi($this->method),
             'amount' => (float) $this->amount,
+            'source_contract_ids' => $sourceContractIds,
+            'is_inherited' => $this->isInherited($request, $sourceContractIds),
             'reference' => $this->reference,
             'note' => $this->note,
             'meta' => $this->meta,

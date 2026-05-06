@@ -188,9 +188,10 @@ function RequestRow({ req, onApprove, onViewContract }: {
 
       {/* Actions */}
       <td className="px-6 py-4">
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
           {/* View contract */}
           <button
+            type="button"
             onClick={() => onViewContract(req.contract_id)}
             title="Xem hợp đồng"
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
@@ -201,20 +202,23 @@ function RequestRow({ req, onApprove, onViewContract }: {
           {/* Approve / Act */}
           {req.type === 'TERMINATION' ? (
             <button
+              type="button"
               onClick={() => onViewContract(req.contract_id, { openTerminate: true })}
-              className="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-colors"
+              className="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-rose-100 transition-colors shadow-sm"
             >
               Giải quyết
             </button>
           ) : req.type === 'ROOM_TRANSFER' ? (
             <button
+              type="button"
               onClick={() => onApprove(req)}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors shadow-sm"
+              className="px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-100 transition-colors shadow-sm"
             >
               Giải quyết
             </button>
           ) : (
             <button
+              type="button"
               onClick={() => onApprove(req)}
               className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors shadow-sm"
             >
